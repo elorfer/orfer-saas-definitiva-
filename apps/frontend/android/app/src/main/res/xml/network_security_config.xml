@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Permitir conexiones HTTP para el backend de producción -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">backend-alb-1038609925.us-east-1.elb.amazonaws.com</domain>
+        <domain includeSubdomains="true">*.elb.amazonaws.com</domain>
+        <domain includeSubdomains="true">*.amazonaws.com</domain>
+    </domain-config>
+    
+    <!-- Para desarrollo local (si es necesario) -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
+

@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: vintage-music-postgres
+    environment:
+      POSTGRES_DB: vintage_music
+      POSTGRES_USER: vintage_user
+      POSTGRES_PASSWORD: vintage_password_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./apps/backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vintage_user -d vintage_music"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vintage-network
+
+  # Redis para estadísticas en tiempo real
+  redis:
+    image: redis:7-alpine
+    container_name: vintage-music-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vintage-network
+
+  # Backend NestJS
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: vintage-music-backend
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://vintage_user:vintage_password_2024@postgres:5432/vintage_music
+      DB_SSL: "false"
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: vintage_jwt_secret_2024_ultra_secure
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      # STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}  # Deshabilitado - No disponible en Colombia
+      # PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}  # Deshabilitado - Pagos no implementados aún
+      # PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}  # Deshabilitado - Pagos no implementados aún
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+    networks:
+      - vintage-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  vintage-network:
+    driver: bridge

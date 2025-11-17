@@ -1,0 +1,61 @@
+{
+  "family": "backend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::317642919799:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "317642919799.dkr.ecr.us-east-1.amazonaws.com/vintage-backend:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp",
+          "name": "backend-3000-tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://postgres:k50Pjk0<Cf>7POQ$[!koH>yxlvUy@vintage-prod-db.c2124w8euis5.us-east-1.rds.amazonaws.com:5432/postgres?sslmode=require"
+        },
+        {
+          "name": "AWS_S3_BUCKET",
+          "value": "vintage-music-storage"
+        },
+        {
+          "name": "JWT_SECRET",
+          "value": "O34xk7NQvR9t1wYzC5PeH8jL2sV6MbXaGqUfZdSi0rTnBpJh"
+        },
+        {
+          "name": "DB_SSL_REJECT_UNAUTHORIZED",
+          "value": "false"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/backend-prod",
+          "awslogs-create-group": "true",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+

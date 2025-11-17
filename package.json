@@ -1,0 +1,39 @@
+{
+  "name": "vintage-music-streaming",
+  "version": "1.0.0",
+  "description": "Aplicación de streaming musical vintage con roles Admin, Artista y Usuario",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:admin\" \"npm run dev:frontend\"",
+    "dev:backend": "cd apps/backend && npm run start:dev",
+    "dev:admin": "cd apps/admin && npm run dev",
+    "dev:frontend": "cd apps/frontend && flutter run",
+    "dev:backend-admin": "concurrently \"npm run dev:backend\" \"npm run dev:admin\"",
+    "dev:backend-only": "cd apps/backend && npm run start:dev",
+    "dev:admin-only": "cd apps/admin && npm run dev",
+    "dev:frontend-only": "cd apps/frontend && flutter run",
+    "build": "npm run build:backend && npm run build:admin && npm run build:frontend",
+    "build:backend": "cd apps/backend && npm run build",
+    "build:admin": "cd apps/admin && npm run build",
+    "build:frontend": "cd apps/frontend && flutter build apk",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "setup": "npm install && npm run setup:backend && npm run setup:admin",
+    "setup:backend": "cd apps/backend && npm install",
+    "setup:admin": "cd apps/admin && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
+
+

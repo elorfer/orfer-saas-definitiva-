@@ -1,0 +1,195 @@
+{
+  "_comment": "Ejemplo de respuesta JSON para la app Flutter - Home Feed",
+  "example_home_feed": {
+    "featured": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "title": "Bohemian Rhapsody",
+        "duration": 355,
+        "durationFormatted": "5:55",
+        "fileUrl": "http://localhost:3000/uploads/songs/550e8400-e29b-41d4-a716-446655440000.mp3",
+        "coverArtUrl": "http://localhost:3000/uploads/covers/550e8400-e29b-41d4-a716-446655440000.png",
+        "featured": true,
+        "releaseDate": "1975-10-31T00:00:00.000Z",
+        "totalStreams": 2500000,
+        "totalLikes": 150000,
+        "totalShares": 50000,
+        "createdAt": "2025-01-10T10:00:00.000Z",
+        "artist": {
+          "id": "660e8400-e29b-41d4-a716-446655440001",
+          "stageName": "Queen",
+          "avatarUrl": "http://localhost:3000/uploads/avatars/queen.jpg"
+        },
+        "album": {
+          "id": "770e8400-e29b-41d4-a716-446655440002",
+          "title": "A Night at the Opera",
+          "coverArtUrl": "http://localhost:3000/uploads/covers/a-night-at-the-opera.jpg"
+        },
+        "genre": {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "name": "Rock",
+          "colorHex": "#FF5733"
+        }
+      },
+      {
+        "id": "551e8400-e29b-41d4-a716-446655440001",
+        "title": "Stairway to Heaven",
+        "duration": 482,
+        "durationFormatted": "8:02",
+        "fileUrl": "http://localhost:3000/uploads/songs/551e8400-e29b-41d4-a716-446655440001.mp3",
+        "coverArtUrl": "http://localhost:3000/uploads/covers/551e8400-e29b-41d4-a716-446655440001.png",
+        "featured": true,
+        "releaseDate": "1971-11-08T00:00:00.000Z",
+        "totalStreams": 3200000,
+        "totalLikes": 200000,
+        "totalShares": 75000,
+        "createdAt": "2025-01-08T14:30:00.000Z",
+        "artist": {
+          "id": "661e8400-e29b-41d4-a716-446655440004",
+          "stageName": "Led Zeppelin",
+          "avatarUrl": "http://localhost:3000/uploads/avatars/led-zeppelin.jpg"
+        },
+        "album": {
+          "id": "771e8400-e29b-41d4-a716-446655440005",
+          "title": "Led Zeppelin IV",
+          "coverArtUrl": "http://localhost:3000/uploads/covers/led-zeppelin-iv.jpg"
+        },
+        "genre": {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "name": "Rock",
+          "colorHex": "#FF5733"
+        }
+      }
+    ],
+    "newSongs": [
+      {
+        "id": "552e8400-e29b-41d4-a716-446655440002",
+        "title": "New Song 2025",
+        "duration": 215,
+        "durationFormatted": "3:35",
+        "fileUrl": "http://localhost:3000/uploads/songs/552e8400-e29b-41d4-a716-446655440002.mp3",
+        "coverArtUrl": "http://localhost:3000/uploads/covers/552e8400-e29b-41d4-a716-446655440002.png",
+        "featured": false,
+        "releaseDate": "2025-01-15T00:00:00.000Z",
+        "totalStreams": 150,
+        "totalLikes": 10,
+        "totalShares": 3,
+        "createdAt": "2025-01-15T10:30:00.000Z",
+        "artist": {
+          "id": "662e8400-e29b-41d4-a716-446655440006",
+          "stageName": "Emerging Artist",
+          "avatarUrl": "http://localhost:3000/uploads/avatars/emerging-artist.jpg"
+        },
+        "album": null,
+        "genre": {
+          "id": "881e8400-e29b-41d4-a716-446655440007",
+          "name": "Pop",
+          "colorHex": "#33FF57"
+        }
+      },
+      {
+        "id": "553e8400-e29b-41d4-a716-446655440003",
+        "title": "Latest Track",
+        "duration": 190,
+        "durationFormatted": "3:10",
+        "fileUrl": "http://localhost:3000/uploads/songs/553e8400-e29b-41d4-a716-446655440003.mp3",
+        "coverArtUrl": "http://localhost:3000/uploads/covers/553e8400-e29b-41d4-a716-446655440003.png",
+        "featured": false,
+        "totalStreams": 89,
+        "totalLikes": 5,
+        "totalShares": 1,
+        "createdAt": "2025-01-14T16:45:00.000Z",
+        "artist": {
+          "id": "663e8400-e29b-41d4-a716-446655440008",
+          "stageName": "New Talent",
+          "avatarUrl": null
+        },
+        "album": {
+          "id": "772e8400-e29b-41d4-a716-446655440009",
+          "title": "Debut Album",
+          "coverArtUrl": "http://localhost:3000/uploads/covers/debut-album.jpg"
+        },
+        "genre": {
+          "id": "882e8400-e29b-41d4-a716-446655440010",
+          "name": "Indie",
+          "colorHex": "#3357FF"
+        }
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 30,
+      "total": 54,
+      "totalPages": 2
+    }
+  },
+  "example_paginated_songs": {
+    "songs": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "title": "Canción Ejemplo",
+        "duration": 227,
+        "durationFormatted": "3:47",
+        "fileUrl": "http://localhost:3000/uploads/songs/550e8400-e29b-41d4-a716-446655440000.mp3",
+        "coverArtUrl": "http://localhost:3000/uploads/covers/550e8400-e29b-41d4-a716-446655440000.png",
+        "featured": false,
+        "releaseDate": "2025-01-15T00:00:00.000Z",
+        "totalStreams": 1250,
+        "totalLikes": 45,
+        "totalShares": 12,
+        "createdAt": "2025-01-15T10:30:00.000Z",
+        "artist": {
+          "id": "660e8400-e29b-41d4-a716-446655440001",
+          "stageName": "Rock Legend",
+          "avatarUrl": "http://localhost:3000/uploads/avatars/avatar.jpg"
+        },
+        "album": {
+          "id": "770e8400-e29b-41d4-a716-446655440002",
+          "title": "Álbum Ejemplo",
+          "coverArtUrl": "http://localhost:3000/uploads/covers/album.png"
+        },
+        "genre": {
+          "id": "880e8400-e29b-41d4-a716-446655440003",
+          "name": "Rock",
+          "colorHex": "#FF5733"
+        }
+      }
+    ],
+    "total": 54,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 3,
+    "hasNext": true,
+    "hasPrevious": false
+  },
+  "example_single_song": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "title": "Canción Ejemplo",
+    "duration": 227,
+    "durationFormatted": "3:47",
+    "fileUrl": "http://localhost:3000/uploads/songs/550e8400-e29b-41d4-a716-446655440000.mp3",
+    "coverArtUrl": "http://localhost:3000/uploads/covers/550e8400-e29b-41d4-a716-446655440000.png",
+    "featured": false,
+    "releaseDate": "2025-01-15T00:00:00.000Z",
+    "totalStreams": 1250,
+    "totalLikes": 45,
+    "totalShares": 12,
+    "createdAt": "2025-01-15T10:30:00.000Z",
+    "artist": {
+      "id": "660e8400-e29b-41d4-a716-446655440001",
+      "stageName": "Rock Legend",
+      "avatarUrl": "http://localhost:3000/uploads/avatars/avatar.jpg"
+    },
+    "album": {
+      "id": "770e8400-e29b-41d4-a716-446655440002",
+      "title": "Álbum Ejemplo",
+      "coverArtUrl": "http://localhost:3000/uploads/covers/album.png"
+    },
+    "genre": {
+      "id": "880e8400-e29b-41d4-a716-446655440003",
+      "name": "Rock",
+      "colorHex": "#FF5733"
+    }
+  },
+  "note": "Todos los campos son consistentes entre endpoints. Los campos opcionales pueden ser null o no estar presentes."
+}

@@ -1,0 +1,57 @@
+ruta de desarrollo
+subida de canciones y asignacion de artistas BIEN 
+
+Plan de implementación recomendado
+Fase 1: Crítico (1-2 semanas)
+
+Extracción de metadatos de audio
+Compresión de imágenes
+
+Fase 2: Importante (2-3 semanas)
+Logging estructurado
+Validación de dimensiones
+Rate limiting específico
+
+Fase 3: Optimizaciones (1-2 meses)
+Progreso de subida
+Múltiples tamaños
+Limpieza automática
+
+Recomendación
+Desarrollo diario: flutter run (usa localhost)
+Probar producción: flutter run --release (usa AWS)
+Generar APK: flutter build apk --release (para distribuir)
+
+
+para iniciar el admin
+
+El admin se iniciará en http://localhost:3002 según la documentación.
+Nota importante: Asegúrate de que el backend esté corriendo primero en http://localhost:3000. Si necesitas iniciarlo también:
+
+npm run dev:backend-only
+
+O para iniciar ambos juntos:
+npm run dev:backend-admin
+¿Quieres que lo inicie ahora?
+
+
+
+Endpoint de subida de canciones
+Ruta completa:
+POST /api/v1/songs/upload
+Desglose:
+Prefijo global: /api/v1 (configurado en main.ts)
+Controlador: /songs (definido en @Controller('songs'))
+Ruta del endpoint: /upload (definido en @Post('upload'))
+Método: POST
+Campos que acepta (FormData):
+audio: archivo de audio (requerido)
+cover: archivo de imagen de portada (opcional)
+title: título de la canción (requerido)
+artistId: ID del artista (requerido)
+albumId: ID del álbum (opcional)
+genreId: ID del género (opcional)
+status: estado (opcional: 'draft', 'pending', 'published', 'rejected')
+duration: duración en segundos (opcional)
+uploadId: ID opcional para idempotencia (opcional)
+URL completa:
