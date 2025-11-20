@@ -8,6 +8,8 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "kill-port": "powershell -ExecutionPolicy Bypass -File ./scripts/kill-port.ps1",
+    "prestart:dev": "npm run kill-port",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:dev:with-admin": "concurrently \"nest start --watch\" \"node scripts/start-admin.js\"",
@@ -26,7 +28,6 @@
     "update-durations": "ts-node -r tsconfig-paths/register scripts/update-song-durations.ts"
   },
   "dependencies": {
-    "sharp": "^0.33.2",
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/s3-request-presigner": "^3.490.0",
     "@nestjs/bull": "^10.2.3",
@@ -63,6 +64,7 @@
     "redis": "^4.6.12",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1",
+    "sharp": "^0.34.5",
     "socket.io": "^4.7.5",
     "stripe": "^14.15.0",
     "typeorm": "^0.3.20",

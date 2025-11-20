@@ -3,7 +3,7 @@ import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path/path.dart' as path_lib;
+import 'dart:io' show Platform;
 
 /// Servicio para configurar caché HTTP con Dio
 class HttpCacheService {
@@ -15,7 +15,7 @@ class HttpCacheService {
     try {
       // Obtener directorio de caché
       final cacheDir = await getTemporaryDirectory();
-      final cachePath = path_lib.join(cacheDir.path, 'http_cache');
+      final cachePath = '${cacheDir.path}${Platform.pathSeparator}http_cache';
 
       // Inicializar Hive para caché si no está inicializado
       if (!Hive.isAdapterRegistered(1)) {

@@ -28,7 +28,7 @@ class FastScrollPhysics extends ClampingScrollPhysics {
     double velocity,
   ) {
     // Reducir la fricción para scroll más rápido
-    final tolerance = this.tolerance;
+    final tolerance = toleranceFor(position);
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
       return ClampingScrollSimulation(
         position: position.pixels,

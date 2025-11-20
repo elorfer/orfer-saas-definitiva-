@@ -124,7 +124,16 @@ async function bootstrap() {
   const port = configService.get('PORT', 3001);
   const host = configService.get('HOST', '0.0.0.0'); // Escuchar en todas las interfaces para permitir acceso desde emulador Android
   
-  await app.listen(port, host);
+  try {
+    await app.listen(port, host);
+  } catch (error: any) {
+    if (error.code === 'EADDRINUSE') {
+      logger.error(`❌ El puerto ${port} ya está en uso. Por favor ejecuta: npm run kill-port`);
+      logger.error(`O detén el proceso manualmente con: Get-NetTCPConnection -LocalPort ${port} | Select-Object -ExpandProperty OwningProcess | Stop-Process -Force`);
+      process.exit(1);
+    }
+    throw error;
+  }
   
   logger.log('═══════════════════════════════════════════════════════════');
   logger.log(`🎵 Vintage Music Backend ejecutándose en ${host}:${port}`);

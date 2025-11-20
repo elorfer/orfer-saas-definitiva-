@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/artist.dart';
+import '../../../core/widgets/network_image_with_fallback.dart';
 
 String flagEmoji(String? code) {
   if (code == null || code.length != 2) return '🏳️';
@@ -23,20 +24,22 @@ class ArtistCard extends StatelessWidget {
         children: [
           AspectRatio(
             aspectRatio: 1.7,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: artist.coverPhotoUrl != null
-                  ? Image.network(artist.coverPhotoUrl!, fit: BoxFit.cover)
-                  : Container(color: Colors.grey.shade300),
+            child: NetworkImageWithFallback.medium(
+              imageUrl: artist.coverPhotoUrl,
+              fit: BoxFit.cover,
+              borderRadius: 12,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.grey.shade300,
-                backgroundImage: artist.profilePhotoUrl != null ? NetworkImage(artist.profilePhotoUrl!) : null,
+              ClipOval(
+                child: NetworkImageWithFallback.small(
+                  imageUrl: artist.profilePhotoUrl,
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(

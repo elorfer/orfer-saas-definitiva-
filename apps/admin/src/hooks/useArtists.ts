@@ -64,6 +64,63 @@ export const useArtists = ({ page = 1, limit = 100, enabled = true }: UseArtists
   );
 };
 
+/**
+ * Hook para obtener TODOS los artistas disponibles sin límite de paginación
+ * Hace múltiples requests si es necesario para obtener todos los artistas
+ */
+export const useAllArtists = (enabled = true) => {
+  return useQuery<ArtistsResponse, Error>(
+    [ARTISTS_QUERY_KEY, 'all'],
+    async () => {
+      const allArtists: ArtistModel[] = [];
+      let currentPage = 1;
+      const pageSize = 100; // Tamaño de página razonable
+      let hasMore = true;
+      let total = 0;
+
+      // Obtener todos los artistas haciendo múltiples requests
+      while (hasMore) {
+        try {
+          const response = await apiClient.getArtists(currentPage, pageSize);
+          const mappedResponse = mapArtistsResponse(response.data);
+          
+          allArtists.push(...mappedResponse.artists);
+          total = mappedResponse.total;
+
+          // Si obtuvimos menos artistas que el límite, no hay más páginas
+          if (mappedResponse.artists.length < pageSize) {
+            hasMore = false;
+          } else {
+            // Si ya tenemos todos los artistas según el total, no hay más páginas
+            if (allArtists.length >= total) {
+              hasMore = false;
+            } else {
+              currentPage++;
+            }
+          }
+        } catch (error) {
+          // Si hay un error, detener la búsqueda
+          hasMore = false;
+          throw error;
+        }
+      }
+
+      return {
+        artists: allArtists,
+        total,
+      };
+    },
+    {
+      enabled,
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+      // Cache por 5 minutos ya que obtener todos los artistas puede ser costoso
+      staleTime: 5 * 60 * 1000,
+    }
+  );
+};
+
 
 
 

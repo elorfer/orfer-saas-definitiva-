@@ -180,7 +180,7 @@ class GoRouterNotifier extends ChangeNotifier {
                 );
               },
             ),
-            // Playlist Detail - transición de escala (se expande como modal)
+            // Playlist Detail - transición horizontal ligera
             GoRoute(
               path: '/playlist/:id',
               pageBuilder: (context, state) {
@@ -188,9 +188,9 @@ class GoRouterNotifier extends ChangeNotifier {
                 return CustomTransitionPage<void>(
                   key: state.pageKey,
                   child: PlaylistDetailScreen(playlistId: playlistId),
-                  transitionsBuilder: SpotifyPageTransitions.scaleTransition,
-                  transitionDuration: const Duration(milliseconds: 300),
-                  reverseTransitionDuration: const Duration(milliseconds: 250),
+                  transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
+                  transitionDuration: const Duration(milliseconds: 200),
+                  reverseTransitionDuration: const Duration(milliseconds: 150),
                 );
               },
             ),

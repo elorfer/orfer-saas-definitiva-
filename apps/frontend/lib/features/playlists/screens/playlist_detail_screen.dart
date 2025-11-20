@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/playlist_provider.dart';
+import '../../../core/providers/audio_player_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
@@ -81,7 +82,7 @@ class PlaylistDetailScreen extends ConsumerWidget {
                     ],
                   ),
                   title: Text(
-                    playlist.name ?? 'Playlist',
+                    (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -130,7 +131,7 @@ class PlaylistDetailScreen extends ConsumerWidget {
                           Icon(Icons.queue_music, size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 4),
                           Text(
-                            '${playlist.totalTracks ?? 0} canciones',
+                            '${playlist.totalSongs} canciones',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               color: Colors.grey[600],
@@ -394,33 +395,71 @@ class PlaylistDetailScreen extends ConsumerWidget {
   }
 
   void _onSongTap(BuildContext context, Song song) {
-    // TODO: Navegar a detalles de la canción o abrir reproductor
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Navegando a ${song.title}'),
-        backgroundColor: const Color(0xFF667eea),
-      ),
-    );
+    // Navegar a detalles de la canción o abrir reproductor
+    // Por ahora, reproducir la canción directamente ya que no hay ruta de detalles
+    // Nota: Se puede crear una ruta /song/:id en el futuro para mostrar detalles completos
+    _onPlaySong(context, song);
   }
 
   void _onPlaySong(BuildContext context, Song song) {
-    // TODO: Reproducir canción usando el reproductor existente
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reproduciendo ${song.title}'),
-        backgroundColor: const Color(0xFF667eea),
-      ),
-    );
+    // Reproducir canción usando el reproductor existente
+    final container = ProviderScope.containerOf(context);
+    final audioService = container.read(audioPlayerServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    
+    audioService.playSong(song).then((_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Reproduciendo ${song.title ?? "Canción"}'),
+          backgroundColor: const Color(0xFF667eea),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }).catchError((error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al reproducir: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
   }
 
   void _onPlayAll(BuildContext context, List<Song> songs) {
-    // TODO: Reproducir toda la playlist usando el reproductor existente
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reproduciendo ${songs.length} canciones'),
-        backgroundColor: const Color(0xFF667eea),
-      ),
-    );
+    // Reproducir toda la playlist usando el reproductor existente
+    final messenger = ScaffoldMessenger.of(context);
+    
+    if (songs.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('No hay canciones para reproducir'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final container = ProviderScope.containerOf(context);
+    final audioService = container.read(audioPlayerServiceProvider);
+    
+    audioService.playQueue(songs).then((_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Reproduciendo playlist con ${songs.length} canciones'),
+          backgroundColor: const Color(0xFF667eea),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }).catchError((error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al reproducir playlist: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
   }
 }
 

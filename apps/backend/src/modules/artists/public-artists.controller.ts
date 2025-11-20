@@ -8,38 +8,16 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 import { ArtistsService } from './artists.service';
+import { FeaturedService } from '../featured/featured.service';
+import { ArtistSerializer } from '@/common/utils/artist-serializer';
 
 @ApiTags('public-artists')
 @Controller('public/artists')
 export class PublicArtistsController {
-  constructor(private readonly artistsService: ArtistsService) {}
-
-  private serializeArtistLite(artist: any) {
-    const profilePhotoUrl = artist.profilePhotoUrl ?? artist.user?.avatarUrl ?? null;
-    const coverPhotoUrl = artist.coverPhotoUrl ?? null;
-    const name = artist.name ?? artist.stageName;
-    
-    return {
-      id: artist.id,
-      name,
-      stageName: artist.stageName ?? name,
-      // Ambas variantes para máxima compatibilidad (camelCase y snake_case)
-      profilePhotoUrl,
-      profile_photo_url: profilePhotoUrl,
-      coverPhotoUrl,
-      cover_photo_url: coverPhotoUrl,
-      nationalityCode: artist.nationalityCode ?? null,
-      nationality_code: artist.nationalityCode ?? null,
-      featured: !!artist.featured,
-      is_featured: !!artist.featured,
-      totalStreams: artist.totalStreams ?? 0,
-      total_streams: artist.totalStreams ?? 0,
-      totalFollowers: artist.totalFollowers ?? 0,
-      total_followers: artist.totalFollowers ?? 0,
-      monthlyListeners: artist.monthlyListeners ?? 0,
-      monthly_listeners: artist.monthlyListeners ?? 0,
-    };
-  }
+  constructor(
+    private readonly artistsService: ArtistsService,
+    private readonly featuredService: FeaturedService,
+  ) {}
 
   @Get('top')
   @ApiOperation({ summary: 'Obtener artistas más populares (público)' })
@@ -49,7 +27,7 @@ export class PublicArtistsController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
   ) {
     const artists = await this.artistsService.getTopArtists(limit);
-    return artists.map((a) => this.serializeArtistLite(a));
+    return artists.map((a) => ArtistSerializer.serializeLite(a));
   }
 
   @Get()
@@ -62,7 +40,7 @@ export class PublicArtistsController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
   ) {
     const { artists, total } = await this.artistsService.findAll(page, limit);
-    return { artists: artists.map((a) => this.serializeArtistLite(a)), total };
+    return { artists: artists.map((a) => ArtistSerializer.serializeLite(a)), total };
   }
 
   @Get('featured')
@@ -72,8 +50,11 @@ export class PublicArtistsController {
   async getFeatured(
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 20,
   ) {
-    const artists = await this.artistsService.findFeatured(limit);
-    return artists.map((a) => this.serializeArtistLite(a));
+    // Usar FeaturedService para consistencia (mismo ordenamiento y validación)
+    // Validar límite como en PublicFeaturedController
+    const validLimit = Math.min(Math.max(1, limit), 100);
+    const artists = await this.featuredService.getFeaturedArtists(validLimit);
+    return artists.map((a) => ArtistSerializer.serializeLite(a));
   }
 
   @Get(':id')
@@ -81,28 +62,7 @@ export class PublicArtistsController {
   @ApiResponse({ status: 200, description: 'Detalle del artista' })
   async getByIdPublic(@Param('id') id: string) {
     const artist = await this.artistsService.findOne(id);
-    const biography = artist.biography ?? artist.bio ?? null;
-    const profilePhotoUrl = artist.profilePhotoUrl ?? null;
-    const coverPhotoUrl = artist.coverPhotoUrl ?? null;
-    const nationalityCode = artist.nationalityCode ?? null;
-    return {
-      id: artist.id,
-      name: artist.name ?? artist.stageName,
-      stageName: artist.stageName,
-      // Ambas variantes para máxima compatibilidad (camelCase y snake_case)
-      biography,
-      bio: biography,
-      profilePhotoUrl,
-      profile_photo_url: profilePhotoUrl,
-      coverPhotoUrl,
-      cover_photo_url: coverPhotoUrl,
-      nationalityCode,
-      nationality_code: nationalityCode,
-      verificationStatus: artist.verificationStatus ?? false,
-      totalStreams: artist.totalStreams ?? 0,
-      totalFollowers: artist.totalFollowers ?? 0,
-      monthlyListeners: artist.monthlyListeners ?? 0,
-    };
+    return ArtistSerializer.serializeFull(artist);
   }
 }
 

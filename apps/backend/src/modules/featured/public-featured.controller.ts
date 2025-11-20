@@ -8,6 +8,8 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 import { FeaturedService } from './featured.service';
+import { ArtistSerializer } from '@/common/utils/artist-serializer';
+import { PlaylistMapper } from '../playlists/mappers/playlist.mapper';
 
 @ApiTags('public-featured')
 @Controller('public/featured')
@@ -42,33 +44,8 @@ export class PublicFeaturedController {
       throw new BadRequestException('El límite debe estar entre 1 y 100');
     }
     const artists = await this.featuredService.getFeaturedArtists(limit);
-    // Serializar artistas con URLs normalizadas y ambos formatos (camelCase y snake_case)
-    return artists.map((artist) => {
-      const profilePhotoUrl = artist.profilePhotoUrl ?? artist.user?.avatarUrl ?? null;
-      const coverPhotoUrl = artist.coverPhotoUrl ?? null;
-      const name = artist.name ?? artist.stageName;
-      
-      return {
-        id: artist.id,
-        name,
-        stageName: artist.stageName ?? name,
-        // Ambas variantes para máxima compatibilidad (camelCase y snake_case)
-        profilePhotoUrl,
-        profile_photo_url: profilePhotoUrl,
-        coverPhotoUrl,
-        cover_photo_url: coverPhotoUrl,
-        nationalityCode: artist.nationalityCode ?? null,
-        nationality_code: artist.nationalityCode ?? null,
-        featured: !!artist.isFeatured,
-        is_featured: !!artist.isFeatured,
-        totalStreams: artist.totalStreams ?? 0,
-        total_streams: artist.totalStreams ?? 0,
-        totalFollowers: artist.totalFollowers ?? 0,
-        total_followers: artist.totalFollowers ?? 0,
-        monthlyListeners: artist.monthlyListeners ?? 0,
-        monthly_listeners: artist.monthlyListeners ?? 0,
-      };
-    });
+    // Usar serializador compartido para evitar duplicación
+    return artists.map((artist) => ArtistSerializer.serializeLite(artist));
   }
 
   @Get('playlists')
@@ -83,7 +60,10 @@ export class PublicFeaturedController {
     if (limit < 1 || limit > 100) {
       throw new BadRequestException('El límite debe estar entre 1 y 100');
     }
-    return this.featuredService.getFeaturedPlaylists(limit);
+    // Obtener las entidades con todas las relaciones cargadas y contadores actualizados
+    const playlists = await this.featuredService.getFeaturedPlaylists(limit);
+    // Mapear las entidades a DTOs para devolver en formato camelCase con todos los datos correctos
+    return PlaylistMapper.toResponseDtoArray(playlists);
   }
 }
 

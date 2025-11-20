@@ -58,13 +58,11 @@ export class FeaturedService {
     // Validar y limitar el límite para evitar consultas costosas
     const validLimit = Math.min(Math.max(1, limit), 100);
     
-    // Solo artistas destacados que tengan foto de perfil y portada
+    // Artistas destacados (sin requerir imágenes, la app móvil puede manejar imágenes nulas)
     return this.artistRepository
       .createQueryBuilder('artist')
       .leftJoinAndSelect('artist.user', 'user')
       .where('artist.isFeatured = :isFeatured', { isFeatured: true })
-      // Aceptar artistas que tengan al menos UNA imagen (perfil o portada)
-      .andWhere('(artist.profilePhotoUrl IS NOT NULL OR artist.coverPhotoUrl IS NOT NULL)')
       .orderBy('artist.updatedAt', 'DESC')
       .limit(validLimit)
       .getMany();
@@ -74,12 +72,21 @@ export class FeaturedService {
     // Validar y limitar el límite para evitar consultas costosas
     const validLimit = Math.min(Math.max(1, limit), 100);
     
-    return this.playlistRepository.find({
+    // Cargar todas las relaciones necesarias para mapear correctamente a DTOs
+    const playlists = await this.playlistRepository.find({
       where: { isFeatured: true, visibility: PlaylistVisibility.PUBLIC },
-      relations: ['user'],
+      relations: ['user', 'playlistSongs', 'playlistSongs.song', 'playlistSongs.song.artist'],
       order: { createdAt: 'DESC' },
       take: validLimit,
     });
+
+    // Actualizar contadores para asegurar que los datos sean precisos
+    playlists.forEach(playlist => {
+      playlist.updateTrackCount();
+      playlist.updateTotalDuration();
+    });
+
+    return playlists;
   }
 
   async setSongFeatured(songId: string, featured: boolean) {
@@ -105,16 +112,15 @@ export class FeaturedService {
   }
 
   async setArtistFeatured(artistId: string, featured: boolean) {
-    // Si se quiere destacar, validar que tenga imágenes cargadas
-    if (featured) {
-      const toValidate = await this.artistRepository.findOne({ where: { id: artistId } });
-      if (!toValidate) {
-        throw new NotFoundException('Artista no encontrado');
-      }
-      if (!toValidate.profilePhotoUrl || !toValidate.coverPhotoUrl) {
-        throw new BadRequestException('Para destacar un artista, debe tener foto de perfil y portada cargadas');
-      }
+    // Validar que el artista existe
+    const toValidate = await this.artistRepository.findOne({ where: { id: artistId } });
+    if (!toValidate) {
+      throw new NotFoundException('Artista no encontrado');
     }
+    
+    // Ya no se requiere que tenga imágenes para ser destacado
+    // La app móvil puede manejar artistas sin imágenes mostrando placeholders
+    
     // Usar update() para mejor rendimiento (una sola query)
     const updateResult = await this.artistRepository.update(
       { id: artistId },

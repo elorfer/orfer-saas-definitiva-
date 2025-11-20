@@ -312,6 +312,13 @@ export class PlaylistsService {
     // Permitir a cualquier usuario autenticado destacar/desdestacar
     // En el futuro, solo admin debería poder hacer esto
     playlist.isFeatured = !playlist.isFeatured;
+    
+    // Si se está destacando la playlist, asegurar que sea pública
+    // Las playlists destacadas deben ser públicas para aparecer en el endpoint público
+    if (playlist.isFeatured && playlist.visibility !== PlaylistVisibility.PUBLIC) {
+      playlist.visibility = PlaylistVisibility.PUBLIC;
+    }
+    
     await this.playlistRepository.save(playlist);
     
     // Retornar como DTO (admin puede ver todas las playlists)

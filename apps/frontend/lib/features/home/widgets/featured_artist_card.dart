@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/artist_model.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/url_normalizer.dart';
+import '../../../core/widgets/image_placeholder.dart';
 
 class FeaturedArtistCard extends StatelessWidget {
   final FeaturedArtist featuredArtist;
@@ -30,13 +32,13 @@ class FeaturedArtistCard extends StatelessWidget {
             Container(
               width: 140,
               height: 140,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Color(0x1A000000), // Colors.black.withValues(alpha: 0.1) como const
                     blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
@@ -80,9 +82,9 @@ class FeaturedArtistCard extends StatelessWidget {
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                decoration: const BoxDecoration(
+                  color: Color(0x33FF9800), // Colors.orange.withValues(alpha: 0.2) como const
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
                 ),
                 child: Text(
                   featuredArtist.featuredReason!,
@@ -102,12 +104,16 @@ class FeaturedArtistCard extends StatelessWidget {
   }
 
   Widget _buildImageOrPlaceholder() {
-    final url = featuredArtist.imageUrl 
+    final rawUrl = featuredArtist.imageUrl 
         ?? featuredArtist.artist.profilePhotoUrl 
         ?? featuredArtist.artist.coverPhotoUrl;
-    if (url != null && url.isNotEmpty) {
+    
+    // Normalizar la URL para logging (NetworkImageWithFallback también normaliza, pero queremos ver la URL original)
+    final normalizedUrl = UrlNormalizer.normalizeImageUrl(rawUrl, enableLogging: true);
+    
+    if (normalizedUrl != null && normalizedUrl.isNotEmpty) {
       return CachedNetworkImage(
-        imageUrl: url,
+        imageUrl: normalizedUrl,
         fit: BoxFit.cover,
         memCacheWidth: 280, // 2x para pantallas de alta densidad
         memCacheHeight: 280,
@@ -116,58 +122,22 @@ class FeaturedArtistCard extends StatelessWidget {
         fadeInDuration: const Duration(milliseconds: 200),
         fadeOutDuration: const Duration(milliseconds: 100),
         errorWidget: (context, url, error) {
-          // Si falla, intentar con el placeholder
-          return _placeholder();
+          // Log del error para debugging
+          debugPrint('[FeaturedArtistCard] Error cargando imagen: $url - Error: $error');
+          debugPrint('[FeaturedArtistCard] URL original: $rawUrl');
+          return const ImagePlaceholder.artist();
         },
         placeholder: (context, url) {
-          return _loadingShimmer();
+          return const ImagePlaceholder.shimmer();
         },
         // Key estable para evitar reconstrucciones innecesarias
-        key: ValueKey('artist_image_${featuredArtist.artist.id}_$url'),
+        key: ValueKey('artist_image_${featuredArtist.artist.id}_$normalizedUrl'),
       );
     }
-    return _placeholder();
-  }
-
-  Widget _placeholder() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF2740B),
-            Color(0xFFE35A01),
-          ],
-        ),
-      ),
-      child: const Icon(
-        Icons.person,
-        color: Colors.white,
-        size: 40,
-      ),
-    );
-  }
-
-  Widget _loadingShimmer() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF667eea),
-            Color(0xFF764ba2),
-          ],
-        ),
-      ),
-      child: const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2,
-        ),
-      ),
-    );
+    
+    // Si no hay URL, log para debugging
+    debugPrint('[FeaturedArtistCard] No hay URL de imagen para artista ${featuredArtist.artist.id}');
+    return const ImagePlaceholder.artist();
   }
 
 }

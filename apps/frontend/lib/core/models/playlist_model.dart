@@ -124,6 +124,14 @@ class Playlist {
         .toList();
   }
 
+  /// Obtener el número total de canciones (usar totalTracks si está disponible, sino contar las canciones)
+  int get totalSongs {
+    if (totalTracks != null && totalTracks! > 0) {
+      return totalTracks!;
+    }
+    return songs.length;
+  }
+
   String get durationFormatted {
     if (totalDuration == null || totalDuration! <= 0) return '0m';
     

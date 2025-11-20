@@ -96,19 +96,29 @@ export class Playlist {
   }
 
   updateTrackCount(): void {
-    this.totalTracks = this.playlistSongs?.length || 0;
+    // Filtrar solo canciones válidas y publicadas
+    const validSongs = this.playlistSongs?.filter(
+      (ps) => ps.song != null && ps.song.status === 'published'
+    ) || [];
+    this.totalTracks = validSongs.length;
   }
 
   updateTotalDuration(): void {
-    this.totalDuration = this.playlistSongs?.reduce(
-      (total, playlistSong) => total + playlistSong.song.duration,
+    // Filtrar solo canciones válidas y publicadas para calcular la duración
+    const validSongs = this.playlistSongs?.filter(
+      (ps) => ps.song != null && ps.song.status === 'published' && ps.song.duration != null
+    ) || [];
+    
+    this.totalDuration = validSongs.reduce(
+      (total, playlistSong) => total + (playlistSong.song?.duration || 0),
       0
-    ) || 0;
+    );
   }
 
   getSongs(): any[] {
     return this.playlistSongs
-      ?.sort((a, b) => a.position - b.position)
+      ?.filter((ps) => ps.song != null && ps.song.status === 'published')
+      .sort((a, b) => a.position - b.position)
       .map(playlistSong => playlistSong.song) || [];
   }
 }

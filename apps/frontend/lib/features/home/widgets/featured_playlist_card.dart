@@ -29,13 +29,13 @@ class FeaturedPlaylistCard extends StatelessWidget {
             Container(
               width: 160,
               height: 160,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(12)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: Color(0x33000000), // Colors.black.withValues(alpha: 0.2) como const
                     blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
@@ -56,7 +56,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
             
             // Nombre de la playlist
             Text(
-              playlist.name ?? 'Playlist sin nombre',
+              (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -115,9 +115,9 @@ class FeaturedPlaylistCard extends StatelessWidget {
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                decoration: const BoxDecoration(
+                  color: Color(0x33FF9800), // Colors.orange.withValues(alpha: 0.2) como const
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

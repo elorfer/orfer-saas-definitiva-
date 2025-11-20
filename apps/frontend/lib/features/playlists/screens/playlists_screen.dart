@@ -380,7 +380,7 @@ class _PlaylistCard extends StatelessWidget {
           
           // Nombre de la playlist
           Text(
-            playlist.name ?? 'Playlist sin nombre',
+            (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,

@@ -5,20 +5,31 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user_model.dart';
 import '../models/auth_models.dart';
 import '../config/api_config.dart';
+import '../config/app_config.dart';
 import '../utils/logger.dart';
+import '../utils/retry_handler.dart';
+import '../utils/error_handler.dart';
+import 'http_client_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
 
-  late final Dio _dio;
-  late final FlutterSecureStorage _secureStorage;
+  final HttpClientService _httpClient = HttpClientService();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device,
+    ),
+  );
 
   // Claves para el almacenamiento seguro
-  static const String _tokenKey = 'auth_token';
-  static const String _userKey = 'user_data';
-  static const String _refreshTokenKey = 'refresh_token';
+  static const String _tokenKey = AppConfig.tokenKey;
+  static const String _userKey = AppConfig.userKey;
+  static const String _refreshTokenKey = AppConfig.refreshTokenKey;
 
   // Estado de autenticación
   User? _currentUser;
@@ -31,27 +42,26 @@ class AuthService {
   bool get isAuthenticated => _currentUser != null && _accessToken != null;
   bool get isInitialized => _isInitialized;
 
+  /// Obtener instancia de Dio del HttpClientService
+  Dio get _dio => _httpClient.dio;
+
   /// Inicializar el servicio de autenticación
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      _dio = Dio();
-      _secureStorage = const FlutterSecureStorage(
-        aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
-        ),
-        iOptions: IOSOptions(
-          accessibility: KeychainAccessibility.first_unlock_this_device,
-        ),
-      );
-
-      // Configurar interceptores
-      _setupInterceptors();
+      // Asegurar que HttpClientService esté inicializado
+      if (!_httpClient.isInitialized) {
+        await _httpClient.initialize();
+      }
 
       // Cargar datos de autenticación guardados
       try {
         await _loadStoredAuthData();
+        // Actualizar token en HttpClientService si existe
+        if (_accessToken != null) {
+          await _httpClient.updateAuthToken(_accessToken);
+        }
       } catch (e) {
         AppLogger.error('Error cargando datos guardados', e);
         // Continuar sin datos guardados
@@ -62,44 +72,6 @@ class AuthService {
       AppLogger.error('Error inicializando AuthService', e);
       _isInitialized = true; // Marcar como inicializado de todos modos
     }
-  }
-
-  /// Configurar interceptores de Dio
-  void _setupInterceptors() {
-    // Interceptor de autenticación
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          // Agregar token de autorización si existe
-          if (_accessToken != null) {
-            options.headers['Authorization'] = 'Bearer $_accessToken';
-          }
-          handler.next(options);
-        },
-        onError: (error, handler) async {
-          // Manejar errores de autenticación
-          if (error.response?.statusCode == 401) {
-            await _handleUnauthorized();
-          }
-          handler.next(error);
-        },
-      ),
-    );
-
-    // Interceptor de logging (solo en debug)
-    _dio.interceptors.add(
-      LogInterceptor(
-        requestBody: false,
-        responseBody: false,
-        logPrint: (object) {
-          // Solo loggear en modo debug
-          if (const bool.fromEnvironment('dart.vm.product') == false) {
-            // Usar debugPrint en lugar de print
-            AppLogger.network('Dio: $object');
-          }
-        },
-      ),
-    );
   }
 
   /// Cargar datos de autenticación guardados
@@ -121,12 +93,9 @@ class AuthService {
   /// Verificar conectividad
   Future<bool> _checkConnectivity() async {
     try {
-      AppLogger.debug('Verificando conectividad a: ${ApiConfig.baseUrl}');
       
-      // Crear una instancia temporal de Dio con timeouts más largos
-      final tempDio = Dio();
-      tempDio.options.connectTimeout = const Duration(seconds: 15);
-      tempDio.options.receiveTimeout = const Duration(seconds: 15);
+      // Usar instancia temporal de Dio del HttpClientService
+      final tempDio = _httpClient.createTemporaryDio();
       
       // Intentar hacer una petición simple al backend para verificar conectividad
       // baseUrl ya incluye /api/v1, así que solo agregamos /health
@@ -134,29 +103,25 @@ class AuthService {
           ? '${ApiConfig.baseUrl}health'
           : '${ApiConfig.baseUrl}/health';
       
-      AppLogger.network('Intentando conectar a: $healthUrl');
       final response = await tempDio.get(healthUrl);
-      AppLogger.success('Conectividad OK: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
-      AppLogger.error('Error de conectividad', e);
-      AppLogger.debug('URL intentada: ${ApiConfig.baseUrl}');
+      // Error de conectividad silenciado - se intentará de todas formas
       
       // Si falla, intentar verificar conectividad de red básica
       try {
-        final tempDio = Dio();
-        tempDio.options.connectTimeout = const Duration(seconds: 15);
-        tempDio.options.receiveTimeout = const Duration(seconds: 15);
+        final tempDio = _httpClient.createTemporaryDio();
         
         // Intentar con un endpoint que siempre existe
         final testUrl = ApiConfig.baseUrl.endsWith('/')
             ? '${ApiConfig.baseUrl}health'
             : '${ApiConfig.baseUrl}/health';
-        final response = await tempDio.get(testUrl, options: Options(validateStatus: (status) => status! < 500));
-        AppLogger.success('Conectividad OK (fallback): ${response.statusCode}');
+        await tempDio.get(
+          testUrl,
+          options: Options(validateStatus: (status) => status! < 500),
+        );
         return true; // Si responde (aunque sea con error), hay conectividad
       } catch (e2) {
-        AppLogger.error('Error de conectividad (fallback)', e2);
         return false;
       }
     }
@@ -170,19 +135,21 @@ class AuthService {
     // Verificar conectividad pero no bloquear si falla - intentar directamente
     final hasConnectivity = await _checkConnectivity();
     if (!hasConnectivity) {
-      AppLogger.warning('Verificación de conectividad falló, pero intentando login de todas formas...');
       // No lanzar error aquí, intentar el login directamente
     }
 
     try {
-      final response = await _dio.post(
-        '${ApiConfig.baseUrl}${ApiConfig.loginEndpoint}',
-        data: LoginRequest(
-          email: email,
-          password: password,
-        ).toJson(),
-        options: Options(
-          headers: ApiConfig.defaultHeaders,
+      final response = await RetryHandler.retryCritical(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.post(
+          '${ApiConfig.baseUrl}${ApiConfig.loginEndpoint}',
+          data: LoginRequest(
+            email: email,
+            password: password,
+          ).toJson(),
+          options: Options(
+            headers: ApiConfig.defaultHeaders,
+          ),
         ),
       );
 
@@ -194,9 +161,17 @@ class AuthService {
         throw AuthException('Error en el servidor: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      final error = ErrorHandler.handleDioError(e, context: 'AuthService.login');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     } catch (e) {
-      throw AuthException('Error inesperado: $e');
+      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.login');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     }
   }
 
@@ -213,29 +188,28 @@ class AuthService {
     // Verificar conectividad pero no bloquear si falla - intentar directamente
     final hasConnectivity = await _checkConnectivity();
     if (!hasConnectivity) {
-      AppLogger.warning('Verificación de conectividad falló, pero intentando registro de todas formas...');
       // No lanzar error aquí, intentar el registro directamente
     }
 
     try {
       final url = '${ApiConfig.baseUrl}${ApiConfig.registerEndpoint}';
-      AppLogger.auth('Intentando registrar en: $url');
-      AppLogger.debug('Base URL completa: ${ApiConfig.baseUrl}');
-      AppLogger.debug('Endpoint: ${ApiConfig.registerEndpoint}');
       
-      final response = await _dio.post(
-        url,
-        data: RegisterRequest(
-          email: email,
-          username: username,
-          password: password,
-          firstName: firstName,
-          lastName: lastName,
-          role: role,
-          stageName: stageName,
-        ).toJson(),
-        options: Options(
-          headers: ApiConfig.defaultHeaders,
+      final response = await RetryHandler.retryCritical(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.post(
+          url,
+          data: RegisterRequest(
+            email: email,
+            username: username,
+            password: password,
+            firstName: firstName,
+            lastName: lastName,
+            role: role,
+            stageName: stageName,
+          ).toJson(),
+          options: Options(
+            headers: ApiConfig.defaultHeaders,
+          ),
         ),
       );
 
@@ -318,16 +292,23 @@ class AuthService {
           return authResponse;
         } catch (parseError, stackTrace) {
           AppLogger.error('Error parseando JSON', parseError, stackTrace);
-          AppLogger.debug('Datos recibidos: ${response.data}');
           throw AuthException('Error parseando respuesta del servidor: $parseError');
         }
       } else {
         throw AuthException('Error en el servidor: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      final error = ErrorHandler.handleDioError(e, context: 'AuthService.register');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     } catch (e) {
-      throw AuthException('Error inesperado: $e');
+      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.register');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     }
   }
 
@@ -347,14 +328,17 @@ class AuthService {
     }
 
     try {
-      final response = await _dio.post(
-        '${ApiConfig.baseUrl}${ApiConfig.changePasswordEndpoint}',
-        data: ChangePasswordRequest(
-          oldPassword: oldPassword,
-          newPassword: newPassword,
-        ).toJson(),
-        options: Options(
-          headers: ApiConfig.defaultHeaders,
+      final response = await RetryHandler.retryCritical(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.post(
+          '${ApiConfig.baseUrl}${ApiConfig.changePasswordEndpoint}',
+          data: ChangePasswordRequest(
+            oldPassword: oldPassword,
+            newPassword: newPassword,
+          ).toJson(),
+          options: Options(
+            headers: ApiConfig.defaultHeaders,
+          ),
         ),
       );
 
@@ -362,9 +346,17 @@ class AuthService {
         throw AuthException('Error al cambiar contraseña: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      final error = ErrorHandler.handleDioError(e, context: 'AuthService.changePassword');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     } catch (e) {
-      throw AuthException('Error inesperado: $e');
+      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.changePassword');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     }
   }
 
@@ -377,10 +369,13 @@ class AuthService {
     }
 
     try {
-      final response = await _dio.post(
-        '${ApiConfig.baseUrl}${ApiConfig.refreshTokenEndpoint}',
-        options: Options(
-          headers: ApiConfig.defaultHeaders,
+      final response = await RetryHandler.retryCritical(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.post(
+          '${ApiConfig.baseUrl}${ApiConfig.refreshTokenEndpoint}',
+          options: Options(
+            headers: ApiConfig.defaultHeaders,
+          ),
         ),
       );
 
@@ -388,13 +383,24 @@ class AuthService {
         final refreshResponse = RefreshTokenResponse.fromJson(response.data);
         _accessToken = refreshResponse.accessToken;
         await _secureStorage.write(key: _tokenKey, value: _accessToken);
+        
+        // Actualizar token en HttpClientService
+        await _httpClient.updateAuthToken(_accessToken);
       } else {
         throw AuthException('Error al refrescar token: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      final error = ErrorHandler.handleDioError(e, context: 'AuthService.refreshToken');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     } catch (e) {
-      throw AuthException('Error inesperado: $e');
+      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.refreshToken');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     }
   }
 
@@ -411,10 +417,13 @@ class AuthService {
     }
 
     try {
-      final response = await _dio.get(
-        '${ApiConfig.baseUrl}${ApiConfig.profileEndpoint}',
-        options: Options(
-          headers: ApiConfig.defaultHeaders,
+      final response = await RetryHandler.retryDataLoad(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.get(
+          '${ApiConfig.baseUrl}${ApiConfig.profileEndpoint}',
+          options: Options(
+            headers: ApiConfig.defaultHeaders,
+          ),
         ),
       );
 
@@ -427,9 +436,17 @@ class AuthService {
         throw AuthException('Error al obtener perfil: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      throw _handleDioError(e);
+      final error = ErrorHandler.handleDioError(e, context: 'AuthService.getProfile');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     } catch (e) {
-      throw AuthException('Error inesperado: $e');
+      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.getProfile');
+      if (error is AuthException) {
+        throw error;
+      }
+      throw AuthException(error.message, code: error.code);
     }
   }
 
@@ -445,6 +462,9 @@ class AuthService {
 
     await _secureStorage.write(key: _tokenKey, value: _accessToken);
     await _secureStorage.write(key: _userKey, value: jsonEncode(_currentUser!.toJson()));
+    
+    // Actualizar token en HttpClientService para que se use en futuras peticiones
+    await _httpClient.updateAuthToken(_accessToken);
   }
 
   /// Limpiar datos de autenticación
@@ -455,85 +475,9 @@ class AuthService {
     await _secureStorage.delete(key: _tokenKey);
     await _secureStorage.delete(key: _userKey);
     await _secureStorage.delete(key: _refreshTokenKey);
-  }
-
-  /// Manejar error no autorizado
-  Future<void> _handleUnauthorized() async {
-    await _clearAuthData();
-    // Aquí podrías emitir un evento o notificar a la UI
-  }
-
-  /// Manejar errores de Dio
-  AuthException _handleDioError(DioException e) {
-    // Log detallado del error
-    AppLogger.error('Error Dio: ${e.type}');
-    AppLogger.error('Mensaje: ${e.message}');
-    AppLogger.error('URL: ${e.requestOptions.uri}');
-    AppLogger.error('Response: ${e.response?.statusCode} - ${e.response?.data}');
     
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return AuthException('Tiempo de espera agotado. Verifica tu conexión a internet.');
-      
-      case DioExceptionType.connectionError:
-        // Verificar si es un problema de DNS o conectividad
-        AppLogger.error('Error de conexión: ${e.message}');
-        if (e.message?.contains('Failed host lookup') == true || 
-            e.message?.contains('Unable to resolve host') == true) {
-          return AuthException('No se puede resolver el servidor. Verifica tu conexión a internet.');
-        } else if (e.message?.contains('Connection refused') == true) {
-          return AuthException('El servidor rechazó la conexión. Verifica que el backend esté ejecutándose.');
-        } else if (e.message?.contains('Network is unreachable') == true) {
-          return AuthException('Red no disponible. Verifica tu conexión a internet.');
-        } else {
-          return AuthException('Error de conexión: ${e.message ?? "Desconocido"}. Verifica tu internet.');
-        }
-      
-      case DioExceptionType.badResponse:
-        final statusCode = e.response?.statusCode;
-        final data = e.response?.data;
-        
-        if (statusCode == 401) {
-          return AuthException('Credenciales inválidas');
-        } else if (statusCode == 409) {
-          final message = data?['message'] ?? 'Conflicto en los datos';
-          return AuthException(message);
-        } else if (statusCode == 400) {
-          final message = data?['message'] ?? 'Datos inválidos';
-          return AuthException(message);
-        } else if (statusCode == 500) {
-          return AuthException('Error interno del servidor');
-        } else {
-          return AuthException('Error del servidor: $statusCode');
-        }
-      
-      case DioExceptionType.cancel:
-        return AuthException('Operación cancelada');
-      
-      case DioExceptionType.unknown:
-      default:
-        // Verificar si es un problema de conectividad específico
-        if (e.message?.contains('Failed host lookup') == true) {
-          return AuthException('No se puede conectar al servidor. Verifica tu internet y que el backend esté ejecutándose.');
-        } else if (e.message?.contains('Connection refused') == true) {
-          return AuthException('El servidor no está disponible. Verifica que el backend esté ejecutándose en el puerto 3000.');
-        } else {
-          return AuthException('Error desconocido: ${e.message}');
-        }
-    }
+    // Limpiar token en HttpClientService
+    await _httpClient.clearAuthToken();
   }
-}
 
-/// Excepción personalizada para errores de autenticación
-class AuthException implements Exception {
-  final String message;
-  final String? code;
-  final Map<String, dynamic>? details;
-
-  const AuthException(this.message, {this.code, this.details});
-
-  @override
-  String toString() => 'AuthException: $message';
 }

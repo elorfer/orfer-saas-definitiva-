@@ -30,7 +30,7 @@ class FeaturedArtistsSection extends ConsumerWidget {
       children: [
         // Título de la sección
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -74,7 +74,7 @@ class FeaturedArtistsSection extends ConsumerWidget {
             },
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.only(left: 24, right: 8),
               cacheExtent: 800, // Aumentado a 800px para scroll más rápido y fluido
               physics: const FastScrollPhysics(), // Scroll más rápido y fluido
               itemCount: featuredArtists.length,
@@ -135,27 +135,27 @@ class FeaturedArtistsSection extends ConsumerWidget {
                         Container(
                           width: 140,
                           height: 140,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
                           ),
                         ),
                         const SizedBox(height: 12),
                         Container(
                           height: 16,
                           width: 100,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           height: 12,
                           width: 80,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
                           ),
                         ),
                       ],
@@ -188,7 +188,7 @@ class FeaturedArtistsSection extends ConsumerWidget {
           height: 200,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
           ),
           child: Center(
             child: Column(

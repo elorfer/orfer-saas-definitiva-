@@ -528,6 +528,8 @@ export class SongsService {
     genreId?: string,
     search?: string,
   ): Promise<PaginatedSongsResponseDto> {
+    this.logger.log(`🔍 Buscando canciones publicadas - page: ${page}, limit: ${limit}, artistId: ${artistId || 'ninguno'}, featured: ${featured}, genreId: ${genreId || 'ninguno'}, search: ${search || 'ninguno'}`);
+    
     const queryBuilder = this.songRepository
       .createQueryBuilder('song')
       .leftJoinAndSelect('song.artist', 'artist')
@@ -542,7 +544,22 @@ export class SongsService {
     }
 
     if (artistId) {
+      // Validar que el artista existe
+      const artist = await this.artistRepository.findOne({ where: { id: artistId } });
+      if (!artist) {
+        this.logger.warn(`⚠️ Artista no encontrado con ID: ${artistId}`);
+      } else {
+        this.logger.log(`✅ Artista encontrado: ${artist.stageName || artist.name} (ID: ${artistId})`);
+      }
+      
       queryBuilder.andWhere('song.artistId = :artistId', { artistId });
+      this.logger.log(`✅ Filtro por artista aplicado: ${artistId}`);
+      
+      // Log adicional: contar canciones antes de aplicar filtros
+      const countBeforeFilter = await this.songRepository.count({
+        where: { artistId, status: SongStatus.PUBLISHED }
+      });
+      this.logger.log(`📊 Total de canciones publicadas para este artista en BD: ${countBeforeFilter}`);
     }
 
     if (genreId) {
@@ -564,7 +581,27 @@ export class SongsService {
     const skip = (page - 1) * limit;
     queryBuilder.skip(skip).take(limit);
 
+    // Log del SQL generado para debugging
+    const sql = queryBuilder.getSql();
+    this.logger.log(`🔍 SQL Query: ${sql}`);
+    this.logger.log(`🔍 Parámetros: ${JSON.stringify(queryBuilder.getParameters())}`);
+    
     const [songs, total] = await queryBuilder.getManyAndCount();
+    
+    this.logger.log(`✅ Encontradas ${songs.length} canciones (total: ${total}) para artista ${artistId || 'todos'}`);
+    
+    // Si hay canciones pero no se devuelven, log adicional
+    if (artistId && songs.length === 0 && total === 0) {
+      // Verificar si hay canciones con ese artistId pero con otro estado
+      const allSongsForArtist = await this.songRepository.find({
+        where: { artistId },
+        select: ['id', 'title', 'status', 'artistId']
+      });
+      this.logger.warn(`⚠️ Hay ${allSongsForArtist.length} canciones para este artista, pero ninguna está publicada:`);
+      allSongsForArtist.forEach(song => {
+        this.logger.warn(`  - "${song.title}": status=${song.status}, artistId=${song.artistId}`);
+      });
+    }
 
     const totalPages = Math.ceil(total / limit);
 

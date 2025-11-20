@@ -61,13 +61,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           backgroundColor: const Color(0xFF667eea),
           child: SingleChildScrollView(
             physics: const FastScrollPhysics(), // Scroll más rápido y fluido
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header con avatar y bienvenida
-                Row(
-                  children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Row(
+                    children: [
                     // Avatar con inicial
                     Container(
                       width: 56,
@@ -130,6 +132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                   ],
+                  ),
                 ),
 
                 const SizedBox(height: 32),

@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/navigation/app_router.dart';
 import 'core/services/http_cache_service.dart';
+import 'core/services/http_client_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Inicializar caché HTTP para mejorar rendimiento
   await HttpCacheService.initialize();
+  
+  // Inicializar HttpClientService (debe ser antes que otros servicios)
+  await HttpClientService().initialize();
   
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(

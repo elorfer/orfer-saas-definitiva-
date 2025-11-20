@@ -57,10 +57,15 @@ export const authOptions: NextAuthOptions = {
               return null;
             }
 
+            // El backend devuelve first_name y last_name (snake_case)
+            const firstName = user.first_name || user.firstName || '';
+            const lastName = user.last_name || user.lastName || '';
+            const fullName = [firstName, lastName].filter(Boolean).join(' ') || user.username || user.email;
+
             return {
               id: user.id,
               email: user.email,
-              name: `${user.firstName} ${user.lastName}`,
+              name: fullName,
               role: user.role,
               accessToken: access_token,
             };

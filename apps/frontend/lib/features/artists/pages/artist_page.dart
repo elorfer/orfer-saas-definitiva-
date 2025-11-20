@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/models/song_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../artists/services/artists_api.dart';
 import '../models/artist.dart';
 import '../../../core/utils/url_normalizer.dart';
+import '../../../core/widgets/network_image_with_fallback.dart';
 
 class ArtistPage extends ConsumerStatefulWidget {
   final ArtistLite artist;
@@ -17,6 +19,7 @@ class ArtistPage extends ConsumerStatefulWidget {
 
 class _ArtistPageState extends ConsumerState<ArtistPage> {
   late final ArtistsApi _api;
+  final _logger = Logger();
   Map<String, dynamic>? _details;
   List<Song> _songs = [];
   bool _loading = true;
@@ -31,14 +34,21 @@ class _ArtistPageState extends ConsumerState<ArtistPage> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      _logger.d('🔍 Cargando artista con ID: ${widget.artist.id}');
       final details = await _api.getById(widget.artist.id);
+      _logger.d('✅ Detalles del artista obtenidos: ${details['id']} - ${details['name'] ?? details['stageName']}');
+      
+      _logger.d('🔍 Buscando canciones para artista: ${widget.artist.id}');
       final songsRaw = await _api.getSongsByArtist(widget.artist.id, limit: 50);
+      _logger.d('✅ Canciones obtenidas: ${songsRaw.length}');
+      
       final songs = songsRaw.map((e) => Song.fromJson(e)).toList();
       setState(() {
         _details = details;
         _songs = songs;
       });
-    } catch (_) {
+    } catch (e, s) {
+      _logger.e('❌ Error al cargar artista', error: e, stackTrace: s);
       setState(() {
         _details = null;
         _songs = [];
@@ -86,27 +96,10 @@ class _ArtistPageState extends ConsumerState<ArtistPage> {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      coverUrl != null && coverUrl.isNotEmpty
-                          ? Image.network(
-                              coverUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey.shade300,
-                                  child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  color: Colors.grey.shade300,
-                                  child: const Center(
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(color: Colors.grey.shade300),
+                      NetworkImageWithFallback.large(
+                        imageUrl: coverUrl,
+                        fit: BoxFit.cover,
+                      ),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -145,30 +138,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage> {
                             ],
                           ),
                           child: ClipOval(
-                            child: (profileUrl != null && profileUrl.isNotEmpty)
-                                ? Image.network(
-                                    profileUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey.shade300,
-                                        child: const Icon(Icons.person, color: Colors.grey),
-                                      );
-                                    },
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Container(
-                                        color: Colors.grey.shade300,
-                                        child: const Center(
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : Container(
-                                    color: Colors.grey.shade300,
-                                    child: const Icon(Icons.person, color: Colors.grey),
-                                  ),
+                            child: NetworkImageWithFallback.small(
+                              imageUrl: profileUrl,
+                              fit: BoxFit.cover,
+                              width: 72,
+                              height: 72,
+                            ),
                           ),
                         ),
                       ),
@@ -339,42 +314,13 @@ class _ArtistPageState extends ConsumerState<ArtistPage> {
           const SizedBox(width: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: (songCover != null && songCover.isNotEmpty)
-                ? Image.network(
-                    songCover,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 40,
-                        height: 40,
-                        color: Colors.grey.shade300,
-                        child: const Icon(Icons.music_note, size: 20, color: Colors.grey),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        width: 40,
-                        height: 40,
-                        color: Colors.grey.shade300,
-                        child: const Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                : Container(
-                    width: 40,
-                    height: 40,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.music_note, size: 20, color: Colors.grey),
-                  ),
+            child: NetworkImageWithFallback.medium(
+              imageUrl: songCover,
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              borderRadius: 8,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

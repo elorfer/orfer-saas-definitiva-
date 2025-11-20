@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/user_model.dart';
+import '../../../core/widgets/network_image_with_fallback.dart';
 
 class UserProfileCard extends StatelessWidget {
   final User user;
@@ -38,26 +39,19 @@ class UserProfileCard extends StatelessWidget {
                   color: const Color(0xFF667eea).withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(30),
                 ),
-                child: user.avatarUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: Image.network(
-                          user.avatarUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.person,
-                              size: 30,
-                              color: const Color(0xFF667eea),
-                            );
-                          },
-                        ),
-                      )
-                    : Icon(
-                        Icons.person,
-                        size: 30,
-                        color: const Color(0xFF667eea),
-                      ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(30),
+                  child: NetworkImageWithFallback.small(
+                    imageUrl: user.avatarUrl,
+                    fit: BoxFit.cover,
+                    width: 60,
+                    height: 60,
+                    borderRadius: 30,
+                    errorIcon: Icons.person,
+                    iconColor: const Color(0xFF667eea),
+                    backgroundColor: const Color(0xFF667eea).withValues(alpha: 0.1),
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               // Información del usuario

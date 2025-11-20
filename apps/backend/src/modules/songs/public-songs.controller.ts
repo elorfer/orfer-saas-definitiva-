@@ -6,6 +6,7 @@ import {
   ParseIntPipe,
   ParseBoolPipe,
   DefaultValuePipe,
+  Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SongsService } from './songs.service';
@@ -15,6 +16,8 @@ import { PaginatedSongsResponseDto, HomeFeedResponseDto, SongResponseDto } from 
 @ApiTags('public-songs')
 @Controller('public/songs')
 export class PublicSongsController {
+  private readonly logger = new Logger(PublicSongsController.name);
+  
   constructor(private readonly songsService: SongsService) {}
 
   /**
@@ -46,6 +49,9 @@ export class PublicSongsController {
     @Query('search') search?: string,
   ): Promise<PaginatedSongsResponseDto> {
     const featuredBool = featured !== undefined ? featured === 'true' : undefined;
+    
+    // Log para debugging
+    this.logger.log(`📥 Request recibido - artistId: ${artistId || 'ninguno'}, page: ${page}, limit: ${limit}`);
     
     return this.songsService.getPublishedSongs(
       page,

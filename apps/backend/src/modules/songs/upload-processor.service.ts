@@ -173,6 +173,10 @@ export class UploadProcessorService {
 
       // Paso 5: Crear registro de canción (dentro de transacción)
       this.logger.log('💾 Creando registro de canción...');
+      
+      // El artista ya fue validado en el Paso 3, usar esa referencia
+      this.logger.log(`📝 Creando canción para artista: ${artist.stageName || artist.name} (ID: ${data.artistId})`);
+      
       const song = queryRunner.manager.create(Song, {
         title: data.title,
         fileUrl: audioUrl,
@@ -189,9 +193,25 @@ export class UploadProcessorService {
         totalStreams: 0,
         totalLikes: 0,
       });
+      
+      this.logger.log(`📝 Canción creada con artistId: ${data.artistId}, status: ${song.status}`);
 
       const savedSong = await queryRunner.manager.save(Song, song);
       this.logger.log(`✅ Canción creada: ${savedSong.id}`);
+      this.logger.log(`📊 Detalles de la canción guardada:`);
+      this.logger.log(`   - Título: ${savedSong.title}`);
+      this.logger.log(`   - ArtistId: ${savedSong.artistId}`);
+      this.logger.log(`   - Status: ${savedSong.status}`);
+      
+      // Verificar que la canción se puede encontrar con ese artistId
+      const verification = await queryRunner.manager.findOne(Song, {
+        where: { id: savedSong.id, artistId: savedSong.artistId }
+      });
+      if (verification) {
+        this.logger.log(`✅ Verificación: Canción encontrada correctamente con artistId ${savedSong.artistId}`);
+      } else {
+        this.logger.error(`❌ ERROR: No se pudo encontrar la canción con artistId ${savedSong.artistId}`);
+      }
 
       // Paso 6: Actualizar registro de upload (dentro de transacción)
       await queryRunner.manager.update(
@@ -282,6 +302,7 @@ export class UploadProcessorService {
     return fs.readFileSync(filePath);
   }
 }
+
 
 
 

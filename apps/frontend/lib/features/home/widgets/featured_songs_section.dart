@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/home_provider.dart';
+import '../../../core/providers/audio_player_provider.dart';
 import '../../../core/models/song_model.dart';
 import 'featured_song_card.dart';
 
@@ -26,7 +28,7 @@ class FeaturedSongsSection extends ConsumerWidget {
       children: [
         // Título de la sección
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -41,7 +43,8 @@ class FeaturedSongsSection extends ConsumerWidget {
               ),
               TextButton(
                 onPressed: () {
-                  // TODO: Navegar a vista de todas las canciones
+                  // Navegar a búsqueda para ver todas las canciones destacadas
+                  context.push('/search');
                 },
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white.withValues(alpha: 0.8),
@@ -77,7 +80,7 @@ class FeaturedSongsSection extends ConsumerWidget {
               },
             ),
           );
-        }).toList(),
+        }),
         
         // Botón para ver más canciones
         if (featuredSongs.length > 4) ...[
@@ -85,7 +88,8 @@ class FeaturedSongsSection extends ConsumerWidget {
           Center(
             child: TextButton(
               onPressed: () {
-                // TODO: Navegar a vista completa
+                // Navegar a búsqueda para ver todas las canciones destacadas
+                context.push('/search');
               },
               child: Text(
                 'Ver ${featuredSongs.length - 4} canciones más',
@@ -126,7 +130,7 @@ class FeaturedSongsSection extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
               ),
               child: Row(
                 children: [
@@ -135,7 +139,7 @@ class FeaturedSongsSection extends ConsumerWidget {
                     height: 56,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
                     ),
                     child: const Center(
                       child: CircularProgressIndicator(
@@ -242,23 +246,33 @@ class FeaturedSongsSection extends ConsumerWidget {
   }
 
   void _onSongTap(BuildContext context, Song song) {
-    // TODO: Navegar a detalles de la canción
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Navegando a ${song.title}'),
-        backgroundColor: const Color(0xFF667eea),
-      ),
-    );
+    // Reproducir canción al tocar (no hay vista de detalles de canción individual)
+    _onPlaySong(context, song);
   }
 
   void _onPlaySong(BuildContext context, Song song) {
-    // TODO: Reproducir canción
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Reproduciendo ${song.title}'),
-        backgroundColor: const Color(0xFF667eea),
-      ),
-    );
+    // Reproducir canción usando el servicio de audio
+    final container = ProviderScope.containerOf(context);
+    final audioService = container.read(audioPlayerServiceProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    
+    audioService.playSong(song).then((_) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Reproduciendo ${song.title ?? "Canción"}'),
+          backgroundColor: const Color(0xFF667eea),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }).catchError((error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al reproducir: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
   }
 }
 

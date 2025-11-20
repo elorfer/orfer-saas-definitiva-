@@ -24,8 +24,9 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { useSongs, useUploadSong, useDeleteSong, useCreateSong } from '@/hooks/useSongs';
-import { useArtists } from '@/hooks/useArtists';
+import { useAllArtists } from '@/hooks/useArtists';
 import type { SongModel } from '@/types/song';
+import ArtistSelector from '@/components/ArtistSelector';
 
 const PAGE_SIZE = 10;
 const DEFAULT_UPLOAD_FORM = {
@@ -191,7 +192,8 @@ export default function SongsPage() {
   const { data, isLoading, isFetching, refetch } = useSongs({ page, limit: PAGE_SIZE, enabled: true });
   const songs = data?.songs ?? [];
 
-  const { data: artistsData } = useArtists({ page: 1, limit: 100, enabled: true });
+  // Obtener TODOS los artistas disponibles (sin límite de paginación)
+  const { data: artistsData, isLoading: artistsLoading } = useAllArtists(true);
   const artists = artistsData?.artists ?? [];
 
   const { mutateAsync: uploadSong } = useUploadSong();
@@ -757,32 +759,16 @@ export default function SongsPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                  Artista
-                </label>
-                <select
-                  value={uploadForm.artistId}
-                  onChange={(event) =>
-                    setUploadForm((prev) => ({ ...prev, artistId: event.target.value }))
-                  }
-                  required
-                  disabled={uploading}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                >
-                  <option value="">Selecciona un artista</option>
-                  {artists.map((artist) => (
-                    <option key={artist.id} value={artist.id}>
-                      {artist.stageName || artist.user?.email || `Artista ${artist.id}`}
-                    </option>
-                  ))}
-                </select>
-                {artists.length === 0 && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    No hay artistas disponibles. Crea un usuario con rol de artista primero.
-                  </p>
-                )}
-              </div>
+              <ArtistSelector
+                artists={artists}
+                value={uploadForm.artistId}
+                onChange={(artistId) =>
+                  setUploadForm((prev) => ({ ...prev, artistId }))
+                }
+                disabled={uploading}
+                isLoading={artistsLoading}
+                required
+              />
 
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button

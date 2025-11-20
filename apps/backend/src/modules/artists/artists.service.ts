@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -7,6 +7,7 @@ import { User } from '../../common/entities/user.entity';
 import { Song } from '../../common/entities/song.entity';
 import { Album } from '../../common/entities/album.entity';
 import { CoversStorageService } from '../covers/covers-storage.service';
+import { FeaturedService } from '../featured/featured.service';
 
 @Injectable()
 export class ArtistsService {
@@ -20,6 +21,8 @@ export class ArtistsService {
     @InjectRepository(Album)
     private readonly albumRepository: Repository<Album>,
     private readonly coversStorageService: CoversStorageService,
+    @Inject(forwardRef(() => FeaturedService))
+    private readonly featuredService?: FeaturedService,
   ) {}
 
   async findAll(page: number = 1, limit: number = 10): Promise<{ artists: Artist[]; total: number }> {
@@ -37,10 +40,19 @@ export class ArtistsService {
     return { artists, total };
   }
 
+  /**
+   * @deprecated Usar FeaturedService.getFeaturedArtists() en su lugar (más consistente)
+   * Mantenido por compatibilidad con código existente
+   */
   async findFeatured(limit: number = 20): Promise<Artist[]> {
+    // Delegar a FeaturedService para consistencia (mismo ordenamiento y validación)
+    if (this.featuredService) {
+      return this.featuredService.getFeaturedArtists(limit);
+    }
+    // Fallback si FeaturedService no está disponible
     return this.artistRepository.find({
       where: { isFeatured: true },
-      order: { createdAt: 'DESC' },
+      order: { updatedAt: 'DESC' },
       take: limit,
       relations: ['user'],
     });
@@ -183,11 +195,17 @@ export class ArtistsService {
     return this.artistRepository.save(artist);
   }
 
+  /**
+   * @deprecated Usar FeaturedService.setArtistFeatured() en su lugar (más eficiente)
+   * Mantenido por compatibilidad con código existente
+   */
   async toggleFeatured(id: string, featured: boolean): Promise<Artist> {
-    const artist = await this.findOne(id);
-    if (featured && (!artist.profilePhotoUrl || !artist.coverPhotoUrl)) {
-      throw new BadRequestException('Para destacar un artista, debe tener foto de perfil y portada cargadas');
+    // Delegar a FeaturedService para evitar duplicación y usar update() más eficiente
+    if (this.featuredService) {
+      return this.featuredService.setArtistFeatured(id, featured);
     }
+    // Fallback si FeaturedService no está disponible
+    const artist = await this.findOne(id);
     artist.isFeatured = featured;
     return this.artistRepository.save(artist);
   }
@@ -197,6 +215,34 @@ export class ArtistsService {
     
     Object.assign(artist, updateData);
     return this.artistRepository.save(artist);
+  }
+
+  /**
+   * Mueve todas las canciones de un artista duplicado al artista correcto y elimina el duplicado
+   * Solo para uso administrativo
+   */
+  async mergeDuplicateArtist(duplicateArtistId: string, correctArtistId: string): Promise<{ moved: number; deleted: boolean }> {
+    const duplicateArtist = await this.findOne(duplicateArtistId);
+    const correctArtist = await this.findOne(correctArtistId);
+
+    // Mover todas las canciones del artista duplicado al artista correcto
+    const songsToMove = await this.songRepository.find({
+      where: [
+        { artistId: duplicateArtistId },
+      ],
+    });
+
+    let moved = 0;
+    for (const song of songsToMove) {
+      song.artistId = correctArtistId;
+      await this.songRepository.save(song);
+      moved++;
+    }
+
+    // Eliminar el artista duplicado
+    await this.artistRepository.remove(duplicateArtist);
+
+    return { moved, deleted: true };
   }
 
   async verifyArtist(artistId: string): Promise<Artist> {
@@ -225,11 +271,6 @@ export class ArtistsService {
     return { artists, total };
   }
 }
-
-
-
-
-
 
 
 
