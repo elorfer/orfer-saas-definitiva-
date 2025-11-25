@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/home_provider.dart';
-import '../../../core/providers/audio_player_provider.dart';
 import '../../../core/models/song_model.dart';
+import '../../../core/utils/logger.dart';
+import '../../song_detail/screens/song_detail_screen.dart';
 import 'featured_song_card.dart';
 
 class FeaturedSongsSection extends ConsumerWidget {
@@ -37,7 +38,7 @@ class FeaturedSongsSection extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: const Color(0xFF3D2E20),
                   decoration: TextDecoration.none,
                 ),
               ),
@@ -47,13 +48,13 @@ class FeaturedSongsSection extends ConsumerWidget {
                   context.push('/search');
                 },
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white.withValues(alpha: 0.8),
+                  foregroundColor: const Color(0xFF8B7A6A),
                 ),
                 child: Text(
                   'Ver todas',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: const Color(0xFF8B7A6A),
                     decoration: TextDecoration.none,
                   ),
                 ),
@@ -74,9 +75,6 @@ class FeaturedSongsSection extends ConsumerWidget {
               featuredSong: featuredSong,
               onTap: () {
                 _onSongTap(context, featuredSong.song);
-              },
-              onPlay: () {
-                _onPlaySong(context, featuredSong.song);
               },
             ),
           );
@@ -110,28 +108,34 @@ class FeaturedSongsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Canciones Destacadas',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            decoration: TextDecoration.none,
+        // Título de la sección con padding
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Canciones Destacadas',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF3D2E20),
+              decoration: TextDecoration.none,
+            ),
           ),
         ),
         const SizedBox(height: 16),
         // Usar Column en lugar de ListView.builder con shrinkWrap (mejor rendimiento)
-        Column(
-          children: List.generate(3, (index) {
-            return RepaintBoundary(
-              key: ValueKey('loading_song_$index'),
-              child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
-                borderRadius: const BorderRadius.all(Radius.circular(12)),
-              ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: List.generate(3, (index) {
+              return RepaintBoundary(
+                key: ValueKey('loading_song_$index'),
+                child: Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                ),
               child: Row(
                 children: [
                   Container(
@@ -185,7 +189,8 @@ class FeaturedSongsSection extends ConsumerWidget {
               ),
             ),
             );
-          }),
+            }),
+          ),
         ),
       ],
     );
@@ -195,49 +200,56 @@ class FeaturedSongsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Canciones Destacadas',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            decoration: TextDecoration.none,
+        // Título de la sección con padding
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Canciones Destacadas',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF3D2E20),
+              decoration: TextDecoration.none,
+            ),
           ),
         ),
         const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(
-                  Icons.queue_music,
-                  size: 48,
-                  color: Colors.white.withValues(alpha: 0.5),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No hay canciones destacadas',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    color: Colors.white.withValues(alpha: 0.7),
-                    decoration: TextDecoration.none,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.queue_music,
+                    size: 48,
+                    color: const Color(0xFF8B7A6A),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Descubre nueva música más tarde',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.5),
-                    decoration: TextDecoration.none,
+                  const SizedBox(height: 16),
+                  Text(
+                    'No hay canciones destacadas',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: const Color(0xFF3D2E20),
+                      decoration: TextDecoration.none,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Descubre nueva música más tarde',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF8B7A6A),
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -246,34 +258,33 @@ class FeaturedSongsSection extends ConsumerWidget {
   }
 
   void _onSongTap(BuildContext context, Song song) {
-    // Reproducir canción al tocar (no hay vista de detalles de canción individual)
-    _onPlaySong(context, song);
+    // Verificar que el contexto esté montado
+    if (!context.mounted) {
+      debugPrint('[FeaturedSongsSection] Contexto no montado');
+      return;
+    }
+    
+    debugPrint('[FeaturedSongsSection] Navegando a canción: ${song.title} (${song.id})');
+    
+    // Navegar a la pantalla de detalle de canción
+    // Usar la función estática que verifica si ya existe la pantalla
+    try {
+      SongDetailScreen.navigateToSong(context, song);
+      debugPrint('[FeaturedSongsSection] Navegación exitosa');
+    } catch (e, stackTrace) {
+      // Si hay un error, intentar navegación directa como fallback
+      AppLogger.error('[FeaturedSongsSection] Error al navegar: $e', stackTrace);
+      debugPrint('[FeaturedSongsSection] Error: $e, usando fallback');
+      if (context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SongDetailScreen(song: song),
+          ),
+        );
+      }
+    }
   }
 
-  void _onPlaySong(BuildContext context, Song song) {
-    // Reproducir canción usando el servicio de audio
-    final container = ProviderScope.containerOf(context);
-    final audioService = container.read(audioPlayerServiceProvider);
-    final messenger = ScaffoldMessenger.of(context);
-    
-    audioService.playSong(song).then((_) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Reproduciendo ${song.title ?? "Canción"}'),
-          backgroundColor: const Color(0xFF667eea),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }).catchError((error) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Error al reproducir: ${error.toString()}'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    });
-  }
 }
 
 
