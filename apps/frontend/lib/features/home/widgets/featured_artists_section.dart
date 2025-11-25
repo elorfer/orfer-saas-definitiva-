@@ -39,7 +39,7 @@ class FeaturedArtistsSection extends ConsumerWidget {
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: const Color(0xFF3D2E20),
                   decoration: TextDecoration.none,
                 ),
               ),
@@ -48,13 +48,13 @@ class FeaturedArtistsSection extends ConsumerWidget {
                   context.push('/artists');
                 },
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white.withValues(alpha: 0.8),
+                  foregroundColor: const Color(0xFF8B7A6A),
                 ),
                 child: Text(
                   'Ver todos',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    color: const Color(0xFF8B7A6A),
                     decoration: TextDecoration.none,
                   ),
                 ),

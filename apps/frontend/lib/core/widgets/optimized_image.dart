@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../theme/neumorphism_theme.dart';
 
 /// Widget optimizado de imagen con carga progresiva
 /// - Carga thumbnail primero para scroll rápido
@@ -162,8 +163,8 @@ class OptimizedImage extends StatelessWidget {
                 placeholderColor!.withValues(alpha: 0.5),
               ]
             : [
-                const Color(0xFF667eea).withValues(alpha: 0.2),
-                const Color(0xFF764ba2).withValues(alpha: 0.3),
+                NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
               ],
       ),
     );
@@ -209,9 +210,9 @@ class OptimizedImage extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF667eea),
-            const Color(0xFF764ba2),
+          colors: const [
+            NeumorphismTheme.coffeeMedium,
+            NeumorphismTheme.coffeeDark,
           ],
         ),
       ),
@@ -233,9 +234,9 @@ class OptimizedImage extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF667eea),
-            const Color(0xFF764ba2),
+          colors: const [
+            NeumorphismTheme.coffeeMedium,
+            NeumorphismTheme.coffeeDark,
           ],
         ),
       ),

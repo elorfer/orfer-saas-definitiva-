@@ -3,14 +3,16 @@ import '../services/audio_player_service.dart';
 import '../models/song_model.dart';
 import 'package:just_audio/just_audio.dart';
 
-/// Provider del servicio de reproductor de audio
+/// Provider del servicio de reproductor de audio (DEPRECADO - Usar professionalAudioServiceProvider)
+/// Deshabilitado para evitar conflictos con el reproductor profesional
 final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) {
   final service = AudioPlayerService();
   
-  // Inicializar el servicio cuando se crea el provider
-  service.initialize().catchError((error) {
-    // Error silencioso en inicialización
-  });
+  // DESHABILITADO: Ya no se inicializa automáticamente para evitar conflictos
+  // El servicio profesional (professionalAudioServiceProvider) debe usarse en su lugar
+  // service.initialize().catchError((error) {
+  //   // Error silencioso en inicialización
+  // });
   
   // Limpiar cuando se destruye el provider
   ref.onDispose(() {
@@ -49,6 +51,9 @@ final currentQueueProvider = Provider<List<Song>>((ref) {
   final service = ref.watch(audioPlayerServiceProvider);
   return service.currentQueue;
 });
+
+
+
 
 
 

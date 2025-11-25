@@ -151,7 +151,7 @@ class GoRouterNotifier extends ChangeNotifier {
                 reverseTransitionDuration: const Duration(milliseconds: 200),
               ),
             ),
-            // Artist Detail
+            // Artist Detail - transición simple fade rápida (sin slide pesado)
             GoRoute(
               path: '/artist/:id',
               pageBuilder: (context, state) {
@@ -174,9 +174,9 @@ class GoRouterNotifier extends ChangeNotifier {
                 return CustomTransitionPage<void>(
                   key: state.pageKey,
                   child: ArtistPage(artist: artistLite),
-                  transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
-                  transitionDuration: const Duration(milliseconds: 250),
-                  reverseTransitionDuration: const Duration(milliseconds: 200),
+                  transitionsBuilder: SpotifyPageTransitions.tabTransition, // Solo fade, sin slide
+                  transitionDuration: const Duration(milliseconds: 150), // Más rápido
+                  reverseTransitionDuration: const Duration(milliseconds: 120), // Más rápido
                 );
               },
             ),

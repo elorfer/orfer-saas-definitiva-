@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/artist_model.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
@@ -9,6 +11,48 @@ import '../utils/retry_handler.dart';
 import '../utils/error_handler.dart';
 import '../utils/data_normalizer.dart';
 import '../utils/response_parser.dart';
+
+// Función top-level para procesar playlist en isolate
+FeaturedPlaylist? _parseFeaturedPlaylist(Map<String, dynamic> item, int rank) {
+  try {
+    if (item['id'] == null || item['id'].toString().isEmpty) {
+      throw Exception('Playlist sin ID válido');
+    }
+    
+    final normalized = DataNormalizer.normalizePlaylist(item);
+    
+    if (normalized['isFeatured'] == null) {
+      normalized['isFeatured'] = true;
+    }
+    
+    final playlist = Playlist.fromJson(normalized);
+    
+    if (playlist.id.isEmpty) {
+      throw Exception('Playlist con ID vacío');
+    }
+    
+    return FeaturedPlaylist(
+      playlist: playlist,
+      featuredReason: 'Destacada',
+      rank: rank,
+    );
+  } catch (e) {
+    return null;
+  }
+}
+
+// Función top-level para procesar lista de playlists en isolate
+List<FeaturedPlaylist> _parseFeaturedPlaylistsList(List<Map<String, dynamic>> validData) {
+  final results = <FeaturedPlaylist>[];
+  for (int i = 0; i < validData.length; i++) {
+    final item = validData[i];
+    final featuredPlaylist = _parseFeaturedPlaylist(item, i + 1);
+    if (featuredPlaylist != null) {
+      results.add(featuredPlaylist);
+    }
+  }
+  return results;
+}
 
 class HomeService {
   static final HomeService _instance = HomeService._internal();
@@ -288,38 +332,11 @@ class HomeService {
 
         final validData = ResponseParser.validateList(data);
         
-        return ResponseParser.parseList<FeaturedPlaylist>(
-          data: validData,
-          parser: (item) {
-            try {
-              if (item['id'] == null || item['id'].toString().isEmpty) {
-                throw Exception('Playlist sin ID válido');
-              }
-              
-              final normalized = DataNormalizer.normalizePlaylist(item);
-              
-              if (normalized['isFeatured'] == null) {
-                normalized['isFeatured'] = true;
-              }
-              
-              final playlist = Playlist.fromJson(normalized);
-              
-              if (playlist.id.isEmpty) {
-                throw Exception('Playlist con ID vacío');
-              }
-              
-              return FeaturedPlaylist(
-                playlist: playlist,
-                featuredReason: 'Destacada',
-                rank: validData.indexOf(item) + 1,
-              );
-            } catch (e, stackTrace) {
-              AppLogger.error('[HomeService] Error al parsear playlist', e, stackTrace);
-              rethrow;
-            }
-          },
-          logErrors: false,
-        );
+        // Procesar JSON en isolate para evitar bloqueo del UI thread
+        final featuredPlaylists = await compute(_parseFeaturedPlaylistsList, validData);
+        
+        // Retornar lista (ya filtrada de nulls en el isolate)
+        return featuredPlaylists;
       } else {
         return [];
       }

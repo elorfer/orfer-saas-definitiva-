@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 
 /// LibraryScreen optimizado con AutomaticKeepAliveClientMixin
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -63,14 +64,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
-          ),
+          gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
           child: Padding(
@@ -86,7 +80,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                       style: GoogleFonts.inter(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: NeumorphismTheme.textPrimary,
                       ),
                     ),
                   ],
@@ -136,19 +130,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: NeumorphismTheme.neumorphismShadow,
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(8),
+            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: Colors.white,
+            color: NeumorphismTheme.coffeeMedium,
             size: 24,
           ),
         ),
@@ -157,19 +152,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: NeumorphismTheme.textPrimary,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Colors.white.withValues(alpha: 0.7),
+            color: NeumorphismTheme.textSecondary,
           ),
         ),
         trailing: Icon(
           Icons.chevron_right,
-          color: Colors.white.withValues(alpha: 0.7),
+          color: NeumorphismTheme.textSecondary,
         ),
         onTap: onTap,
       ),

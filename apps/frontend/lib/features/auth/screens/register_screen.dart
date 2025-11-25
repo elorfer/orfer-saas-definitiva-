@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -67,14 +68,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
-          ),
+          gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
           child: SingleChildScrollView(
@@ -329,7 +323,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                     _acceptTerms = value ?? false;
                                   });
                                 },
-                                activeColor: const Color(0xFF667eea),
+                                activeColor: NeumorphismTheme.coffeeMedium,
                               ),
                               Expanded(
                                 child: Padding(
@@ -345,7 +339,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                         TextSpan(
                                           text: 'Términos y Condiciones',
                                           style: GoogleFonts.inter(
-                                            color: const Color(0xFF667eea),
+                                            color: NeumorphismTheme.coffeeMedium,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -353,7 +347,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                         TextSpan(
                                           text: 'Política de Privacidad',
                                           style: GoogleFonts.inter(
-                                            color: const Color(0xFF667eea),
+                                            color: NeumorphismTheme.coffeeMedium,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
@@ -472,7 +466,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   'Inicia sesión',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: const Color(0xFF667eea),
+                                    color: NeumorphismTheme.coffeeMedium,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

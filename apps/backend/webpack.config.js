@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = function (options, webpack) {
   const lazyImports = [
     '@nestjs/microservices/microservices-module',
@@ -7,6 +9,18 @@ module.exports = function (options, webpack) {
 
   return {
     ...options,
+    resolve: {
+      ...options.resolve,
+      extensions: ['.ts', '.js', '.json'],
+      mainFiles: ['index', 'main'],
+      alias: {
+        ...options.resolve?.alias,
+        '@': path.resolve(__dirname, 'src'),
+        '@/common': path.resolve(__dirname, 'src/common'),
+        '@/modules': path.resolve(__dirname, 'src/modules'),
+        '@/database': path.resolve(__dirname, 'src/database'),
+      },
+    },
     externals: {
       'music-metadata': 'commonjs music-metadata', // Tratar como módulo externo
     },

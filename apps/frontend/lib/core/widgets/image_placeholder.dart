@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/neumorphism_theme.dart';
 
 /// Widget de placeholder reutilizable para imágenes
 /// Elimina la duplicación de placeholders en múltiples widgets
@@ -49,8 +50,8 @@ class ImagePlaceholder extends StatelessWidget {
         iconColor = Colors.white70,
         backgroundColor = null,
         gradientColors = const [
-          Color(0xFF667eea),
-          Color(0xFF764ba2),
+          NeumorphismTheme.coffeeMedium,
+          NeumorphismTheme.coffeeDark,
         ],
         showShimmer = false;
 
@@ -65,8 +66,8 @@ class ImagePlaceholder extends StatelessWidget {
         iconColor = Colors.white,
         backgroundColor = null,
         gradientColors = gradientColors ?? const [
-          Color(0xFF667eea),
-          Color(0xFF764ba2),
+          NeumorphismTheme.coffeeMedium,
+          NeumorphismTheme.coffeeDark,
         ],
         showShimmer = true;
 

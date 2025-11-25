@@ -17,6 +17,9 @@ class NetworkImageWithFallback extends StatelessWidget {
   final IconData? errorIcon;
   final IconData? placeholderIcon;
   final Color? iconColor;
+  final int? cacheWidth;
+  final int? cacheHeight;
+  final Duration? fadeInDuration;
 
   const NetworkImageWithFallback({
     super.key,
@@ -32,6 +35,9 @@ class NetworkImageWithFallback extends StatelessWidget {
     this.errorIcon,
     this.placeholderIcon,
     this.iconColor,
+    this.cacheWidth,
+    this.cacheHeight,
+    this.fadeInDuration,
   });
 
   /// Constructor para imágenes pequeñas (avatars, thumbnails)
@@ -49,7 +55,10 @@ class NetworkImageWithFallback extends StatelessWidget {
   })  : placeholder = null,
         errorWidget = null,
         useCachedImage = false,
-        backgroundColor = backgroundColor ?? Colors.grey.shade300;
+        backgroundColor = backgroundColor ?? Colors.grey.shade300,
+        cacheWidth = null,
+        cacheHeight = null,
+        fadeInDuration = null;
 
   /// Constructor para imágenes medianas (covers de canciones, cards)
   NetworkImageWithFallback.medium({
@@ -65,7 +74,10 @@ class NetworkImageWithFallback extends StatelessWidget {
   })  : placeholder = null,
         errorWidget = null,
         useCachedImage = true,
-        backgroundColor = Colors.grey.shade300;
+        backgroundColor = Colors.grey.shade300,
+        cacheWidth = null,
+        cacheHeight = null,
+        fadeInDuration = null;
 
   /// Constructor para imágenes grandes (portadas de artistas, banners)
   NetworkImageWithFallback.large({
@@ -81,7 +93,10 @@ class NetworkImageWithFallback extends StatelessWidget {
   })  : placeholder = null,
         errorWidget = null,
         useCachedImage = false,
-        backgroundColor = Colors.grey.shade300;
+        backgroundColor = Colors.grey.shade300,
+        cacheWidth = null,
+        cacheHeight = null,
+        fadeInDuration = null;
 
   @override
   Widget build(BuildContext context) {
@@ -104,12 +119,14 @@ class NetworkImageWithFallback extends StatelessWidget {
         fit: fit,
         width: width,
         height: height,
+        memCacheWidth: cacheWidth,
+        memCacheHeight: cacheHeight,
         placeholder: (context, url) => placeholder ?? _buildPlaceholder(),
         errorWidget: (context, url, error) {
           debugPrint('[NetworkImageWithFallback] Error cargando imagen: $url - Error: $error');
           return errorWidget ?? _buildErrorWidget();
         },
-        fadeInDuration: const Duration(milliseconds: 200),
+        fadeInDuration: fadeInDuration ?? const Duration(milliseconds: 150),
         fadeOutDuration: const Duration(milliseconds: 100),
       );
     } else {

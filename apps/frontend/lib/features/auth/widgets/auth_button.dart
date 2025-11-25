@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 
 class AuthButton extends StatelessWidget {
   final String text;
@@ -29,7 +30,7 @@ class AuthButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? const Color(0xFF667eea),
+          backgroundColor: backgroundColor ?? NeumorphismTheme.coffeeMedium,
           foregroundColor: textColor ?? Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,

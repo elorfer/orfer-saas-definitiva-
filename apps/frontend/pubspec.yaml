@@ -43,6 +43,7 @@ dependencies:
   just_audio: ^0.10.5
   audio_service: ^0.18.12
   audio_session: ^0.2.2
+  rxdart: ^0.28.0
   # flutter_media_metadata: ^1.0.0  # Temporalmente deshabilitado por problema de namespace
 
   # File & Image Handling

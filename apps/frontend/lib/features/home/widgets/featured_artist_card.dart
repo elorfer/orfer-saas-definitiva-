@@ -5,6 +5,7 @@ import '../../../core/models/artist_model.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/image_placeholder.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 
 class FeaturedArtistCard extends StatelessWidget {
   final FeaturedArtist featuredArtist;
@@ -56,7 +57,7 @@ class FeaturedArtistCard extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: NeumorphismTheme.textPrimary,
                 decoration: TextDecoration.none,
               ),
               maxLines: 1,
@@ -70,7 +71,7 @@ class FeaturedArtistCard extends StatelessWidget {
               '${NumberFormatter.format(artist.totalFollowers)} seguidores',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: NeumorphismTheme.textSecondary,
                 decoration: TextDecoration.none,
               ),
               maxLines: 1,

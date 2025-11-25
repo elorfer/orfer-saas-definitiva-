@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
@@ -176,7 +177,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> {
                         padding: EdgeInsets.all(16),
                         child: Center(
                           child: CircularProgressIndicator(
-                            color: Color(0xFF667eea),
+                            color: NeumorphismTheme.coffeeMedium,
                           ),
                         ),
                       ),
@@ -313,7 +314,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> {
               ref.invalidate(playlistsProvider((page: 1, limit: _pageSize)));
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF667eea),
+              backgroundColor: NeumorphismTheme.coffeeMedium,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -370,7 +371,7 @@ class _PlaylistCard extends StatelessWidget {
                   imageUrl: playlist.coverArtUrl,
                   fit: BoxFit.cover,
                   borderRadius: 12,
-                  placeholderColor: const Color(0xFF667eea).withValues(alpha: 0.3),
+                  placeholderColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
                 ),
               ),
             ),

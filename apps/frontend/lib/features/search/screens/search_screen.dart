@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 
 /// SearchScreen optimizado con AutomaticKeepAliveClientMixin
 class SearchScreen extends ConsumerStatefulWidget {
@@ -19,14 +20,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
-          ),
+          gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
           child: Padding(
@@ -42,7 +36,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: NeumorphismTheme.textPrimary,
                       ),
                     ),
                   ],
@@ -52,22 +46,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 // Search Bar
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+                    color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(26),
+                    boxShadow: NeumorphismTheme.neumorphismShadow,
                   ),
                   child: TextField(
                     style: GoogleFonts.inter(
-                      color: Colors.white,
+                      color: NeumorphismTheme.textPrimary,
                       fontSize: 16,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Buscar canciones, artistas, álbumes...',
                       hintStyle: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: NeumorphismTheme.textLight,
                       ),
                       prefixIcon: Icon(
                         Icons.search,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: NeumorphismTheme.textSecondary,
                       ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(

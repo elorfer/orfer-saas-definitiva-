@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/models/user_model.dart';
 
 class RoleSelector extends StatelessWidget {
@@ -80,10 +81,10 @@ class _RoleOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF667eea).withValues(alpha:0.1) : Colors.grey[50],
+          color: isSelected ? NeumorphismTheme.coffeeMedium.withValues(alpha:0.1) : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF667eea) : Colors.grey[300]!,
+            color: isSelected ? NeumorphismTheme.coffeeMedium : Colors.grey[300]!,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -92,7 +93,7 @@ class _RoleOption extends StatelessWidget {
             Icon(
               icon,
               size: 32,
-              color: isSelected ? const Color(0xFF667eea) : Colors.grey[600],
+              color: isSelected ? NeumorphismTheme.coffeeMedium : Colors.grey[600],
             ),
             const SizedBox(height: 8),
             Text(
@@ -100,7 +101,7 @@ class _RoleOption extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? const Color(0xFF667eea) : Colors.grey[700],
+                color: isSelected ? NeumorphismTheme.coffeeMedium : Colors.grey[700],
               ),
             ),
             const SizedBox(height: 4),

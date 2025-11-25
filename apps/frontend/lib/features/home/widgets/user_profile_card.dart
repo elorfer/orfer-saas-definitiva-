@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/widgets/network_image_with_fallback.dart';
 
@@ -36,7 +37,7 @@ class UserProfileCard extends StatelessWidget {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF667eea).withValues(alpha:0.1),
+                  color: NeumorphismTheme.coffeeMedium.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: ClipRRect(
@@ -48,8 +49,8 @@ class UserProfileCard extends StatelessWidget {
                     height: 60,
                     borderRadius: 30,
                     errorIcon: Icons.person,
-                    iconColor: const Color(0xFF667eea),
-                    backgroundColor: const Color(0xFF667eea).withValues(alpha: 0.1),
+                    iconColor: NeumorphismTheme.coffeeMedium,
+                    backgroundColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
                   ),
                 ),
               ),
@@ -239,7 +240,7 @@ class _StatItem extends StatelessWidget {
         Icon(
           icon,
           size: 20,
-          color: const Color(0xFF667eea),
+          color: NeumorphismTheme.coffeeMedium,
         ),
         const SizedBox(height: 4),
         Text(

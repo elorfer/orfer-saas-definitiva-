@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -52,14 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
-          ),
+          gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
           child: SingleChildScrollView(
@@ -195,7 +189,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         _rememberMe = value ?? false;
                                       });
                                     },
-                                    activeColor: const Color(0xFF667eea),
+                                    activeColor: NeumorphismTheme.coffeeMedium,
                                   ),
                                   Text(
                                     'Recordarme',
@@ -219,7 +213,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   '¿Olvidaste tu contraseña?',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: const Color(0xFF667eea),
+                                    color: NeumorphismTheme.coffeeMedium,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -331,7 +325,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   'Regístrate',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: const Color(0xFF667eea),
+                                    color: NeumorphismTheme.coffeeMedium,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),

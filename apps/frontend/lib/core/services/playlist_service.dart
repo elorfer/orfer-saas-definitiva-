@@ -19,6 +19,9 @@ class PlaylistService {
 
   /// Obtener instancia de Dio del HttpClientService
   Dio get _dio => _httpClient.dio;
+  
+  /// Obtener instancia de Dio (público para uso en isolates)
+  Dio get dio => _httpClient.dio;
 
   /// Inicializar el servicio
   Future<void> initialize() async {

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 
 /// ProfileScreen optimizado con AutomaticKeepAliveClientMixin
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -63,14 +64,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF667eea),
-              Color(0xFF764ba2),
-            ],
-          ),
+          gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
           child: Padding(
@@ -84,7 +78,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   style: GoogleFonts.inter(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: NeumorphismTheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -94,8 +88,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
+                    color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: NeumorphismTheme.neumorphismShadow,
                   ),
                   child: Column(
                     children: [
@@ -104,13 +99,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.person,
                           size: 40,
-                          color: Colors.white,
+                          color: NeumorphismTheme.coffeeMedium,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -121,7 +116,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: NeumorphismTheme.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -131,7 +126,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                         user?.email ?? 'usuario@ejemplo.com',
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: NeumorphismTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -143,7 +138,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -151,7 +146,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: NeumorphismTheme.coffeeMedium,
                           ),
                         ),
                       ),
@@ -244,13 +239,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: NeumorphismTheme.neumorphismShadow,
       ),
       child: ListTile(
         leading: Icon(
           icon,
-          color: Colors.white,
+          color: NeumorphismTheme.coffeeMedium,
           size: 24,
         ),
         title: Text(
@@ -258,12 +254,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: NeumorphismTheme.textPrimary,
           ),
         ),
         trailing: Icon(
           Icons.chevron_right,
-          color: Colors.white.withValues(alpha: 0.7),
+          color: NeumorphismTheme.textSecondary,
         ),
         onTap: onTap,
       ),

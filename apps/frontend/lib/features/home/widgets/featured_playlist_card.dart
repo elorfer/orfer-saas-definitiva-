@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/playlist_model.dart';
 import '../../../core/widgets/optimized_image.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 
 class FeaturedPlaylistCard extends StatelessWidget {
   final FeaturedPlaylist featuredPlaylist;
@@ -47,7 +48,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                   width: 160,
                   height: 160,
                   borderRadius: 12,
-                  placeholderColor: const Color(0xFF667eea).withValues(alpha: 0.3),
+                  placeholderColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
                 ),
               ),
             ),
@@ -60,7 +61,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: NeumorphismTheme.textPrimary,
                 decoration: TextDecoration.none,
               ),
               maxLines: 1,
@@ -78,7 +79,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                       playlist.user?.firstName ?? 'Usuario',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: NeumorphismTheme.textSecondary,
                         decoration: TextDecoration.none,
                       ),
                       maxLines: 1,
@@ -93,14 +94,14 @@ class FeaturedPlaylistCard extends StatelessWidget {
                       Icon(
                         Icons.queue_music,
                         size: 12,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: NeumorphismTheme.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${playlist.totalTracks}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: NeumorphismTheme.textSecondary,
                           decoration: TextDecoration.none,
                         ),
                       ),

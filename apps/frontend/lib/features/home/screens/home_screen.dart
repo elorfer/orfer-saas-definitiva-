@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import '../widgets/featured_artists_section.dart';
 import '../widgets/featured_songs_section.dart';
 import '../widgets/featured_playlists_section.dart';
@@ -42,14 +43,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF667eea),
-            Color(0xFF764ba2),
-          ],
-        ),
+        gradient: NeumorphismTheme.backgroundGradient,
       ),
       child: SafeArea(
         child: RefreshIndicator(
@@ -58,7 +52,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             await homeNotifier.refresh();
           },
           color: Colors.white,
-          backgroundColor: const Color(0xFF667eea),
+          backgroundColor: NeumorphismTheme.coffeeMedium,
           child: SingleChildScrollView(
             physics: const FastScrollPhysics(), // Scroll más rápido y fluido
             padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 24.0),
@@ -98,7 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF667eea),
+                            color: NeumorphismTheme.textPrimary,
                           ),
                         ),
                       ),
@@ -113,7 +107,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             'Bienvenido',
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.8),
+                              color: NeumorphismTheme.textSecondary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -123,7 +117,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             style: GoogleFonts.inter(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: NeumorphismTheme.textPrimary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
