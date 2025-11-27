@@ -45,7 +45,7 @@ class OptimizedImage extends StatelessWidget {
       return _buildDefaultWidget();
     }
 
-    // Obtener el tamaño de pantalla para optimizar caché
+    // ✅ OPTIMIZACIÓN: Obtener el tamaño de pantalla para optimizar caché
     final screenSize = MediaQuery.of(context).size;
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     
@@ -61,9 +61,9 @@ class OptimizedImage extends StatelessWidget {
       if (width == null || !width!.isFinite || width!.isNaN || width!.isInfinite) return null;
       final result = width! * devicePixelRatio;
       if (!result.isFinite || result.isNaN || result.isInfinite) return null;
-      // Limitar a máximo 3x el tamaño para no sobrecargar memoria
-      return (result > screenSize.width * devicePixelRatio * 3)
-          ? (screenSize.width * devicePixelRatio * 3).round()
+      // Limitar a máximo 2x el tamaño para no sobrecargar memoria (antes 3x)
+      return (result > screenSize.width * devicePixelRatio * 2)
+          ? (screenSize.width * devicePixelRatio * 2).round()
           : result.round();
     }
 
@@ -78,9 +78,9 @@ class OptimizedImage extends StatelessWidget {
       if (height == null || !height!.isFinite || height!.isNaN || height!.isInfinite) return null;
       final result = height! * devicePixelRatio;
       if (!result.isFinite || result.isNaN || result.isInfinite) return null;
-      // Limitar a máximo 3x el tamaño para no sobrecargar memoria
-      return (result > 800 * devicePixelRatio * 3)
-          ? (800 * devicePixelRatio * 3).round()
+      // Limitar a máximo 2x el tamaño para no sobrecargar memoria (antes 3x)
+      return (result > 800 * devicePixelRatio * 2)
+          ? (800 * devicePixelRatio * 2).round()
           : result.round();
     }
 
@@ -119,12 +119,12 @@ class OptimizedImage extends StatelessWidget {
       fit: fit,
       width: (width != null && width!.isFinite && !width!.isNaN && !width!.isInfinite) ? width : null,
       height: (height != null && height!.isFinite && !height!.isNaN && !height!.isInfinite) ? height : null,
-      // Transiciones más rápidas para mejor UX
+      // Transiciones más rápidas para mejor UX (OPTIMIZADO 🚀)
       fadeInDuration: isLargeCover 
-          ? const Duration(milliseconds: 300) 
-          : const Duration(milliseconds: 200),
-      fadeOutDuration: const Duration(milliseconds: 100),
-      placeholderFadeInDuration: const Duration(milliseconds: 100),
+          ? const Duration(milliseconds: 150) 
+          : const Duration(milliseconds: 100),
+      fadeOutDuration: const Duration(milliseconds: 0), // Sin fade out para evitar parpadeo
+      placeholderFadeInDuration: const Duration(milliseconds: 0), // Sin fade para placeholder
       // Caché optimizado según el contexto
       memCacheWidth: getMemCacheWidth(),
       memCacheHeight: getMemCacheHeight(),
@@ -132,13 +132,18 @@ class OptimizedImage extends StatelessWidget {
       maxHeightDiskCache: getMaxHeightDiskCache(),
       placeholder: (context, url) => placeholder ?? _buildPlaceholder(),
       errorWidget: (context, url, error) => errorWidget ?? _buildErrorWidget(),
-      // Configuración de caché optimizada
+      // Configuración de caché optimizada (MEJORADO 🚀)
       cacheKey: imageUrl,
       httpHeaders: const {
         'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
+        'Cache-Control': 'max-age=3600', // Cache por 1 hora
       },
       // Usar imagen anterior si la URL cambia (mejor UX durante transiciones)
       useOldImageOnUrlChange: true,
+      // Configuración de cache más agresiva
+      cacheManager: null, // Usar cache manager por defecto
+      // Configuración adicional para evitar parpadeo
+      filterQuality: FilterQuality.medium, // Balance entre calidad y performance
     );
 
     if (borderRadius != null) {

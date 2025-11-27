@@ -5,7 +5,6 @@ import 'core/navigation/app_router.dart';
 import 'core/services/http_cache_service.dart';
 import 'core/services/http_client_service.dart';
 import 'core/theme/neumorphism_theme.dart';
-import 'core/audio/audio_manager.dart';
 
 /// Builder personalizado para manejar errores no capturados
 /// Ignora errores no críticos y muestra un mensaje amigable solo para errores importantes
@@ -60,18 +59,11 @@ void main() async {
   // Inicializar HttpClientService (debe ser antes que otros servicios)
   await HttpClientService().initialize();
   
-  // Inicializar AudioManager (singleton global)
-  try {
-    await AudioManager().initialize(enableBackground: true);
-  } catch (e) {
-    // Si falla con background, intentar sin background
-    try {
-      await AudioManager().initialize(enableBackground: false);
-    } catch (e2) {
-      debugPrint('Error al inicializar AudioManager: $e2');
-      // Continuar sin audio si falla completamente
-    }
-  }
+  // 🚀 USANDO PROVIDER UNIFICADO CORREGIDO - ÚNICA FUENTE DE VERDAD
+  // Todos los sistemas de audio antiguos han sido reemplazados
+  debugPrint('🚀 [MAIN] Usando unifiedAudioProviderFixed como único sistema de audio');
+  
+  // El provider se inicializa automáticamente cuando se usa por primera vez
   
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
@@ -89,9 +81,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
+  // Crear el ProviderContainer
+  final container = ProviderContainer();
+  
+  // El provider unificado se inicializa automáticamente cuando se usa
+  debugPrint('🚀 [MAIN] Provider unificado listo para usar');
+  
   runApp(
-    const ProviderScope(
-      child: VintageMusicApp(),
+    UncontrolledProviderScope(
+      container: container,
+      child: const VintageMusicApp(),
     ),
   );
 }

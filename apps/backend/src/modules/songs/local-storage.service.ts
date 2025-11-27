@@ -27,7 +27,7 @@ export class LocalStorageService {
     // Directorio base de uploads
     this.uploadsDir = path.join(process.cwd(), 'uploads');
     this.songsDir = path.join(this.uploadsDir, 'songs');
-    this.baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000';
+    this.baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3001';
 
     // Crear directorios si no existen
     this.ensureDirectoriesExist();

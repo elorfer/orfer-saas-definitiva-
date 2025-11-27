@@ -16,26 +16,17 @@ class UrlNormalizer {
       return null;
     }
 
-    // Si ya es una URL completa (http:// o https://), normalizarla para el emulador
+    // Si ya es una URL completa, usar la lógica centralizada
     if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      String normalized = imageUrl;
+      String normalized = _applyBaseNormalization(imageUrl);
       
-      // Reemplazar localhost/127.0.0.1 por 10.0.2.2 para emulador Android
-      if (normalized.contains('localhost') || normalized.contains('127.0.0.1')) {
-        normalized = normalized.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
-      }
-      
-      // Corregir puerto si viene con 3000 (debe ser 3001)
-      normalized = normalized.replaceAll(':3000/', ':3001/').replaceAll(':3000"', ':3001"');
-      
-      // Corregir rutas que tienen /covers/ sin /uploads/ antes
-      // Ejemplo: http://10.0.2.2:3001/covers/xxx.png -> http://10.0.2.2:3001/uploads/covers/xxx.png
-      if (normalized.contains('://') && normalized.contains('/covers/') && !normalized.contains('/uploads/covers/')) {
+      // Corregir rutas específicas de imágenes
+      if (normalized.contains('/covers/') && !normalized.contains('/uploads/covers/')) {
         normalized = normalized.replaceAll('/covers/', '/uploads/covers/');
       }
       
       if (enableLogging) {
-        AppLogger.refresh('[UrlNormalizer] URL normalizada: $imageUrl -> $normalized');
+        AppLogger.refresh('[UrlNormalizer] URL de imagen normalizada: $imageUrl -> $normalized');
       }
       return normalized;
     }
@@ -91,26 +82,9 @@ class UrlNormalizer {
 
     // Si ya es una URL completa (http:// o https://), normalizarla para el emulador
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      String normalized = url;
-      
-      // Reemplazar localhost/127.0.0.1 por 10.0.2.2 para emulador Android
-      if (normalized.contains('localhost') || normalized.contains('127.0.0.1')) {
-        normalized = normalized.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
-        if (enableLogging) {
-          AppLogger.refresh('[UrlNormalizer] URL normalizada (localhost -> 10.0.2.2): $url -> $normalized');
-        }
-      }
-      
-      // Corregir puerto si viene con 3000 (debe ser 3001)
-      if (normalized.contains(':3000/') || normalized.endsWith(':3000')) {
-        normalized = normalized.replaceAll(':3000/', ':3001/').replaceAll(':3000', ':3001');
-        if (enableLogging) {
-          AppLogger.refresh('[UrlNormalizer] Puerto corregido (3000 -> 3001): $url -> $normalized');
-        }
-      }
+      String normalized = _applyBaseNormalization(url);
       
       // CORREGIR RUTA: Si la URL tiene /songs/ pero debería ser /uploads/songs/
-      // El backend guarda archivos en /uploads/songs/ pero la URL puede venir como /songs/
       if (normalized.contains('/songs/') && !normalized.contains('/uploads/songs/')) {
         normalized = normalized.replaceAll('/songs/', '/uploads/songs/');
         if (enableLogging) {
@@ -169,6 +143,24 @@ class UrlNormalizer {
       AppLogger.error('[UrlNormalizer] Error al validar URL construida: $finalUrl - $e');
       rethrow;
     }
+  }
+  
+  /// Método centralizado para aplicar normalizaciones básicas de URL
+  /// Evita duplicación de código entre normalizeUrl y normalizeImageUrl
+  static String _applyBaseNormalization(String url) {
+    String normalized = url;
+    
+    // Reemplazar localhost/127.0.0.1 por 10.0.2.2 para emulador Android
+    if (normalized.contains('localhost') || normalized.contains('127.0.0.1')) {
+      normalized = normalized.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
+    }
+    
+    // Corregir puerto si viene con 3000 (debe ser 3001)
+    if (normalized.contains(':3000/') || normalized.endsWith(':3000')) {
+      normalized = normalized.replaceAll(':3000/', ':3001/').replaceAll(':3000', ':3001');
+    }
+    
+    return normalized;
   }
 }
 

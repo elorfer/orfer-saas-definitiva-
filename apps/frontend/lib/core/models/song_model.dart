@@ -27,6 +27,7 @@ class Song {
   final String? coverArtUrl;
   final String? lyrics;
   final String? genreId;
+  final List<String>? genres; // Array de géneros musicales
   final int? trackNumber;
   final SongStatus status;
   final bool isExplicit;
@@ -34,6 +35,7 @@ class Song {
   final int totalStreams;
   final int totalLikes;
   final int totalShares;
+  final bool featured; // Indica si la canción es destacada
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final Artist? artist;
@@ -48,6 +50,7 @@ class Song {
     this.coverArtUrl,
     this.lyrics,
     this.genreId,
+    this.genres,
     this.trackNumber,
     this.status = SongStatus.draft,
     this.isExplicit = false,
@@ -55,6 +58,7 @@ class Song {
     this.totalStreams = 0,
     this.totalLikes = 0,
     this.totalShares = 0,
+    this.featured = false,
     this.createdAt,
     this.updatedAt,
     this.artist,

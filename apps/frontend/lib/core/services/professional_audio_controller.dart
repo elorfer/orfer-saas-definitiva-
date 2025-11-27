@@ -30,6 +30,10 @@ class AudioPlayerController {
   Song? _currentSong;
   List<Song> _playlist = [];
   double _volume = 0.85; // Volumen inicial reducido para evitar clipping
+  
+  // Cache de AudioSource para evitar recrear objetos
+  final Map<String, AudioSource> _audioSourceCache = {};
+  static const int _maxCacheSize = 10; // Limitar tamaño del caché
 
   /// Constructor: puede recibir un AudioPlayer compartido o crear uno nuevo
   AudioPlayerController({AudioPlayer? sharedPlayer})
@@ -48,6 +52,19 @@ class AudioPlayerController {
   double get volume => _volume;
   bool get isPlaying => _player.playing;
   Duration get position => _player.position;
+  
+  /// Verificar si hay una playlist cargada (más de una canción)
+  bool get hasPlaylist {
+    final result = _playlist.length > 1;
+    AppLogger.info('[AudioPlayerController] hasPlaylist: $result (playlist size: ${_playlist.length})');
+    return result;
+  }
+  
+  /// Limpiar caché de AudioSource (útil para debugging)
+  void clearCache() {
+    _audioSourceCache.clear();
+    AppLogger.info('[AudioPlayerController] 🧹 Caché de AudioSource limpiado');
+  }
   Duration? get duration => _player.duration;
 
   /// Inicializar el controlador con configuración de AudioSession
@@ -77,6 +94,8 @@ class AudioPlayerController {
       await _player.setVolume(_volume);
       // Asegurar que la velocidad esté en 1.0x para evitar distorsión
       await _player.setSpeed(1.0);
+      // Configurar para que avance automáticamente a la siguiente canción
+      await _player.setLoopMode(LoopMode.off);
       
       // Activar el AudioSession explícitamente
       try {
@@ -184,6 +203,8 @@ class AudioPlayerController {
     int attempt = 0;
     Exception? lastError;
 
+    String? normalizedUrl;
+    
     while (attempt <= maxRetries) {
       try {
         // Log del intento
@@ -194,7 +215,7 @@ class AudioPlayerController {
         }
 
         // Normalizar y validar URL para emulador Android (localhost -> 10.0.2.2)
-        final normalizedUrl = UrlNormalizer.normalizeUrl(song.fileUrl!, enableLogging: true);
+        normalizedUrl = UrlNormalizer.normalizeUrl(song.fileUrl!, enableLogging: true);
         
         // Validar que la URL sea parseable
         final uri = Uri.parse(normalizedUrl);
@@ -219,9 +240,10 @@ class AudioPlayerController {
           // Ignorar errores al detener si no hay nada reproduciendo
         }
         
-        // Cargar la URL en el reproductor (setUrl automáticamente carga y prepara)
+        // 🚀 OPTIMIZACIÓN: Usar AudioSource con caché para carga más rápida
         AppLogger.info('[AudioPlayerController] Cargando canción desde URL final: $normalizedUrl');
-        await _player.setUrl(normalizedUrl);
+        final audioSource = _getCachedAudioSource(normalizedUrl);
+        await _player.setAudioSource(audioSource);
         
         // Optimizaciones para evitar clipping después de cargar
         // Asegurar que el volumen esté configurado correctamente
@@ -229,9 +251,15 @@ class AudioPlayerController {
         // Asegurar que la velocidad esté en 1.0x para evitar distorsión
         await _player.setSpeed(1.0);
         
-        // Guardar como playlist de una sola canción para consistencia
-        _playlist.clear();
-        _playlist.add(song);
+        // Solo actualizar playlist si no hay una playlist multi-canción cargada
+        // Esto evita que loadSong destruya playlists existentes
+        if (_playlist.length <= 1) {
+          _playlist.clear();
+          _playlist.add(song);
+          AppLogger.info('[AudioPlayerController] Playlist actualizada con canción individual: ${song.title}');
+        } else {
+          AppLogger.info('[AudioPlayerController] Manteniendo playlist existente (${_playlist.length} canciones), solo actualizando canción actual');
+        }
         _currentSong = song;
         
         // Emitir la canción al stream INMEDIATAMENTE después de cargar
@@ -269,9 +297,14 @@ class AudioPlayerController {
         lastError = e is Exception ? e : Exception(e.toString());
         AppLogger.error('[AudioPlayerController] Error al cargar canción (intento ${attempt + 1}): $e');
         
-        // Si es error de red, intentar de nuevo
-        if (e.toString().contains('404') || 
-            e.toString().contains('network') || 
+        // Verificar si es un error 404 (archivo no encontrado) - no reintentar
+        if (e.toString().contains('404') || e.toString().contains('Not Found')) {
+          AppLogger.error('[AudioPlayerController] Error 404: Archivo no encontrado en el servidor: $normalizedUrl');
+          throw Exception('Archivo de audio no encontrado en el servidor (404)');
+        }
+        
+        // Si es error de red recuperable, intentar de nuevo
+        if (e.toString().contains('network') || 
             e.toString().contains('Connection') ||
             e.toString().contains('Source error')) {
           attempt++;
@@ -413,6 +446,9 @@ class AudioPlayerController {
 
       await _player.setAudioSources(urls, initialIndex: filteredIndex);
       
+      // Configurar para que avance automáticamente a la siguiente canción en la playlist
+      await _player.setLoopMode(LoopMode.off);
+      
       // Guardar playlist para actualizar currentSong cuando cambie el índice
       _playlist = validSongs;
       
@@ -500,5 +536,37 @@ class AudioPlayerController {
 
   /// Getter para acceder a la playlist (para el handler)
   List<Song> get playlist => List.unmodifiable(_playlist);
+  
+  /// 🚀 OPTIMIZACIÓN: Obtener AudioSource con caché para evitar recrear objetos
+  AudioSource _getCachedAudioSource(String url) {
+    // Validar URL antes de usar caché
+    if (url.contains('..') || url.contains('songgs') || url.contains('bluees')) {
+      AppLogger.error('[AudioPlayerController] ❌ URL corrupta detectada, limpiando caché: $url');
+      _audioSourceCache.clear();
+      throw Exception('URL corrupta detectada: $url');
+    }
+    
+    // Verificar si ya existe en caché
+    if (_audioSourceCache.containsKey(url)) {
+      AppLogger.info('[AudioPlayerController] 🚀 AudioSource encontrado en caché: $url');
+      return _audioSourceCache[url]!;
+    }
+    
+    // Crear nuevo AudioSource
+    final audioSource = AudioSource.uri(Uri.parse(url));
+    
+    // Agregar al caché (con límite de tamaño)
+    if (_audioSourceCache.length >= _maxCacheSize) {
+      // Remover el más antiguo (FIFO)
+      final firstKey = _audioSourceCache.keys.first;
+      _audioSourceCache.remove(firstKey);
+      AppLogger.info('[AudioPlayerController] Caché lleno, removiendo: $firstKey');
+    }
+    
+    _audioSourceCache[url] = audioSource;
+    AppLogger.info('[AudioPlayerController] 🚀 AudioSource agregado al caché: $url');
+    
+    return audioSource;
+  }
 }
 

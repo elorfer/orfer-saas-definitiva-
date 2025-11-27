@@ -23,6 +23,7 @@ export interface UploadRequest {
   artistId: string;
   albumId?: string;
   genreId?: string;
+  genres?: string[]; // Array de géneros musicales (ej: ["Reggaeton", "Trap Latino"])
   status?: 'draft' | 'pending' | 'published' | 'rejected';
   duration?: number;
   userId: string;
@@ -200,6 +201,7 @@ export class UploadOrchestratorService {
         artistId: request.artistId,
         albumId: request.albumId,
         genreId: request.genreId,
+        genres: request.genres || [], // Array de géneros musicales
         status: request.status,
         duration: request.duration,
         userId: request.userId,

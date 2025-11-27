@@ -23,6 +23,7 @@ export interface SongModel {
   artist?: ArtistModel;
   albumId?: string;
   genreId?: string;
+  genres?: string[]; // Array de géneros musicales
   status: 'draft' | 'published' | 'archived';
   totalStreams: number;
   totalLikes: number;

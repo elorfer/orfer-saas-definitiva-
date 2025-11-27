@@ -4,7 +4,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:ui';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/audio/audio_manager.dart';
+import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/play_button_icon.dart';
 import '../providers/song_detail_provider.dart';
@@ -196,22 +197,23 @@ class ArtistSongsList extends ConsumerWidget {
     Song song,
   ) async {
     try {
-      final audioManager = ref.read(audioManagerProvider);
+      final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
+      final audioState = ref.read(unifiedAudioProviderFixed);
       
       // Verificar si hay una canción reproduciéndose
-      final currentSong = audioManager.currentSong;
-      final isPlaying = audioManager.isPlaying;
+      final currentSong = audioState.currentSong;
+      final isPlaying = audioState.isPlaying;
       final isCurrentSong = currentSong?.id == song.id;
       
-      // Si es la canción actual y está reproduciéndose → abrir full player
+      // Si es la canción actual y está reproduciéndose → toggle pause/play
       if (isCurrentSong && isPlaying) {
-        audioManager.openFullPlayer();
+        await audioNotifier.togglePlayPause();
         return;
       }
       
-      // Si hay otra canción reproduciéndose → playSong se encargará de abrir el full player
-      // Si no hay canción reproduciéndose → reproduce normalmente
-      await audioManager.playSong(song);
+      // Si hay otra canción reproduciéndose o no hay canción → reproducir nueva canción
+      AppLogger.info('[ArtistSongsList] 🎵 Reproduciendo: ${song.title}');
+      await audioNotifier.playSong(song);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,8 +230,6 @@ class ArtistSongsList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final songsAsync = ref.watch(songsByArtistProvider(artistId));
-    final audioManager = ref.read(audioManagerProvider);
-    final currentSong = audioManager.currentSong;
 
     return songsAsync.when(
       data: (songs) {
@@ -250,40 +250,22 @@ class ArtistSongsList extends ConsumerWidget {
                 ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
                 : null;
             
-            // Escuchar cambios en la canción actual primero
-            return StreamBuilder<Song?>(
-              stream: audioManager.currentSongStream,
-              initialData: currentSong,
-              builder: (context, currentSongSnapshot) {
-                final currentSongNow = currentSongSnapshot.data;
-                final isCurrentSong = currentSongNow?.id == song.id;
+            // Usar el provider unificado en lugar de streams
+            return Consumer(
+              builder: (context, ref, child) {
+                final audioState = ref.watch(unifiedAudioProviderFixed);
+                final currentSong = audioState.currentSong;
+                final isCurrentSong = currentSong?.id == song.id;
                 
-                // Si no es la canción actual, no necesitamos escuchar el estado de reproducción
-                if (!isCurrentSong) {
-                  return _SongListItem(
-                    song: song,
-                    coverUrl: coverUrl,
-                    isPlaying: false,
-                    onTap: () => onSongTap(song),
-                    onPlayPause: () => _handlePlayPause(context, ref, song),
-                  );
-                }
-                
-                // Si es la canción actual, escuchar el estado de reproducción
-                return StreamBuilder<bool>(
-                  stream: audioManager.isPlayingStream,
-                  initialData: audioManager.isPlaying,
-                  builder: (context, isPlayingSnapshot) {
-                    final isPlaying = isPlayingSnapshot.data ?? false;
+                // Obtener el estado de reproducción del provider unificado
+                final isPlaying = isCurrentSong ? audioState.isPlaying : false;
 
-                    return _SongListItem(
-                      song: song,
-                      coverUrl: coverUrl,
-                      isPlaying: isPlaying,
-                      onTap: () => onSongTap(song),
-                      onPlayPause: () => _handlePlayPause(context, ref, song),
-                    );
-                  },
+                return _SongListItem(
+                  song: song,
+                  coverUrl: coverUrl,
+                  isPlaying: isPlaying,
+                  onTap: () => onSongTap(song),
+                  onPlayPause: () => _handlePlayPause(context, ref, song),
                 );
               },
             );
@@ -336,7 +318,7 @@ class _SongListItem extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             padding: const EdgeInsets.all(12),
-            decoration: NeumorphismTheme.glassDecoration.copyWith(
+            decoration: NeumorphismTheme.glassDecoration().copyWith(
               color: Colors.white.withValues(alpha: 0.3),
             ),
             child: Material(

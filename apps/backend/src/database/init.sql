@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS songs (
     cover_art_url TEXT,
     lyrics TEXT,
     genre_id UUID REFERENCES genres(id),
+    genres TEXT, -- Array de géneros separados por comas (ej: "Reggaeton,Trap Latino")
     track_number INTEGER,
     status song_status NOT NULL DEFAULT 'draft',
     is_explicit BOOLEAN DEFAULT FALSE,

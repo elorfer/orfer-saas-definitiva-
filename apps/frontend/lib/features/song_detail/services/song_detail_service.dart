@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/services/http_client_service.dart';
 import '../../../core/utils/retry_handler.dart';
@@ -87,7 +88,17 @@ class SongDetailService {
       if (ResponseParser.isSuccess(response)) {
         final data = response.data;
         if (data is Map<String, dynamic>) {
+          // DEBUG: Ver qué viene del backend
+          debugPrint('[SongDetailService] Datos recibidos del backend:');
+          debugPrint('[SongDetailService] genres en data: ${data['genres']}');
+          debugPrint('[SongDetailService] Tipo de genres: ${data['genres'].runtimeType}');
+          
           final normalized = DataNormalizer.normalizeSong(data);
+          
+          // DEBUG: Ver qué queda después de normalizar
+          debugPrint('[SongDetailService] Después de normalizar:');
+          debugPrint('[SongDetailService] genres en normalized: ${normalized['genres']}');
+          debugPrint('[SongDetailService] Tipo de genres normalizado: ${normalized['genres']?.runtimeType}');
           
           // Normalizar URL de portada
           final rawCoverUrl = normalized['cover_art_url'] as String?;
@@ -96,7 +107,16 @@ class SongDetailService {
             normalized['cover_art_url'] = normalizedCoverUrl;
           }
           
-          return Song.fromJson(normalized);
+          // IMPORTANTE: También normalizar URL del archivo de audio
+          final rawFileUrl = normalized['file_url'] as String?;
+          if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
+            final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
+            normalized['file_url'] = normalizedFileUrl;
+          }
+          
+          final song = Song.fromJson(normalized);
+          debugPrint('[SongDetailService] Canción parseada. Géneros: ${song.genres}');
+          return song;
         }
       }
       return null;

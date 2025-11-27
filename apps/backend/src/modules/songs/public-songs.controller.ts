@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SongsService } from './songs.service';
+import { SongMapper } from './mappers/song.mapper';
+import { RecommendationService } from '../recommendations/recommendation.service';
 import { SongQueryDto } from './dto/song-query.dto';
 import { PaginatedSongsResponseDto, HomeFeedResponseDto, SongResponseDto } from './dto/song-response.dto';
 
@@ -18,7 +20,10 @@ import { PaginatedSongsResponseDto, HomeFeedResponseDto, SongResponseDto } from 
 export class PublicSongsController {
   private readonly logger = new Logger(PublicSongsController.name);
   
-  constructor(private readonly songsService: SongsService) {}
+  constructor(
+    private readonly songsService: SongsService,
+    private readonly recommendationService: RecommendationService,
+  ) {}
 
   /**
    * Obtiene todas las canciones publicadas (optimizado para Flutter)
@@ -119,6 +124,74 @@ export class PublicSongsController {
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number = 10,
   ) {
     return this.songsService.getTopSongs(limit);
+  }
+
+  /**
+   * 🎵 RECOMENDACIONES ESTILO SPOTIFY (PÚBLICO - sin autenticación)
+   * Algoritmo avanzado con ML básico, scoring inteligente y múltiples estrategias
+   * IMPORTANTE: Debe estar ANTES de @Get(':id') para que la ruta 'recommended' no sea interpretada como un ID
+   */
+  @Get('recommended/:songId')
+  @ApiOperation({ 
+    summary: '🎵 Recomendaciones estilo Spotify (público)',
+    description: 'Sistema avanzado de recomendaciones que combina Content-Based Filtering, Collaborative Filtering, análisis de popularidad y scoring inteligente. Similar al algoritmo de Spotify.',
+  })
+  @ApiParam({ name: 'songId', description: 'ID de la canción actual' })
+  @ApiQuery({ name: 'genres', required: false, type: [String], description: 'Géneros de la canción actual (opcional)' })
+  @ApiQuery({ name: 'userId', required: false, type: String, description: 'ID del usuario para personalización (opcional)' })
+  @ApiResponse({ status: 200, description: 'Canción recomendada con algoritmo avanzado' })
+  @ApiResponse({ status: 404, description: 'Canción actual no encontrada' })
+  async getRecommendedSong(
+    @Param('songId') songId: string,
+    @Query('genres') genres?: string | string[],
+    @Query('userId') userId?: string,
+  ) {
+    const startTime = Date.now();
+    this.logger.log(`🎵 [SPOTIFY-STYLE] Recomendación solicitada para: ${songId}`);
+    this.logger.log(`👤 [SPOTIFY-STYLE] Usuario: ${userId || 'anónimo'}`);
+    this.logger.log(`🏷️ [SPOTIFY-STYLE] Géneros: ${genres ? (Array.isArray(genres) ? genres.join(', ') : genres) : 'auto-detectar'}`);
+    
+    // Convertir genres a array si viene como string
+    const genresArray = genres 
+      ? (Array.isArray(genres) ? genres : [genres])
+      : undefined;
+    
+    // Usar el nuevo servicio de recomendaciones estilo Spotify
+    const recommended = await this.recommendationService.getRecommendedSong(
+      songId, 
+      userId, 
+      genresArray
+    );
+    
+    if (!recommended) {
+      this.logger.log(`❌ [SPOTIFY-STYLE] No hay recomendaciones disponibles`);
+      return { 
+        message: 'No hay canciones recomendadas disponibles', 
+        song: null,
+        algorithm: 'spotify-style-v1',
+        processingTime: Date.now() - startTime
+      };
+    }
+    
+    // Usar el mapper para convertir a DTO
+    const songDto = SongMapper.toDto(recommended);
+    
+    const processingTime = Date.now() - startTime;
+    this.logger.log(`✅ [SPOTIFY-STYLE] Recomendación completada en ${processingTime}ms`);
+    this.logger.log(`🎵 [SPOTIFY-STYLE] Recomendada: ${recommended.title}`);
+    this.logger.log(`👤 [SPOTIFY-STYLE] Artista: ${recommended.artist?.stageName || 'Desconocido'}`);
+    this.logger.log(`🏷️ [SPOTIFY-STYLE] Géneros: ${recommended.genres?.join(', ') || 'ninguno'}`);
+    
+    return { 
+      song: songDto,
+      algorithm: 'spotify-style-v1',
+      processingTime,
+      metadata: {
+        recommendationEngine: 'Advanced ML-based hybrid system',
+        strategies: ['content-based', 'collaborative-filtering', 'popularity-based', 'trending'],
+        scoringFactors: ['genre-similarity', 'popularity', 'artist-match', 'novelty', 'user-affinity']
+      }
+    };
   }
 
   /**

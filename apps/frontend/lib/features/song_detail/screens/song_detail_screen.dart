@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/audio/audio_manager.dart';
+import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/widgets/play_button_icon.dart';
 import '../widgets/artist_songs_list.dart';
+import '../providers/song_detail_provider.dart';
 import '../../../core/utils/url_normalizer.dart';
+import '../../../core/utils/logger.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../../artists/pages/artist_page.dart';
@@ -137,11 +139,14 @@ class SongDetailScreen extends ConsumerStatefulWidget {
 
 class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
   late ScrollController _scrollController;
+  Song? _loadedSong; // Canción cargada desde el backend
 
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    // Cargar la canción completa desde el backend para asegurar datos actualizados
+    _loadSongFromBackend();
   }
   
   @override
@@ -153,6 +158,30 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Carga la canción completa desde el backend para asegurar datos actualizados (incluyendo géneros)
+  Future<void> _loadSongFromBackend() async {
+    try {
+      final songDetailService = ref.read(songDetailServiceProvider);
+      final loadedSong = await songDetailService.getSongById(widget.song.id);
+      if (loadedSong != null && mounted) {
+        debugPrint('[SongDetailScreen] Canción cargada desde backend: ${loadedSong.title}');
+        debugPrint('[SongDetailScreen] Géneros recibidos: ${loadedSong.genres}');
+        debugPrint('[SongDetailScreen] Géneros es null: ${loadedSong.genres == null}');
+        debugPrint('[SongDetailScreen] Géneros está vacío: ${loadedSong.genres?.isEmpty ?? true}');
+        setState(() {
+          _loadedSong = loadedSong;
+        });
+      } else {
+        debugPrint('[SongDetailScreen] No se pudo cargar la canción desde el backend');
+        debugPrint('[SongDetailScreen] Géneros de la canción inicial: ${widget.song.genres}');
+      }
+    } catch (e) {
+      debugPrint('[SongDetailScreen] Error al cargar canción desde backend: $e');
+      // Si falla, usar la canción que viene como parámetro
+      debugPrint('[SongDetailScreen] Usando canción inicial. Géneros: ${widget.song.genres}');
+    }
   }
 
 
@@ -194,22 +223,37 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
   /// Si HAY canción reproduciéndose → expande el full player
   Future<void> _handlePlay() async {
     try {
-      final audioManager = ref.read(audioManagerProvider);
+      // 🚀 USAR PROVIDER UNIFICADO CORREGIDO CON DEBUG
+      final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
       
-      // Verificar si hay una canción reproduciéndose
-      final currentSong = audioManager.currentSong;
-      final isPlaying = audioManager.isPlaying;
-      final isCurrentSong = currentSong?.id == widget.song.id;
+      // Usar la canción cargada desde el backend si está disponible
+      final songToPlay = _loadedSong ?? widget.song;
       
-      // Si es la canción actual y está reproduciéndose → abrir full player
-      if (isCurrentSong && isPlaying) {
-        audioManager.openFullPlayer();
+      // DEBUG: Verificar qué canción se está usando
+      debugPrint('[SongDetailScreen] 🚀 GLOBAL PROVIDER - Canción a reproducir:');
+      debugPrint('[SongDetailScreen] 🎵 Título: ${songToPlay.title}');
+      debugPrint('[SongDetailScreen] 🎵 fileUrl: ${songToPlay.fileUrl}');
+      debugPrint('[SongDetailScreen] 🎵 coverArtUrl: ${songToPlay.coverArtUrl}');
+      
+      // Verificar estado actual del reproductor unificado corregido
+      final currentAudioState = ref.read(unifiedAudioProviderFixed);
+      final isCurrentSong = currentAudioState.currentSong?.id == songToPlay.id;
+      
+      // Si es la canción actual y está reproduciéndose → toggle play/pause
+      if (isCurrentSong && currentAudioState.isPlaying) {
+        await audioNotifier.togglePlayPause();
         return;
       }
       
-      // Si hay otra canción reproduciéndose → playSong se encargará de abrir el full player
-      // Si no hay canción reproduciéndose → reproduce normalmente
-      await audioManager.playSong(widget.song);
+      // Si es la canción actual pero pausada → reanudar
+      if (isCurrentSong && !currentAudioState.isPlaying) {
+        await audioNotifier.play();
+        return;
+      }
+      
+      // Si es una canción diferente → reproducir nueva canción
+      AppLogger.info('[SongDetailScreen] 🚀 Reproduciendo nueva canción: ${songToPlay.title}');
+      await audioNotifier.playSong(songToPlay);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -225,13 +269,17 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final audioManager = ref.read(audioManagerProvider);
+    // 🚀 USAR PROVIDER UNIFICADO CORREGIDO CON DEBUG
+    final _ = ref.watch(unifiedAudioProviderFixed); // Solo para escuchar cambios
 
-    final coverUrl = widget.song.coverArtUrl != null && widget.song.coverArtUrl!.isNotEmpty
-        ? UrlNormalizer.normalizeImageUrl(widget.song.coverArtUrl)
+    // Usar la canción cargada desde el backend si está disponible, sino usar la que viene como parámetro
+    final song = _loadedSong ?? widget.song;
+
+    final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
+        ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
         : null;
     
-    final artist = widget.song.artist;
+    final artist = song.artist;
     final artistAvatarUrl = artist?.profilePhotoUrl != null
         ? UrlNormalizer.normalizeImageUrl(artist?.profilePhotoUrl)
         : null;
@@ -293,8 +341,8 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
                         
                         // Portada grande centrada
                         Center(
-                          child: Hero(
-                            tag: 'album_cover_${widget.song.id}',
+                            child: Hero(
+                            tag: 'album_cover_${song.id}',
                             child: Container(
                               width: MediaQuery.of(context).size.width * 0.85,
                               height: MediaQuery.of(context).size.width * 0.85,
@@ -354,7 +402,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
                             // Título de la canción (grande y bold)
                             Expanded(
                               child: Text(
-                                widget.song.title ?? 'Sin título',
+                                song.title ?? 'Sin título',
                                 style: const TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.bold,
@@ -419,12 +467,11 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
                                       onTap: _handlePlay,
                                       borderRadius: BorderRadius.circular(24),
                                       child: Center(
-                                        child: StreamBuilder<Song?>(
-                                          stream: audioManager.currentSongStream,
-                                          initialData: audioManager.currentSong,
-                                          builder: (context, currentSongSnapshot) {
-                                            final currentSong = currentSongSnapshot.data;
-                                            final isCurrentSong = currentSong?.id == widget.song.id;
+                                        child: Consumer(
+                                          builder: (context, ref, child) {
+                                            final currentAudioState = ref.watch(unifiedAudioProviderFixed);
+                                            final currentSong = currentAudioState.currentSong;
+                                            final isCurrentSong = currentSong?.id == song.id;
                                             
                                             if (!isCurrentSong) {
                                               return const PlayButtonIcon(
@@ -434,17 +481,12 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
                                               );
                                             }
                                             
-                                            return StreamBuilder<bool>(
-                                              stream: audioManager.isPlayingStream,
-                                              initialData: audioManager.isPlaying,
-                                              builder: (context, isPlayingSnapshot) {
-                                                final isPlaying = isPlayingSnapshot.data ?? false;
-                                                return PlayButtonIcon(
-                                                  isPlaying: isPlaying,
-                                                  color: Colors.white,
-                                                  size: 24,
-                                                );
-                                              },
+                                            // Usar estado del provider unificado corregido
+                                            final isPlaying = currentAudioState.isPlaying;
+                                            return PlayButtonIcon(
+                                              isPlaying: isPlaying,
+                                              color: Colors.white,
+                                              size: 24,
                                             );
                                           },
                                         ),
@@ -540,9 +582,9 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
                                     color: NeumorphismTheme.textLight,
                                   ),
                                 ),
-                                if (widget.song.releaseDate != null) ...[
+                                if (song.releaseDate != null) ...[
                                   Text(
-                                    ' • ${_formatReleaseDate(widget.song.releaseDate)}',
+                                    ' • ${_formatReleaseDate(song.releaseDate)}',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: NeumorphismTheme.textLight,
@@ -563,6 +605,47 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
                         //   ),
                         
                         const SizedBox(height: 12),
+                        
+                        // Géneros musicales - DEBUG
+                        Builder(
+                          builder: (context) {
+                            // Sin logs para mejor rendimiento
+                            // Sin logs para mejor rendimiento
+                            // Sin logs para mejor rendimiento
+                            
+                            if (song.genres != null && song.genres!.isNotEmpty) {
+                              return Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: song.genres!.map((genre) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      genre,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: NeumorphismTheme.textPrimary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              );
+                            } else {
+                              // Sin logs para mejor rendimiento
+                              return const SizedBox.shrink();
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         
                         // Sección "Más de este artista" estilo Spotify
                         if (artist != null) ...[
@@ -598,7 +681,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen> {
                             height: 200,
                             child: ArtistSongsHorizontalList(
                               artistId: artist.id,
-                              currentSongId: widget.song.id,
+                              currentSongId: song.id,
                               onSongTap: _navigateToSong,
                             ),
                           ),

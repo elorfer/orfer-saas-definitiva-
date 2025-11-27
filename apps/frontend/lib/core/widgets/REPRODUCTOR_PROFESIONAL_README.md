@@ -226,3 +226,7 @@ Agregar en `ios/Runner/Info.plist`:
 
 
 
+
+
+
+

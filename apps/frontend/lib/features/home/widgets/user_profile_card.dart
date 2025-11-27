@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/models/user_model.dart';
-import '../../../core/widgets/network_image_with_fallback.dart';
+import '../../../core/widgets/optimized_image.dart';
 
 class UserProfileCard extends StatelessWidget {
   final User user;
@@ -42,15 +42,20 @@ class UserProfileCard extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(30),
-                  child: NetworkImageWithFallback.small(
+                  child: OptimizedImage(
                     imageUrl: user.avatarUrl,
                     fit: BoxFit.cover,
                     width: 60,
                     height: 60,
                     borderRadius: 30,
-                    errorIcon: Icons.person,
-                    iconColor: NeumorphismTheme.coffeeMedium,
-                    backgroundColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+                    errorWidget: Container(
+                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+                      child: Icon(
+                        Icons.person,
+                        color: NeumorphismTheme.coffeeMedium,
+                        size: 30,
+                      ),
+                    ),
                   ),
                 ),
               ),

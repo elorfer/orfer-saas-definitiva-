@@ -49,7 +49,7 @@ export interface PlaylistResponseDto {
 
 export class PlaylistMapper {
   private static getBaseUrl(): string {
-    return process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000';
+    return process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3001';
   }
 
   /**

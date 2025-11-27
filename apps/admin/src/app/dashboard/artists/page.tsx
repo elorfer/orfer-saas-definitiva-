@@ -3,14 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api';
-import {
-  HomeIcon,
-  UsersIcon,
-  MusicalNoteIcon,
-  ShieldCheckIcon,
-  StarIcon,
-  ListBulletIcon,
-} from '@heroicons/react/24/outline';
 
 type ArtistLite = {
   id: string;
@@ -32,15 +24,6 @@ export default function ArtistsPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Administrar usuarios', href: '/dashboard/users', icon: UsersIcon },
-    { name: 'Gestionar canciones', href: '/dashboard/songs', icon: MusicalNoteIcon },
-    { name: 'Artistas', href: '/dashboard/artists', icon: UsersIcon },
-    { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },
-    { name: 'Contenido destacado', href: '/dashboard/featured', icon: StarIcon },
-    { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
-  ];
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -82,57 +65,21 @@ export default function ArtistsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
-        <div className="flex flex-col items-center xl:items-start px-4 mb-8">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold">
-            VM
-          </div>
-          <span className="mt-3 text-sm font-semibold text-gray-900 hidden xl:block">
-            Vintage Admin
-          </span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Artistas</h1>
+          <p className="mt-1 text-sm text-gray-500">Gestiona y destaca artistas.</p>
         </div>
-        <nav className="flex-1 flex flex-col space-y-1 px-2">
-          {navItems.map((item) => {
-            const isActive = item.href === '/dashboard/artists';
-            const Icon = item.icon as any;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                  isActive ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="hidden xl:inline">{item.name}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div className="flex-1 flex flex-col">
-        <header className="bg-white/95 backdrop-blur border-b border-gray-200 shadow-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Artistas</h1>
-                <p className="mt-1 text-sm text-gray-500">Gestiona y destaca artistas.</p>
-              </div>
-              <div className="flex gap-2">
-                <Link href="/dashboard/artists/featured" className="px-3 py-2 rounded-lg border">
-                  Ver destacados
-                </Link>
-                <Link href="/dashboard/artists/create" className="px-3 py-2 rounded-lg bg-purple-600 text-white">
-                  Crear artista
-                </Link>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="flex gap-2">
+          <Link href="/dashboard/artists/featured" className="px-3 py-2 rounded-lg border">
+            Ver destacados
+          </Link>
+          <Link href="/dashboard/artists/create" className="px-3 py-2 rounded-lg bg-purple-600 text-white">
+            Crear artista
+          </Link>
+        </div>
+      </div>
           <div className="flex items-center gap-3">
             <input
               value={search}
@@ -189,8 +136,6 @@ export default function ArtistsPage() {
               </tbody>
             </table>
           </div>
-        </main>
-      </div>
     </div>
   );
 }

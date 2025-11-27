@@ -193,14 +193,50 @@ class HomeService {
           return ResponseParser.parseList<FeaturedSong>(
             data: validData,
             parser: (songData) {
+              // DEBUG: Ver datos originales
+              debugPrint('[HomeService] 🔍 Datos originales de canción destacada:');
+              debugPrint('[HomeService] 🔍 fileUrl: ${songData['fileUrl']}');
+              debugPrint('[HomeService] 🔍 file_url: ${songData['file_url']}');
+              
+              // CORRECCIÓN CRÍTICA: Asegurar que fileUrl se mapee correctamente
+              if (songData['fileUrl'] != null && songData['file_url'] == null) {
+                songData['file_url'] = songData['fileUrl'];
+                debugPrint('[HomeService] 🔧 CORRECCIÓN: Mapeando fileUrl -> file_url');
+              }
+              
               // Usar DataNormalizer para normalizar la canción
               final normalizedSong = DataNormalizer.normalizeSong(songData);
+              
+              // DEBUG: Ver datos después de normalizar
+              debugPrint('[HomeService] 🔍 Después de DataNormalizer:');
+              debugPrint('[HomeService] 🔍 fileUrl: ${normalizedSong['fileUrl']}');
+              debugPrint('[HomeService] 🔍 file_url: ${normalizedSong['file_url']}');
+              
+              // CORRECCIÓN ADICIONAL: Si aún no hay file_url, usar fileUrl original
+              if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') && 
+                  songData['fileUrl'] != null) {
+                normalizedSong['file_url'] = songData['fileUrl'];
+                normalizedSong['fileUrl'] = songData['fileUrl'];
+                debugPrint('[HomeService] 🔧 CORRECCIÓN ADICIONAL: Usando fileUrl original');
+              }
               
               // Normalizar URL de portada
               final rawCoverUrl = normalizedSong['cover_art_url'] as String?;
               final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
               if (normalizedCoverUrl != null) {
                 normalizedSong['cover_art_url'] = normalizedCoverUrl;
+              }
+              
+              // IMPORTANTE: También normalizar URL del archivo de audio
+              final rawFileUrl = normalizedSong['file_url'] as String?;
+              debugPrint('[HomeService] 🔍 rawFileUrl para normalizar: $rawFileUrl');
+              if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
+                final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
+                normalizedSong['file_url'] = normalizedFileUrl;
+                normalizedSong['fileUrl'] = normalizedFileUrl; // También mantener camelCase
+                debugPrint('[HomeService] 🔧 URL de audio normalizada: $normalizedFileUrl');
+              } else {
+                debugPrint('[HomeService] ❌ ERROR: rawFileUrl es null o vacío');
               }
               
               final song = Song.fromJson(normalizedSong);
@@ -225,6 +261,71 @@ class HomeService {
     }
   }
 
+
+  /// Obtiene una canción recomendada basándose en los géneros de la canción actual
+  /// 
+  /// LÓGICA:
+  /// 1. Obtiene los géneros de la canción actual
+  /// 2. Busca canciones que compartan al menos un género
+  /// 3. Si encuentra coincidencias, elige una al azar
+  /// 4. Si no encuentra coincidencias, elige una canción aleatoria de todas las disponibles
+  /// 
+  /// @param currentSongId ID de la canción actual
+  /// @param currentGenres Géneros de la canción actual (opcional, se obtienen de la BD si no se proporcionan)
+  /// @returns Canción recomendada o null si no hay canciones disponibles
+  Future<Song?> getRecommendedSong(String currentSongId, {List<String>? currentGenres}) async {
+    try {
+      AppLogger.info('[HomeService] getRecommendedSong llamado para canción: $currentSongId');
+      
+      final url = '/songs/recommended/$currentSongId';
+      
+      // Agregar géneros como query params si se proporcionan
+      final queryParams = <String, dynamic>{};
+      if (currentGenres != null && currentGenres.isNotEmpty) {
+        queryParams['genres'] = currentGenres;
+      }
+      
+      final response = await RetryHandler.retryDataLoad(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.get(
+          url,
+          queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        ),
+      );
+
+      if (ResponseParser.isSuccess(response)) {
+        final data = response.data;
+        
+        if (data == null || data['song'] == null) {
+          AppLogger.warning('[HomeService] No se encontró canción recomendada');
+          return null;
+        }
+
+        // Normalizar y parsear la canción recomendada
+        final normalizedSong = DataNormalizer.normalizeSong(data['song']);
+        
+        // Normalizar URL de portada
+        final rawCoverUrl = normalizedSong['cover_art_url'] as String?;
+        final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
+        if (normalizedCoverUrl != null) {
+          normalizedSong['cover_art_url'] = normalizedCoverUrl;
+        }
+        
+        final song = Song.fromJson(normalizedSong);
+        AppLogger.info('[HomeService] Canción recomendada obtenida: ${song.title} (géneros: ${song.genres?.join(', ') ?? 'ninguno'})');
+        return song;
+      } else {
+        AppLogger.warning('[HomeService] Respuesta no exitosa al obtener canción recomendada');
+        return null;
+      }
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'HomeService.getRecommendedSong', logError: true);
+      return null;
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'HomeService.getRecommendedSong', logError: true);
+      return null;
+    }
+  }
 
   /// Obtener canciones populares
   /// Si el endpoint falla, retorna lista vacía silenciosamente (no afecta la UI)

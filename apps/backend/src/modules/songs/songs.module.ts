@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
+import { RecommendationModule } from '../recommendations/recommendation.module';
 
 import { SongsController } from './songs.controller';
 import { PublicSongsController } from './public-songs.controller';
@@ -25,6 +26,7 @@ import { Genre } from '../../common/entities/genre.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Song, SongUpload, Artist, Album, Genre]),
+    RecommendationModule,
     ConfigModule,
     MulterModule.register({
       limits: {

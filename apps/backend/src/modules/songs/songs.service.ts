@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, Not } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -185,6 +185,7 @@ export class SongsService {
       artistId: string;
       albumId?: string;
       genreId?: string;
+      genres?: string[]; // Array de géneros musicales
       status?: 'draft' | 'pending' | 'published' | 'rejected';
       duration?: number;
     },
@@ -279,6 +280,7 @@ export class SongsService {
         artistId: songData.artistId,
         albumId: songData.albumId,
         genreId: songData.genreId,
+        genres: songData.genres || [], // Array de géneros musicales
         status: songData.status === 'pending' || songData.status === 'published' 
           ? SongStatus.PUBLISHED 
           : songData.status === 'draft' 
@@ -356,10 +358,19 @@ export class SongsService {
     artistId: string;
     albumId?: string;
     genreId?: string;
+    genres?: string[]; // Array de géneros musicales
     coverImageUrl?: string;
     status?: 'draft' | 'pending' | 'published' | 'rejected';
     duration?: number;
   }): Promise<Song> {
+    // VALIDACIÓN: Verificar que se proporcionen géneros
+    if (!createSongDto.genres || createSongDto.genres.length === 0) {
+      throw new BadRequestException(
+        'Es obligatorio asignar al menos un género musical a la canción. ' +
+        'Los géneros son necesarios para el sistema de recomendaciones.'
+      );
+    }
+
     // Verificar que el artista existe
     const artist = await this.artistRepository.findOne({
       where: { id: createSongDto.artistId },
@@ -398,6 +409,7 @@ export class SongsService {
       artistId: createSongDto.artistId,
       albumId: createSongDto.albumId,
       genreId: createSongDto.genreId,
+      genres: createSongDto.genres || [], // Array de géneros musicales
       status: createSongDto.status === 'pending' || createSongDto.status === 'published' 
         ? SongStatus.PUBLISHED 
         : createSongDto.status === 'draft' 
@@ -407,6 +419,115 @@ export class SongsService {
       totalStreams: 0,
       totalLikes: 0,
     });
+
+    return await this.songRepository.save(song);
+  }
+
+  /**
+   * Actualiza una canción existente
+   * @param id ID de la canción a actualizar
+   * @param updateData Datos a actualizar
+   * @returns Canción actualizada
+   */
+  async update(id: string, updateData: {
+    title?: string;
+    artistId?: string;
+    albumId?: string;
+    genreId?: string;
+    genres?: string[];
+    status?: SongStatus;
+    isExplicit?: boolean;
+    releaseDate?: Date;
+    coverImageUrl?: string;
+  }): Promise<Song> {
+    // Buscar la canción existente
+    const song = await this.songRepository.findOne({
+      where: { id },
+      relations: ['artist', 'album', 'genre'],
+    });
+
+    if (!song) {
+      throw new NotFoundException('Canción no encontrada');
+    }
+
+    // VALIDACIÓN: Si se están actualizando los géneros, verificar que no quede vacío
+    if (updateData.genres !== undefined) {
+      if (!updateData.genres || updateData.genres.length === 0) {
+        throw new BadRequestException(
+          'Es obligatorio mantener al menos un género musical asignado. ' +
+          'Los géneros son necesarios para el sistema de recomendaciones.'
+        );
+      }
+      
+      // VALIDACIÓN ADICIONAL: Si la canción es destacada, no puede quedarse sin géneros
+      if (song.isFeatured) {
+        throw new BadRequestException(
+          'No se pueden quitar todos los géneros de una canción destacada. ' +
+          'Las canciones destacadas requieren géneros para el sistema de recomendaciones automáticas.'
+        );
+      }
+    }
+
+    // Verificar artista si se está actualizando
+    if (updateData.artistId) {
+      const artist = await this.artistRepository.findOne({
+        where: { id: updateData.artistId },
+      });
+      if (!artist) {
+        throw new NotFoundException('Artista no encontrado');
+      }
+    }
+
+    // Verificar álbum si se está actualizando
+    if (updateData.albumId) {
+      const album = await this.albumRepository.findOne({
+        where: { id: updateData.albumId },
+      });
+      if (!album) {
+        throw new NotFoundException('Álbum no encontrado');
+      }
+    }
+
+    // Verificar género si se está actualizando
+    if (updateData.genreId) {
+      const genre = await this.genreRepository.findOne({
+        where: { id: updateData.genreId },
+      });
+      if (!genre) {
+        throw new NotFoundException('Género no encontrado');
+      }
+    }
+
+    // Actualizar campos
+    if (updateData.title !== undefined) {
+      song.title = updateData.title;
+    }
+    if (updateData.artistId !== undefined) {
+      song.artistId = updateData.artistId;
+    }
+    if (updateData.albumId !== undefined) {
+      song.albumId = updateData.albumId;
+    }
+    if (updateData.genreId !== undefined) {
+      song.genreId = updateData.genreId;
+    }
+    if (updateData.genres !== undefined) {
+      song.genres = updateData.genres;
+    }
+    if (updateData.coverImageUrl !== undefined) {
+      song.coverArtUrl = updateData.coverImageUrl;
+    }
+    if (updateData.status !== undefined) {
+      song.status = updateData.status;
+    }
+    if (updateData.isExplicit !== undefined) {
+      song.isExplicit = updateData.isExplicit;
+    }
+    if (updateData.releaseDate !== undefined) {
+      song.releaseDate = updateData.releaseDate;
+    }
+
+    this.logger.log(`Actualizando canción: ${song.title} (géneros: ${song.genres?.join(', ') || 'ninguno'})`);
 
     return await this.songRepository.save(song);
   }
@@ -426,6 +547,7 @@ export class SongsService {
 
     await this.songRepository.remove(song);
   }
+
 
   /**
    * Actualiza la duración de una canción leyendo el archivo de audio
@@ -688,8 +810,218 @@ export class SongsService {
       throw new NotFoundException('Canción no encontrada');
     }
 
+    // VALIDACIÓN: Una canción destacada debe tener géneros para el sistema de recomendaciones
+    if (featured && (!song.genres || song.genres.length === 0)) {
+      throw new BadRequestException(
+        'No se puede destacar una canción sin géneros musicales. ' +
+        'Los géneros son necesarios para el sistema de recomendaciones automáticas.'
+      );
+    }
+
     song.isFeatured = featured;
     return await this.songRepository.save(song);
+  }
+
+  /**
+   * Obtiene una canción recomendada basada en géneros compartidos
+   * 
+   * LÓGICA MEJORADA:
+   * 1. Obtiene los géneros de la canción actual
+   * 2. Busca canciones que compartan EXACTAMENTE al menos un género
+   * 3. Prioriza coincidencias exactas de género
+   * 4. Si no encuentra coincidencias exactas, busca coincidencias parciales
+   * 5. Como último recurso, elige una canción aleatoria
+   * 
+   * @param currentSongId ID de la canción actual
+   * @param currentGenres Géneros de la canción actual (opcional, se obtiene de la BD si no se proporciona)
+   * @returns Canción recomendada o null si no hay canciones disponibles
+   */
+  async getRecommendedSong(currentSongId: string, currentGenres?: string[]): Promise<Song | null> {
+    this.logger.log(`[getRecommendedSong] 🎵 MEJORADO: Buscando siguiente canción con género similar`);
+    
+    // Obtener géneros de la canción actual
+    let genres = currentGenres;
+    if (!genres || genres.length === 0) {
+      const currentSong = await this.songRepository.findOne({ 
+        where: { id: currentSongId },
+        select: ['id', 'genres', 'title']
+      });
+      genres = currentSong?.genres || [];
+      this.logger.log(`[getRecommendedSong] Géneros obtenidos de BD: ${genres.join(', ') || 'ninguno'}`);
+    } else {
+      this.logger.log(`[getRecommendedSong] Géneros proporcionados: ${genres.join(', ')}`);
+    }
+
+    if (!genres || genres.length === 0) {
+      this.logger.log(`[getRecommendedSong] ❌ Sin géneros, usando canción aleatoria`);
+      return this.getRandomSong(currentSongId);
+    }
+
+    // Normalizar géneros para comparación
+    const normalizedGenres = genres.map(g => g.toLowerCase().trim());
+    this.logger.log(`[getRecommendedSong] Géneros normalizados: ${normalizedGenres.join(', ')}`);
+
+    // PASO 1: Buscar coincidencias EXACTAS de género
+    const exactMatches = await this.findSongsByExactGenres(currentSongId, normalizedGenres);
+    if (exactMatches.length > 0) {
+      const selected = exactMatches[Math.floor(Math.random() * exactMatches.length)];
+      this.logger.log(`[getRecommendedSong] ✅ COINCIDENCIA EXACTA: ${selected.title} (géneros: ${selected.genres?.join(', ') || 'ninguno'})`);
+      return selected;
+    }
+
+    // PASO 2: Buscar coincidencias PARCIALES (contiene el género)
+    const partialMatches = await this.findSongsByPartialGenres(currentSongId, normalizedGenres);
+    if (partialMatches.length > 0) {
+      const selected = partialMatches[Math.floor(Math.random() * partialMatches.length)];
+      this.logger.log(`[getRecommendedSong] ✅ COINCIDENCIA PARCIAL: ${selected.title} (géneros: ${selected.genres?.join(', ') || 'ninguno'})`);
+      return selected;
+    }
+
+    // PASO 3: Fallback - canción aleatoria
+    this.logger.log(`[getRecommendedSong] ⚠️ Sin coincidencias de género, usando canción aleatoria`);
+    return this.getRandomSong(currentSongId);
+  }
+
+  /**
+   * Busca canciones que tengan EXACTAMENTE los mismos géneros - CONSULTA DIRECTA EN BD
+   */
+  private async findSongsByExactGenres(currentSongId: string, normalizedGenres: string[]): Promise<Song[]> {
+    try {
+      this.logger.log(`[findSongsByExactGenres] 🔍 Consultando BD para géneros: ${normalizedGenres.join(', ')}`);
+      
+      // CONSULTA SQL DIRECTA para buscar por género en la base de datos
+      const queryBuilder = this.songRepository.createQueryBuilder('song')
+        .leftJoinAndSelect('song.artist', 'artist')
+        .leftJoinAndSelect('song.album', 'album')
+        .where('song.status = :status', { status: SongStatus.PUBLISHED })
+        .andWhere('song.id != :currentSongId', { currentSongId })
+        .andWhere('song.fileUrl IS NOT NULL')
+        .andWhere('song.fileUrl != \'\'')
+        .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
+        .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' })
+        .andWhere('song.fileUrl LIKE :httpUrl', { httpUrl: 'http%' });
+
+      // Agregar condiciones OR para cada género
+      const genreConditions = normalizedGenres.map((genre, index) => 
+        `LOWER(song.genres) LIKE :genre${index}`
+      ).join(' OR ');
+      
+      if (genreConditions) {
+        queryBuilder.andWhere(`(${genreConditions})`);
+        
+        // Agregar parámetros para cada género
+        normalizedGenres.forEach((genre, index) => {
+          queryBuilder.setParameter(`genre${index}`, `%${genre}%`);
+        });
+      }
+
+      const exactMatches = await queryBuilder
+        .orderBy('song.totalStreams', 'DESC') // Priorizar canciones más populares
+        .limit(20) // Limitar resultados
+        .getMany();
+
+      this.logger.log(`[findSongsByExactGenres] ✅ Encontradas ${exactMatches.length} coincidencias exactas en BD`);
+      
+      // Log de las canciones encontradas
+      exactMatches.forEach(song => {
+        this.logger.log(`[findSongsByExactGenres] - ${song.title} (géneros: ${song.genres?.join(', ') || 'ninguno'})`);
+      });
+      
+      return exactMatches;
+    } catch (error) {
+      this.logger.error(`[findSongsByExactGenres] Error: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Busca canciones que contengan parcialmente los géneros - CONSULTA DIRECTA EN BD
+   */
+  private async findSongsByPartialGenres(currentSongId: string, normalizedGenres: string[]): Promise<Song[]> {
+    try {
+      this.logger.log(`[findSongsByPartialGenres] 🔍 Consultando BD para coincidencias parciales: ${normalizedGenres.join(', ')}`);
+      
+      // CONSULTA SQL DIRECTA para coincidencias parciales
+      const queryBuilder = this.songRepository.createQueryBuilder('song')
+        .leftJoinAndSelect('song.artist', 'artist')
+        .leftJoinAndSelect('song.album', 'album')
+        .where('song.status = :status', { status: SongStatus.PUBLISHED })
+        .andWhere('song.id != :currentSongId', { currentSongId })
+        .andWhere('song.fileUrl IS NOT NULL')
+        .andWhere('song.fileUrl != \'\'')
+        .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
+        .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' })
+        .andWhere('song.fileUrl LIKE :httpUrl', { httpUrl: 'http%' });
+
+      // Agregar condiciones OR más amplias para coincidencias parciales
+      const genreConditions = normalizedGenres.map((genre, index) => 
+        `(LOWER(song.genres) LIKE :genreStart${index} OR LOWER(song.genres) LIKE :genreEnd${index} OR LOWER(song.genres) LIKE :genreMiddle${index})`
+      ).join(' OR ');
+      
+      if (genreConditions) {
+        queryBuilder.andWhere(`(${genreConditions})`);
+        
+        // Agregar parámetros para cada género con diferentes patrones
+        normalizedGenres.forEach((genre, index) => {
+          queryBuilder.setParameter(`genreStart${index}`, `${genre}%`);
+          queryBuilder.setParameter(`genreEnd${index}`, `%${genre}`);
+          queryBuilder.setParameter(`genreMiddle${index}`, `%${genre}%`);
+        });
+      }
+
+      const partialMatches = await queryBuilder
+        .orderBy('song.createdAt', 'DESC') // Priorizar canciones más recientes
+        .limit(15) // Limitar resultados
+        .getMany();
+
+      this.logger.log(`[findSongsByPartialGenres] ✅ Encontradas ${partialMatches.length} coincidencias parciales en BD`);
+      
+      // Log de las canciones encontradas
+      partialMatches.forEach(song => {
+        this.logger.log(`[findSongsByPartialGenres] - ${song.title} (géneros: ${song.genres?.join(', ') || 'ninguno'})`);
+      });
+      
+      return partialMatches;
+    } catch (error) {
+      this.logger.error(`[findSongsByPartialGenres] Error: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene una canción aleatoria como fallback - CONSULTA DIRECTA EN BD
+   */
+  private async getRandomSong(currentSongId: string): Promise<Song | null> {
+    try {
+      this.logger.log(`[getRandomSong] 🔍 Consultando BD para canción aleatoria`);
+      
+      // CONSULTA SQL DIRECTA para canción aleatoria con URLs válidas
+      const randomSong = await this.songRepository.createQueryBuilder('song')
+        .leftJoinAndSelect('song.artist', 'artist')
+        .leftJoinAndSelect('song.album', 'album')
+        .where('song.status = :status', { status: SongStatus.PUBLISHED })
+        .andWhere('song.id != :currentSongId', { currentSongId })
+        .andWhere('song.fileUrl IS NOT NULL')
+        .andWhere('song.fileUrl != \'\'')
+        .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
+        .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' })
+        .andWhere('song.fileUrl LIKE :httpUrl', { httpUrl: 'http%' })
+        .orderBy('RANDOM()') // Orden aleatorio
+        .limit(1)
+        .getOne();
+
+      if (randomSong) {
+        this.logger.log(`[getRandomSong] ✅ Canción aleatoria seleccionada: ${randomSong.title} (géneros: ${randomSong.genres?.join(', ') || 'ninguno'})`);
+        this.logger.log(`[getRandomSong] URL: ${randomSong.fileUrl}`);
+      } else {
+        this.logger.log(`[getRandomSong] ❌ No hay canciones válidas disponibles en BD`);
+      }
+      
+      return randomSong;
+    } catch (error) {
+      this.logger.error(`[getRandomSong] Error: ${error.message}`);
+      return null;
+    }
   }
 
   /**

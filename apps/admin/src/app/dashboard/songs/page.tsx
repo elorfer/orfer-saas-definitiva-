@@ -1,15 +1,10 @@
 'use client';
 
 import { useMemo, useState, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import {
   ArrowPathIcon,
   MagnifyingGlassIcon,
-  UsersIcon,
-  HomeIcon,
-  MusicalNoteIcon,
-  ShieldCheckIcon,
   XMarkIcon,
   TrashIcon,
   PlusIcon,
@@ -19,21 +14,24 @@ import {
   CheckCircleIcon,
   DocumentArrowUpIcon,
   PhotoIcon,
-  StarIcon,
-  ListBulletIcon,
+  MusicalNoteIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
 
-import { useSongs, useUploadSong, useDeleteSong, useCreateSong } from '@/hooks/useSongs';
+import { useSongs, useUploadSong, useDeleteSong, useCreateSong, useUpdateSong } from '@/hooks/useSongs';
 import { useAllArtists } from '@/hooks/useArtists';
+import { useGenres } from '@/hooks/useGenres';
 import type { SongModel } from '@/types/song';
 import ArtistSelector from '@/components/ArtistSelector';
 
 const PAGE_SIZE = 10;
+
 const DEFAULT_UPLOAD_FORM = {
   file: null as File | null,
   coverFile: null as File | null,
   title: '',
   artistId: '',
+  genres: [] as string[], // Array de géneros seleccionados
 };
 
 const statusLabels: Record<string, { label: string; badge: string }> = {
@@ -53,11 +51,13 @@ function SongRow({
   song, 
   statusInfo, 
   onDelete, 
+  onEdit,
   isDeleting 
 }: { 
   song: SongModel; 
   statusInfo: { label: string; badge: string };
   onDelete: (song: SongModel) => void;
+  onEdit: (song: SongModel) => void;
   isDeleting: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
@@ -134,9 +134,28 @@ function SongRow({
         </div>
       </td>
       <td className="py-4 px-4">
-        <p className="text-sm text-gray-900">
-          {song.artist?.stageName || song.artist?.user?.email || 'Sin artista'}
-        </p>
+        <div>
+          <p className="text-sm text-gray-900">
+            {song.artist?.stageName || song.artist?.user?.email || 'Sin artista'}
+          </p>
+          {song.genres && song.genres.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {song.genres.slice(0, 3).map((genre, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700"
+                >
+                  {genre}
+                </span>
+              ))}
+              {song.genres.length > 3 && (
+                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600">
+                  +{song.genres.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </td>
       <td className="py-4 px-4">
         <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -164,27 +183,43 @@ function SongRow({
         </div>
       </td>
       <td className="py-4 px-4 text-right">
-        <button
-          onClick={() => onDelete(song)}
-          className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isDeleting}
-        >
-          <TrashIcon className={`h-4 w-4 ${isDeleting ? 'animate-spin' : ''}`} />
-          <span className="ml-1">Eliminar</span>
-        </button>
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => onEdit(song)}
+            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-purple-300 hover:text-purple-600"
+          >
+            <PencilIcon className="h-4 w-4" />
+            <span className="ml-1">Editar</span>
+          </button>
+          <button
+            onClick={() => onDelete(song)}
+            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isDeleting}
+          >
+            <TrashIcon className={`h-4 w-4 ${isDeleting ? 'animate-spin' : ''}`} />
+            <span className="ml-1">Eliminar</span>
+          </button>
+        </div>
       </td>
     </tr>
   );
 }
 
 export default function SongsPage() {
-  const router = useRouter();
-  const pathname = usePathname();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingSong, setEditingSong] = useState<SongModel | null>(null);
   const [uploadForm, setUploadForm] = useState(DEFAULT_UPLOAD_FORM);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    artistId: '',
+    genres: [] as string[],
+    status: 'published' as string,
+  });
   const [uploading, setUploading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const notificationShownRef = useRef(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -196,18 +231,14 @@ export default function SongsPage() {
   const { data: artistsData, isLoading: artistsLoading } = useAllArtists(true);
   const artists = artistsData?.artists ?? [];
 
+  // Obtener géneros desde la base de datos
+  const { data: genresData, isLoading: genresLoading } = useGenres({ page: 1, limit: 100, all: true, enabled: true });
+  const availableGenres = genresData?.genres?.map(g => g.name) ?? [];
+
   const { mutateAsync: uploadSong } = useUploadSong();
+  const { mutateAsync: updateSong } = useUpdateSong();
   const { mutateAsync: deleteSong } = useDeleteSong();
 
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Administrar usuarios', href: '/dashboard/users', icon: UsersIcon },
-    { name: 'Gestionar canciones', href: '/dashboard/songs', icon: MusicalNoteIcon },
-    { name: 'Artistas', href: '/dashboard/artists', icon: UsersIcon },
-    { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },
-    { name: 'Contenido destacado', href: '/dashboard/featured', icon: StarIcon },
-    { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
-  ];
 
   const openUploadModal = () => {
     setUploadForm(DEFAULT_UPLOAD_FORM);
@@ -261,6 +292,11 @@ export default function SongsPage() {
       return;
     }
 
+    if (!uploadForm.genres || uploadForm.genres.length === 0) {
+      alert('Por favor selecciona al menos un género musical. Es obligatorio para poder destacar la canción.');
+      return;
+    }
+
     try {
       setUploading(true);
       setUploadProgress(0);
@@ -297,6 +333,47 @@ export default function SongsPage() {
       setUploadProgress(0);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleEditSong = (song: SongModel) => {
+    setEditingSong(song);
+    setEditForm({
+      title: song.title || '',
+      artistId: song.artistId || '',
+      genres: song.genres || [], // Usar los géneros del modelo directamente
+      status: song.status || 'published',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateSong = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingSong) return;
+
+    if (!editForm.genres || editForm.genres.length === 0) {
+      alert('Por favor selecciona al menos un género musical. Es obligatorio para poder destacar la canción.');
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      await updateSong({
+        id: editingSong.id,
+        data: {
+          title: editForm.title,
+          artistId: editForm.artistId,
+          genres: editForm.genres,
+          status: editForm.status,
+        },
+      });
+      setShowEditModal(false);
+      setEditingSong(null);
+      setEditForm({ title: '', artistId: '', genres: [], status: 'published' });
+    } catch (error) {
+      // Error manejado por el hook
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -342,74 +419,31 @@ export default function SongsPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-100 flex">
-        <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
-          <div className="flex flex-col items-center xl:items-start px-4 mb-8">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold">
-              VM
-            </div>
-            <span className="mt-3 text-sm font-semibold text-gray-900 hidden xl:block">
-              Vintage Admin
-            </span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Gestionar canciones</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Consulta, filtra y gestiona las canciones del catálogo.
+            </p>
           </div>
-
-          <nav className="flex-1 flex flex-col space-y-1 px-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => {
-                    if (!isActive) {
-                      router.push(item.href);
-                    }
-                  }}
-                  className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="hidden xl:inline">{item.name}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <div className="flex-1 flex flex-col">
-          <header className="bg-white border-b border-gray-200 shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Gestionar canciones</h1>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Consulta, filtra y gestiona las canciones del catálogo.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => refetch()}
-                    className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
-                  >
-                    <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-                    Actualizar
-                  </button>
-                  <button
-                    onClick={openUploadModal}
-                    className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    Subir canción
-                  </button>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
+            >
+              <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
+            <button
+              onClick={openUploadModal}
+              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Subir canción
+            </button>
+          </div>
+        </div>
             <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="relative w-full sm:w-72">
@@ -471,6 +505,7 @@ export default function SongsPage() {
                             song={song}
                             statusInfo={statusInfo}
                             onDelete={handleDeleteSong}
+                            onEdit={handleEditSong}
                             isDeleting={deletingId === song.id}
                           />
                         );
@@ -502,8 +537,6 @@ export default function SongsPage() {
                 </div>
               </div>
             </div>
-          </main>
-        </div>
       </div>
 
       {showUploadModal && (
@@ -770,6 +803,69 @@ export default function SongsPage() {
                 required
               />
 
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  Géneros musicales <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Selecciona al menos un género. Es obligatorio para poder destacar la canción.
+                </p>
+                {genresLoading ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                    Cargando géneros...
+                  </div>
+                ) : availableGenres.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-sm text-gray-500">
+                    <p className="mb-2">No hay géneros disponibles.</p>
+                    <p className="text-xs text-gray-400">
+                      Ve a "Géneros musicales" para crear géneros primero.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    {availableGenres.map((genre) => {
+                      const isSelected = uploadForm.genres.includes(genre);
+                      return (
+                        <label
+                          key={genre}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
+                            isSelected
+                              ? 'bg-purple-100 border-2 border-purple-500 text-purple-700'
+                              : 'bg-white border border-gray-200 hover:border-purple-300 text-gray-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setUploadForm((prev) => ({
+                                  ...prev,
+                                  genres: [...prev.genres, genre],
+                                }));
+                              } else {
+                                setUploadForm((prev) => ({
+                                  ...prev,
+                                  genres: prev.genres.filter((g) => g !== genre),
+                                }));
+                              }
+                            }}
+                            disabled={uploading}
+                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                          />
+                          <span className="text-sm font-medium">{genre}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                {uploadForm.genres.length > 0 && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    {uploadForm.genres.length} género(s) seleccionado(s): {uploadForm.genres.join(', ')}
+                  </p>
+                )}
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -797,6 +893,177 @@ export default function SongsPage() {
                     </>
                   ) : (
                     'Subir canción'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && editingSong && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Editar canción</h2>
+                <p className="text-sm text-gray-500">
+                  Actualiza la información de la canción.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (!updating) {
+                    setShowEditModal(false);
+                    setEditingSong(null);
+                    setEditForm({ title: '', artistId: '', genres: [], status: 'published' });
+                  }
+                }}
+                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Cerrar"
+                disabled={updating}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSong} className="px-6 py-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  Título de la canción
+                </label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, title: event.target.value }))
+                  }
+                  required
+                  disabled={updating}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  placeholder="Ej. Canción de ejemplo"
+                />
+              </div>
+
+              <ArtistSelector
+                artists={artists}
+                value={editForm.artistId}
+                onChange={(artistId) =>
+                  setEditForm((prev) => ({ ...prev, artistId }))
+                }
+                disabled={updating}
+                isLoading={artistsLoading}
+                required
+              />
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  Estado
+                </label>
+                <select
+                  value={editForm.status}
+                  onChange={(event) =>
+                    setEditForm((prev) => ({ ...prev, status: event.target.value }))
+                  }
+                  disabled={updating}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                >
+                  <option value="draft">Borrador</option>
+                  <option value="published">Publicada</option>
+                  <option value="archived">Archivada</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  Géneros musicales <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Selecciona al menos un género. Es obligatorio para poder destacar la canción.
+                </p>
+                {genresLoading ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                    Cargando géneros...
+                  </div>
+                ) : availableGenres.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-sm text-gray-500">
+                    <p className="mb-2">No hay géneros disponibles.</p>
+                    <p className="text-xs text-gray-400">
+                      Ve a "Géneros musicales" para crear géneros primero.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    {availableGenres.map((genre) => {
+                      const isSelected = editForm.genres.includes(genre);
+                      return (
+                        <label
+                          key={genre}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
+                            isSelected
+                              ? 'bg-purple-100 border-2 border-purple-500 text-purple-700'
+                              : 'bg-white border border-gray-200 hover:border-purple-300 text-gray-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  genres: [...prev.genres, genre],
+                                }));
+                              } else {
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  genres: prev.genres.filter((g) => g !== genre),
+                                }));
+                              }
+                            }}
+                            disabled={updating}
+                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                          />
+                          <span className="text-sm font-medium">{genre}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                {editForm.genres.length > 0 && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    {editForm.genres.length} género(s) seleccionado(s): {editForm.genres.join(', ')}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!updating) {
+                      setShowEditModal(false);
+                      setEditingSong(null);
+                      setEditForm({ title: '', artistId: '', genres: [], status: 'published' });
+                    }
+                  }}
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={updating}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={updating || !editForm.title.trim() || !editForm.artistId}
+                  className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-400"
+                >
+                  {updating ? (
+                    <>
+                      <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                      Actualizando...
+                    </>
+                  ) : (
+                    'Guardar cambios'
                   )}
                 </button>
               </div>

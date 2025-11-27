@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'url_normalizer.dart';
 
 /// Utilidad centralizada para normalizar datos entre camelCase y snake_case
@@ -204,6 +205,7 @@ class DataNormalizer {
       'total_shares': 'total_shares',
       'status': 'status',
       'lyrics': 'lyrics',
+      'genres': 'genres', // Array de géneros musicales
       'createdAt': 'created_at',
       'created_at': 'created_at',
       'updatedAt': 'updated_at',
@@ -218,6 +220,25 @@ class DataNormalizer {
         normalized[mappedKey] = key == 'artist' 
             ? normalizeArtist(value) 
             : normalizeKeys(value);
+      } else if (key == 'genres') {
+        // Manejar géneros que pueden venir como List, String (separado por comas), o null
+        if (value is List) {
+          // Si es una lista, convertir a lista de strings
+          normalized[mappedKey] = value
+              .where((item) => item != null && item.toString().trim().isNotEmpty)
+              .map((item) => item.toString().trim())
+              .toList();
+        } else if (value is String && value.isNotEmpty) {
+          // Si es un string (simple-array de TypeORM), dividir por comas
+          normalized[mappedKey] = value
+              .split(',')
+              .map((item) => item.trim())
+              .where((item) => item.isNotEmpty)
+              .toList();
+        } else {
+          // Si es null o vacío, dejar como null
+          normalized[mappedKey] = null;
+        }
       } else {
         normalized[mappedKey] = value;
       }
@@ -231,6 +252,9 @@ class DataNormalizer {
     );
     normalized['cover_art_url'] = coverArtUrl;
     
+    // IMPORTANTE: También mantener coverArtUrl en camelCase para compatibilidad con el modelo Song
+    normalized['coverArtUrl'] = coverArtUrl;
+    
     // Asegurar campos requeridos con valores por defecto
     _ensureDefaultValue(normalized, 'title', _defaultSongTitle);
     _ensureDefaultValue(normalized, 'duration', _defaultNumericValue);
@@ -238,7 +262,18 @@ class DataNormalizer {
     _ensureDefaultValue(normalized, 'id', '');
     
     // file_url puede venir de diferentes campos
-    normalized['file_url'] ??= data['file_url'] ?? data['fileUrl'] ?? '';
+    final fileUrlValue = data['file_url'] ?? data['fileUrl'] ?? '';
+    
+    // DEBUG: Verificar qué está pasando con fileUrl
+    debugPrint('[DataNormalizer] 🔍 Datos originales:');
+    debugPrint('[DataNormalizer] 🔍 data[\'file_url\']: ${data['file_url']}');
+    debugPrint('[DataNormalizer] 🔍 data[\'fileUrl\']: ${data['fileUrl']}');
+    debugPrint('[DataNormalizer] 🔍 fileUrlValue final: $fileUrlValue');
+    
+    normalized['file_url'] = fileUrlValue;
+    
+    // IMPORTANTE: También mantener fileUrl en camelCase para compatibilidad con el modelo Song
+    normalized['fileUrl'] = fileUrlValue;
     
     return normalized;
   }

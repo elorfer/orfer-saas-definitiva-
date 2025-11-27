@@ -1,27 +1,19 @@
 'use client';
 
 import { useMemo, useState, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import {
   ArrowPathIcon,
   MagnifyingGlassIcon,
   UsersIcon,
-  HomeIcon,
   MusicalNoteIcon,
-  ShieldCheckIcon,
   XMarkIcon,
   TrashIcon,
   PlusIcon,
   ClockIcon,
-  PlayIcon,
-  HeartIcon,
-  CheckCircleIcon,
-  DocumentArrowUpIcon,
-  PhotoIcon,
   StarIcon,
   ListBulletIcon,
-  PencilIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/outline';
 
 import { usePlaylists, useCreatePlaylist, useUpdatePlaylist, useDeletePlaylist, useToggleFeaturedPlaylist, useUploadPlaylistCover, useFeaturedPlaylists, usePlaylist } from '@/hooks/usePlaylists';
@@ -171,8 +163,6 @@ function PlaylistRow({
 }
 
 export default function PlaylistsPage() {
-  const router = useRouter();
-  const pathname = usePathname();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -204,15 +194,6 @@ export default function PlaylistsPage() {
   const { mutateAsync: toggleFeatured } = useToggleFeaturedPlaylist();
   const { mutateAsync: uploadCover } = useUploadPlaylistCover();
 
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Administrar usuarios', href: '/dashboard/users', icon: UsersIcon },
-    { name: 'Gestionar canciones', href: '/dashboard/songs', icon: MusicalNoteIcon },
-    { name: 'Artistas', href: '/dashboard/artists', icon: UsersIcon },
-    { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },
-    { name: 'Contenido destacado', href: '/dashboard/featured', icon: StarIcon },
-    { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
-  ];
 
   const openCreateModal = () => {
     setPlaylistForm(DEFAULT_PLAYLIST_FORM);
@@ -348,194 +329,150 @@ export default function PlaylistsPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-100 flex">
-        {/* Sidebar */}
-        <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
-          <div className="flex flex-col items-center xl:items-start px-4 mb-8">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold">
-              VM
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+            <div>
+              <h1 className="text-2xl xl:text-3xl font-bold text-gray-900">Administrar Playlists</h1>
+              <p className="text-sm text-gray-500 mt-1">Gestiona las playlists de la plataforma</p>
             </div>
-            <span className="mt-3 text-sm font-semibold text-gray-900 hidden xl:block">
-              Vintage Admin
-            </span>
+            <button
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-md transition hover:bg-purple-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            >
+              <PlusIcon className="h-6 w-6" />
+              <span>Crear Playlist</span>
+            </button>
           </div>
 
-          <nav className="flex-1 flex flex-col space-y-1 px-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => {
-                    if (!isActive) {
-                      router.push(item.href);
-                    }
-                  }}
-                  className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                    isActive
-                      ? 'bg-purple-100 text-purple-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="hidden xl:block">{item.name}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto bg-gray-50 p-6 xl:p-10">
-            <div className="max-w-7xl mx-auto">
-              {/* Header */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-                  <div>
-                    <h1 className="text-2xl xl:text-3xl font-bold text-gray-900">Administrar Playlists</h1>
-                    <p className="text-sm text-gray-500 mt-1">Gestiona las playlists de la plataforma</p>
-                  </div>
-                  <button
-                    onClick={openCreateModal}
-                    className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-md transition hover:bg-purple-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+          {/* Featured Section */}
+          {featuredPlaylists.length > 0 && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl border border-yellow-200">
+              <div className="flex items-center gap-2 mb-3">
+                <StarIcon className="h-5 w-5 text-yellow-600 fill-current" />
+                <h2 className="text-lg font-semibold text-yellow-900">Playlists Destacadas</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {featuredPlaylists.slice(0, 4).map((playlist) => (
+                  <div
+                    key={playlist.id}
+                    className="bg-white rounded-lg p-3 border border-yellow-200 shadow-sm hover:shadow-md transition"
                   >
-                    <PlusIcon className="h-6 w-6" />
-                    <span>Crear Playlist</span>
-                  </button>
-                </div>
-
-                {/* Featured Section */}
-                {featuredPlaylists.length > 0 && (
-                  <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-xl border border-yellow-200">
-                    <div className="flex items-center gap-2 mb-3">
-                      <StarIcon className="h-5 w-5 text-yellow-600 fill-current" />
-                      <h2 className="text-lg font-semibold text-yellow-900">Playlists Destacadas</h2>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      {featuredPlaylists.slice(0, 4).map((playlist) => (
-                        <div
-                          key={playlist.id}
-                          className="bg-white rounded-lg p-3 border border-yellow-200 shadow-sm hover:shadow-md transition"
-                        >
-                          <div className="flex items-center gap-2">
-                            {playlist.coverArtUrl ? (
-                              <img
-                                src={playlist.coverArtUrl}
-                                alt={playlist.name}
-                                className="h-10 w-10 rounded object-cover"
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded bg-purple-100 flex items-center justify-center">
-                                <ListBulletIcon className="h-5 w-5 text-purple-600" />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{playlist.name}</p>
-                              <p className="text-xs text-gray-500">{playlist.totalTracks} canciones</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Search */}
-                <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar playlists..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="mb-6 flex items-center gap-4 text-sm text-gray-600">
-                <p className="text-sm text-gray-500">{total.toLocaleString('es-ES')} playlists en total</p>
-              </div>
-
-              {/* Playlists Table */}
-              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Playlist
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Descripción
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Contenido
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Estado
-                      </th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
-                          Cargando playlists...
-                        </td>
-                      </tr>
-                    ) : filteredPlaylists.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
-                          No se encontraron playlists.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredPlaylists.map((playlist) => (
-                        <PlaylistRow
-                          key={playlist.id}
-                          playlist={playlist}
-                          onDelete={handleDeletePlaylist}
-                          onToggleFeatured={handleToggleFeatured}
-                          onViewDetails={handleViewDetails}
-                          isDeleting={deletingId === playlist.id}
+                    <div className="flex items-center gap-2">
+                      {playlist.coverArtUrl ? (
+                        <img
+                          src={playlist.coverArtUrl}
+                          alt={playlist.name}
+                          className="h-10 w-10 rounded object-cover"
                         />
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
-                <p className="text-sm text-gray-500">
-                  Página {page} de {totalPages}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePrev}
-                    disabled={page === 1}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={page === totalPages}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Siguiente
-                  </button>
-                </div>
+                      ) : (
+                        <div className="h-10 w-10 rounded bg-purple-100 flex items-center justify-center">
+                          <ListBulletIcon className="h-5 w-5 text-purple-600" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{playlist.name}</p>
+                        <p className="text-xs text-gray-500">{playlist.totalTracks} canciones</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
+
+          {/* Search */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar playlists..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
           </div>
-        </main>
+        </div>
+
+        {/* Stats */}
+        <div className="mb-6 flex items-center gap-4 text-sm text-gray-600">
+          <p className="text-sm text-gray-500">{total.toLocaleString('es-ES')} playlists en total</p>
+        </div>
+
+        {/* Playlists Table */}
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Playlist
+                </th>
+                <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Descripción
+                </th>
+                <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Contenido
+                </th>
+                <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Estado
+                </th>
+                <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
+                    Cargando playlists...
+                  </td>
+                </tr>
+              ) : filteredPlaylists.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
+                    No se encontraron playlists.
+                  </td>
+                </tr>
+              ) : (
+                filteredPlaylists.map((playlist) => (
+                  <PlaylistRow
+                    key={playlist.id}
+                    playlist={playlist}
+                    onDelete={handleDeletePlaylist}
+                    onToggleFeatured={handleToggleFeatured}
+                    onViewDetails={handleViewDetails}
+                    isDeleting={deletingId === playlist.id}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+          <p className="text-sm text-gray-500">
+            Página {page} de {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrev}
+              disabled={page === 1}
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={page === totalPages}
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Create Modal */}

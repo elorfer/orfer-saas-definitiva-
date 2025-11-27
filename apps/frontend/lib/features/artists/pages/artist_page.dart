@@ -6,11 +6,12 @@ import '../../../core/config/api_config.dart';
 import '../../../core/models/song_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
-import '../../../core/providers/professional_audio_provider.dart';
+import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/utils/logger.dart';
 import '../../artists/services/artists_api.dart';
 import '../models/artist.dart';
 import '../../../core/utils/url_normalizer.dart';
-import '../../../core/widgets/network_image_with_fallback.dart';
+import '../../../core/widgets/optimized_image.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
 // Clase helper para resultado del procesamiento en isolate
@@ -348,13 +349,11 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                       fit: StackFit.expand,
                       children: [
                         // Usar CachedNetworkImage optimizado para la portada grande
-                        NetworkImageWithFallback(
+                        OptimizedImage(
                           imageUrl: _coverUrl,
                           fit: BoxFit.cover,
-                          useCachedImage: true,
-                          cacheWidth: (screenWidth * devicePixelRatio).toInt(),
-                          cacheHeight: (coverHeight * devicePixelRatio).toInt(),
-                          fadeInDuration: const Duration(milliseconds: 150),
+                          maxCacheWidth: (screenWidth * devicePixelRatio).toInt(),
+                          maxCacheHeight: (coverHeight * devicePixelRatio).toInt(),
                         ),
                         Container(
                           decoration: BoxDecoration(
@@ -394,7 +393,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                               ],
                             ),
                             child: ClipOval(
-                              child: NetworkImageWithFallback.small(
+                              child: OptimizedImage(
                                 imageUrl: _profileUrl,
                                 fit: BoxFit.cover,
                                 width: 72,
@@ -533,9 +532,35 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                'Canciones',
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Canciones',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (_allProcessedSongs.isNotEmpty)
+                    ElevatedButton.icon(
+                      onPressed: () => _onPlayAll(),
+                      icon: const Icon(Icons.play_arrow, color: Colors.white, size: 18),
+                      label: const Text(
+                        'Reproducir todo',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: NeumorphismTheme.coffeeMedium,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -699,7 +724,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           const SizedBox(width: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: NetworkImageWithFallback.medium(
+            child: OptimizedImage(
               imageUrl: processedSong.normalizedCoverUrl,
               width: 40,
               height: 40,
@@ -753,18 +778,17 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       if (!mounted) return;
       
       final container = ProviderScope.containerOf(context);
-      final audioService = container.read(professionalAudioServiceProvider);
+      final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
       final messenger = ScaffoldMessenger.of(context);
       
       try {
-        // Asegurar que el servicio esté inicializado
-        if (!audioService.isInitialized) {
-          await audioService.initialize(enableBackground: true);
-        }
+        // Usar provider unificado corregido - reproducir canción específica
+        AppLogger.info('[ArtistPage] 🎵 Reproduciendo canción destacada: ${song.title}');
+        await audioNotifier.playSong(song);
         
-        // Cargar y reproducir automáticamente
-        await audioService.loadSong(song);
-        await audioService.play();
+        // TODO: Implementar contexto de playlist completa en el provider unificado
+        // final allSongs = _allProcessedSongs.map((ps) => ps.song).toList();
+        // final songIndex = allSongs.indexWhere((s) => s.id == song.id);
         
         if (!mounted) return;
         messenger.showSnackBar(
@@ -785,5 +809,42 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         );
       }
     });
+  }
+  
+  void _onPlayAll() async {
+    if (_allProcessedSongs.isEmpty) return;
+    
+    final container = ProviderScope.containerOf(context);
+    final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    
+    try {
+      // Usar provider unificado corregido - reproducir primera canción
+      final allSongs = _allProcessedSongs.map((ps) => ps.song).toList();
+      if (allSongs.isNotEmpty) {
+        AppLogger.info('[ArtistPage] 🎵 Reproduciendo todas las canciones del artista desde el inicio');
+        await audioNotifier.playSong(allSongs.first);
+        
+        // TODO: Implementar contexto de playlist completa en el provider unificado
+      }
+      
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Reproduciendo todas las canciones de ${widget.artist.name} (${allSongs.length} canciones)'),
+          backgroundColor: NeumorphismTheme.coffeeMedium,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al reproducir: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 }

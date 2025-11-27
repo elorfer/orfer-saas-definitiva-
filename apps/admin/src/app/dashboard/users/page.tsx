@@ -1,19 +1,12 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import {
   ArrowPathIcon,
   MagnifyingGlassIcon,
-  UsersIcon,
-  HomeIcon,
-  MusicalNoteIcon,
   ShieldCheckIcon,
   UserPlusIcon,
   XMarkIcon,
-  TrashIcon,
-  ListBulletIcon,
-  StarIcon,
 } from '@heroicons/react/24/outline';
 
 import { useCreateUser, useDeactivateUser, useActivateUser, useUsers } from '@/hooks/useUsers';
@@ -37,8 +30,6 @@ const roleLabels: Record<string, { label: string; badge: string; text: string }>
 };
 
 export default function UsersPage() {
-  const router = useRouter();
-  const pathname = usePathname();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
 
@@ -51,16 +42,6 @@ export default function UsersPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState(DEFAULT_CREATE_FORM);
-
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Administrar usuarios', href: '/dashboard/users', icon: UsersIcon },
-    { name: 'Gestionar canciones', href: '/dashboard/songs', icon: MusicalNoteIcon },
-    { name: 'Artistas', href: '/dashboard/artists', icon: UsersIcon },
-    { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },
-    { name: 'Contenido destacado', href: '/dashboard/featured', icon: StarIcon },
-    { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
-  ];
 
   const openCreateModal = () => {
     setCreateForm(DEFAULT_CREATE_FORM);
@@ -144,74 +125,31 @@ export default function UsersPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-100 flex">
-      <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
-        <div className="flex flex-col items-center xl:items-start px-4 mb-8">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold">
-            VM
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Administrar usuarios</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Consulta, filtra y gestiona los usuarios registrados.
+            </p>
           </div>
-          <span className="mt-3 text-sm font-semibold text-gray-900 hidden xl:block">
-            Vintage Admin
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
+            >
+              <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+            >
+              <UserPlusIcon className="h-4 w-4" />
+              Nuevo usuario
+            </button>
+          </div>
         </div>
-
-        <nav className="flex-1 flex flex-col space-y-1 px-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-
-            return (
-              <button
-                key={item.href}
-                onClick={() => {
-                  if (!isActive) {
-                    router.push(item.href);
-                  }
-                }}
-                className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                  isActive
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="hidden xl:inline">{item.name}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div className="flex-1 flex flex-col">
-        <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Administrar usuarios</h1>
-                <p className="mt-1 text-sm text-gray-500">
-                  Consulta, filtra y gestiona los usuarios registrados.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => refetch()}
-                  className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
-                >
-                  <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-                  Actualizar
-                </button>
-                <button
-                  onClick={openCreateModal}
-                  className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
-                >
-                  <UserPlusIcon className="h-4 w-4" />
-                  Nuevo usuario
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative w-full sm:w-72">
@@ -360,9 +298,7 @@ export default function UsersPage() {
               </div>
             </div>
           </div>
-        </main>
       </div>
-    </div>
     {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">

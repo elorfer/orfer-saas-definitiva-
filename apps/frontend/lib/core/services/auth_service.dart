@@ -9,6 +9,7 @@ import '../config/app_config.dart';
 import '../utils/logger.dart';
 import '../utils/retry_handler.dart';
 import '../utils/error_handler.dart';
+import '../exceptions/auth_exception.dart';
 import 'http_client_service.dart';
 
 class AuthService {
@@ -161,17 +162,11 @@ class AuthService {
         throw AuthException('Error en el servidor: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      final error = ErrorHandler.handleDioError(e, context: 'AuthService.login');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleDioError(e, context: 'AuthService.login');
+      throw AuthException.fromDioError(e, context: 'AuthService.login');
     } catch (e) {
-      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.login');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleGenericError(e, context: 'AuthService.login');
+      throw AuthException.fromGenericError(e, context: 'AuthService.login');
     }
   }
 
@@ -298,17 +293,11 @@ class AuthService {
         throw AuthException('Error en el servidor: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      final error = ErrorHandler.handleDioError(e, context: 'AuthService.register');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleDioError(e, context: 'AuthService.register');
+      throw AuthException.fromDioError(e, context: 'AuthService.register');
     } catch (e) {
-      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.register');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleGenericError(e, context: 'AuthService.register');
+      throw AuthException.fromGenericError(e, context: 'AuthService.register');
     }
   }
 
@@ -346,17 +335,11 @@ class AuthService {
         throw AuthException('Error al cambiar contraseña: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      final error = ErrorHandler.handleDioError(e, context: 'AuthService.changePassword');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleDioError(e, context: 'AuthService.changePassword');
+      throw AuthException.fromDioError(e, context: 'AuthService.changePassword');
     } catch (e) {
-      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.changePassword');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleGenericError(e, context: 'AuthService.changePassword');
+      throw AuthException.fromGenericError(e, context: 'AuthService.changePassword');
     }
   }
 
@@ -390,17 +373,11 @@ class AuthService {
         throw AuthException('Error al refrescar token: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      final error = ErrorHandler.handleDioError(e, context: 'AuthService.refreshToken');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleDioError(e, context: 'AuthService.refreshToken');
+      throw AuthException.fromDioError(e, context: 'AuthService.refreshToken');
     } catch (e) {
-      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.refreshToken');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleGenericError(e, context: 'AuthService.refreshToken');
+      throw AuthException.fromGenericError(e, context: 'AuthService.refreshToken');
     }
   }
 
@@ -436,17 +413,11 @@ class AuthService {
         throw AuthException('Error al obtener perfil: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      final error = ErrorHandler.handleDioError(e, context: 'AuthService.getProfile');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleDioError(e, context: 'AuthService.getProfile');
+      throw AuthException.fromDioError(e, context: 'AuthService.getProfile');
     } catch (e) {
-      final error = ErrorHandler.handleGenericError(e, context: 'AuthService.getProfile');
-      if (error is AuthException) {
-        throw error;
-      }
-      throw AuthException(error.message, code: error.code);
+      ErrorHandler.handleGenericError(e, context: 'AuthService.getProfile');
+      throw AuthException.fromGenericError(e, context: 'AuthService.getProfile');
     }
   }
 

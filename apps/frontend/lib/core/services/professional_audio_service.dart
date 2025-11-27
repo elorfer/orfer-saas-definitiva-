@@ -29,6 +29,9 @@ class ProfessionalAudioService {
   ProfessionalAudioHandler? get handler => _handler;
   bool get isInitialized => _isInitialized;
   bool get backgroundModeEnabled => _backgroundModeEnabled;
+  
+  /// Verificar si hay una playlist cargada (más de una canción)
+  bool get hasPlaylist => _controller?.hasPlaylist ?? false;
 
   /// Inicializar el servicio completo - CREAR UN SOLO AudioPlayer
   Future<void> initialize({bool enableBackground = true}) async {

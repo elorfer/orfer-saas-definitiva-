@@ -90,6 +90,32 @@ export class FeaturedService {
   }
 
   async setSongFeatured(songId: string, featured: boolean) {
+    // Obtener la canción primero para validaciones
+    const song = await this.songRepository.findOne({
+      where: { id: songId },
+      relations: ['artist', 'album', 'genre'],
+    });
+
+    if (!song) {
+      throw new NotFoundException('Canción no encontrada');
+    }
+
+    // VALIDACIÓN: Si se está destacando, verificar que tenga géneros asignados
+    if (featured && (!song.genres || song.genres.length === 0)) {
+      throw new BadRequestException(
+        'No se puede destacar una canción sin géneros asignados. ' +
+        'Por favor, asigna al menos un género musical antes de destacar esta canción.'
+      );
+    }
+
+    // VALIDACIÓN: Si se está destacando, verificar que esté publicada
+    if (featured && song.status !== SongStatus.PUBLISHED) {
+      throw new BadRequestException(
+        'Solo se pueden destacar canciones que estén publicadas. ' +
+        'Por favor, publica la canción antes de destacarla.'
+      );
+    }
+
     // Usar update() para mejor rendimiento (una sola query)
     const updateResult = await this.songRepository.update(
       { id: songId },
@@ -97,16 +123,17 @@ export class FeaturedService {
     );
 
     if (updateResult.affected === 0) {
-      throw new NotFoundException('Canción no encontrada');
+      throw new NotFoundException('Error al actualizar el estado de la canción');
     }
 
-    // Obtener la canción actualizada para retornarla
-    const song = await this.songRepository.findOne({
-      where: { id: songId },
-      relations: ['artist', 'album', 'genre'],
-    });
+    // Actualizar el objeto song con el nuevo estado
+    song.isFeatured = featured;
 
-    this.logger.log(`Canción "${song?.title || songId}" ${featured ? 'destacada' : 'ya no está destacada'}`);
+    this.logger.log(`Canción "${song.title}" ${featured ? 'destacada' : 'ya no está destacada'}`);
+    
+    if (featured) {
+      this.logger.log(`Géneros de la canción destacada: ${song.genres?.join(', ') || 'ninguno'}`);
+    }
 
     return song;
   }

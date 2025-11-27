@@ -165,6 +165,7 @@ export const apiClient = {
       artistId: string;
       albumId?: string;
       genreId?: string;
+      genres?: string[]; // Array de géneros musicales
       status?: string;
       duration?: number;
     },
@@ -177,6 +178,12 @@ export const apiClient = {
     }
     formData.append('title', songData.title);
     formData.append('artistId', songData.artistId);
+    if (songData.genres && songData.genres.length > 0) {
+      // Enviar cada género como un campo separado (el backend los recibirá como array)
+      songData.genres.forEach((genre) => {
+        formData.append('genres[]', genre);
+      });
+    }
     if (songData.albumId) {
       formData.append('albumId', songData.albumId);
     }
@@ -206,7 +213,30 @@ export const apiClient = {
   updateSong: (id: string, data: any) => api.patch(`/songs/${id}`, data),
   
   deleteSong: (id: string) => api.delete(`/songs/${id}`),
-
+  
+  // Genres
+  getGenres: (page = 1, limit = 50, all = false) =>
+    api.get(`/genres?page=${page}&limit=${limit}&all=${all ? 'true' : 'false'}`),
+  
+  getGenre: (id: string) => api.get(`/genres/${id}`),
+  
+  searchGenres: (query: string, limit = 20) =>
+    api.get(`/genres/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+  
+  createGenre: (data: {
+    name: string;
+    description?: string;
+    colorHex?: string;
+  }) => api.post('/genres', data),
+  
+  updateGenre: (id: string, data: {
+    name?: string;
+    description?: string;
+    colorHex?: string;
+  }) => api.patch(`/genres/${id}`, data),
+  
+  deleteGenre: (id: string) => api.delete(`/genres/${id}`),
+  
   // Playlists
   getPlaylists: (page = 1, limit = 10) =>
     api.get(`/playlists?page=${page}&limit=${limit}`),

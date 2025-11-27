@@ -81,7 +81,7 @@ class _BottomPlayerState extends State<BottomPlayer>
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: NeumorphismTheme.glassDecoration.copyWith(
+              decoration: NeumorphismTheme.glassDecoration().copyWith(
                     color: Colors.white.withValues(alpha: 0.3),
                   ),
               child: Row(

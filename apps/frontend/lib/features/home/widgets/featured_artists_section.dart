@@ -67,7 +67,7 @@ class FeaturedArtistsSection extends ConsumerWidget {
         
         // Lista horizontal de artistas optimizada con Pull to Refresh
         SizedBox(
-          height: 220,
+          height: 235, // Aumentado para evitar overflow cuando hay razón destacada
           child: RefreshIndicator(
             onRefresh: () async {
               await ref.read(homeStateProvider.notifier).loadFeaturedArtists();
@@ -113,7 +113,7 @@ class FeaturedArtistsSection extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 220,
+          height: 235, // Aumentado para consistencia
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             cacheExtent: 800, // Aumentado para scroll más rápido

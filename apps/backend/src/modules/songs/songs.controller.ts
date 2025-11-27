@@ -24,6 +24,9 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiConsume
 
 import { SongsService } from './songs.service';
 import { UploadOrchestratorService } from './upload-orchestrator.service';
+import { SongMapper } from './mappers/song.mapper';
+import { UpdateSongDto } from './dto/update-song.dto';
+import { SongResponseDto } from './dto/song-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../../common/entities/user.entity';
@@ -110,6 +113,36 @@ export class SongsController {
     return this.songsService.getSongsByGenre(genreId, page, limit);
   }
 
+  @Get('recommended/:songId')
+  @ApiOperation({ 
+    summary: 'Obtener canción recomendada basada en géneros',
+    description: 'Obtiene una canción recomendada que comparta al menos un género con la canción actual. Si no hay coincidencias, devuelve una canción aleatoria.',
+  })
+  @ApiParam({ name: 'songId', description: 'ID de la canción actual' })
+  @ApiQuery({ name: 'genres', required: false, type: [String], description: 'Géneros de la canción actual (opcional, se obtienen de la BD si no se proporcionan)' })
+  @ApiResponse({ status: 200, description: 'Canción recomendada' })
+  @ApiResponse({ status: 404, description: 'Canción actual no encontrada' })
+  async getRecommendedSong(
+    @Param('songId') songId: string,
+    @Query('genres') genres?: string | string[],
+  ) {
+    // Convertir genres a array si viene como string
+    const genresArray = genres 
+      ? (Array.isArray(genres) ? genres : [genres])
+      : undefined;
+    
+    const recommended = await this.songsService.getRecommendedSong(songId, genresArray);
+    
+    if (!recommended) {
+      return { message: 'No hay canciones recomendadas disponibles', song: null };
+    }
+    
+    // Usar el mapper para convertir a DTO y asegurar que genres esté incluido
+    const songDto = SongMapper.toDto(recommended);
+    
+    return { song: songDto };
+  }
+
   @Get('upload/:uploadId/status')
   @ApiOperation({ summary: 'Consultar estado de un upload' })
   @ApiResponse({ status: 200, description: 'Estado del upload' })
@@ -186,6 +219,7 @@ export class SongsController {
         artistId: { type: 'string' },
         albumId: { type: 'string' },
         genreId: { type: 'string' },
+        genres: { type: 'array', items: { type: 'string' }, description: 'Array de géneros musicales' },
         status: { type: 'string', enum: ['draft', 'pending', 'published', 'rejected'] },
         duration: { type: 'number' },
       },
@@ -267,6 +301,7 @@ export class SongsController {
       artistId: artistId.trim(),
       albumId: req.body?.albumId?.trim(),
       genreId: req.body?.genreId?.trim(),
+      genres: this._parseGenresFromBody(req.body),
       status: req.body?.status?.trim() as 'draft' | 'pending' | 'published' | 'rejected' | undefined,
       duration: req.body?.duration ? Number.parseFloat(req.body.duration) : undefined,
       userId: user.id,
@@ -294,6 +329,7 @@ export class SongsController {
         artistId: { type: 'string' },
         albumId: { type: 'string' },
         genreId: { type: 'string' },
+        genres: { type: 'array', items: { type: 'string' }, description: 'Array de géneros musicales' },
         status: { type: 'string', enum: ['draft', 'pending', 'published', 'rejected'], default: 'pending' },
         duration: { type: 'number' },
       },
@@ -337,6 +373,33 @@ export class SongsController {
   ) {
     await this.songsService.unlikeSong(id, user.id);
     return { message: 'Like removido' };
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Actualizar canción' })
+  @ApiResponse({ status: 200, description: 'Canción actualizada exitosamente', type: SongResponseDto })
+  @ApiResponse({ status: 404, description: 'Canción no encontrada' })
+  async update(
+    @Param('id') id: string,
+    @Body() updateSongDto: UpdateSongDto,
+  ) {
+    // Parsear géneros si vienen como string o array
+    let genres: string[] | undefined = undefined;
+    if (updateSongDto.genres !== undefined && updateSongDto.genres !== null) {
+      const rawGenres = updateSongDto.genres;
+      if (typeof rawGenres === 'string') {
+        genres = (rawGenres as string).split(',').map(g => g.trim()).filter(g => g.length > 0);
+      } else if (Array.isArray(rawGenres)) {
+        genres = (rawGenres as string[]).map(g => typeof g === 'string' ? g.trim() : String(g).trim()).filter(g => g.length > 0);
+      }
+    }
+
+    const updatedSong = await this.songsService.update(id, {
+      ...updateSongDto,
+      genres,
+    });
+
+    return SongMapper.toDto(updatedSong);
   }
 
   @Delete(':id')
@@ -417,6 +480,54 @@ export class SongsController {
       message: featured ? 'Canción marcada como destacada' : 'Canción desmarcada como destacada',
       song,
     };
+  }
+
+  /**
+   * Parsea géneros desde el body de la petición
+   * FormData puede enviar géneros como:
+   * - Array: genres[] = ["Reggaeton", "Trap Latino"] (Express lo convierte automáticamente)
+   * - String: genres = "Reggaeton,Trap Latino"
+   * - Múltiples campos: genres[] = "Reggaeton", genres[] = "Trap Latino" (Express lo convierte a array)
+   * 
+   * Nota: Cuando se envía como genres[] desde el frontend, Express/Multer lo parsea como array
+   */
+  private _parseGenresFromBody(body: any): string[] | undefined {
+    // Buscar géneros en diferentes formatos posibles
+    let genres: any = body?.genres;
+    
+    // Si no existe en genres, buscar en genres[] (formato FormData)
+    if (!genres && body?.['genres[]']) {
+      genres = body['genres[]'];
+    }
+
+    if (!genres) {
+      return undefined;
+    }
+
+    // Si es un array, retornarlo directamente (ya filtrado)
+    if (Array.isArray(genres)) {
+      const filtered = genres
+        .filter((g: any) => g != null && typeof g === 'string' && g.trim().length > 0)
+        .map((g: string) => g.trim());
+      return filtered.length > 0 ? filtered : undefined;
+    }
+
+    // Si es un string, puede venir como "Género1,Género2" o como string simple
+    if (typeof genres === 'string') {
+      const trimmed = genres.trim();
+      if (trimmed.length === 0) {
+        return undefined;
+      }
+      // Si contiene comas, separar
+      if (trimmed.includes(',')) {
+        const split = trimmed.split(',').map((g: string) => g.trim()).filter((g: string) => g.length > 0);
+        return split.length > 0 ? split : undefined;
+      }
+      // Si no contiene comas, retornar como array de un elemento
+      return [trimmed];
+    }
+
+    return undefined;
   }
 }
 

@@ -47,6 +47,19 @@ const mapSong = (song: any): SongModel => {
     }
   }
   
+  // Mapear géneros - pueden venir como array o string (simple-array de TypeORM)
+  let genres: string[] | undefined = undefined;
+  if (song?.genres !== undefined && song?.genres !== null) {
+    if (Array.isArray(song.genres)) {
+      genres = song.genres.filter(g => g && g.trim().length > 0);
+    } else if (typeof song.genres === 'string' && song.genres.trim().length > 0) {
+      genres = song.genres.split(',').map(g => g.trim()).filter(g => g.length > 0);
+    }
+    if (genres && genres.length === 0) {
+      genres = undefined;
+    }
+  }
+
   return {
     id: song?.id ?? '',
     title: song?.title ?? '',
@@ -57,6 +70,7 @@ const mapSong = (song: any): SongModel => {
     artist: song?.artist ? mapArtist(song.artist) : undefined,
     albumId: song?.albumId ?? song?.album_id ?? undefined,
     genreId: song?.genreId ?? song?.genre_id ?? undefined,
+    genres, // Array de géneros musicales
     status: song?.status ?? 'draft',
     totalStreams: song?.totalStreams ?? song?.total_streams ?? 0,
     totalLikes: song?.totalLikes ?? song?.total_likes ?? 0,
@@ -117,6 +131,7 @@ export const useUploadSong = () => {
         artistId: string;
         albumId?: string;
         genreId?: string;
+        genres?: string[]; // Array de géneros musicales
         status?: string;
         duration?: number;
       };
@@ -183,6 +198,26 @@ export const useCreateSong = () => {
       onSuccess: () => {
         queryClient.invalidateQueries([SONGS_QUERY_KEY]);
         toast.success('Canción creada exitosamente');
+      },
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+
+export const useUpdateSong = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiClient.updateSong(id, data);
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([SONGS_QUERY_KEY]);
+        toast.success('Canción actualizada exitosamente');
       },
       onError: (error) => {
         toast.error(extractErrorMessage(error));

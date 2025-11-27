@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
-import '../utils/error_handler.dart';
+import '../exceptions/auth_exception.dart';
 
 /// Provider para el servicio de autenticación
 final authServiceProvider = Provider<AuthService>((ref) {

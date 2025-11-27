@@ -42,6 +42,8 @@ export class SongMapper {
             colorHex: song.genre.colorHex || undefined,
           }
         : undefined,
+      // Asegurar que genres sea siempre un array, incluso si TypeORM lo serializa como string (simple-array)
+      genres: this.normalizeGenres(song.genres),
     };
   }
 
@@ -59,5 +61,29 @@ export class SongMapper {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Normaliza los géneros para asegurar que siempre sea un array de strings
+   * Maneja el caso donde TypeORM simple-array puede serializarse como string
+   */
+  private static normalizeGenres(genres: string[] | string | null | undefined): string[] | undefined {
+    if (!genres) {
+      return undefined;
+    }
+    
+    if (Array.isArray(genres)) {
+      // Si ya es un array, filtrar valores vacíos y retornar
+      const filtered = genres.filter(g => g && g.trim().length > 0);
+      return filtered.length > 0 ? filtered : undefined;
+    }
+    
+    if (typeof genres === 'string') {
+      // Si es un string (simple-array serializado), dividir por comas
+      const split = genres.split(',').map(g => g.trim()).filter(g => g.length > 0);
+      return split.length > 0 ? split : undefined;
+    }
+    
+    return undefined;
   }
 }

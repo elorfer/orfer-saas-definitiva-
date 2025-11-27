@@ -7,7 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/providers/playlist_provider.dart';
-import '../../../core/providers/professional_audio_provider.dart';
+import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/models/playlist_model.dart';
 import '../../../core/widgets/optimized_image.dart';
@@ -364,8 +365,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          if (_displayedSongs.isNotEmpty) {
-                            _onPlayAll(context, _displayedSongs);
+                          if (_playlist != null && _playlist!.songs.isNotEmpty) {
+                            _onPlayAll(context, _playlist!.songs);
                           }
                         },
                         icon: const Icon(Icons.play_arrow, color: Colors.white),
@@ -645,23 +646,30 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       if (!mounted) return;
       
       final container = ProviderScope.containerOf(context);
-      final audioService = container.read(professionalAudioServiceProvider);
+      final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
       final messenger = ScaffoldMessenger.of(context);
       
       try {
-        // Asegurar que el servicio esté inicializado
-        if (!audioService.isInitialized) {
-          await audioService.initialize(enableBackground: true);
+        // Validar que la canción tenga URL de archivo
+        if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+          throw Exception('La canción "${song.title}" no tiene archivo de audio disponible');
         }
         
-        // Cargar y reproducir automáticamente
-        await audioService.loadSong(song);
-        await audioService.play();
+        // Validar que tengamos la playlist completa
+        if (_playlist == null || _playlist!.songs.isEmpty) {
+          throw Exception('No se puede reproducir: playlist no disponible');
+        }
+        
+        // Usar provider unificado corregido - reproducir canción específica
+        AppLogger.info('[PlaylistDetailScreen] 🎵 Reproduciendo desde playlist: ${song.title}');
+        await audioNotifier.playSong(song);
+        
+        // TODO: Implementar contexto de playlist completa en el provider unificado
         
         if (!mounted) return;
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Reproduciendo ${song.title ?? "Canción"}'),
+            content: Text('Reproduciendo playlist desde "${song.title ?? "Canción"}"'),
             backgroundColor: NeumorphismTheme.coffeeMedium,
             duration: const Duration(seconds: 2),
           ),
@@ -700,17 +708,16 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       }
 
       final container = ProviderScope.containerOf(context);
-      final audioService = container.read(professionalAudioServiceProvider);
+      final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
       
       try {
-        // Asegurar que el servicio esté inicializado
-        if (!audioService.isInitialized) {
-          await audioService.initialize(enableBackground: true);
+        // Usar provider unificado corregido - reproducir primera canción de la playlist
+        if (songs.isNotEmpty) {
+          AppLogger.info('[PlaylistDetailScreen] 🎵 Reproduciendo playlist completa desde el inicio');
+          await audioNotifier.playSong(songs.first);
+          
+          // TODO: Implementar contexto de playlist completa en el provider unificado
         }
-        
-        // Cargar playlist y reproducir automáticamente
-        await audioService.loadPlaylist(songs, startIndex: 0);
-        await audioService.play();
         
         if (!mounted) return;
         messenger.showSnackBar(

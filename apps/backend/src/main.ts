@@ -45,6 +45,20 @@ async function bootstrap() {
     },
   });
 
+  // Configurar servicio estático para canciones (compatibilidad con URLs legacy)
+  app.useStaticAssets(join(process.cwd(), 'uploads', 'songs'), {
+    prefix: '/songs',
+    setHeaders: (res, path) => {
+      // Permitir CORS para archivos estáticos
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      // Cache para archivos de audio
+      if (path.endsWith('.mp3') || path.endsWith('.wav') || path.endsWith('.flac') || path.endsWith('.aac')) {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 horas
+      }
+    },
+  });
+
   // Configuración de seguridad
   // Configurar Helmet para permitir imágenes desde cualquier origen
   app.use(helmet({

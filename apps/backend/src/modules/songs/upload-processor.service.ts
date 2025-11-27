@@ -18,6 +18,7 @@ import { AudioMetadataService } from '../../common/services/audio-metadata.servi
 import { CompensationService } from './compensation.service';
 
 export interface ProcessUploadData {
+  genres?: string[]; // Array de géneros musicales
   uploadId: string;
   audioFileKey: string;
   coverFileKey?: string;
@@ -184,6 +185,7 @@ export class UploadProcessorService {
         artistId: data.artistId,
         albumId: data.albumId,
         genreId: data.genreId,
+        genres: data.genres || [], // Array de géneros musicales
         status: data.status === 'pending' || data.status === 'published' 
           ? SongStatus.PUBLISHED 
           : data.status === 'draft' 

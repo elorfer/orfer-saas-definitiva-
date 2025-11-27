@@ -16,6 +16,8 @@ Song _$SongFromJson(Map<String, dynamic> json) => Song(
       coverArtUrl: json['cover_art_url'] as String?,
       lyrics: json['lyrics'] as String?,
       genreId: json['genre_id'] as String?,
+      genres:
+          (json['genres'] as List<dynamic>?)?.map((e) => e as String).toList(),
       trackNumber: (json['track_number'] as num?)?.toInt(),
       status: $enumDecodeNullable(_$SongStatusEnumMap, json['status']) ??
           SongStatus.draft,
@@ -26,6 +28,7 @@ Song _$SongFromJson(Map<String, dynamic> json) => Song(
       totalStreams: (json['total_streams'] as num?)?.toInt() ?? 0,
       totalLikes: (json['total_likes'] as num?)?.toInt() ?? 0,
       totalShares: (json['total_shares'] as num?)?.toInt() ?? 0,
+      featured: json['featured'] as bool? ?? false,
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
@@ -56,6 +59,7 @@ Map<String, dynamic> _$SongToJson(Song instance) {
   writeNotNull('cover_art_url', instance.coverArtUrl);
   writeNotNull('lyrics', instance.lyrics);
   writeNotNull('genre_id', instance.genreId);
+  writeNotNull('genres', instance.genres);
   writeNotNull('track_number', instance.trackNumber);
   val['status'] = _$SongStatusEnumMap[instance.status]!;
   val['is_explicit'] = instance.isExplicit;
@@ -63,6 +67,7 @@ Map<String, dynamic> _$SongToJson(Song instance) {
   val['total_streams'] = instance.totalStreams;
   val['total_likes'] = instance.totalLikes;
   val['total_shares'] = instance.totalShares;
+  val['featured'] = instance.featured;
   writeNotNull('created_at', instance.createdAt?.toIso8601String());
   writeNotNull('updated_at', instance.updatedAt?.toIso8601String());
   writeNotNull('artist', instance.artist?.toJson());

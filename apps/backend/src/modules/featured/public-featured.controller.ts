@@ -10,6 +10,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { FeaturedService } from './featured.service';
 import { ArtistSerializer } from '@/common/utils/artist-serializer';
 import { PlaylistMapper } from '../playlists/mappers/playlist.mapper';
+import { SongMapper } from '../songs/mappers/song.mapper';
 
 @ApiTags('public-featured')
 @Controller('public/featured')
@@ -28,7 +29,11 @@ export class PublicFeaturedController {
     if (limit < 1 || limit > 100) {
       throw new BadRequestException('El límite debe estar entre 1 y 100');
     }
-    return this.featuredService.getFeaturedSongs(limit);
+    const songs = await this.featuredService.getFeaturedSongs(limit);
+    // Usar SongMapper para asegurar que los géneros y otros campos se serialicen correctamente
+    return {
+      songs: SongMapper.toDtoArray(songs),
+    };
   }
 
   @Get('artists')

@@ -1,16 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import {
   UsersIcon,
-  HomeIcon,
   MusicalNoteIcon,
-  ShieldCheckIcon,
   StarIcon,
-  XMarkIcon,
   ArrowPathIcon,
-  ListBulletIcon,
 } from '@heroicons/react/24/outline';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-hot-toast';
@@ -23,20 +18,8 @@ const TABS = [
 ];
 
 export default function FeaturedPage() {
-  const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'songs' | 'artists' | 'playlists'>('songs');
-
-  const navItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Administrar usuarios', href: '/dashboard/users', icon: UsersIcon },
-    { name: 'Gestionar canciones', href: '/dashboard/songs', icon: MusicalNoteIcon },
-    { name: 'Artistas', href: '/dashboard/artists', icon: UsersIcon },
-    { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },
-    { name: 'Contenido destacado', href: '/dashboard/featured', icon: StarIcon },
-    { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
-  ];
 
   // Queries para obtener contenido destacado
   const { data: featuredSongs, isLoading: songsLoading, refetch: refetchSongs } = useQuery(
@@ -163,69 +146,26 @@ export default function FeaturedPage() {
   const featuredPlaylistsIds = new Set(featuredPlaylists?.map((p: any) => p.id) || []);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
-        <div className="flex flex-col items-center xl:items-start px-4 mb-8">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold">
-            VM
-          </div>
-          <span className="mt-3 text-sm font-semibold text-gray-900 hidden xl:block">
-            Vintage Admin
-          </span>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Contenido Destacado</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Gestiona qué canciones, artistas y playlists aparecen destacados en el inicio.
+          </p>
         </div>
-
-        <nav className="flex-1 flex flex-col space-y-1 px-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-
-            return (
-              <button
-                key={item.href}
-                onClick={() => {
-                  if (!isActive) {
-                    router.push(item.href);
-                  }
-                }}
-                className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                  isActive
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="hidden xl:inline">{item.name}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-
-      <div className="flex-1 flex flex-col">
-        <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Contenido Destacado</h1>
-                <p className="mt-1 text-sm text-gray-500">
-                  Gestiona qué canciones, artistas y playlists aparecen destacados en el inicio.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  if (activeTab === 'songs') refetchSongs();
-                  if (activeTab === 'artists') refetchArtists();
-                  if (activeTab === 'playlists') refetchPlaylists();
-                }}
-                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
-              >
-                <ArrowPathIcon className="h-4 w-4" />
-                Actualizar
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <button
+          onClick={() => {
+            if (activeTab === 'songs') refetchSongs();
+            if (activeTab === 'artists') refetchArtists();
+            if (activeTab === 'playlists') refetchPlaylists();
+          }}
+          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
+        >
+          <ArrowPathIcon className="h-4 w-4" />
+          Actualizar
+        </button>
+      </div>
           {/* Tabs */}
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
             <div className="border-b border-gray-200">
@@ -288,8 +228,6 @@ export default function FeaturedPage() {
               )}
             </div>
           </div>
-        </main>
-      </div>
     </div>
   );
 }

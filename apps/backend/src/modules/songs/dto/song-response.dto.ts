@@ -61,6 +61,14 @@ export class SongResponseDto {
     name: string;
     colorHex?: string;
   };
+
+  @ApiProperty({ 
+    description: 'Array de géneros musicales', 
+    type: [String],
+    nullable: true,
+    example: ['Reggaeton', 'Trap Latino']
+  })
+  genres?: string[];
 }
 
 /**

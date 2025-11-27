@@ -51,6 +51,9 @@ export class Song {
   @Column({ name: 'genre_id', nullable: true })
   genreId?: string;
 
+  @Column({ type: 'simple-array', nullable: true, name: 'genres' })
+  genres?: string[]; // Array de géneros musicales (ej: ["Reggaeton", "Trap Latino"])
+
   @Column({ name: 'track_number', nullable: true })
   trackNumber?: number;
 

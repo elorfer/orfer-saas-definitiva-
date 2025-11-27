@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ArtistsModule } from './modules/artists/artists.module';
 import { SongsModule } from './modules/songs/songs.module';
+import { GenresModule } from './modules/genres/genres.module';
 import { PlaylistsModule } from './modules/playlists/playlists.module';
 import { StreamingModule } from './modules/streaming/streaming.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
@@ -173,6 +174,7 @@ import { dataSourceOptions } from './database/data-source';
     UsersModule,
     ArtistsModule,
     SongsModule,
+    GenresModule,
     PlaylistsModule,
     StreamingModule,
     AnalyticsModule,
