@@ -8,11 +8,13 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/playlists/screens/playlists_screen.dart';
 import '../../features/playlists/screens/playlist_detail_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/home/screens/featured_songs_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 import '../../features/library/screens/library_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/artists/pages/artist_page.dart';
 import '../../features/artists/models/artist.dart';
+import '../../features/player/screens/full_player_screen.dart';
 import '../providers/auth_provider.dart';
 import 'main_navigation.dart';
 import 'page_transitions.dart';
@@ -151,6 +153,17 @@ class GoRouterNotifier extends ChangeNotifier {
                 reverseTransitionDuration: const Duration(milliseconds: 200),
               ),
             ),
+            // Featured Songs - transición horizontal (desde la derecha)
+            GoRoute(
+              path: '/featured-songs',
+              pageBuilder: (context, state) => CustomTransitionPage<void>(
+                key: state.pageKey,
+                child: const FeaturedSongsScreen(),
+                transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
+                transitionDuration: const Duration(milliseconds: 250),
+                reverseTransitionDuration: const Duration(milliseconds: 200),
+              ),
+            ),
             // Artist Detail - transición simple fade rápida (sin slide pesado)
             GoRoute(
               path: '/artist/:id',
@@ -195,6 +208,31 @@ class GoRouterNotifier extends ChangeNotifier {
               },
             ),
           ],
+        ),
+        // Full Player - FUERA del ShellRoute para que no muestre el mini player
+        GoRoute(
+          path: '/player',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const FullPlayerScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              // Transición vertical desde abajo como Spotify
+              const begin = Offset(0.0, 1.0);
+              const end = Offset.zero;
+              const curve = Curves.easeOutCubic;
+              
+              var tween = Tween(begin: begin, end: end).chain(
+                CurveTween(curve: curve),
+              );
+              
+              return SlideTransition(
+                position: animation.drive(tween),
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 300),
+            reverseTransitionDuration: const Duration(milliseconds: 250),
+          ),
         ),
         GoRoute(
           path: '/',

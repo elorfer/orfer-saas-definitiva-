@@ -117,7 +117,7 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
 
   Widget _buildPlaylistsList() {
     return SizedBox(
-      height: 240,
+      height: 260, // ✅ Aumentado para evitar overflow con badges
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         shrinkWrap: true, // Necesario cuando está dentro de un Column dentro de SingleChildScrollView
@@ -157,7 +157,7 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 240,
+          height: 260, // ✅ Misma altura que la lista real
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             shrinkWrap: true, // Necesario cuando está dentro de un Column dentro de SingleChildScrollView

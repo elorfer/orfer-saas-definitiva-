@@ -7,6 +7,7 @@ import '../../../core/models/song_model.dart';
 import '../../../core/utils/logger.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import 'featured_song_card.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 
 class FeaturedSongsSection extends ConsumerWidget {
   const FeaturedSongsSection({super.key});
@@ -48,13 +49,13 @@ class FeaturedSongsSection extends ConsumerWidget {
                   context.push('/search');
                 },
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF8B7A6A),
+                  foregroundColor: NeumorphismTheme.accentDark, // ✅ Marrón oscuro del tema
                 ),
                 child: Text(
                   'Ver todas',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: const Color(0xFF8B7A6A),
+                    color: NeumorphismTheme.accentDark, // ✅ Marrón oscuro del tema
                     decoration: TextDecoration.none,
                   ),
                 ),
@@ -269,7 +270,13 @@ class FeaturedSongsSection extends ConsumerWidget {
     // Navegar a la pantalla de detalle de canción
     // Usar la función estática que verifica si ya existe la pantalla
     try {
-      SongDetailScreen.navigateToSong(context, song);
+      // Pasar parámetro indicando que es una canción destacada
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => SongDetailScreen(song: song),
+          settings: RouteSettings(arguments: {'isFeatured': true}),
+        ),
+      );
       debugPrint('[FeaturedSongsSection] Navegación exitosa');
     } catch (e, stackTrace) {
       // Si hay un error, intentar navegación directa como fallback

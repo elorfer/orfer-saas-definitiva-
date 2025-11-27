@@ -6,7 +6,7 @@ import '../../../core/providers/home_provider.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../widgets/featured_artists_section.dart';
-import '../widgets/featured_songs_section.dart';
+import '../widgets/intelligent_featured_songs_section.dart';
 import '../widgets/featured_playlists_section.dart';
 
 /// HomeScreen optimizado con AutomaticKeepAliveClientMixin
@@ -55,7 +55,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           backgroundColor: NeumorphismTheme.coffeeMedium,
           child: SingleChildScrollView(
             physics: const FastScrollPhysics(), // Scroll más rápido y fluido
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 24.0),
+            padding: const EdgeInsets.only(top: 24.0, bottom: 40.0), // ✅ Más padding inferior
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -136,15 +136,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                 const SizedBox(height: 32),
 
-                // Canciones destacadas
-                FeaturedSongsSection(key: const ValueKey('songs')),
+                // Canciones destacadas inteligentes (usa tu algoritmo avanzado)
+                IntelligentFeaturedSongsSection(key: const ValueKey('intelligent_songs')),
 
                 const SizedBox(height: 32),
 
                 // Playlists destacadas
                 FeaturedPlaylistsSection(key: const ValueKey('playlists')),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 80), // ✅ Más espacio en blanco al final
               ],
             ),
           ),

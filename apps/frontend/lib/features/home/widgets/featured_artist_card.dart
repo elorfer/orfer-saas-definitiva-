@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -29,22 +30,21 @@ class FeaturedArtistCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen del artista
+            // Imagen del artista (redonda)
             Container(
               width: 140,
               height: 140,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(12)),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle, // ✅ Forma circular completa
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0x1A000000), // Colors.black.withValues(alpha: 0.1) como const
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+              child: ClipOval( // ✅ ClipOval para recortar en círculo
                 child: _buildImageOrPlaceholder(),
               ),
             ),
@@ -55,10 +55,10 @@ class FeaturedArtistCard extends StatelessWidget {
             Text(
               artist.stageName ?? 'Artista Desconocido',
               style: GoogleFonts.inter(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: NeumorphismTheme.textPrimary,
-                decoration: TextDecoration.none,
+                letterSpacing: -0.3,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -70,9 +70,9 @@ class FeaturedArtistCard extends StatelessWidget {
             Text(
               '${NumberFormatter.format(artist.totalFollowers)} seguidores',
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: 13,
                 color: NeumorphismTheme.textSecondary,
-                decoration: TextDecoration.none,
+                fontWeight: FontWeight.w400,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -80,20 +80,23 @@ class FeaturedArtistCard extends StatelessWidget {
             
             // Razón destacada (si existe)
             if (featuredArtist.featuredReason != null) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: const BoxDecoration(
-                  color: Color(0x33FF9800), // Colors.orange.withValues(alpha: 0.2) como const
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.accent.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  border: Border.all(
+                    color: NeumorphismTheme.accent.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
                 ),
                 child: Text(
                   featuredArtist.featuredReason!,
                   style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.none,
+                    fontSize: 11,
+                    color: NeumorphismTheme.accent,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -126,7 +129,7 @@ class FeaturedArtistCard extends StatelessWidget {
           // Log del error para debugging
           debugPrint('[FeaturedArtistCard] Error cargando imagen: $url - Error: $error');
           debugPrint('[FeaturedArtistCard] URL original: $rawUrl');
-          return const ImagePlaceholder.artist();
+          return const ImagePlaceholder.artistRound(); // ✅ Placeholder redondo
         },
         placeholder: (context, url) {
           return const ImagePlaceholder.shimmer();
@@ -136,9 +139,11 @@ class FeaturedArtistCard extends StatelessWidget {
       );
     }
     
-    // Si no hay URL, log para debugging
-    debugPrint('[FeaturedArtistCard] No hay URL de imagen para artista ${featuredArtist.artist.id}');
-    return const ImagePlaceholder.artist();
+    // Si no hay URL, usar placeholder sin log excesivo (solo en debug mode)
+    if (kDebugMode) {
+      debugPrint('[FeaturedArtistCard] No hay URL de imagen para artista ${featuredArtist.artist.id}');
+    }
+    return const ImagePlaceholder.artistRound(); // ✅ Placeholder redondo
   }
 
 }

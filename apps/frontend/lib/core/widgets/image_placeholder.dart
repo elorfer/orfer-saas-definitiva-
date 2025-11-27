@@ -12,6 +12,7 @@ class ImagePlaceholder extends StatelessWidget {
   final List<Color>? gradientColors;
   final double? borderRadius;
   final bool showShimmer;
+  final bool isCircular;
 
   const ImagePlaceholder({
     super.key,
@@ -23,6 +24,7 @@ class ImagePlaceholder extends StatelessWidget {
     this.gradientColors,
     this.borderRadius,
     this.showShimmer = false,
+    this.isCircular = false,
   });
 
   /// Placeholder para artistas (gradiente vintage)
@@ -38,7 +40,24 @@ class ImagePlaceholder extends StatelessWidget {
           Color(0xFFF2740B),
           Color(0xFFE35A01),
         ],
-        showShimmer = false;
+        showShimmer = false,
+        isCircular = false;
+
+  /// Placeholder para artistas redondos (gradiente vintage circular)
+  const ImagePlaceholder.artistRound({
+    super.key,
+    this.width,
+    this.height,
+  })  : icon = Icons.person,
+        iconColor = Colors.white,
+        backgroundColor = null,
+        gradientColors = const [
+          Color(0xFFF2740B),
+          Color(0xFFE35A01),
+        ],
+        borderRadius = null,
+        showShimmer = false,
+        isCircular = true;
 
   /// Placeholder para canciones (gradiente púrpura)
   const ImagePlaceholder.song({
@@ -53,7 +72,8 @@ class ImagePlaceholder extends StatelessWidget {
           NeumorphismTheme.coffeeMedium,
           NeumorphismTheme.coffeeDark,
         ],
-        showShimmer = false;
+        showShimmer = false,
+        isCircular = false;
 
   /// Placeholder con shimmer effect para loading
   const ImagePlaceholder.shimmer({
@@ -69,7 +89,8 @@ class ImagePlaceholder extends StatelessWidget {
           NeumorphismTheme.coffeeMedium,
           NeumorphismTheme.coffeeDark,
         ],
-        showShimmer = true;
+        showShimmer = true,
+        isCircular = false;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +106,8 @@ class ImagePlaceholder extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: gradientColors!,
           ),
-          borderRadius: borderRadius != null ? BorderRadius.circular(borderRadius!) : null,
+          shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: !isCircular && borderRadius != null ? BorderRadius.circular(borderRadius!) : null,
         ),
         child: showShimmer
             ? const Center(

@@ -2,242 +2,111 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../features/home/screens/home_screen.dart';
-import '../../features/search/screens/search_screen.dart';
-import '../../features/library/screens/library_screen.dart';
-import '../../features/profile/screens/profile_screen.dart';
-import '../widgets/mini_player.dart';
-import '../widgets/professional_audio_player.dart';
-import '../providers/professional_audio_provider.dart';
-import '../models/song_model.dart';
-import '../utils/full_player_tracker.dart';
-import '../audio/audio_manager.dart';
+import '../providers/unified_audio_provider_fixed.dart';
+import '../widgets/final_mini_player.dart';
+import '../theme/neumorphism_theme.dart';
 
+/// Navegación principal con bottom navigation bar y mini player
 class MainNavigation extends ConsumerStatefulWidget {
-  final Widget? child;
+  final Widget child;
 
-  const MainNavigation({super.key, this.child});
+  const MainNavigation({
+    super.key,
+    required this.child,
+  });
 
   @override
   ConsumerState<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends ConsumerState<MainNavigation> {
-  // Sin AnimationController - animación simple con AnimatedContainer
-
-  // Obtener el índice basado en la ruta actual
-  int _getCurrentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).matchedLocation;
-    if (location.startsWith('/home') && !location.contains('/playlist')) {
-      return 0;
-    } else if (location.startsWith('/search')) {
-      return 1;
-    } else if (location.startsWith('/library')) {
-      return 2;
-    } else if (location.startsWith('/profile')) {
-      return 3;
-    }
-    return 0; // Default a home
-  }
+class _MainNavigationState extends ConsumerState<MainNavigation> 
+    with AutomaticKeepAliveClientMixin {
+  
+  @override
+  bool get wantKeepAlive => true; // ✅ Mantener estado de navegación
 
   @override
   Widget build(BuildContext context) {
-    // Configurar callback en AudioManager para abrir el full player
-    // Se configura en cada build para asegurar que el contexto esté disponible
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && context.mounted) {
-        final audioManager = ref.read(audioManagerProvider);
-        audioManager.setOnOpenFullPlayerCallback(() => _openFullPlayer(context));
-      }
-    });
+    super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
-    final currentIndex = _getCurrentIndex(context);
+    // ✅ OPTIMIZACIÓN: Solo escuchar cambios en currentSong, no todo el estado
+    final currentSong = ref.watch(unifiedAudioProviderFixed.select((state) => state.currentSong));
 
-    // Si hay un child (ruta anidada desde ShellRoute), mostrar el child
-    // Si no hay child, mostrar IndexedStack con las pantallas principales
-    final bodyContent = widget.child ?? IndexedStack(
-      index: currentIndex,
-      children: const [
-        HomeScreen(),
-        SearchScreen(),
-        LibraryScreen(),
-        ProfileScreen(),
-      ],
-    );
-    
-    // Renderizar el Scaffold con MiniPlayer arriba y navigation bar abajo
-    // Ambos en bottomNavigationBar usando Column (NO hace scroll, solo organiza)
-    // El navigation bar queda tal cual como está ahora (abajo)
     return Scaffold(
-      backgroundColor: Colors.white, // Fondo blanco explícito para evitar fondo beige del tema
-      body: bodyContent,
-      // bottomNavigationBar contiene: MiniPlayer (arriba) + Navigation bar (abajo)
-      // Estilo Spotify: pegado directamente sin espacios
-      bottomNavigationBar: Container(
-        color: const Color(0xFFF2E8DD), // beigeLight del tema - mismo fondo que navigation bar
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // MiniPlayer arriba, pegado directamente al navigation bar (sin espacios)
-            MiniPlayer(
-              onTap: () => _openFullPlayer(context),
-            ),
-            // Navigation bar abajo - sin separación
-            _buildModernBottomNavigationBar(context, currentIndex),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Método optimizado para abrir el reproductor completo con transición fluida estilo Spotify/Apple Music
-  /// El FullPlayer aparece DESDE el MiniPlayer con animación suave (250-320ms)
-  void _openFullPlayer(BuildContext context) {
-    // Verificar si ya hay un reproductor abierto
-    if (FullPlayerTracker.isOpen) {
-      return; // Ya está abierto, no abrir otro
-    }
-    
-    // Verificar que hay una canción cargada antes de mostrar el modal
-    final currentSongAsync = ref.read(professionalCurrentSongProvider);
-    Song? currentSong;
-    
-    // Obtener la canción desde el provider
-    currentSong = currentSongAsync.maybeWhen(
-      data: (song) => song,
-      orElse: () => null,
-    );
-    
-    // Si no hay canción en el provider, intentar obtenerla directamente del controller
-    if (currentSong == null) {
-      try {
-        final audioService = ref.read(professionalAudioServiceProvider);
-        if (audioService.isInitialized && audioService.controller != null) {
-          currentSong = audioService.controller!.currentSong;
-        }
-      } catch (e) {
-        // Ignorar errores
-      }
-    }
-
-    if (currentSong == null) {
-      // Si no hay canción, no mostrar el modal
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No hay ninguna canción reproduciéndose'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    // Marcar como abierto
-    FullPlayerTracker.setOpen(true);
-    
-    // Mostrar modal con transición optimizada estilo Spotify/Apple Music
-    // El modal aparece DESDE el MiniPlayer con animación suave (280ms, GPU-optimizada)
-    // showModalBottomSheet usa animación optimizada por defecto que empieza desde abajo
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: true,
-      enableDrag: true,
-      useSafeArea: true, // Usar SafeArea como solicitado
-      routeSettings: const RouteSettings(name: '/full_player'),
-      builder: (context) => RepaintBoundary(
-        // Usar RepaintBoundary para optimizar rendimiento y evitar rebuilds innecesarios
-        // Esto mantiene el FullPlayer aislado del resto de la UI
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(28), // Bordes redondeados arriba
+      backgroundColor: NeumorphismTheme.background,
+      body: Stack(
+        children: [
+          // Contenido principal con nueva navigation bar
+          Column(
+            children: [
+              Expanded(child: widget.child),
+              _buildBottomNavigationBar(context), // ✅ NUEVA BARRA SENCILLA
+            ],
           ),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.98, // Ocupar casi toda la pantalla desde el inicio
-            minChildSize: 0.6,
-            maxChildSize: 0.98,
-            snap: true,
-            snapSizes: const [0.98],
-            builder: (context, scrollController) => RepaintBoundary(
-              // RepaintBoundary interno para evitar rebuilds del contenido debajo
-              // Mantiene el FullPlayer aislado del resto de la UI
-              child: const SafeArea(
-                child: ProfessionalAudioPlayer(),
+          
+          // ✅ MINI PLAYER OPTIMIZADO - Solo se muestra cuando hay canción
+          if (currentSong != null)
+            Positioned(
+              bottom: 70, // Ajustado para la nueva altura de barra (60px + 10px separación)
+              left: 0,
+              right: 0,
+              child: RepaintBoundary( // ✅ Evitar repintados innecesarios
+                child: FinalMiniPlayer(
+                  onTap: () {
+                    // Abrir reproductor completo con transición estilo Spotify
+                    context.push('/player');
+                  },
+                ),
               ),
             ),
-          ),
-        ),
+        ],
       ),
-    ).whenComplete(() {
-      // Cuando el modal se cierra, marcar como cerrado
-      FullPlayerTracker.setOpen(false);
-    });
+    );
   }
 
-
-  Widget _buildModernBottomNavigationBar(BuildContext context, int currentIndex) {
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    final currentIndex = _getCurrentIndex(context);
+    
     return Container(
+      height: 70, // 🎯 Altura fija estable
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-            spreadRadius: 0,
-          ),
-        ],
+        color: NeumorphismTheme.background,
       ),
       child: SafeArea(
         top: false,
-        child: Container(
-          // Altura optimizada - debe quedar justo debajo del MiniPlayer
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildModernNavItem(
-                context: context,
-                index: 0,
-                route: '/home',
-                icon: Icons.home_rounded,
+              _buildNavItem(
+                icon: Icons.home_outlined,
                 activeIcon: Icons.home,
                 label: 'Inicio',
-                currentIndex: currentIndex,
+                isSelected: currentIndex == 0,
+                onTap: () => context.go('/home'),
               ),
-              _buildModernNavItem(
-                context: context,
-                index: 1,
-                route: '/search',
-                icon: Icons.search_rounded,
+              _buildNavItem(
+                icon: Icons.search_outlined,
                 activeIcon: Icons.search,
                 label: 'Buscar',
-                currentIndex: currentIndex,
+                isSelected: currentIndex == 1,
+                onTap: () => context.go('/search'),
               ),
-              _buildModernNavItem(
-                context: context,
-                index: 2,
-                route: '/library',
-                icon: Icons.library_music_rounded,
+              _buildNavItem(
+                icon: Icons.library_music_outlined,
                 activeIcon: Icons.library_music,
                 label: 'Biblioteca',
-                currentIndex: currentIndex,
+                isSelected: currentIndex == 2,
+                onTap: () => context.go('/library'),
               ),
-              _buildModernNavItem(
-                context: context,
-                index: 3,
-                route: '/profile',
-                icon: Icons.person_outline_rounded,
-                activeIcon: Icons.person_rounded,
+              _buildNavItem(
+                icon: Icons.person_outline,
+                activeIcon: Icons.person,
                 label: 'Perfil',
-                currentIndex: currentIndex,
+                isSelected: currentIndex == 3,
+                onTap: () => context.go('/profile'),
               ),
             ],
           ),
@@ -246,78 +115,44 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
     );
   }
 
-  Widget _buildModernNavItem({
-    required BuildContext context,
-    required int index,
-    required String route,
+  Widget _buildNavItem({
     required IconData icon,
     required IconData activeIcon,
     required String label,
-    required int currentIndex,
+    required bool isSelected,
+    required VoidCallback onTap,
   }) {
-    final isSelected = currentIndex == index;
-    
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          // Navegar a la ruta usando GoRouter
-          context.go(route);
-        },
+        onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? const Color(0xFFB8A894).withValues(alpha: 0.15)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
+        child: SizedBox(
+          height: 60, // Altura fija igual al contenedor
           child: Column(
-            mainAxisSize: MainAxisSize.min, // Minimizar tamaño vertical
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Icono con animación simple de tamaño y color
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200), // Animación suave
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFFB8A894)
-                      : Colors.transparent,
-                  shape: BoxShape.circle,
-                ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200), // Animación de tamaño
-                  curve: Curves.easeOut,
-                  child: Icon(
-                    isSelected ? activeIcon : icon,
-                    color: isSelected
-                        ? Colors.white
-                        : Colors.grey[600],
-                    size: isSelected ? 24 : 22, // Cambia de tamaño cuando está seleccionado
-                  ),
-                ),
+              Icon(
+                isSelected ? activeIcon : icon,
+                size: 32, // Mantiene el tamaño de iconos
+                color: isSelected 
+                  ? NeumorphismTheme.coffeeMedium 
+                  : NeumorphismTheme.textSecondary,
               ),
-              const SizedBox(height: 3),
-              // Texto simple sin animación compleja
-              Flexible(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: isSelected ? 11 : 10,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected
-                        ? const Color(0xFFB8A894)
-                        : Colors.grey[600],
-                    letterSpacing: 0.1,
-                    height: 1.0,
-                  ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected 
+                    ? NeumorphismTheme.coffeeMedium 
+                    : NeumorphismTheme.textSecondary,
+                  height: 1.0,
                 ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -325,4 +160,21 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
       ),
     );
   }
+
+  int _getCurrentIndex(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    switch (location) {
+      case '/home':
+        return 0;
+      case '/search':
+        return 1;
+      case '/library':
+        return 2;
+      case '/profile':
+        return 3;
+      default:
+        return 0;
+    }
+  }
+
 }
