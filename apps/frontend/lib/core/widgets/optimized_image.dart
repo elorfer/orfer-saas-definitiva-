@@ -120,11 +120,15 @@ class OptimizedImage extends StatelessWidget {
       width: (width != null && width!.isFinite && !width!.isNaN && !width!.isInfinite) ? width : null,
       height: (height != null && height!.isFinite && !height!.isNaN && !height!.isInfinite) ? height : null,
       // Transiciones más rápidas para mejor UX (OPTIMIZADO 🚀)
+      // Si la imagen ya está en caché, usar transición instantánea
       fadeInDuration: isLargeCover 
-          ? const Duration(milliseconds: 150) 
-          : const Duration(milliseconds: 100),
+          ? const Duration(milliseconds: 50) // Más rápido para portadas grandes
+          : const Duration(milliseconds: 30), // Más rápido para imágenes pequeñas
       fadeOutDuration: const Duration(milliseconds: 0), // Sin fade out para evitar parpadeo
       placeholderFadeInDuration: const Duration(milliseconds: 0), // Sin fade para placeholder
+      fadeInCurve: Curves.easeOut, // Curva más rápida
+      // Usar imagen anterior si la URL cambia (mejor UX durante transiciones)
+      useOldImageOnUrlChange: true,
       // Caché optimizado según el contexto
       memCacheWidth: getMemCacheWidth(),
       memCacheHeight: getMemCacheHeight(),
@@ -136,10 +140,8 @@ class OptimizedImage extends StatelessWidget {
       cacheKey: imageUrl,
       httpHeaders: const {
         'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
-        'Cache-Control': 'max-age=3600', // Cache por 1 hora
+        'Cache-Control': 'max-age=86400', // Cache por 24 horas (más agresivo)
       },
-      // Usar imagen anterior si la URL cambia (mejor UX durante transiciones)
-      useOldImageOnUrlChange: true,
       // Configuración de cache más agresiva
       cacheManager: null, // Usar cache manager por defecto
       // Configuración adicional para evitar parpadeo
@@ -190,20 +192,11 @@ class OptimizedImage extends StatelessWidget {
       );
     }
 
+    // Placeholder sólido sin indicador de carga para evitar "apariciones" durante scroll
     return Container(
       width: width,
       height: height,
       decoration: gradient,
-      child: const Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white70,
-          ),
-        ),
-      ),
     );
   }
 

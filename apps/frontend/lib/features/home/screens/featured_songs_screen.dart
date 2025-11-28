@@ -1,17 +1,15 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/providers/intelligent_featured_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/config/performance_config.dart';
-import '../../../core/widgets/optimized_image.dart';
+import '../../../core/widgets/favorite_button.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/url_normalizer.dart';
 
 /// 🚀 PANTALLA OPTIMIZADA DE CANCIONES DESTACADAS
 /// Implementa múltiples optimizaciones de rendimiento:
@@ -78,30 +76,100 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
 
   Widget _buildSongsList(BuildContext context, List<FeaturedSong> featuredSongs) {
     return CustomScrollView(
-      physics: const FastScrollPhysics(),
-      cacheExtent: 1200.0,
+      physics: const ClampingScrollPhysics(), // Más fluido que FastScrollPhysics
+      cacheExtent: 500.0, // Optimizado: menos caché = scroll más fluido
+      clipBehavior: Clip.none, // Evitar clipping innecesario
       slivers: [
-        // Header con información
+        // Header mejorado con gradiente (similar a favoritos)
         SliverToBoxAdapter(
-          child: Padding(
+          child: Container(
+            margin: const EdgeInsets.all(16.0),
             padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                  NeumorphismTheme.coffeeDark.withValues(alpha: 0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                Text(
-                  'Descubre música increíble',
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: NeumorphismTheme.textPrimary,
+                // Icono de estrella grande (diferente al de favoritos)
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        NeumorphismTheme.coffeeMedium,
+                        NeumorphismTheme.coffeeDark,
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.star_rounded,
+                    color: Colors.white,
+                    size: 32,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '${featuredSongs.length} canciones seleccionadas especialmente para ti',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: NeumorphismTheme.textSecondary,
+                const SizedBox(width: 16),
+                // Título y subtítulo
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Canciones Destacadas',
+                        style: GoogleFonts.inter(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: NeumorphismTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.music_note_rounded,
+                            size: 16,
+                            color: NeumorphismTheme.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              '${featuredSongs.length} canciones seleccionadas especialmente para ti',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: NeumorphismTheme.textSecondary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -109,19 +177,28 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
           ),
         ),
         
-        // Lista de canciones
-        SliverList.builder(
-          itemCount: featuredSongs.length,
-          itemBuilder: (context, index) {
-            final featuredSong = featuredSongs[index];
-            return RepaintBoundary(
-              child: _BlurSongCard(
-                key: ValueKey('featured_song_${featuredSong.song.id}'),
-                featuredSong: featuredSong,
-                onTap: () => _onSongTap(context, featuredSong.song),
-              ),
-            );
-          },
+        // Lista de canciones optimizada para scroll fluido
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final featuredSong = featuredSongs[index];
+              final song = featuredSong.song;
+              return RepaintBoundary(
+                key: ValueKey('featured_song_${song.id}'),
+                child: _BlurSongCard(
+                  featuredSong: featuredSong,
+                  onTap: () => _onSongTap(context, song),
+                ),
+              );
+            },
+            childCount: featuredSongs.length,
+            addAutomaticKeepAlives: false, // Optimización: no mantener estado fuera de vista
+            addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual
+          ),
+        ),
+        // Espacio para el reproductor
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 80),
         ),
       ],
     );
@@ -242,221 +319,245 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
   }
 }
 
-/// Widget de tarjeta con estilo del reproductor principal
-class _BlurSongCard extends StatelessWidget {
+/// Widget de tarjeta con estilo de favoritos (sin blur)
+class _BlurSongCard extends ConsumerWidget {
   final FeaturedSong featuredSong;
   final VoidCallback onTap;
 
   const _BlurSongCard({
-    super.key,
     required this.featuredSong,
     required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final song = featuredSong.song;
+    final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
+        ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
+        : null;
     
     return Container(
-      height: 120,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            NeumorphismTheme.surface.withValues(alpha: 0.8),
+            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(-2, -2),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          children: [
-            // ✅ Fondo de imagen con blur (igual que el reproductor)
-            Positioned.fill(
-              child: song.coverArtUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: song.coverArtUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: NeumorphismTheme.background,
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: NeumorphismTheme.background,
-                      ),
-                    )
-                  : Container(color: NeumorphismTheme.background),
-            ),
-            // ✅ Blur overlay (igual que el reproductor)
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.4),
-                ),
-              ),
-            ),
-            // ✅ Contenido sobre el blur
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(24),
-                onTap: onTap,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      // Imagen de la canción
-                      Container(
-                        width: 68,
-                        height: 68,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Portada con efecto de elevación
+                Hero(
+                  tag: 'featured_cover_${song.id}',
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    constraints: const BoxConstraints(
+                      minWidth: 64,
+                      maxWidth: 64,
+                      minHeight: 64,
+                      maxHeight: 64,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: coverUrl != null
+                          ? SizedBox(
+                              width: 64,
+                              height: 64,
+                              child: Image.network(
+                                coverUrl,
+                                fit: BoxFit.cover,
+                                width: 64,
+                                height: 64,
+                                alignment: Alignment.center,
+                                repeat: ImageRepeat.noRepeat,
+                              // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
+                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                if (wasSynchronouslyLoaded) return child;
+                                return AnimatedOpacity(
+                                  opacity: frame == null ? 0 : 1,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: child,
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) {
+                                  return child;
+                                }
+                                // Placeholder simple sin CircularProgressIndicator para mejor rendimiento
+                                return Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        NeumorphismTheme.coffeeMedium,
+                                        NeumorphismTheme.coffeeDark,
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        NeumorphismTheme.coffeeMedium,
+                                        NeumorphismTheme.coffeeDark,
+                                      ],
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.music_note,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: OptimizedImage(
-                            imageUrl: song.coverArtUrl,
-                            fit: BoxFit.cover,
-                            width: 68,
-                            height: 68,
-                            borderRadius: 16,
-                            placeholderColor: NeumorphismTheme.accentLight,
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(width: 16),
-                      
-                      // Información de la canción
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Título
-                            Text(
-                              song.title ?? 'Canción Desconocida',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white, // ✅ Texto blanco como el reproductor
+                          )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    NeumorphismTheme.coffeeMedium,
+                                    NeumorphismTheme.coffeeDark,
+                                  ],
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              child: const Icon(
+                                Icons.music_note,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                             ),
-                            
-                            const SizedBox(height: 4),
-                            
-                            // Artista
-                            Text(
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Información de la canción
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Título
+                      Text(
+                        song.title ?? 'Canción Desconocida',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: NeumorphismTheme.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      // Artista
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: NeumorphismTheme.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
                               song.artist?.stageName ?? 'Artista Desconocido',
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
-                                color: Colors.white.withValues(alpha: 0.7), // ✅ Texto blanco semi-transparente
+                                color: NeumorphismTheme.textSecondary,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            
-                            const SizedBox(height: 8),
-                            
-                            // Duración y badge
-                            Row(
-                              children: [
-                                if (song.duration != null) ...[
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 12,
-                                    color: Colors.white.withValues(alpha: 0.6), // ✅ Texto blanco más transparente
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _formatDuration(song.duration!),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: Colors.white.withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                ],
-                                
-                                // Badge destacado
-                                if (featuredSong.featuredReason != null)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.1), // ✅ Fondo blanco semi-transparente
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.3), // ✅ Borde blanco semi-transparente
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      featuredSong.featuredReason!,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white, // ✅ Badge en blanco para contraste
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      const SizedBox(width: 16),
-                      
-                      // Botón de reproducción (igual que el reproductor)
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: const BoxDecoration(
-                          color: Colors.white, // ✅ Botón blanco como el reproductor
-                          shape: BoxShape.circle,
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(22),
-                            onTap: onTap,
-                            child: const Center(
-                              child: Icon(
-                                Icons.play_arrow_rounded,
-                                color: Colors.black, // ✅ Icono negro como el reproductor
-                                size: 20,
-                              ),
-                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                // Iconos: Corazón y Menú
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Icono de corazón
+                    FavoriteButton(
+                      songId: song.id,
+                      iconSize: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    // Icono de tres rayitas (menú)
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          // TODO: Implementar menú de opciones
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Icon(
+                            Icons.more_vert,
+                            color: NeumorphismTheme.textSecondary,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  String _formatDuration(int seconds) {
-    final minutes = seconds ~/ 60;
-    final remainingSeconds = seconds % 60;
-    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 }

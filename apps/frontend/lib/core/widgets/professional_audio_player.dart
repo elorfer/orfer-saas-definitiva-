@@ -10,6 +10,7 @@ import '../utils/logger.dart';
 import 'stable_image_widget.dart';
 import '../utils/url_normalizer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'favorite_button.dart';
 
 /// Widget separado para el fondo de imagen (evita rebuilds)
 class _BackgroundImageWidget extends StatelessWidget {
@@ -263,9 +264,10 @@ class _StaticPlayerUI extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.favorite_border_rounded, color: Colors.white, size: 28),
-                            onPressed: () {},
+                          FavoriteButton(
+                            songId: song.id,
+                            iconColor: Colors.white,
+                            iconSize: 28,
                           ),
                         ],
                       ),

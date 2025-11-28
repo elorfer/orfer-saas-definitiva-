@@ -153,3 +153,4 @@ La aplicación ahora cuenta con un sistema de optimización robusto que:
 - ✅ **Proporciona UX fluida** y profesional
 
 Todas las optimizaciones están centralizadas en `PerformanceConfig` para fácil mantenimiento y ajustes futuros.
+

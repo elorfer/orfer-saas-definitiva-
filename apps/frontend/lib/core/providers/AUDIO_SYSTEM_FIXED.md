@@ -173,3 +173,4 @@ El sistema incluye logs detallados:
 - ✅ Sin listeners duplicados
 - ✅ Un solo AudioPlayer global
 - ✅ Estado sincronizado entre todos los widgets
+

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/providers/favorites_provider.dart';
 
 /// LibraryScreen optimizado con AutomaticKeepAliveClientMixin
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -24,7 +25,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       'icon': Icons.favorite,
       'title': 'Canciones Favoritas',
       'subtitle': '0 canciones',
-      'onTap': () {},
+      'onTap': null, // Se maneja en el build
     },
     {
       'icon': Icons.playlist_play,
@@ -61,6 +62,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
+    
+    // Observar el estado de favoritos para mostrar el número correcto
+    final favoritesState = ref.watch(favoritesProvider);
+    final favoritesCount = favoritesState.favorites.length;
+    
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -72,20 +78,98 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Row(
-                  children: [
-                    Text(
-                      'Mi Biblioteca',
-                      style: GoogleFonts.inter(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: NeumorphismTheme.textPrimary,
-                      ),
+                // Header mejorado con icono
+                Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                        NeumorphismTheme.coffeeDark.withValues(alpha: 0.1),
+                      ],
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Icono de biblioteca grande
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              NeumorphismTheme.coffeeMedium,
+                              NeumorphismTheme.coffeeDark,
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.library_music_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      // Información
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mi Biblioteca',
+                              style: GoogleFonts.inter(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: NeumorphismTheme.textPrimary,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.collections_rounded,
+                                  size: 16,
+                                  color: NeumorphismTheme.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Tu música organizada',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                    color: NeumorphismTheme.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
                 
                 // Library sections optimizadas
                 Expanded(
@@ -96,15 +180,27 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                     itemExtent: 80.0, // Altura fija para mejor rendimiento
                     itemBuilder: (context, index) {
                       final section = _librarySections[index];
+                      
+                      // Actualizar subtitle para favoritos
+                      String subtitle = section['subtitle'] as String;
+                      if (index == 0) {
+                        // Canciones Favoritas
+                        subtitle = '$favoritesCount ${favoritesCount == 1 ? 'canción' : 'canciones'}';
+                      }
+                      
                       return RepaintBoundary(
                         key: ValueKey('library_section_$index'),
                         child: _buildLibrarySection(
                           icon: section['icon'] as IconData,
                           title: section['title'] as String,
-                          subtitle: section['subtitle'] as String,
+                          subtitle: subtitle,
                           onTap: section['onTap'] as VoidCallback? ?? () {
-                            // Manejar tap específico para "Mis Playlists"
-                            if (index == 1) {
+                            // Manejar tap específico para cada sección
+                            if (index == 0) {
+                              // Canciones Favoritas
+                              context.push('/favorites');
+                            } else if (index == 1) {
+                              // Mis Playlists
                               context.push('/playlists');
                             }
                           },

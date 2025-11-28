@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'url_normalizer.dart';
 
 /// Utilidad centralizada para normalizar datos entre camelCase y snake_case
@@ -155,9 +154,20 @@ class DataNormalizer {
       }
     });
     
+    // Manejar avatarUrl del SongMapper (formato simplificado del backend)
+    if (data.containsKey('avatarUrl') && !normalized.containsKey('profile_photo_url')) {
+      normalized['profile_photo_url'] = data['avatarUrl'];
+    }
+    
     // Asegurar que siempre haya un stage_name
-    if (!normalized.containsKey('stage_name') && normalized.containsKey('name')) {
-      normalized['stage_name'] = normalized['name'];
+    if (!normalized.containsKey('stage_name') || normalized['stage_name'] == null || normalized['stage_name'].toString().isEmpty) {
+      if (normalized.containsKey('name') && normalized['name'] != null) {
+        normalized['stage_name'] = normalized['name'];
+      } else if (data.containsKey('stageName') && data['stageName'] != null) {
+        normalized['stage_name'] = data['stageName'];
+      } else {
+        normalized['stage_name'] = 'Artista desconocido';
+      }
     }
     
     // Asegurar valores por defecto
@@ -217,9 +227,17 @@ class DataNormalizer {
       final mappedKey = fieldMapping[key] ?? camelToSnake(key);
       
       if (value is Map<String, dynamic>) {
-        normalized[mappedKey] = key == 'artist' 
-            ? normalizeArtist(value) 
-            : normalizeKeys(value);
+        if (key == 'artist') {
+          // Normalizar artista específicamente
+          final normalizedArtist = normalizeArtist(value);
+          normalized[mappedKey] = normalizedArtist;
+          // Asegurar que stageName también esté disponible en camelCase para compatibilidad
+          if (normalizedArtist['stage_name'] != null && normalizedArtist['stageName'] == null) {
+            normalizedArtist['stageName'] = normalizedArtist['stage_name'];
+          }
+        } else {
+          normalized[mappedKey] = normalizeKeys(value);
+        }
       } else if (key == 'genres') {
         // Manejar géneros que pueden venir como List, String (separado por comas), o null
         if (value is List) {
@@ -263,13 +281,6 @@ class DataNormalizer {
     
     // file_url puede venir de diferentes campos
     final fileUrlValue = data['file_url'] ?? data['fileUrl'] ?? '';
-    
-    // DEBUG: Verificar qué está pasando con fileUrl
-    debugPrint('[DataNormalizer] 🔍 Datos originales:');
-    debugPrint('[DataNormalizer] 🔍 data[\'file_url\']: ${data['file_url']}');
-    debugPrint('[DataNormalizer] 🔍 data[\'fileUrl\']: ${data['fileUrl']}');
-    debugPrint('[DataNormalizer] 🔍 fileUrlValue final: $fileUrlValue');
-    
     normalized['file_url'] = fileUrlValue;
     
     // IMPORTANTE: También mantener fileUrl en camelCase para compatibilidad con el modelo Song

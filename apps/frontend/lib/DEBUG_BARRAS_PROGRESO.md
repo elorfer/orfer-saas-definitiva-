@@ -82,3 +82,4 @@ Deberías ver logs como estos:
 Esto me permitirá identificar exactamente en qué punto falla el sistema y aplicar la corrección específica.
 
 ¡Los logs de debug nos dirán exactamente qué está pasando! 🔍✨
+

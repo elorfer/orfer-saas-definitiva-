@@ -7,6 +7,7 @@ import '../../../features/artists/models/artist.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/models/artist_model.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import 'featured_artist_card.dart';
 
 class FeaturedArtistsSection extends ConsumerWidget {
@@ -28,38 +29,94 @@ class FeaturedArtistsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Título de la sección
+        // Header mejorado con icono
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Artistas Destacados',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF3D2E20),
-                  decoration: TextDecoration.none,
-                ),
+          child: Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
+                  NeumorphismTheme.coffeeDark.withValues(alpha: 0.08),
+                ],
               ),
-              TextButton(
-                onPressed: () {
-                  context.push('/artists');
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF8B7A6A),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
                 ),
-                child: Text(
-                  'Ver todos',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: const Color(0xFF8B7A6A),
-                    decoration: TextDecoration.none,
+              ],
+            ),
+            child: Row(
+              children: [
+                // Icono de artista destacado
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        NeumorphismTheme.coffeeMedium,
+                        NeumorphismTheme.coffeeDark,
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.star_rounded,
+                    color: Colors.white,
+                    size: 24,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                // Título
+                Expanded(
+                  child: Text(
+                    'Artistas Destacados',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: NeumorphismTheme.textPrimary,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                // Botón "Ver todos"
+                TextButton(
+                  onPressed: () {
+                    context.push('/artists');
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: NeumorphismTheme.accentDark,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    'Ver todos',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: NeumorphismTheme.accentDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         

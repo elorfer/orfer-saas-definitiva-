@@ -245,3 +245,4 @@ Padding(
 - **Memoria optimizada**
 
 ¡Las tarjetas ahora son **perfectamente funcionales** sin ningún overflow, manteniendo toda la belleza visual y los efectos dinámicos! 🎵✨
+

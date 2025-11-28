@@ -84,3 +84,4 @@ Una vez identificado el problema específico, las barras de progreso funcionará
 - ✅ Estado sincronizado entre todos los widgets
 
 ¡Los logs de debug nos darán la respuesta exacta! 🔍✨
+

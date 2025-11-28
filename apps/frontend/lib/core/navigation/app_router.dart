@@ -11,6 +11,7 @@ import '../../features/home/screens/home_screen.dart';
 import '../../features/home/screens/featured_songs_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 import '../../features/library/screens/library_screen.dart';
+import '../../features/library/screens/favorites_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/artists/pages/artist_page.dart';
 import '../../features/artists/models/artist.dart';
@@ -159,6 +160,17 @@ class GoRouterNotifier extends ChangeNotifier {
               pageBuilder: (context, state) => CustomTransitionPage<void>(
                 key: state.pageKey,
                 child: const FeaturedSongsScreen(),
+                transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
+                transitionDuration: const Duration(milliseconds: 250),
+                reverseTransitionDuration: const Duration(milliseconds: 200),
+              ),
+            ),
+            // Favorites - transición horizontal (desde la derecha)
+            GoRoute(
+              path: '/favorites',
+              pageBuilder: (context, state) => CustomTransitionPage<void>(
+                key: state.pageKey,
+                child: const FavoritesScreen(),
                 transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
                 transitionDuration: const Duration(milliseconds: 250),
                 reverseTransitionDuration: const Duration(milliseconds: 200),

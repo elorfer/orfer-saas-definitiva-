@@ -15,6 +15,7 @@ import '../../../core/widgets/optimized_image.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/utils/data_normalizer.dart';
 import '../../../core/utils/retry_handler.dart';
+import '../../../core/utils/url_normalizer.dart';
 
 // Función top-level para procesar playlist en isolate
 Playlist? _parsePlaylist(Map<String, dynamic> jsonData) {
@@ -65,6 +66,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   bool _hasMoreSongs = false;
   bool _loadingMore = false;
   String? _error;
+  bool _hasLoadedOnce = false; // Flag para saber si ya se cargó una vez
+  DateTime? _lastLoadTime; // Timestamp de última carga
+  
+  // Cache estático para mantener datos entre navegaciones (evita parpadeo)
+  // Estructura: { playlistId: { 'playlist': ..., 'songs': ..., 'lastLoad': ... } }
+  static final Map<String, Map<String, dynamic>> _playlistCache = {};
   
   // Timer para debounce en botones de play
   Timer? _playSongDebounce;
@@ -73,6 +80,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   static const int _initialSongsLimit = 20;
   static const int _loadMoreSongsLimit = 20;
   static const Duration _debounceDuration = Duration(milliseconds: 300);
+  static const Duration _cacheValidDuration = Duration(minutes: 5); // Cache válido por 5 minutos
+  
+  // Cachear dimensiones de pantalla para evitar recálculos
+  double? _cachedScreenWidth;
+  double? _cachedDevicePixelRatio;
 
   @override
   bool get wantKeepAlive => true;
@@ -80,7 +92,81 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   @override
   void initState() {
     super.initState();
-    _loadPlaylist();
+    
+    // Intentar cargar desde caché estático primero (evita parpadeo)
+    final cachedData = _playlistCache[widget.playlistId];
+    if (cachedData != null) {
+      final lastLoadTime = cachedData['lastLoadTime'] as DateTime;
+      if (!_shouldReloadCache(lastLoadTime)) {
+        // Restaurar datos desde caché inmediatamente
+        _playlist = cachedData['playlist'] as Playlist?;
+        _displayedSongs = List<Song>.from(
+          cachedData['displayedSongs'] as List,
+        );
+        _hasMoreSongs = cachedData['hasMoreSongs'] as bool;
+        _lastLoadTime = lastLoadTime;
+        _hasLoadedOnce = true;
+        _loading = false; // NO mostrar loading si tenemos datos en caché
+        
+        // Pre-cachear imagen de portada inmediatamente
+        if (_playlist?.coverArtUrl != null && _playlist!.coverArtUrl!.isNotEmpty) {
+          scheduleMicrotask(() {
+            if (mounted) {
+              precacheImage(
+                CachedNetworkImageProvider(_playlist!.coverArtUrl!),
+                context,
+              ).catchError((_) {
+                // Ignorar errores de pre-cache
+              });
+            }
+          });
+        }
+      } else {
+        // Caché expirado, limpiar y cargar
+        _playlistCache.remove(widget.playlistId);
+        _loadPlaylist();
+      }
+    } else {
+      // No hay caché, cargar normalmente
+      _loadPlaylist();
+    }
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cachear dimensiones de pantalla una sola vez
+    if (_cachedScreenWidth == null) {
+      final mediaQuery = MediaQuery.of(context);
+      _cachedScreenWidth = mediaQuery.size.width;
+      _cachedDevicePixelRatio = mediaQuery.devicePixelRatio;
+    }
+  }
+  
+  /// Verifica si el caché estático expiró
+  bool _shouldReloadCache(DateTime cacheTime) {
+    final now = DateTime.now();
+    return now.difference(cacheTime) > _cacheValidDuration;
+  }
+  
+  /// Limpiar caché antiguo periódicamente
+  static void _cleanOldCache() {
+    final now = DateTime.now();
+    final expiredKeys = <String>[];
+    
+    _playlistCache.forEach((key, value) {
+      final lastLoad = value['lastLoadTime'] as DateTime?;
+      if (lastLoad != null && now.difference(lastLoad) > _cacheValidDuration) {
+        expiredKeys.add(key);
+      }
+    });
+    
+    // Limpiar solo si hay más de 10 entradas
+    if (_playlistCache.length > 10) {
+      for (final key in expiredKeys) {
+        _playlistCache.remove(key);
+      }
+    }
   }
 
   @override
@@ -94,10 +180,20 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   Future<void> _loadPlaylist() async {
     if (!mounted) return;
     
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    // Solo mostrar loading si NO tenemos datos previos (evita parpadeo al volver)
+    if (!_hasLoadedOnce && mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    
+    // Pequeño delay para permitir que el primer frame se renderice sin bloqueo
+    if (!_hasLoadedOnce) {
+      await Future.delayed(const Duration(milliseconds: 16)); // ~1 frame a 60fps
+    }
+    
+    if (!mounted) return;
 
     try {
       final service = ref.read(playlistServiceProvider);
@@ -181,12 +277,30 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     final initialSongs = allSongs.take(_initialSongsLimit).toList();
     final hasMore = allSongs.length > _initialSongsLimit;
 
-    setState(() {
-      _playlist = playlist;
-      _displayedSongs = initialSongs;
-      _hasMoreSongs = hasMore;
-      _loading = false;
-    });
+    final now = DateTime.now();
+    if (mounted) {
+      setState(() {
+        _playlist = playlist;
+        _displayedSongs = initialSongs;
+        _hasMoreSongs = hasMore;
+        _loading = false;
+        _hasLoadedOnce = true;
+        _lastLoadTime = now;
+      });
+    }
+
+    // Guardar en caché estático para futuras navegaciones
+    _playlistCache[widget.playlistId] = {
+      'playlist': playlist,
+      'displayedSongs': initialSongs,
+      'hasMoreSongs': hasMore,
+      'lastLoadTime': now,
+    };
+    
+    // Limpiar caché antiguo periódicamente (solo si hay muchas entradas)
+    if (_playlistCache.length > 10) {
+      _cleanOldCache();
+    }
 
     // Pre-cachear imagen de portada para mejor UX
     if (mounted && playlist.coverArtUrl != null && playlist.coverArtUrl!.isNotEmpty) {
@@ -252,8 +366,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       body: SafeArea(
         bottom: true,
         child: CustomScrollView(
-          cacheExtent: 800,
+          cacheExtent: 1000, // Aumentado para mejor scroll performance
           physics: const FastScrollPhysics(),
+          clipBehavior: Clip.none, // Evitar clipping innecesario
           slivers: [
             // App Bar con imagen de fondo
             SliverAppBar(
@@ -269,11 +384,16 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                   fit: StackFit.expand,
                   children: [
                     OptimizedImage(
+                      key: ValueKey('playlist_cover_${playlist.id}_${playlist.coverArtUrl ?? 'null'}'),
                       imageUrl: playlist.coverArtUrl,
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: double.infinity,
                       isLargeCover: true,
+                      maxCacheWidth: _cachedScreenWidth != null && _cachedDevicePixelRatio != null
+                          ? (_cachedScreenWidth! * _cachedDevicePixelRatio! * 2).toInt()
+                          : null,
+                      maxCacheHeight: (300 * (_cachedDevicePixelRatio ?? 2.0)).toInt(),
                     ),
                     Container(
                       decoration: BoxDecoration(
@@ -360,31 +480,61 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
 
                     const SizedBox(height: 24),
 
-                    // Botón de reproducir todo
+                    // Botón de reproducir todo con nuevo estilo
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (_playlist != null && _playlist!.songs.isNotEmpty) {
-                            _onPlayAll(context, _playlist!.songs);
-                          }
-                        },
-                        icon: const Icon(Icons.play_arrow, color: Colors.white),
-                        label: Text(
-                          'Reproducir todo',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              NeumorphismTheme.coffeeMedium,
+                              NeumorphismTheme.coffeeDark,
+                            ],
                           ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: NeumorphismTheme.coffeeMedium,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              if (_playlist != null && _playlist!.songs.isNotEmpty) {
+                                _onPlayAll(context, _playlist!.songs);
+                              }
+                            },
                             borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Reproducir todo',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          elevation: 2,
                         ),
                       ),
                     ),
@@ -439,8 +589,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 ),
               )
             else
-              SliverFixedExtentList(
-                itemExtent: 80.0, // Altura fija conocida (mejora rendimiento)
+              SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     if (index >= _displayedSongs.length) {
@@ -451,21 +600,24 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                       return null;
                     }
                     
+                    // Variables locales para evitar accesos repetidos
                     final song = _displayedSongs[index];
+                    final songIndex = index + 1;
+                    
                     return RepaintBoundary(
                       key: ValueKey('song_item_${song.id}'),
                       child: _SongListItem(
                         key: ValueKey(song.id),
                         song: song,
-                        index: index + 1,
+                        index: songIndex,
                         onTap: () => _onSongTap(context, song),
                         onPlay: () => _onPlaySong(context, song),
                       ),
                     );
                   },
                   childCount: _displayedSongs.length + (_hasMoreSongs ? 1 : 0),
-                  addAutomaticKeepAlives: false,
-                  addRepaintBoundaries: false,
+                  addAutomaticKeepAlives: false, // Ya usamos AutomaticKeepAliveClientMixin
+                  addRepaintBoundaries: false, // Ya agregamos RepaintBoundary manualmente
                 ),
               ),
             
@@ -757,111 +909,261 @@ class _SongListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        child: Row(
-          children: [
-            // Número de posición
-            SizedBox(
-              width: 32,
-              child: Text(
-                '$index',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-            const SizedBox(width: 16),
-
-            // Portada de la canción
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: OptimizedImage(
-                  imageUrl: song.coverArtUrl,
-                  fit: BoxFit.cover,
-                  width: 56,
-                  height: 56,
-                  borderRadius: 8,
-                  placeholderColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                ),
-              ),
-            ),
-
-            const SizedBox(width: 16),
-
-            // Información de la canción
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    song.title ?? 'Canción sin título',
+    final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
+        ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
+        : null;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            NeumorphismTheme.surface.withValues(alpha: 0.8),
+            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(-2, -2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Número de posición
+                Container(
+                  width: 32,
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${index + 1}',
                     style: GoogleFonts.inter(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.6),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _getArtistName(song),
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                ),
+                const SizedBox(width: 12),
+                // Portada con efecto de elevación
+                Hero(
+                  tag: 'playlist_song_cover_${song.id}',
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    constraints: const BoxConstraints(
+                      minWidth: 64,
+                      maxWidth: 64,
+                      minHeight: 64,
+                      maxHeight: 64,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: coverUrl != null
+                          ? SizedBox(
+                              width: 64,
+                              height: 64,
+                              child: Image.network(
+                                coverUrl,
+                                fit: BoxFit.cover,
+                                width: 64,
+                                height: 64,
+                                alignment: Alignment.center,
+                                repeat: ImageRepeat.noRepeat,
+                              // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
+                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                if (wasSynchronouslyLoaded) return child;
+                                return AnimatedOpacity(
+                                  opacity: frame == null ? 0 : 1,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOut,
+                                  child: child,
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) {
+                                  return child;
+                                }
+                                // Placeholder simple sin CircularProgressIndicator para mejor rendimiento
+                                return Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        NeumorphismTheme.coffeeMedium,
+                                        NeumorphismTheme.coffeeDark,
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  decoration: const BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        NeumorphismTheme.coffeeMedium,
+                                        NeumorphismTheme.coffeeDark,
+                                      ],
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.music_note,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                );
+                              },
+                            ),
+                          )
+                          : Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    NeumorphismTheme.coffeeMedium,
+                                    NeumorphismTheme.coffeeDark,
+                                  ],
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.music_note,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 16),
+                // Información de la canción
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        song.title ?? 'Canción sin título',
+                        style: GoogleFonts.inter(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: NeumorphismTheme.textPrimary,
+                          letterSpacing: -0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: NeumorphismTheme.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _getArtistName(song),
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: NeumorphismTheme.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Duración
+                Text(
+                  song.durationFormatted,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: NeumorphismTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Botón de play circular marrón (como en la foto)
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        NeumorphismTheme.coffeeMedium,
+                        NeumorphismTheme.coffeeDark,
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onPlay,
+                      borderRadius: BorderRadius.circular(22),
+                      child: const Center(
+                        child: Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-
-            const SizedBox(width: 16),
-
-            // Duración
-            Text(
-              song.durationFormatted,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-
-            const SizedBox(width: 16),
-
-            // Botón de play
-            IconButton(
-              onPressed: onPlay,
-              icon: const Icon(
-                Icons.play_arrow,
-                color: NeumorphismTheme.coffeeMedium,
-                size: 28,
-              ),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
+          ),
         ),
       ),
     );

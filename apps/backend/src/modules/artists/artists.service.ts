@@ -270,6 +270,19 @@ export class ArtistsService {
 
     return { artists, total };
   }
+
+  async searchArtists(query: string, page: number = 1, limit: number = 10): Promise<{ artists: Artist[]; total: number }> {
+    const [artists, total] = await this.artistRepository
+      .createQueryBuilder('artist')
+      .leftJoinAndSelect('artist.user', 'user')
+      .where('(artist.stageName ILIKE :query OR artist.name ILIKE :query)', { query: `%${query}%` })
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('artist.createdAt', 'DESC')
+      .getManyAndCount();
+
+    return { artists, total };
+  }
 }
 
 

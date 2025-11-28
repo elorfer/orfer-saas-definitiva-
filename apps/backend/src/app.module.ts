@@ -21,6 +21,8 @@ import { CoversModule } from './modules/covers/covers.module';
 import { HealthModule } from './modules/health/health.module';
 import { PublicModule } from './modules/public/public.module';
 import { FeaturedModule } from './modules/featured/featured.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
+import { SearchModule } from './modules/search/search.module';
 import { entities } from './database/entities';
 
 // Configuración de la base de datos
@@ -183,6 +185,8 @@ import { dataSourceOptions } from './database/data-source';
     CoversModule,
     PublicModule,
     FeaturedModule,
+    FavoritesModule,
+    SearchModule,
   ],
 })
 export class AppModule {}

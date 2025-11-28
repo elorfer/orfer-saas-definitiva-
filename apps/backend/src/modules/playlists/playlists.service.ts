@@ -389,4 +389,30 @@ export class PlaylistsService {
 
     await this.playlistRepository.save(playlist);
   }
+
+  async searchPlaylists(query: string, page: number = 1, limit: number = 10): Promise<{ playlists: PlaylistResponseDto[]; total: number }> {
+    const [playlists, total] = await this.playlistRepository
+      .createQueryBuilder('playlist')
+      .leftJoinAndSelect('playlist.user', 'user')
+      .leftJoinAndSelect('playlist.playlistSongs', 'playlistSongs')
+      .leftJoinAndSelect('playlistSongs.song', 'song')
+      .leftJoinAndSelect('song.artist', 'artist')
+      .where('playlist.visibility = :visibility', { visibility: PlaylistVisibility.PUBLIC })
+      .andWhere('(playlist.name ILIKE :query OR playlist.description ILIKE :query)', { query: `%${query}%` })
+      .skip((page - 1) * limit)
+      .take(limit)
+      .orderBy('playlist.createdAt', 'DESC')
+      .getManyAndCount();
+
+    // Actualizar contadores
+    playlists.forEach(playlist => {
+      playlist.updateTrackCount();
+      playlist.updateTotalDuration();
+    });
+
+    return {
+      playlists: PlaylistMapper.toResponseDtoArray(playlists),
+      total,
+    };
+  }
 }

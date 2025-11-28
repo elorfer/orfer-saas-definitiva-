@@ -76,3 +76,4 @@ Ahora cuando reproduzcas una canción, deberías ver estos logs **NUEVOS**:
 - ✅ **Sin logs antiguos**: No más `[GlobalMiniPlayer]` con progreso 0.0%
 
 ¡Prueba ahora y me dices si las barras funcionan correctamente! 🎵✨
+
