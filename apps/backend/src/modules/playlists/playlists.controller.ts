@@ -114,7 +114,7 @@ export class PlaylistsController {
     @Body() updateData: UpdatePlaylistDto,
     @CurrentUser() user: User,
   ) {
-    return this.playlistsService.updatePlaylist(id, user.id, updateData);
+    return this.playlistsService.updatePlaylist(id, user.id, updateData, user.role);
   }
 
   @Patch(':id')
@@ -126,7 +126,7 @@ export class PlaylistsController {
     @Body() updateData: UpdatePlaylistDto,
     @CurrentUser() user: User,
   ) {
-    return this.playlistsService.updatePlaylist(id, user.id, updateData);
+    return this.playlistsService.updatePlaylist(id, user.id, updateData, user.role);
   }
 
   @Patch(':id/feature')
@@ -147,7 +147,7 @@ export class PlaylistsController {
     @Param('id') id: string,
     @CurrentUser() user: User,
   ) {
-    await this.playlistsService.deletePlaylist(id, user.id);
+    await this.playlistsService.deletePlaylist(id, user.id, user.role);
     return { message: 'Playlist eliminada exitosamente' };
   }
 
@@ -202,7 +202,7 @@ export class PlaylistsController {
     @Param('songId') songId: string,
     @CurrentUser() user: User,
   ) {
-    await this.playlistsService.addSongToPlaylist(playlistId, songId, user.id);
+    await this.playlistsService.addSongToPlaylist(playlistId, songId, user.id, user.role);
     return { message: 'Canción agregada exitosamente' };
   }
 
@@ -214,7 +214,7 @@ export class PlaylistsController {
     @Param('songId') songId: string,
     @CurrentUser() user: User,
   ) {
-    await this.playlistsService.removeSongFromPlaylist(playlistId, songId, user.id);
+    await this.playlistsService.removeSongFromPlaylist(playlistId, songId, user.id, user.role);
     return { message: 'Canción removida exitosamente' };
   }
 }

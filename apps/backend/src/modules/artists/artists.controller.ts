@@ -4,6 +4,7 @@ import {
   Patch,
   Post,
   Put,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -250,6 +251,17 @@ export class ArtistsController {
   @ApiResponse({ status: 404, description: 'Artista no encontrado' })
   async verifyArtist(@Param('id') id: string) {
     return this.artistsService.verifyArtist(id);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Eliminar artista (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Artista eliminado exitosamente' })
+  @ApiResponse({ status: 404, description: 'Artista no encontrado' })
+  async deleteArtist(@Param('id') id: string) {
+    await this.artistsService.deleteArtist(id);
+    return { message: 'Artista eliminado exitosamente' };
   }
 }
 

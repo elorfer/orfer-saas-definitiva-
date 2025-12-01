@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 
 import { Playlist } from '../../common/entities/playlist.entity';
-import { User } from '../../common/entities/user.entity';
+import { User, UserRole } from '../../common/entities/user.entity';
 import { Song } from '../../common/entities/song.entity';
 import { PlaylistSong } from '../../common/entities/playlist-song.entity';
 import { PlaylistVisibility } from '../../common/enums/playlist.enum';
@@ -182,20 +182,18 @@ export class PlaylistsService {
 
     // Agregar canciones si se proporcionaron
     if (playlistData.songIds && playlistData.songIds.length > 0) {
-      await this.addSongsToPlaylist(savedPlaylist.id, playlistData.songIds, userId);
+      await this.addSongsToPlaylist(savedPlaylist.id, playlistData.songIds, userId, undefined);
     }
 
     // Retornar la playlist con sus relaciones
     return this.findOne(savedPlaylist.id);
   }
 
-  async updatePlaylist(id: string, userId: string, updateData: UpdatePlaylistDto): Promise<PlaylistResponseDto> {
+  async updatePlaylist(id: string, userId: string, updateData: UpdatePlaylistDto, userRole?: UserRole): Promise<PlaylistResponseDto> {
     const playlist = await this.findOneEntity(id);
 
-    // Verificar permisos (solo el dueño puede editar, excepto si es admin)
-    // Por ahora permitimos editar si el usuario es el dueño
-    if (playlist.userId !== userId) {
-      // En el futuro, verificar si el usuario es admin
+    // Verificar permisos: solo el dueño puede editar, excepto si es admin
+    if (playlist.userId !== userId && userRole !== UserRole.ADMIN) {
       throw new ForbiddenException('No tienes permisos para editar esta playlist');
     }
 
@@ -222,27 +220,29 @@ export class PlaylistsService {
 
       // Agregar nuevas canciones
       if (updateData.songIds.length > 0) {
-        await this.addSongsToPlaylist(id, updateData.songIds, userId);
+        await this.addSongsToPlaylist(id, updateData.songIds, userId, userRole);
       }
     }
 
     return this.findOne(id);
   }
 
-  async deletePlaylist(id: string, userId: string): Promise<void> {
+  async deletePlaylist(id: string, userId: string, userRole?: UserRole): Promise<void> {
     const playlist = await this.findOneEntity(id);
 
-    if (playlist.userId !== userId) {
+    // Verificar permisos: solo el dueño puede eliminar, excepto si es admin
+    if (playlist.userId !== userId && userRole !== UserRole.ADMIN) {
       throw new ForbiddenException('No tienes permisos para eliminar esta playlist');
     }
 
     await this.playlistRepository.remove(playlist);
   }
 
-  async addSongToPlaylist(playlistId: string, songId: string, userId: string): Promise<void> {
+  async addSongToPlaylist(playlistId: string, songId: string, userId: string, userRole?: UserRole): Promise<void> {
     const playlist = await this.findOne(playlistId);
 
-    if (playlist.userId !== userId) {
+    // Verificar permisos: solo el dueño puede editar, excepto si es admin
+    if (playlist.userId !== userId && userRole !== UserRole.ADMIN) {
       throw new ForbiddenException('No tienes permisos para editar esta playlist');
     }
 
@@ -282,10 +282,11 @@ export class PlaylistsService {
     await this.updatePlaylistCounters(playlistId);
   }
 
-  async removeSongFromPlaylist(playlistId: string, songId: string, userId: string): Promise<void> {
+  async removeSongFromPlaylist(playlistId: string, songId: string, userId: string, userRole?: UserRole): Promise<void> {
     const playlist = await this.findOneEntity(playlistId);
 
-    if (playlist.userId !== userId) {
+    // Verificar permisos: solo el dueño puede editar, excepto si es admin
+    if (playlist.userId !== userId && userRole !== UserRole.ADMIN) {
       throw new ForbiddenException('No tienes permisos para editar esta playlist');
     }
 
@@ -325,7 +326,7 @@ export class PlaylistsService {
     return this.findOneForAdmin(id);
   }
 
-  private async addSongsToPlaylist(playlistId: string, songIds: string[], userId: string): Promise<void> {
+  private async addSongsToPlaylist(playlistId: string, songIds: string[], userId: string, userRole?: UserRole): Promise<void> {
     // Verificar que todas las canciones existen
     const songs = await this.songRepository.find({
       where: { id: In(songIds) },

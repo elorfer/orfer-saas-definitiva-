@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import {
   ArrowPathIcon,
@@ -14,10 +14,13 @@ import {
   StarIcon,
   ListBulletIcon,
   PhotoIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline';
 
 import { usePlaylists, useCreatePlaylist, useUpdatePlaylist, useDeletePlaylist, useToggleFeaturedPlaylist, useUploadPlaylistCover, useFeaturedPlaylists, usePlaylist } from '@/hooks/usePlaylists';
 import { useSongs } from '@/hooks/useSongs';
+import { apiClient } from '@/lib/api';
+import { useQueryClient } from 'react-query';
 import type { PlaylistModel } from '@/types/playlist';
 import type { SongModel } from '@/types/song';
 
@@ -36,19 +39,52 @@ const formatDurationShort = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
+// Componente para checkbox con estado indeterminado
+function SelectAllCheckbox({ 
+  checked, 
+  indeterminate, 
+  onChange 
+}: { 
+  checked: boolean; 
+  indeterminate: boolean; 
+  onChange: (checked: boolean) => void;
+}) {
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = indeterminate;
+    }
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={checkboxRef}
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+    />
+  );
+}
+
 // Componente para la fila de playlist
 function PlaylistRow({ 
   playlist, 
   onDelete, 
   onToggleFeatured,
   onViewDetails,
-  isDeleting 
+  isDeleting,
+  isSelected,
+  onSelect,
 }: { 
   playlist: PlaylistModel; 
   onDelete: (playlist: PlaylistModel) => void;
   onToggleFeatured: (playlist: PlaylistModel) => void;
   onViewDetails: (playlist: PlaylistModel) => void;
   isDeleting: boolean;
+  isSelected: boolean;
+  onSelect: (playlistId: string, selected: boolean) => void;
 }) {
   const [imageError, setImageError] = useState(false);
   
@@ -72,11 +108,20 @@ function PlaylistRow({
 
   return (
     <tr 
-      className="hover:bg-gray-50 transition cursor-pointer"
-      onClick={() => onViewDetails(playlist)}
+      className={`hover:bg-gray-50 transition ${isSelected ? 'bg-blue-50' : ''}`}
     >
       <td className="py-4 px-4">
         <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              onSelect(playlist.id, e.target.checked);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+          />
           {coverUrl && !imageError ? (
             <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 shadow-sm">
               <img
@@ -92,7 +137,10 @@ function PlaylistRow({
               <ListBulletIcon className="h-5 w-5" />
             </div>
           )}
-          <div className="min-w-0 flex-1">
+          <div 
+            className="min-w-0 flex-1 cursor-pointer"
+            onClick={() => onViewDetails(playlist)}
+          >
             <p className="text-sm font-medium text-gray-900 truncate">{playlist.name}</p>
             <p className="text-xs text-gray-500">
               {new Date(playlist.createdAt).toLocaleDateString('es-ES')}
@@ -172,6 +220,8 @@ export default function PlaylistsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistModel | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<Set<string>>(new Set());
+  const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
   const notificationShownRef = useRef(false);
 
   const { data, isLoading } = usePlaylists({ page, limit: PAGE_SIZE, enabled: true });
@@ -188,6 +238,7 @@ export default function PlaylistsPage() {
     showDetailsModal && !!selectedPlaylist
   );
 
+  const queryClient = useQueryClient();
   const { mutateAsync: createPlaylist } = useCreatePlaylist();
   const { mutateAsync: updatePlaylist } = useUpdatePlaylist();
   const { mutateAsync: deletePlaylist } = useDeletePlaylist();
@@ -268,8 +319,69 @@ export default function PlaylistsPage() {
     try {
       setDeletingId(playlist.id);
       await deletePlaylist(playlist.id);
+      // Remover de selección si estaba seleccionada
+      setSelectedPlaylistIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(playlist.id);
+        return newSet;
+      });
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleSelectPlaylist = (playlistId: string, selected: boolean) => {
+    setSelectedPlaylistIds((prev) => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(playlistId);
+      } else {
+        newSet.delete(playlistId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(filteredPlaylists.map((p) => p.id));
+      setSelectedPlaylistIds(allIds);
+    } else {
+      setSelectedPlaylistIds(new Set());
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedPlaylistIds.size === 0) return;
+
+    const count = selectedPlaylistIds.size;
+    const confirmed = window.confirm(
+      `¿Seguro que deseas eliminar ${count} ${count === 1 ? 'playlist' : 'playlists'}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsDeletingMultiple(true);
+      const idsArray = Array.from(selectedPlaylistIds);
+      
+      // Eliminar todas las playlists seleccionadas directamente con la API
+      // sin usar el hook para evitar notificaciones individuales
+      await Promise.all(idsArray.map((id) => apiClient.deletePlaylist(id)));
+      
+      // Invalidar queries para refrescar la lista
+      queryClient.invalidateQueries(['playlists']);
+      queryClient.invalidateQueries(['playlists', 'featured']);
+      
+      // Limpiar selección
+      setSelectedPlaylistIds(new Set());
+      
+      // Mostrar solo una notificación con el conteo total
+      toast.success(`${count} ${count === 1 ? 'playlist eliminada' : 'playlists eliminadas'} exitosamente`);
+    } catch (error) {
+      console.error('Error al eliminar playlists:', error);
+      toast.error('Error al eliminar algunas playlists');
+    } finally {
+      setIsDeletingMultiple(false);
     }
   };
 
@@ -302,6 +414,9 @@ export default function PlaylistsPage() {
       );
     });
   }, [playlists, search]);
+
+  const allSelected = filteredPlaylists.length > 0 && filteredPlaylists.every((p) => selectedPlaylistIds.has(p.id));
+  const someSelected = selectedPlaylistIds.size > 0 && !allSelected;
 
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -395,9 +510,33 @@ export default function PlaylistsPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mb-6 flex items-center gap-4 text-sm text-gray-600">
+        {/* Stats y acciones de selección */}
+        <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm text-gray-500">{total.toLocaleString('es-ES')} playlists en total</p>
+          {selectedPlaylistIds.size > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600 font-medium">
+                {selectedPlaylistIds.size} {selectedPlaylistIds.size === 1 ? 'playlist seleccionada' : 'playlists seleccionadas'}
+              </span>
+              <button
+                onClick={handleDeleteSelected}
+                disabled={isDeletingMultiple}
+                className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeletingMultiple ? (
+                  <>
+                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <TrashIcon className="h-4 w-4" />
+                    Eliminar seleccionadas
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Playlists Table */}
@@ -405,6 +544,13 @@ export default function PlaylistsPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 w-12">
+                  <SelectAllCheckbox
+                    checked={allSelected}
+                    indeterminate={someSelected}
+                    onChange={handleSelectAll}
+                  />
+                </th>
                 <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Playlist
                 </th>
@@ -425,13 +571,13 @@ export default function PlaylistsPage() {
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
+                  <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
                     Cargando playlists...
                   </td>
                 </tr>
               ) : filteredPlaylists.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
+                  <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
                     No se encontraron playlists.
                   </td>
                 </tr>
@@ -444,6 +590,8 @@ export default function PlaylistsPage() {
                     onToggleFeatured={handleToggleFeatured}
                     onViewDetails={handleViewDetails}
                     isDeleting={deletingId === playlist.id}
+                    isSelected={selectedPlaylistIds.has(playlist.id)}
+                    onSelect={handleSelectPlaylist}
                   />
                 ))
               )}

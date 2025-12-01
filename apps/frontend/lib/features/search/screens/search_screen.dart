@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/theme/text_styles.dart';
 import '../../../core/providers/search_provider.dart';
+import '../../../core/services/search_service.dart';
 import '../widgets/artist_search_card.dart';
 import '../widgets/song_search_card.dart';
 import '../widgets/playlist_search_card.dart';
@@ -17,6 +20,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  Timer? _searchDebounce; // ✅ Debounce para búsquedas
 
   @override
   void initState() {
@@ -30,13 +34,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final currentQuery = ref.read(searchProvider).query;
     
     // ✅ Solo actualizar si el texto realmente cambió (evitar loops)
-    if (currentText != currentQuery) {
-      ref.read(searchProvider.notifier).updateQuery(currentText);
-    }
+    if (currentText == currentQuery) return;
+    
+    // ✅ OPTIMIZACIÓN: Debounce - Esperar 500ms antes de buscar
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 500), () {
+      // Solo buscar si tiene al menos 2 caracteres o está vacío
+      if (currentText.isEmpty || currentText.trim().length >= 2) {
+        ref.read(searchProvider.notifier).updateQuery(currentText);
+      }
+    });
   }
 
   @override
   void dispose() {
+    // ✅ Cancelar debounce timer antes de dispose
+    _searchDebounce?.cancel();
     // ✅ Remover listener antes de dispose para evitar memory leaks
     _searchController.removeListener(_onSearchTextChanged);
     _searchController.dispose();
@@ -46,7 +59,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final searchState = ref.watch(searchProvider);
+    // OPTIMIZACIÓN: usar select específico para cada campo y evitar rebuilds innecesarios
+    final isLoading = ref.watch(searchProvider.select((state) => state.isLoading));
+    final error = ref.watch(searchProvider.select((state) => state.error));
+    final isEmpty = ref.watch(searchProvider.select((state) => state.isEmpty));
+    final query = ref.watch(searchProvider.select((state) => state.query));
+    final results = ref.watch(searchProvider.select((state) => state.results));
 
     return Scaffold(
       resizeToAvoidBottomInset: false, // ✅ Evitar que el teclado empuje el contenido
@@ -115,12 +133,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         children: [
                           Text(
                             'Buscar',
-                            style: GoogleFonts.inter(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: NeumorphismTheme.textPrimary,
-                              letterSpacing: -0.5,
-                            ),
+                            style: AppTextStyles.searchTitle,
                           ),
                           const SizedBox(height: 6),
                           Row(
@@ -134,11 +147,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               Expanded(
                                 child: Text(
                                   'Descubre nueva música',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                    color: NeumorphismTheme.textSecondary,
-                                  ),
+                                  style: AppTextStyles.searchSubtitle,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -170,15 +179,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     enableInteractiveSelection: true, // ✅ Permitir selección de texto
                     enableSuggestions: true, // ✅ Sugerencias del teclado
                     autocorrect: true, // ✅ Autocorrección
-                    style: GoogleFonts.inter(
-                      color: NeumorphismTheme.textPrimary,
-                      fontSize: 16,
-                    ),
+                    style: AppTextStyles.searchInput,
                     decoration: InputDecoration(
                       hintText: 'Buscar canciones, artistas, playlists...',
-                      hintStyle: GoogleFonts.inter(
-                        color: NeumorphismTheme.textLight,
-                      ),
+                      hintStyle: AppTextStyles.searchHint,
                       prefixIcon: Icon(
                         Icons.search,
                         color: NeumorphismTheme.textSecondary,
@@ -225,7 +229,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     // ✅ Ocultar teclado al tocar fuera del campo de búsqueda
                     _searchFocusNode.unfocus();
                   },
-                  child: _buildResults(searchState),
+                  child: _buildResults(isLoading, error, isEmpty, query, results),
                 ),
               ),
             ],
@@ -235,16 +239,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildResults(SearchState state) {
-    if (state.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
-        ),
-      );
+  Widget _buildResults(bool isLoading, String? error, bool isEmpty, String query, SearchResults? results) {
+    if (isLoading) {
+      // Mostrar skeleton loaders mientras carga
+      return _buildLoadingSkeletons();
     }
 
-    if (state.error != null) {
+    if (error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -257,19 +258,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             const SizedBox(height: 16),
             Text(
               'Error al buscar',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: NeumorphismTheme.textPrimary,
-              ),
+              style: AppTextStyles.searchErrorTitle,
             ),
             const SizedBox(height: 8),
             Text(
-              state.error!,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: NeumorphismTheme.textSecondary,
-              ),
+              error,
+              style: AppTextStyles.searchErrorBody,
               textAlign: TextAlign.center,
             ),
           ],
@@ -277,7 +271,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       );
     }
 
-    if (state.isEmpty) {
+    if (isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -285,54 +279,42 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Icon(
               Icons.search_rounded,
               size: 80,
-              color: NeumorphismTheme.coffeeDark, // ✅ Marrón oscuro para el icono
+              color: NeumorphismTheme.coffeeDark,
             ),
             const SizedBox(height: 24),
             Text(
-              state.query.isEmpty ? 'Busca tu música favorita' : 'No se encontraron resultados',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: NeumorphismTheme.coffeeDark, // ✅ Marrón oscuro para el título
-              ),
+              query.isEmpty ? 'Busca tu música favorita' : 'No se encontraron resultados',
+              style: AppTextStyles.searchEmptyTitle,
             ),
             const SizedBox(height: 12),
             Text(
-              state.query.isEmpty
+              query.isEmpty
                   ? 'Encuentra canciones, artistas y playlists'
                   : 'Intenta con otros términos de búsqueda',
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.w400,
-                color: NeumorphismTheme.coffeeMedium, // ✅ Marrón medio para el subtítulo
-              ),
+              style: AppTextStyles.searchEmptySubtitle,
             ),
           ],
         ),
       );
     }
 
-    final results = state.results!;
+    final searchResults = results!;
 
     return RepaintBoundary(
       child: CustomScrollView(
         physics: const ClampingScrollPhysics(),
-        cacheExtent: 500,
+        cacheExtent: 400, // OPTIMIZACIÓN: reducido de 500 a 400 (≈5 items de altura ~80px)
         clipBehavior: Clip.none,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, // ✅ Ocultar teclado al hacer scroll
         slivers: [
         // Artistas
-        if (results.artists.isNotEmpty) ...[
+        if (searchResults.artists.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Text(
                 'Artistas',
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: NeumorphismTheme.textPrimary,
-                ),
+                style: AppTextStyles.searchSectionTitle,
               ),
             ),
           ),
@@ -340,11 +322,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 return ArtistSearchCard(
-                  key: ValueKey('artist_${results.artists[index].id}'),
-                  artist: results.artists[index],
+                  key: ValueKey('artist_${searchResults.artists[index].id}'),
+                  artist: searchResults.artists[index],
                 );
               },
-              childCount: results.artists.length,
+              childCount: searchResults.artists.length,
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: false,
             ),
@@ -352,17 +334,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ],
 
         // Canciones
-        if (results.songs.isNotEmpty) ...[
+        if (searchResults.songs.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Text(
                 'Canciones',
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: NeumorphismTheme.textPrimary,
-                ),
+                style: AppTextStyles.searchSectionTitle,
               ),
             ),
           ),
@@ -370,11 +348,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 return SongSearchCard(
-                  key: ValueKey('song_${results.songs[index].id}'),
-                  song: results.songs[index],
+                  key: ValueKey('song_${searchResults.songs[index].id}'),
+                  song: searchResults.songs[index],
                 );
               },
-              childCount: results.songs.length,
+              childCount: searchResults.songs.length,
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: false,
             ),
@@ -382,17 +360,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ],
 
         // Playlists
-        if (results.playlists.isNotEmpty) ...[
+        if (searchResults.playlists.isNotEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Text(
                 'Playlists',
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: NeumorphismTheme.textPrimary,
-                ),
+                style: AppTextStyles.searchSectionTitle,
               ),
             ),
           ),
@@ -400,11 +374,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 return PlaylistSearchCard(
-                  key: ValueKey('playlist_${results.playlists[index].id}'),
-                  playlist: results.playlists[index],
+                  key: ValueKey('playlist_${searchResults.playlists[index].id}'),
+                  playlist: searchResults.playlists[index],
                 );
               },
-              childCount: results.playlists.length,
+              childCount: searchResults.playlists.length,
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: false,
             ),
@@ -416,6 +390,259 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: SizedBox(height: 80),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Skeleton loaders para mostrar mientras se cargan los resultados
+  Widget _buildLoadingSkeletons() {
+    return CustomScrollView(
+      physics: const ClampingScrollPhysics(),
+      cacheExtent: 400,
+      clipBehavior: Clip.none,
+      slivers: [
+        // Skeleton para sección de Artistas
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: _buildSectionTitleSkeleton(),
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildArtistCardSkeleton(),
+            childCount: 3, // Mostrar 3 skeletons de artistas
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: false,
+          ),
+        ),
+
+        // Skeleton para sección de Canciones
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: _buildSectionTitleSkeleton(),
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildSongCardSkeleton(),
+            childCount: 5, // Mostrar 5 skeletons de canciones
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: false,
+          ),
+        ),
+
+        // Skeleton para sección de Playlists
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: _buildSectionTitleSkeleton(),
+          ),
+        ),
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildPlaylistCardSkeleton(),
+            childCount: 3, // Mostrar 3 skeletons de playlists
+            addAutomaticKeepAlives: false,
+            addRepaintBoundaries: false,
+          ),
+        ),
+
+        // Espacio al final para el player
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 80),
+        ),
+      ],
+    );
+  }
+
+  /// Skeleton para título de sección
+  Widget _buildSectionTitleSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: NeumorphismTheme.shimmerBaseColor,
+      highlightColor: NeumorphismTheme.shimmerHighlightColor,
+      child: Container(
+        height: 20,
+        width: 100,
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.shimmerContentColor,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+
+  /// Skeleton para tarjeta de artista
+  Widget _buildArtistCardSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: NeumorphismTheme.shimmerBaseColor,
+      highlightColor: NeumorphismTheme.shimmerHighlightColor,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.shimmerContentColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            // Avatar circular
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Nombre y tipo
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 18,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 14,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Skeleton para tarjeta de canción
+  Widget _buildSongCardSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: NeumorphismTheme.shimmerBaseColor,
+      highlightColor: NeumorphismTheme.shimmerHighlightColor,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.shimmerContentColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            // Portada cuadrada
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Título y artista
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 16,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 14,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Botón play
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Skeleton para tarjeta de playlist
+  Widget _buildPlaylistCardSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: NeumorphismTheme.shimmerBaseColor,
+      highlightColor: NeumorphismTheme.shimmerHighlightColor,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.shimmerContentColor,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            // Portada cuadrada
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Nombre y descripción
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 18,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 14,
+                    width: 180,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

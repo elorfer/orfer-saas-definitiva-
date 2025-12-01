@@ -77,3 +77,11 @@ Ahora cuando reproduzcas una canción, deberías ver estos logs **NUEVOS**:
 
 ¡Prueba ahora y me dices si las barras funcionan correctamente! 🎵✨
 
+
+
+
+
+
+
+
+

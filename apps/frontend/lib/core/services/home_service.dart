@@ -184,13 +184,18 @@ class HomeService {
           // Usar ResponseParser para extraer la lista
           final data = ResponseParser.extractList(response, listKey: 'songs');
           
+          debugPrint('[HomeService] 📊 Total canciones recibidas del backend: ${data.length}');
+          
           if (data.isEmpty) {
+            debugPrint('[HomeService] ⚠️ No se recibieron canciones del backend');
             return [];
           }
 
           // Validar y parsear usando ResponseParser y DataNormalizer
           final validData = ResponseParser.validateList(data);
-          return ResponseParser.parseList<FeaturedSong>(
+          debugPrint('[HomeService] ✅ Canciones válidas después de validación: ${validData.length}');
+          
+          final parsedSongs = ResponseParser.parseList<FeaturedSong>(
             data: validData,
             parser: (songData) {
               // DEBUG: Ver datos originales
@@ -241,14 +246,22 @@ class HomeService {
               
               final song = Song.fromJson(normalizedSong);
               
-              return FeaturedSong(
+              final featuredSong = FeaturedSong(
                 song: song,
                 featuredReason: 'Destacada por el administrador',
                 rank: validData.indexOf(songData) + 1,
               );
+              
+              debugPrint('[HomeService] ✅ Canción parseada: ${song.title} (ID: ${song.id})');
+              
+              return featuredSong;
             },
-            logErrors: false,
+            logErrors: true, // Cambiar a true para ver errores de parseo
           );
+          
+          debugPrint('[HomeService] 📊 Total canciones parseadas exitosamente: ${parsedSongs.length}');
+          
+          return parsedSongs;
       } else {
         return [];
       }

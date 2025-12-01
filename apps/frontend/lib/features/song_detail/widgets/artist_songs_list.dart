@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:ui';
+import 'dart:async';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
@@ -9,6 +11,12 @@ import '../../../core/utils/logger.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/play_button_icon.dart';
 import '../providers/song_detail_provider.dart';
+
+// Set estático para evitar múltiples reproducciones simultáneas en artist songs list
+final Set<String> _artistSongsListPlayingSongIds = {};
+
+// Map estático para almacenar timers cancelables por songId
+final Map<String, Timer> _artistSongsListRemoveTimers = {};
 
 /// Widget que muestra una lista HORIZONTAL de canciones del mismo artista (estilo Spotify)
 class ArtistSongsHorizontalList extends ConsumerWidget {
@@ -26,29 +34,95 @@ class ArtistSongsHorizontalList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final songsAsync = ref.watch(songsByArtistProvider(artistId));
+    
+    // Escuchar cambios en la ruta actual para que el widget se reconstruya cuando cambia
+    // Esto asegura que el filtro se actualice cuando navegas a otra canción
+    final router = GoRouter.of(context);
+    final currentLocation = router.routerDelegate.currentConfiguration.uri.path;
+    
+    // Extraer el ID de la canción de la ruta actual si es una ruta de canción
+    String? currentOpenSongId;
+    if (currentLocation.startsWith('/song/')) {
+      currentOpenSongId = currentLocation.replaceFirst('/song/', '');
+    }
+    
+    // Obtener todas las rutas abiertas en el stack para excluir canciones ya abiertas
+    final openSongRoutes = <String>{};
+    if (currentOpenSongId != null && currentOpenSongId.isNotEmpty) {
+      openSongRoutes.add(currentOpenSongId);
+    }
+    
+    try {
+      final matches = router.routerDelegate.currentConfiguration.matches;
+      for (final match in matches) {
+        final location = match.matchedLocation;
+        if (location.startsWith('/song/')) {
+          // Extraer el ID de la canción de la ruta
+          final songId = location.replaceFirst('/song/', '');
+          if (songId.isNotEmpty) {
+            openSongRoutes.add(songId);
+          }
+        }
+      }
+    } catch (e) {
+      // Si hay error obteniendo las rutas, continuar sin filtrar por stack
+      debugPrint('[ArtistSongsHorizontalList] Error obteniendo rutas abiertas: $e');
+    }
 
     return songsAsync.when(
       data: (songs) {
-        // Filtrar la canción actual si existe
-        final filteredSongs = songs.where((song) => song.id != currentSongId).take(10).toList();
+        // OPTIMIZACIÓN: Función helper para verificar si una canción debe incluirse
+        bool _shouldIncludeSong(Song song) {
+          // Excluir la canción actual pasada como parámetro
+          if (currentSongId != null && currentSongId!.isNotEmpty && song.id == currentSongId) {
+            return false;
+          }
+          
+          // Excluir la canción que está siendo mostrada actualmente en la ruta
+          if (currentOpenSongId != null && currentOpenSongId.isNotEmpty && song.id == currentOpenSongId) {
+            return false;
+          }
+          
+          // Excluir canciones que ya están abiertas en el stack
+          if (openSongRoutes.contains(song.id)) {
+            return false;
+          }
+          
+          return true;
+        }
         
-        if (filteredSongs.isEmpty) {
+        // OPTIMIZACIÓN: Crear lista de índices válidos en lugar de lista completa de objetos
+        // Esto es mucho más eficiente en memoria (solo ints vs objetos completos)
+        // y evita crear múltiples listas intermedias
+        final validIndices = <int>[];
+        for (int i = 0; i < songs.length && validIndices.length < 10; i++) {
+          if (_shouldIncludeSong(songs[i])) {
+            validIndices.add(i);
+          }
+        }
+        
+        if (validIndices.isEmpty) {
           return const SizedBox.shrink();
         }
 
         return ListView.builder(
           scrollDirection: Axis.horizontal,
-          itemCount: filteredSongs.length,
+          itemCount: validIndices.length,
           itemBuilder: (context, index) {
-            final song = filteredSongs[index];
+            // Acceso O(1) usando el índice válido almacenado
+            final song = songs[validIndices[index]];
             final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
                 ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
                 : null;
 
-            return _SongHorizontalCard(
-              song: song,
-              coverUrl: coverUrl,
-              onTap: () => onSongTap(song),
+            return RepaintBoundary(
+              key: ValueKey('artist_song_horizontal_${song.id}'),
+              child: _SongHorizontalCard(
+                key: ValueKey('artist_song_card_${song.id}'),
+                song: song,
+                coverUrl: coverUrl,
+                onTap: () => onSongTap(song),
+              ),
             );
           },
         );
@@ -78,6 +152,7 @@ class _SongHorizontalCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _SongHorizontalCard({
+    super.key,
     required this.song,
     this.coverUrl,
     required this.onTap,
@@ -115,6 +190,8 @@ class _SongHorizontalCard extends StatelessWidget {
                     ? CachedNetworkImage(
                         imageUrl: coverUrl!,
                         fit: BoxFit.cover,
+                        memCacheWidth: 64, // Optimización: límite de memoria para imágenes pequeñas
+                        memCacheHeight: 64,
                         placeholder: (context, url) => Container(
                           color: NeumorphismTheme.coffeeMedium,
                           child: const Center(
@@ -196,7 +273,11 @@ class ArtistSongsList extends ConsumerWidget {
     WidgetRef ref,
     Song song,
   ) async {
+    // Protección: evitar múltiples taps rápidos
+    if (_artistSongsListPlayingSongIds.contains(song.id)) return;
+    
     try {
+      _artistSongsListPlayingSongIds.add(song.id);
       final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
       final audioState = ref.read(unifiedAudioProviderFixed);
       
@@ -224,6 +305,19 @@ class ArtistSongsList extends ConsumerWidget {
           ),
         );
       }
+    } finally {
+      // OPTIMIZACIÓN: Usar Timer cancelable en lugar de Future.delayed
+      // Cancelar timer anterior si existe para esta canción
+      _artistSongsListRemoveTimers[song.id]?.cancel();
+      
+      // Crear nuevo timer cancelable
+      _artistSongsListRemoveTimers[song.id] = Timer(
+        const Duration(milliseconds: 500),
+        () {
+          _artistSongsListPlayingSongIds.remove(song.id);
+          _artistSongsListRemoveTimers.remove(song.id); // Limpiar el timer del map
+        },
+      );
     }
   }
 
@@ -242,6 +336,7 @@ class ArtistSongsList extends ConsumerWidget {
         return ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
+          cacheExtent: 400, // Optimización: límite de cache para lista pequeña embebida
           itemCount: filteredSongs.length,
           separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
@@ -251,23 +346,32 @@ class ArtistSongsList extends ConsumerWidget {
                 : null;
             
             // Usar el provider unificado en lugar de streams
-            return Consumer(
-              builder: (context, ref, child) {
-                final audioState = ref.watch(unifiedAudioProviderFixed);
-                final currentSong = audioState.currentSong;
-                final isCurrentSong = currentSong?.id == song.id;
-                
-                // Obtener el estado de reproducción del provider unificado
-                final isPlaying = isCurrentSong ? audioState.isPlaying : false;
+            return RepaintBoundary(
+              key: ValueKey('artist_song_vertical_${song.id}'),
+              child: Consumer(
+                builder: (context, ref, child) {
+                  // Optimización: usar select para escuchar solo los campos necesarios
+                  final currentSong = ref.watch(
+                    unifiedAudioProviderFixed.select((state) => state.currentSong),
+                  );
+                  final isPlaying = ref.watch(
+                    unifiedAudioProviderFixed.select((state) => state.isPlaying),
+                  );
+                  final isCurrentSong = currentSong?.id == song.id;
+                  
+                  // Obtener el estado de reproducción del provider unificado
+                  final isPlayingForThisSong = isCurrentSong && isPlaying;
 
-                return _SongListItem(
-                  song: song,
-                  coverUrl: coverUrl,
-                  isPlaying: isPlaying,
-                  onTap: () => onSongTap(song),
-                  onPlayPause: () => _handlePlayPause(context, ref, song),
-                );
-              },
+                  return _SongListItem(
+                    key: ValueKey('artist_song_item_${song.id}'),
+                    song: song,
+                    coverUrl: coverUrl,
+                    isPlaying: isPlayingForThisSong,
+                    onTap: () => onSongTap(song),
+                    onPlayPause: () => _handlePlayPause(context, ref, song),
+                  );
+                },
+              ),
             );
           },
         );
@@ -298,6 +402,7 @@ class _SongListItem extends StatelessWidget {
   final VoidCallback onPlayPause;
 
   const _SongListItem({
+    super.key,
     required this.song,
     this.coverUrl,
     required this.isPlaying,
@@ -347,23 +452,33 @@ class _SongListItem extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: coverUrl != null
-                              ? CachedNetworkImage(
-                                  imageUrl: coverUrl!,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    color: NeumorphismTheme.coffeeMedium,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                  ),
-                                  errorWidget: (context, url, error) => Container(
-                                    color: NeumorphismTheme.coffeeMedium,
-                                    child: const Icon(
-                                      Icons.music_note,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                  ),
+                              ? Builder(
+                                  builder: (context) {
+                                    // OPTIMIZACIÓN: Usar valor constante razonable (128) para mayoría de dispositivos
+                                    // Esto evita llamar MediaQuery en cada build
+                                    // 128 = 64 * 2.0 (devicePixelRatio típico) redondeado
+                                    const memCacheSize = 128;
+                                    return CachedNetworkImage(
+                                      imageUrl: coverUrl!,
+                                      fit: BoxFit.cover,
+                                      memCacheWidth: memCacheSize, // Optimización: límite de memoria
+                                      memCacheHeight: memCacheSize,
+                                      placeholder: (context, url) => Container(
+                                        color: NeumorphismTheme.coffeeMedium,
+                                        child: const Center(
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      ),
+                                      errorWidget: (context, url, error) => Container(
+                                        color: NeumorphismTheme.coffeeMedium,
+                                        child: const Icon(
+                                          Icons.music_note,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 )
                               : Container(
                                   color: NeumorphismTheme.coffeeMedium,

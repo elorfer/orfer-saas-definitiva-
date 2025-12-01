@@ -83,3 +83,11 @@ Esto me permitirá identificar exactamente en qué punto falla el sistema y apli
 
 ¡Los logs de debug nos dirán exactamente qué está pasando! 🔍✨
 
+
+
+
+
+
+
+
+

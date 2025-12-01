@@ -161,10 +161,13 @@ export const useDeletePlaylist = () => {
     {
       onSuccess: () => {
         queryClient.invalidateQueries([PLAYLISTS_QUERY_KEY]);
+        queryClient.invalidateQueries(['playlists', 'featured']);
         toast.success('Playlist eliminada exitosamente');
       },
       onError: (error) => {
-        toast.error(extractErrorMessage(error));
+        const errorMessage = extractErrorMessage(error);
+        console.error('Error al eliminar playlist:', error);
+        toast.error(errorMessage);
       },
     }
   );

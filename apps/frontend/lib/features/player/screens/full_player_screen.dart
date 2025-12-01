@@ -14,10 +14,18 @@ class FullPlayerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final audioState = ref.watch(unifiedAudioProviderFixed);
 
+    // Marcar como expandido cuando se abre la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted && !audioState.isPlayerExpanded) {
+        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+      }
+    });
+
     // Si no hay canción, regresar
     if (audioState.currentSong == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
+          ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
           context.pop();
         }
       });
@@ -49,7 +57,11 @@ class FullPlayerScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: IconButton(
-                  onPressed: () => context.pop(),
+                  onPressed: () {
+                    // Cerrar el reproductor y actualizar el estado
+                    ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
+                    context.pop();
+                  },
                   padding: EdgeInsets.zero,
                   icon: const Icon(
                     Icons.keyboard_arrow_down,

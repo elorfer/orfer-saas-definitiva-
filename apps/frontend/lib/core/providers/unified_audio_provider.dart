@@ -80,7 +80,7 @@ class AudioState {
   }
 }
 
-/// Notifier unificado que maneja TODO el estado del audio
+/// Notifier unificado que maneja el estado del audio
 class UnifiedAudioNotifier extends Notifier<AudioState> {
   @override
   AudioState build() {

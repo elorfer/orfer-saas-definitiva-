@@ -5,8 +5,6 @@ import '../../../core/models/song_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/providers/unified_audio_provider_fixed.dart';
-import '../../../core/utils/logger.dart';
 
 /// 🚀 TARJETA OPTIMIZADA DE CANCIÓN DESTACADA
 /// Implementa optimizaciones de rendimiento:
@@ -138,78 +136,6 @@ class FeaturedSongCard extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Botón de Play con nuevo estilo
-                Consumer(
-                  builder: (context, ref, child) {
-                    final currentAudioState = ref.watch(unifiedAudioProviderFixed);
-                    final currentSong = currentAudioState.currentSong;
-                    final isCurrentSong = currentSong?.id == song.id;
-                    final isPlaying = isCurrentSong && currentAudioState.isPlaying;
-                    
-                    return Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            NeumorphismTheme.coffeeMedium,
-                            NeumorphismTheme.coffeeDark,
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: NeumorphismTheme.coffeeMedium.withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () async {
-                            try {
-                              final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
-                              
-                              if (isCurrentSong && isPlaying) {
-                                await audioNotifier.togglePlayPause();
-                              } else if (isCurrentSong && !isPlaying) {
-                                await audioNotifier.play();
-                              } else {
-                                await audioNotifier.playSong(song);
-                              }
-                            } catch (e) {
-                              AppLogger.error('[FeaturedSongCard] Error al reproducir: $e');
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error al reproducir canción'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(24),
-                          child: Center(
-                            child: Icon(
-                              isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
                 ),
               ],
             ),

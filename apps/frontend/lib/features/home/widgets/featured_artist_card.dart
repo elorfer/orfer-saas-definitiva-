@@ -214,9 +214,10 @@ class FeaturedArtistCard extends StatelessWidget {
         fadeInDuration: const Duration(milliseconds: 200),
         fadeOutDuration: const Duration(milliseconds: 100),
         errorWidget: (context, url, error) {
-          // Log del error para debugging
-          debugPrint('[FeaturedArtistCard] Error cargando imagen: $url - Error: $error');
-          debugPrint('[FeaturedArtistCard] URL original: $rawUrl');
+          // Log del error solo en modo debug (no en producción)
+          if (kDebugMode) {
+            debugPrint('[FeaturedArtistCard] Error cargando imagen para artista ${featuredArtist.artist.id}: $error');
+          }
           return const ImagePlaceholder.artistRound(); // ✅ Placeholder redondo
         },
         placeholder: (context, url) {
@@ -227,10 +228,7 @@ class FeaturedArtistCard extends StatelessWidget {
       );
     }
     
-    // Si no hay URL, usar placeholder sin log excesivo (solo en debug mode)
-    if (kDebugMode) {
-      debugPrint('[FeaturedArtistCard] No hay URL de imagen para artista ${featuredArtist.artist.id}');
-    }
+    // Si no hay URL, usar placeholder (sin log - es normal que algunos artistas no tengan imagen)
     return const ImagePlaceholder.artistRound(); // ✅ Placeholder redondo
   }
 

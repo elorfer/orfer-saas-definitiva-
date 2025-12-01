@@ -8,6 +8,8 @@ import '../services/spotify_recommendation_service.dart';
 import '../services/http_client_service.dart';
 import '../utils/url_normalizer.dart';
 import '../services/professional_audio_service.dart';
+import '../services/home_service.dart';
+import '../utils/data_normalizer.dart';
 
 /// Estado unificado del reproductor de audio - ÚNICA FUENTE DE VERDAD
 @immutable
@@ -103,7 +105,7 @@ class UnifiedAudioState {
   }
 }
 
-/// Notifier unificado que maneja TODO el estado del audio
+/// Notifier unificado que maneja el estado del audio
 /// ÚNICA INSTANCIA DE AudioPlayer - ÚNICA FUENTE DE VERDAD
 class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
   // ✅ UN SOLO AudioPlayer para toda la aplicación
@@ -117,16 +119,33 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
   StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<PlayerState>? _playerStateSubscription;
   
-  // ✅ Timer para actualizaciones de progreso en tiempo real
-  Timer? _progressTimer;
-  
   // ✅ Flag de inicialización
   bool _isInitialized = false;
   
   // 🛡️ PROTECCIÓN CONTRA MÚLTIPLES LLAMADAS Y LOOPS
   bool _isSearchingNextSong = false;
+  
   String? _lastRecommendedSongId;
   DateTime? _lastRecommendationTime;
+  
+  // 🛡️ PROTECCIÓN: Timestamp de última operación manual de play/pause
+  // Para evitar que el stream sobrescriba el estado inmediatamente después de una acción del usuario
+  DateTime? _lastManualToggleTime;
+  bool? _lastManualToggleState; // El estado que el usuario quiere (true = playing, false = paused)
+  
+  // 🆕 MEJORA 1: Precarga de siguiente canción
+  Song? _preloadedNextSong;
+  bool _isPreloadingNext = false;
+  bool _hasTriggeredPreload = false; // Evitar múltiples precargas
+  
+  // 🆕 MEJORA 3: Historial de últimas canciones reproducidas (protección contra loops)
+  final List<String> _recentSongIds = [];
+  static const int _maxRecentSongs = 10; // Últimas 10 canciones
+  
+  // ✅ OPTIMIZACIÓN: Cache de últimos valores de streams para evitar emisiones duplicadas
+  Duration? _lastPosition;
+  Duration? _lastDuration;
+  PlayerState? _lastPlayerState;
 
   @override
   UnifiedAudioState build() {
@@ -197,49 +216,63 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
     // Sin logs para mejor rendimiento
 
     // 🎯 LISTENER DE POSICIÓN - CRÍTICO PARA BARRA DE PROGRESO
+    // ✅ OPTIMIZACIÓN: Comparación manual para evitar emisiones duplicadas
     _positionSubscription = _player!.positionStream.listen((position) {
-      // Sin logs para máximo rendimiento
-      _updatePosition(position); // Siempre actualizar posición
+      // Solo actualizar si cambió significativamente (comparar en milisegundos)
+      if (_lastPosition == null || _lastPosition!.inMilliseconds != position.inMilliseconds) {
+        _lastPosition = position;
+        _updatePosition(position);
+      }
     });
 
     // 🎯 LISTENER DE DURACIÓN - CRÍTICO PARA BARRA DE PROGRESO
+    // ✅ OPTIMIZACIÓN: Comparación manual para evitar emisiones duplicadas
     _durationSubscription = _player!.durationStream.listen((duration) {
       if (duration != null) {
-        _updateDuration(duration); // Siempre actualizar duración
+        // Solo actualizar si cambió
+        if (_lastDuration == null || _lastDuration != duration) {
+          _lastDuration = duration;
+          _updateDuration(duration);
+        }
       }
     });
 
     // 🎯 LISTENER DE ESTADO DEL PLAYER - CRÍTICO PARA PLAY/PAUSE
+    // ✅ OPTIMIZACIÓN: Comparación manual para evitar emisiones duplicadas
     _playerStateSubscription = _player!.playerStateStream.listen((playerState) {
-      _updatePlayerState(playerState); // Siempre actualizar estado del player
+      // Solo actualizar si cambió el estado relevante
+      if (_lastPlayerState == null || 
+          _lastPlayerState!.playing != playerState.playing ||
+          _lastPlayerState!.processingState != playerState.processingState) {
+        _lastPlayerState = playerState;
+        _updatePlayerState(playerState);
+      }
     });
 
-    // 🎯 Timer para actualizaciones fluidas de progreso (60 FPS)
-    _startProgressTimer();
+    // ✅ OPTIMIZACIÓN: positionStream ya emite actualizaciones frecuentes (no necesitamos timer)
+    // El timer duplicado causaba actualizaciones redundantes y peor rendimiento
 
     AppLogger.info('[UnifiedAudioNotifier] ✅ Listeners configurados correctamente');
   }
 
-  /// ✅ Iniciar timer para actualizaciones fluidas de progreso a 60 FPS
-  void _startProgressTimer() {
-    _progressTimer?.cancel();
-    // 60 FPS = 16.67ms por frame, usar 16ms para mejor rendimiento
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
-      if (_player != null && _player!.playerState.playing) {
-        final position = _player!.position;
-        if (position != state.currentPosition) {
-          _updatePosition(position);
+  /// ✅ Actualizar posición - OPTIMIZADO: comparar en milisegundos para evitar actualizaciones microscópicas
+  /// 🆕 MEJORA 1: Detecta cuando queden 10-15 segundos para precargar siguiente canción
+  void _updatePosition(Duration position) {
+    // Comparar en milisegundos para evitar actualizaciones redundantes de microsegundos
+    if (position.inMilliseconds != state.currentPosition.inMilliseconds) {
+      state = state.copyWith(currentPosition: position);
+      
+      // 🆕 MEJORA 1: PRECARGA INTELIGENTE - Precargar cuando queden 10-15 segundos
+      if (state.currentSong != null && 
+          state.totalDuration.inMilliseconds > 0 &&
+          !_isPreloadingNext && 
+          !_hasTriggeredPreload) {
+        final remaining = state.totalDuration - position;
+        if (remaining.inSeconds <= 15 && remaining.inSeconds >= 10) {
+          _hasTriggeredPreload = true;
+          _preloadNextSong();
         }
       }
-    });
-    // Timer de progreso iniciado sin log para mejor rendimiento
-  }
-
-  /// ✅ Actualizar posición - LLAMAR notifyListeners()
-  void _updatePosition(Duration position) {
-    if (state.currentPosition != position) {
-      state = state.copyWith(currentPosition: position);
-      // Sin logs para máximo rendimiento a 60 FPS
     }
   }
 
@@ -251,26 +284,44 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
     }
   }
 
-  /// ✅ Actualizar estado del player - LLAMAR notifyListeners()
+  /// Actualizar estado del player
   void _updatePlayerState(PlayerState playerState) {
     final newIsPlaying = playerState.playing;
     final newIsBuffering = playerState.processingState == ProcessingState.loading ||
                           playerState.processingState == ProcessingState.buffering;
 
-    if (state.isPlaying != newIsPlaying || state.isBuffering != newIsBuffering) {
-      state = state.copyWith(
-        isPlaying: newIsPlaying,
-        isBuffering: newIsBuffering,
-      );
-      
-      // Estado actualizado sin log para mejor rendimiento
+    // 🛡️ PROTECCIÓN: Si acabamos de hacer una operación manual de toggle,
+    // ignorar actualizaciones del stream durante los primeros 200ms para evitar
+    // que sobrescriba el estado optimista antes de que la operación se complete
+    final now = DateTime.now();
+    if (_lastManualToggleTime != null && 
+        _lastManualToggleState != null &&
+        now.difference(_lastManualToggleTime!).inMilliseconds < 200) {
+      // Durante los primeros 200ms después de un toggle manual, usar el estado manual
+      // Solo actualizar buffering, pero mantener el estado de playing del toggle manual
+      if (state.isBuffering != newIsBuffering) {
+        state = state.copyWith(
+          isPlaying: _lastManualToggleState!,
+          isBuffering: newIsBuffering,
+        );
+      }
+    } else {
+      // Pasado el período de protección, actualizar normalmente desde el stream
+      if (state.isPlaying != newIsPlaying || state.isBuffering != newIsBuffering) {
+        state = state.copyWith(
+          isPlaying: newIsPlaying,
+          isBuffering: newIsBuffering,
+        );
+      }
+      // Limpiar el flag de protección después del período
+      if (_lastManualToggleTime != null) {
+        _lastManualToggleTime = null;
+        _lastManualToggleState = null;
+      }
     }
 
-    // 🎯 DETECCIÓN OPTIMIZADA DE FINALIZACIÓN
-    // CORRECCIÓN: No requerir !playing porque puede seguir en true al completarse
     if (playerState.processingState == ProcessingState.completed && 
         !_isSearchingNextSong) {
-      AppLogger.info('[UnifiedAudioNotifier] 🏁 Canción completada');
       _handleSongCompletion();
     }
   }
@@ -339,31 +390,76 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
   }
 
   /// 🔍 Buscar y reproducir siguiente canción - COMPLETAMENTE OPTIMIZADO
+  /// 🆕 MEJORA 2: Sistema de fallback inteligente con múltiples estrategias
   Future<void> _findAndPlayNextSong(Song currentSong) async {
     try {
-
-      // 🧠 LLAMADA A TU ALGORITMO DE RECOMENDACIONES
       Song? nextSong;
       
-      try {
-        final recommendationService = SpotifyRecommendationService(HttpClientService());
-        
-        nextSong = await recommendationService.getSmartRecommendation(
-          currentSongId: currentSong.id,
-          genres: currentSong.genres,
-          user: null, // TODO: Pasar usuario cuando esté disponible
-        );
-        
-        if (nextSong != null) {
-          // 🛡️ PROTECCIÓN: Evitar loop infinito con la misma canción
-          if (nextSong.id == currentSong.id) {
-            nextSong = null;
-          } else if (nextSong.id == _lastRecommendedSongId) {
+      // 🆕 MEJORA 1: Estrategia 0 - Usar canción precargada si existe
+      if (_preloadedNextSong != null && _isValidNextSong(_preloadedNextSong!, currentSong)) {
+        debugPrint('✅ [ALGORITMO] Usando canción precargada: ${_preloadedNextSong!.title}');
+        nextSong = _preloadedNextSong;
+        _preloadedNextSong = null;
+        _hasTriggeredPreload = false;
+      }
+      
+      // 🆕 MEJORA 2: Estrategia 1 - Algoritmo de recomendaciones principal
+      if (nextSong == null) {
+        try {
+          final recommendationService = SpotifyRecommendationService(HttpClientService());
+          
+          nextSong = await recommendationService.getSmartRecommendation(
+            currentSongId: currentSong.id,
+            genres: currentSong.genres,
+            user: null, // Nota: Pasar usuario cuando esté disponible
+          );
+          
+          if (nextSong != null && !_isValidNextSong(nextSong, currentSong)) {
             nextSong = null;
           }
+        } catch (e) {
+          debugPrint('⚠️ [ALGORITMO] Error en recomendación principal: $e');
+          nextSong = null;
         }
-      } catch (e) {
-        nextSong = null;
+      }
+      
+      // 🆕 MEJORA 2: Estrategia 2 - Fallback por género (mismo género, diferente artista)
+      if (nextSong == null && currentSong.genres != null && currentSong.genres!.isNotEmpty) {
+        try {
+          debugPrint('🔄 [ALGORITMO] Intentando fallback por género...');
+          nextSong = await _getGenreFallback(currentSong);
+          if (nextSong != null) {
+            debugPrint('✅ [ALGORITMO] Fallback por género exitoso: ${nextSong.title}');
+          }
+        } catch (e) {
+          debugPrint('⚠️ [ALGORITMO] Error en fallback por género: $e');
+        }
+      }
+      
+      // 🆕 MEJORA 2: Estrategia 3 - Fallback por artista (otra canción del mismo artista)
+      if (nextSong == null && currentSong.artistId != null) {
+        try {
+          debugPrint('🔄 [ALGORITMO] Intentando fallback por artista...');
+          nextSong = await _getArtistFallback(currentSong);
+          if (nextSong != null) {
+            debugPrint('✅ [ALGORITMO] Fallback por artista exitoso: ${nextSong.title}');
+          }
+        } catch (e) {
+          debugPrint('⚠️ [ALGORITMO] Error en fallback por artista: $e');
+        }
+      }
+      
+      // 🆕 MEJORA 2: Estrategia 4 - Fallback por canción destacada aleatoria
+      if (nextSong == null) {
+        try {
+          debugPrint('🔄 [ALGORITMO] Intentando fallback por destacada...');
+          nextSong = await _getFeaturedFallback(currentSong);
+          if (nextSong != null) {
+            debugPrint('✅ [ALGORITMO] Fallback por destacada exitoso: ${nextSong.title}');
+          }
+        } catch (e) {
+          debugPrint('⚠️ [ALGORITMO] Error en fallback por destacada: $e');
+        }
       }
 
       // ▶️ REPRODUCIR SIGUIENTE CANCIÓN SI ES VÁLIDA
@@ -375,7 +471,8 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
         await playSong(nextSong);
         
       } else {
-        // ⏸️ MANTENER PAUSADO SI NO HAY SIGUIENTE (solo si realmente no hay canción)
+        // ⏸️ MANTENER PAUSADO SI NO HAY SIGUIENTE (todas las estrategias fallaron)
+        debugPrint('❌ [ALGORITMO] Todas las estrategias fallaron, pausando...');
         state = state.copyWith(
           isPlaying: false,
         );
@@ -383,18 +480,203 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
 
     } catch (e) {
       // ⏸️ MANTENER PAUSADO EN CASO DE ERROR
+      debugPrint('❌ [ALGORITMO] Error general: $e');
       state = state.copyWith(
         isPlaying: false,
       );
     } finally {
-      // 🛡️ SIEMPRE RESETEAR ESTADO DE BÚSQUEDA
+      // 🛡️ SIEMPRE RESETEAR ESTADO DE BÚSQUEDA Y PRECARGA
       _resetSearchState();
+      _preloadedNextSong = null;
+      _hasTriggeredPreload = false;
     }
+  }
+  
+  /// 🆕 MEJORA 1: Precargar siguiente canción cuando queden 10-15 segundos
+  Future<void> _preloadNextSong() async {
+    if (_isPreloadingNext || state.currentSong == null) return;
+    
+    _isPreloadingNext = true;
+    debugPrint('⚡ [PRECARGA] Iniciando precarga de siguiente canción...');
+    
+    try {
+      final currentSong = state.currentSong!;
+      final nextSong = await _findNextSong(currentSong);
+      
+      if (nextSong != null && _isValidNextSong(nextSong, currentSong)) {
+        _preloadedNextSong = nextSong;
+        debugPrint('✅ [PRECARGA] Canción precargada: ${nextSong.title}');
+      } else {
+        debugPrint('⚠️ [PRECARGA] No se pudo precargar canción válida');
+      }
+    } catch (e) {
+      debugPrint('❌ [PRECARGA] Error precargando: $e');
+    } finally {
+      _isPreloadingNext = false;
+    }
+  }
+  
+  /// 🆕 Helper para buscar siguiente canción (sin reproducir)
+  Future<Song?> _findNextSong(Song currentSong) async {
+    try {
+      final recommendationService = SpotifyRecommendationService(HttpClientService());
+      return await recommendationService.getSmartRecommendation(
+        currentSongId: currentSong.id,
+        genres: currentSong.genres,
+        user: null,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  /// 🆕 MEJORA 3: Validar si una canción es válida como siguiente (evita loops)
+  bool _isValidNextSong(Song nextSong, Song currentSong) {
+    // Evitar la misma canción
+    if (nextSong.id == currentSong.id) {
+      debugPrint('⚠️ [VALIDACIÓN] Misma canción, rechazando');
+      return false;
+    }
+    
+    // 🆕 MEJORA 3: Evitar canciones recientes (últimas 10)
+    if (_recentSongIds.contains(nextSong.id)) {
+      debugPrint('⚠️ [VALIDACIÓN] Canción reciente, evitando: ${nextSong.title}');
+      return false;
+    }
+    
+    // Evitar última recomendada
+    if (nextSong.id == _lastRecommendedSongId) {
+      debugPrint('⚠️ [VALIDACIÓN] Última recomendada, evitando');
+      return false;
+    }
+    
+    // Validar que tenga URL válida
+    if (nextSong.fileUrl == null || nextSong.fileUrl!.isEmpty) {
+      debugPrint('⚠️ [VALIDACIÓN] Sin URL válida, rechazando');
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /// 🆕 MEJORA 2: Fallback por género - Obtener canción del mismo género pero diferente artista
+  Future<Song?> _getGenreFallback(Song currentSong) async {
+    if (currentSong.genres == null || currentSong.genres!.isEmpty) return null;
+    
+    try {
+      final httpClient = HttpClientService();
+      final genre = currentSong.genres!.first; // Usar primer género
+      
+      // Buscar canciones por género (usar endpoint de búsqueda o featured)
+      final response = await httpClient.dio.get(
+        '/public/songs',
+        queryParameters: {
+          'limit': 20,
+          'genres': genre,
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final songsList = (data['songs'] as List?) ?? (data is List ? data : []);
+        
+        if (songsList.isNotEmpty) {
+          // Buscar una canción válida del mismo género pero diferente artista
+          for (var songData in songsList) {
+            try {
+              final normalized = DataNormalizer.normalizeSong(songData);
+              final song = Song.fromJson(normalized);
+              
+              if (_isValidNextSong(song, currentSong) && 
+                  song.artistId != currentSong.artistId) {
+                return song;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error en fallback por género: $e');
+    }
+    
+    return null;
+  }
+  
+  /// 🆕 MEJORA 2: Fallback por artista - Obtener otra canción del mismo artista
+  Future<Song?> _getArtistFallback(Song currentSong) async {
+    if (currentSong.artistId == null) return null;
+    
+    try {
+      final httpClient = HttpClientService();
+      
+      // Obtener canciones del artista
+      final response = await httpClient.dio.get(
+        '/public/songs',
+        queryParameters: {
+          'artistId': currentSong.artistId,
+          'limit': 20,
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final songsList = (data['songs'] as List?) ?? (data is List ? data : []);
+        
+        if (songsList.isNotEmpty) {
+          // Buscar otra canción del mismo artista
+          for (var songData in songsList) {
+            try {
+              final normalized = DataNormalizer.normalizeSong(songData);
+              final song = Song.fromJson(normalized);
+              
+              if (_isValidNextSong(song, currentSong)) {
+                return song;
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error en fallback por artista: $e');
+    }
+    
+    return null;
+  }
+  
+  /// 🆕 MEJORA 2: Fallback por destacada - Obtener canción destacada aleatoria
+  Future<Song?> _getFeaturedFallback(Song currentSong) async {
+    try {
+      final homeService = HomeService();
+      final featuredSongs = await homeService.getFeaturedSongs(limit: 20);
+      
+      if (featuredSongs.isNotEmpty) {
+        // Mezclar aleatoriamente para variedad
+        final shuffled = List<FeaturedSong>.from(featuredSongs)..shuffle();
+        
+        for (var featuredSong in shuffled) {
+          final song = featuredSong.song;
+          if (_isValidNextSong(song, currentSong)) {
+            return song;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error en fallback por destacada: $e');
+    }
+    
+    return null;
   }
 
   /// 🛡️ Resetear estado de búsqueda de siguiente canción
+  /// 🆕 MEJORA 1: También resetea flags de precarga
   void _resetSearchState() {
     _isSearchingNextSong = false;
+    _isPreloadingNext = false;
+    _hasTriggeredPreload = false;
     // Estado de búsqueda reseteado sin log para mejor rendimiento
   }
 
@@ -405,7 +687,8 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
     }
   }
 
-  /// ✅ Reproducir una canción
+  /// ✅ Reproducir una canción - Optimizado para respuesta inmediata sin parpadeo
+  /// 🆕 MEJORA 3: Agrega canción al historial para evitar repeticiones
   Future<void> playSong(Song song) async {
     if (_player == null) {
       AppLogger.error('[UnifiedAudioNotifier] ❌ AudioPlayer no inicializado');
@@ -413,19 +696,30 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
     }
 
     try {
+      // 🆕 MEJORA 3: Agregar al historial de canciones recientes
+      _recentSongIds.add(song.id);
+      if (_recentSongIds.length > _maxRecentSongs) {
+        _recentSongIds.removeAt(0); // Remover la más antigua (FIFO)
+      }
+      debugPrint('📝 [HISTORIAL] Agregada: ${song.title} (Total: ${_recentSongIds.length})');
       
-      // ✅ TRANSICIÓN OPTIMIZADA: Cambiar canción sin interrumpir flujo visual
+      // 🛡️ PROTECCIÓN: Registrar que estamos iniciando una reproducción manual
+      // Esto evitará que el stream cause parpadeo durante la carga inicial
+      _lastManualToggleTime = DateTime.now();
+      _lastManualToggleState = true; // Queremos que esté reproduciendo
+      
+      // Resetear flags de precarga
+      _preloadedNextSong = null;
+      _hasTriggeredPreload = false;
+      
+      // Actualización optimista inmediata (una sola vez)
       state = state.copyWith(
         currentSong: song,
-        // NO mostrar isLoading para evitar fondo gris durante transición
-        // Mantener isPlaying true durante la carga para transición fluida
-        isPlaying: true,
+        isPlaying: true, // Establecer como playing inmediatamente
         currentPosition: Duration.zero,
-        totalDuration: Duration.zero, // ✅ CRÍTICO: Resetear duración para forzar progreso a 0
+        totalDuration: Duration.zero,
+        isPlayerExpanded: false,
       );
-      // Sin logs para mejor rendimiento
-
-      AppLogger.info('[UnifiedAudioNotifier] 🎵 Cargando: ${song.title}');
 
       // Verificar que la URL no sea null
       if (song.fileUrl == null || song.fileUrl!.isEmpty) {
@@ -434,80 +728,158 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
       
       // Normalizar URL
       final normalizedUrl = UrlNormalizer.normalizeUrl(song.fileUrl!);
-      // Sin logs para mejor rendimiento
 
-      // Cargar canción
-      // Sin logs para mejor rendimiento
-      await _player!.setUrl(normalizedUrl);
-      // Sin logs para mejor rendimiento
-      
-      // Obtener duración inmediatamente después de cargar
-      final duration = _player!.duration ?? Duration.zero;
-      // Sin logs para mejor rendimiento
-      
-      // ✅ REPRODUCIR INMEDIATAMENTE para transición fluida
-      await _player!.play();
-      
-      // ✅ ACTUALIZAR ESTADO DESPUÉS DE INICIAR REPRODUCCIÓN
-      state = state.copyWith(
-        isPlaying: true, // Confirmar que está reproduciendo
-        totalDuration: duration,
-        // isLoading ya no se usa para evitar fondo gris
-      );
-      
-      // 🎵 RESTAURAR VOLUMEN COMPLETO INMEDIATAMENTE
-      await _player!.setVolume(1.0);
-      
-      // Sin logs para mejor rendimiento
-      // Sin logs para mejor rendimiento
-      
-      // Sin logs para mejor rendimiento
+      // Cargar y reproducir - usar await para evitar múltiples actualizaciones
+      try {
+        await _player!.setUrl(normalizedUrl);
+        final duration = _player!.duration ?? Duration.zero;
+        await _player!.play();
+        _player!.setVolume(1.0);
+        
+        // Actualizar solo una vez después de que todo esté listo
+        // El período de protección del stream evitará actualizaciones intermedias
+        state = state.copyWith(
+          isPlaying: true,
+          totalDuration: duration,
+        );
+      } catch (e) {
+        AppLogger.error('[UnifiedAudioNotifier] ❌ Error en playSong: $e');
+        state = state.copyWith(isPlaying: false);
+        _lastManualToggleTime = null;
+        _lastManualToggleState = null;
+      }
       
     } catch (e) {
-      // Sin logs para mejor rendimiento
       AppLogger.error('[UnifiedAudioNotifier] ❌ Error reproduciendo: $e');
       state = state.copyWith(
         isLoading: false,
         isPlaying: false,
       );
+      _lastManualToggleTime = null;
+      _lastManualToggleState = null;
     }
   }
 
-  /// ✅ Toggle play/pause
+  /// Toggle play/pause
   Future<void> togglePlayPause() async {
     if (_player == null || state.currentSong == null) return;
 
     try {
-      if (state.isPlaying) {
-        await _player!.pause();
-      } else {
+      final newIsPlaying = !state.isPlaying;
+      state = state.copyWith(isPlaying: newIsPlaying);
+      
+      if (newIsPlaying) {
         await _player!.play();
+      } else {
+        await _player!.pause();
       }
-      AppLogger.info('[UnifiedAudioNotifier] ⏯️ Toggle: ${state.isPlaying ? 'pause' : 'play'}');
     } catch (e) {
-      AppLogger.error('[UnifiedAudioNotifier] ❌ Error toggle: $e');
+      AppLogger.error('[UnifiedAudioNotifier] Error toggle: $e');
+      state = state.copyWith(isPlaying: !state.isPlaying);
     }
   }
 
-  /// ✅ Pausar
+  /// Toggle play/pause con lógica inteligente estilo Spotify
+  /// Lógica:
+  /// 1. Si no hay canción → reproducir nueva
+  /// 2. Si es otra canción → cambiar a esa
+  /// 3. Si es la misma → toggle play/pause
+  Future<void> togglePlay([Song? song]) async {
+    if (_player == null) {
+      AppLogger.error('[UnifiedAudioNotifier] AudioPlayer no inicializado');
+      return;
+    }
+
+    try {
+      if (state.currentSong == null) {
+        if (song != null) {
+          // Ejecutar sin await para no bloquear
+          playSong(song);
+        }
+        return;
+      }
+
+      final currentSong = state.currentSong!;
+      
+      if (song != null && song.id != currentSong.id) {
+        // Ejecutar sin await para no bloquear
+        playSong(song);
+        return;
+      }
+
+      // Actualización optimista inmediata (antes de esperar al player)
+      final newIsPlaying = !state.isPlaying;
+      
+      // 🛡️ PROTECCIÓN: Registrar que estamos haciendo un toggle manual
+      // Esto evitará que el stream sobrescriba el estado durante los próximos 200ms
+      _lastManualToggleTime = DateTime.now();
+      _lastManualToggleState = newIsPlaying;
+      
+      state = state.copyWith(isPlaying: newIsPlaying);
+
+      // Ejecutar operación y esperar a que se complete para garantizar sincronización
+      if (newIsPlaying) {
+        try {
+          await _player!.play();
+          // Verificar que el estado del player coincida con nuestro estado optimista
+          // Si no coincide, el stream lo corregirá automáticamente después del período de protección
+        } catch (e) {
+          AppLogger.error('[UnifiedAudioNotifier] Error play: $e');
+          state = state.copyWith(isPlaying: false);
+          _lastManualToggleTime = null;
+          _lastManualToggleState = null;
+        }
+      } else {
+        try {
+          await _player!.pause();
+          // CRÍTICO: Asegurar que el estado se mantenga en pause después de la operación
+          // Verificar el estado actual del player para asegurar sincronización
+          final currentPlayerState = _player!.playerState;
+          if (currentPlayerState.playing) {
+            // Si el player sigue reproduciendo, forzar pause nuevamente
+            await _player!.pause();
+          }
+          // Asegurar que el estado refleje pause
+          state = state.copyWith(isPlaying: false);
+        } catch (e) {
+          AppLogger.error('[UnifiedAudioNotifier] Error pause: $e');
+          state = state.copyWith(isPlaying: true);
+          _lastManualToggleTime = null;
+          _lastManualToggleState = null;
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error('[UnifiedAudioNotifier] Error en togglePlay: $e', stackTrace);
+    }
+  }
+
+  /// Pausar
   Future<void> pause() async {
     if (_player == null) return;
     
     try {
+      state = state.copyWith(isPlaying: false);
       await _player!.pause();
     } catch (e) {
-      AppLogger.error('[UnifiedAudioNotifier] ❌ Error pause: $e');
+      AppLogger.error('[UnifiedAudioNotifier] Error pause: $e');
+      state = state.copyWith(isPlaying: true);
     }
   }
 
-  /// ✅ Reanudar
+  /// Reanudar
   Future<void> play() async {
     if (_player == null) return;
     
     try {
+      state = state.copyWith(
+        isPlaying: true,
+        isPlayerExpanded: false,
+      );
+      
       await _player!.play();
     } catch (e) {
-      AppLogger.error('[UnifiedAudioNotifier] ❌ Error play: $e');
+      AppLogger.error('[UnifiedAudioNotifier] Error play: $e');
+      state = state.copyWith(isPlaying: false);
     }
   }
 
@@ -543,6 +915,25 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
     AppLogger.info('[UnifiedAudioNotifier] 🎬 Player expanded: $expanded');
   }
 
+  /// ✅ Abrir reproductor completo
+  void openFullPlayer() {
+    state = state.copyWith(isPlayerExpanded: true);
+    AppLogger.info('[UnifiedAudioNotifier] 🎬 Abriendo reproductor completo');
+  }
+
+  /// ✅ Cerrar reproductor completo
+  void closeFullPlayer() {
+    state = state.copyWith(isPlayerExpanded: false);
+    AppLogger.info('[UnifiedAudioNotifier] 🎬 Cerrando reproductor completo');
+  }
+
+  /// ✅ Toggle expandir/colapsar reproductor
+  void toggleExpandedPlayer() {
+    final newState = !state.isPlayerExpanded;
+    state = state.copyWith(isPlayerExpanded: newState);
+    AppLogger.info('[UnifiedAudioNotifier] 🎬 Toggle player expanded: $newState');
+  }
+
   /// ✅ Detener completamente
   Future<void> stop() async {
     if (_player == null) return;
@@ -562,29 +953,34 @@ class UnifiedAudioNotifier extends Notifier<UnifiedAudioState> {
   /// ✅ Siguiente canción (placeholder para futura implementación)
   Future<void> next() async {
     AppLogger.info('[UnifiedAudioNotifier] ⏭️ Next - Por implementar con playlist');
-    // TODO: Implementar cuando se agregue soporte para playlists
+    // Nota: Implementar cuando se agregue soporte para playlists
   }
 
   /// ✅ Canción anterior (placeholder para futura implementación)
   Future<void> previous() async {
     AppLogger.info('[UnifiedAudioNotifier] ⏮️ Previous - Por implementar con playlist');
-    // TODO: Implementar cuando se agregue soporte para playlists
+    // Nota: Implementar cuando se agregue soporte para playlists
   }
 
   /// ✅ Limpiar recursos
+  /// 🆕 MEJORA 1 y 3: Limpia también precarga e historial
   void _dispose() {
-    _progressTimer?.cancel();
     _positionSubscription?.cancel();
     _durationSubscription?.cancel();
     _playerStateSubscription?.cancel();
     _player?.dispose();
     
-    _progressTimer = null;
     _positionSubscription = null;
     _durationSubscription = null;
     _playerStateSubscription = null;
     _player = null;
     _isInitialized = false;
+    
+    // 🆕 Limpiar precarga e historial
+    _preloadedNextSong = null;
+    _isPreloadingNext = false;
+    _hasTriggeredPreload = false;
+    _recentSongIds.clear();
     
     AppLogger.info('[UnifiedAudioNotifier] 🧹 Recursos limpiados');
   }
@@ -597,6 +993,7 @@ final unifiedAudioProviderFixed = NotifierProvider<UnifiedAudioNotifier, Unified
 });
 
 /// ✅ Providers de conveniencia para acceso rápido a partes específicas del estado
+/// CRÍTICO: isPlaying y currentSong NO usan select para garantizar actualización inmediata
 final currentSongProviderFixed = Provider<Song?>((ref) {
   return ref.watch(unifiedAudioProviderFixed).currentSong;
 });
@@ -606,21 +1003,31 @@ final isPlayingProviderFixed = Provider<bool>((ref) {
 });
 
 final audioProgressProviderFixed = Provider<double>((ref) {
-  return ref.watch(unifiedAudioProviderFixed).progress;
+  return ref.watch(
+    unifiedAudioProviderFixed.select((state) => state.progress),
+  );
 });
 
 final audioPositionProviderFixed = Provider<Duration>((ref) {
-  return ref.watch(unifiedAudioProviderFixed).currentPosition;
+  return ref.watch(
+    unifiedAudioProviderFixed.select((state) => state.currentPosition),
+  );
 });
 
 final audioDurationProviderFixed = Provider<Duration>((ref) {
-  return ref.watch(unifiedAudioProviderFixed).totalDuration;
+  return ref.watch(
+    unifiedAudioProviderFixed.select((state) => state.totalDuration),
+  );
 });
 
 final isBufferingProviderFixed = Provider<bool>((ref) {
-  return ref.watch(unifiedAudioProviderFixed).isBuffering;
+  return ref.watch(
+    unifiedAudioProviderFixed.select((state) => state.isBuffering),
+  );
 });
 
 final audioVolumeProviderFixed = Provider<double>((ref) {
-  return ref.watch(unifiedAudioProviderFixed).volume;
+  return ref.watch(
+    unifiedAudioProviderFixed.select((state) => state.volume),
+  );
 });

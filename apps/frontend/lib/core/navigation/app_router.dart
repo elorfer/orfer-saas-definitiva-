@@ -16,9 +16,11 @@ import '../../features/profile/screens/profile_screen.dart';
 import '../../features/artists/pages/artist_page.dart';
 import '../../features/artists/models/artist.dart';
 import '../../features/player/screens/full_player_screen.dart';
+import '../../features/song_detail/screens/song_detail_screen.dart';
+import '../../core/models/song_model.dart';
 import '../providers/auth_provider.dart';
 import 'main_navigation.dart';
-import 'page_transitions.dart';
+import 'page_transitions.dart' show SpotifyPageTransitions, createCustomTransitionPage, createNoTransitionPage;
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = GoRouterNotifier(ref);
@@ -28,7 +30,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: notifier,
     routes: notifier.routes,
     redirect: notifier.handleRedirect,
-    debugLogDiagnostics: false,
+    debugLogDiagnostics: false, // Deshabilitado para mejor rendimiento en producción
   );
 
   ref.onDispose(() {
@@ -60,31 +62,31 @@ class GoRouterNotifier extends ChangeNotifier {
         // Splash - sin transición
         GoRoute(
           path: '/splash',
-          pageBuilder: (context, state) => NoTransitionPage<void>(
+          pageBuilder: (context, state) => createNoTransitionPage<void>(
             key: state.pageKey,
             child: const SplashScreen(),
           ),
         ),
-        // Login - transición fade suave
+        // Login - transición optimizada sin parpadeo
         GoRoute(
           path: '/login',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
+          pageBuilder: (context, state) => createCustomTransitionPage<void>(
             key: state.pageKey,
             child: const LoginScreen(),
-            transitionsBuilder: SpotifyPageTransitions.fadeSlideTransition,
-            transitionDuration: const Duration(milliseconds: 250),
-            reverseTransitionDuration: const Duration(milliseconds: 200),
+            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+            transitionDuration: const Duration(milliseconds: 200),
+            reverseTransitionDuration: const Duration(milliseconds: 150),
           ),
         ),
-        // Register - transición fade suave
+        // Register - transición optimizada sin parpadeo
         GoRoute(
           path: '/register',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
+          pageBuilder: (context, state) => createCustomTransitionPage<void>(
             key: state.pageKey,
             child: const RegisterScreen(),
-            transitionsBuilder: SpotifyPageTransitions.fadeSlideTransition,
-            transitionDuration: const Duration(milliseconds: 250),
-            reverseTransitionDuration: const Duration(milliseconds: 200),
+            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+            transitionDuration: const Duration(milliseconds: 200),
+            reverseTransitionDuration: const Duration(milliseconds: 150),
           ),
         ),
         // ShellRoute envuelve todas las rutas autenticadas para mantener la barra de navegación
@@ -99,84 +101,78 @@ class GoRouterNotifier extends ChangeNotifier {
             return MainNavigation(child: child);
           },
           routes: [
-            // Home - transición ultra rápida solo fade (estilo Spotify tabs)
+            // Home - sin transición para tabs (mejor rendimiento)
             GoRoute(
               path: '/home',
-              pageBuilder: (context, state) => CustomTransitionPage<void>(
+              pageBuilder: (context, state) => createNoTransitionPage<void>(
                 key: state.pageKey,
                 child: const HomeScreen(),
-                transitionsBuilder: SpotifyPageTransitions.tabTransition,
-                transitionDuration: const Duration(milliseconds: 100),
-                reverseTransitionDuration: const Duration(milliseconds: 100),
               ),
             ),
-            // Search - transición ultra rápida solo fade
+            // Search - transición optimizada sin parpadeo
             GoRoute(
               path: '/search',
-              pageBuilder: (context, state) => CustomTransitionPage<void>(
+              pageBuilder: (context, state) => createCustomTransitionPage<void>(
                 key: state.pageKey,
                 child: const SearchScreen(),
-                transitionsBuilder: SpotifyPageTransitions.tabTransition,
-                transitionDuration: const Duration(milliseconds: 100),
-                reverseTransitionDuration: const Duration(milliseconds: 100),
+                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                transitionDuration: const Duration(milliseconds: 200),
+                reverseTransitionDuration: const Duration(milliseconds: 150),
               ),
             ),
-            // Library - transición ultra rápida solo fade
+            // Library - sin transición para tabs (mejor rendimiento)
             GoRoute(
               path: '/library',
-              pageBuilder: (context, state) => CustomTransitionPage<void>(
+              pageBuilder: (context, state) => createNoTransitionPage<void>(
                 key: state.pageKey,
                 child: const LibraryScreen(),
-                transitionsBuilder: SpotifyPageTransitions.tabTransition,
-                transitionDuration: const Duration(milliseconds: 100),
-                reverseTransitionDuration: const Duration(milliseconds: 100),
               ),
             ),
-            // Profile - transición ultra rápida solo fade
+            // Profile - IDÉNTICO a song details (sin parpadeo)
             GoRoute(
               path: '/profile',
-              pageBuilder: (context, state) => CustomTransitionPage<void>(
+              pageBuilder: (context, state) => createCustomTransitionPage<void>(
                 key: state.pageKey,
                 child: const ProfileScreen(),
-                transitionsBuilder: SpotifyPageTransitions.tabTransition,
-                transitionDuration: const Duration(milliseconds: 100),
-                reverseTransitionDuration: const Duration(milliseconds: 100),
+                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                transitionDuration: const Duration(milliseconds: 200),
+                reverseTransitionDuration: const Duration(milliseconds: 150),
               ),
             ),
-            // Playlists - transición horizontal (desde la derecha)
+            // Playlists - IDÉNTICO a song details (sin parpadeo)
             GoRoute(
               path: '/playlists',
-              pageBuilder: (context, state) => CustomTransitionPage<void>(
+              pageBuilder: (context, state) => createCustomTransitionPage<void>(
                 key: state.pageKey,
                 child: const PlaylistsScreen(),
-                transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
-                transitionDuration: const Duration(milliseconds: 250),
-                reverseTransitionDuration: const Duration(milliseconds: 200),
+                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                transitionDuration: const Duration(milliseconds: 200),
+                reverseTransitionDuration: const Duration(milliseconds: 150),
               ),
             ),
-            // Featured Songs - transición horizontal (desde la derecha)
+            // Featured Songs - transición optimizada sin parpadeo
             GoRoute(
               path: '/featured-songs',
-              pageBuilder: (context, state) => CustomTransitionPage<void>(
+              pageBuilder: (context, state) => createCustomTransitionPage<void>(
                 key: state.pageKey,
                 child: const FeaturedSongsScreen(),
-                transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
-                transitionDuration: const Duration(milliseconds: 250),
-                reverseTransitionDuration: const Duration(milliseconds: 200),
+                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                transitionDuration: const Duration(milliseconds: 200),
+                reverseTransitionDuration: const Duration(milliseconds: 150),
               ),
             ),
-            // Favorites - transición horizontal (desde la derecha)
+            // Favorites - transición optimizada sin parpadeo
             GoRoute(
               path: '/favorites',
-              pageBuilder: (context, state) => CustomTransitionPage<void>(
+              pageBuilder: (context, state) => createCustomTransitionPage<void>(
                 key: state.pageKey,
                 child: const FavoritesScreen(),
-                transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
-                transitionDuration: const Duration(milliseconds: 250),
-                reverseTransitionDuration: const Duration(milliseconds: 200),
+                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                transitionDuration: const Duration(milliseconds: 200),
+                reverseTransitionDuration: const Duration(milliseconds: 150),
               ),
             ),
-            // Artist Detail - transición simple fade rápida (sin slide pesado)
+            // Artist Detail - transición optimizada sin parpadeo (igual que song details)
             GoRoute(
               path: '/artist/:id',
               pageBuilder: (context, state) {
@@ -196,42 +192,80 @@ class GoRouterNotifier extends ChangeNotifier {
                     featured: false,
                   );
                 }
-                return CustomTransitionPage<void>(
-                  key: state.pageKey,
+                // Key estable basada en artistId para preservar estado
+                return createCustomTransitionPage<void>(
+                  key: ValueKey('artist_page_${artistLite.id}'),
                   child: ArtistPage(artist: artistLite),
-                  transitionsBuilder: SpotifyPageTransitions.tabTransition, // Solo fade, sin slide
-                  transitionDuration: const Duration(milliseconds: 150), // Más rápido
-                  reverseTransitionDuration: const Duration(milliseconds: 120), // Más rápido
+                  transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                  transitionDuration: const Duration(milliseconds: 200),
+                  reverseTransitionDuration: Duration.zero, // CRÍTICO: Sin duración al retroceder (evita parpadeo)
                 );
               },
             ),
-            // Playlist Detail - transición horizontal ligera
+            // Playlist Detail - transición optimizada sin parpadeo (igual que song details)
             GoRoute(
               path: '/playlist/:id',
               pageBuilder: (context, state) {
                 final playlistId = state.pathParameters['id'] ?? '';
-                return CustomTransitionPage<void>(
-                  key: state.pageKey,
+                // Key estable basada en playlistId para preservar estado
+                return createCustomTransitionPage<void>(
+                  key: ValueKey('playlist_detail_$playlistId'),
                   child: PlaylistDetailScreen(playlistId: playlistId),
-                  transitionsBuilder: SpotifyPageTransitions.horizontalTransition,
+                  transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                   transitionDuration: const Duration(milliseconds: 200),
-                  reverseTransitionDuration: const Duration(milliseconds: 150),
+                  reverseTransitionDuration: Duration.zero, // CRÍTICO: Sin duración al retroceder (evita parpadeo)
+                );
+              },
+            ),
+            // Song Detail - DENTRO del ShellRoute para que respete el NavigationBar
+            GoRoute(
+              path: '/song/:id',
+              pageBuilder: (context, state) {
+                final songId = state.pathParameters['id'] ?? '';
+                final extra = state.extra;
+                Song? song;
+                
+                if (extra is Song) {
+                  song = extra;
+                } else {
+                  // Si no hay canción en extra, crear una básica con el ID
+                  // La pantalla cargará los datos completos desde el backend
+                  song = Song(
+                    id: songId,
+                    status: SongStatus.published,
+                    isExplicit: false,
+                    totalStreams: 0,
+                    totalLikes: 0,
+                    totalShares: 0,
+                    featured: false,
+                  );
+                }
+                
+                // Usar transición optimizada para SongDetail: Sin transición al retroceder
+                // Key estable basada en songId para preservar estado
+                return createCustomTransitionPage<void>(
+                  key: ValueKey('song_detail_${song.id}'),
+                  child: SongDetailScreen(song: song),
+                  transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                  transitionDuration: const Duration(milliseconds: 200),
+                  reverseTransitionDuration: Duration.zero, // CRÍTICO: Sin duración al retroceder (evita parpadeo)
                 );
               },
             ),
           ],
         ),
         // Full Player - FUERA del ShellRoute para que no muestre el mini player
+        // Transición vertical optimizada (más rápida)
         GoRoute(
           path: '/player',
           pageBuilder: (context, state) => CustomTransitionPage<void>(
             key: state.pageKey,
             child: const FullPlayerScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // Transición vertical desde abajo como Spotify
+              // Transición vertical desde abajo como Spotify (optimizada)
               const begin = Offset(0.0, 1.0);
               const end = Offset.zero;
-              const curve = Curves.easeOutCubic;
+              const curve = Curves.easeOut; // Más rápida que easeOutCubic
               
               var tween = Tween(begin: begin, end: end).chain(
                 CurveTween(curve: curve),
@@ -242,10 +276,11 @@ class GoRouterNotifier extends ChangeNotifier {
                 child: child,
               );
             },
-            transitionDuration: const Duration(milliseconds: 300),
-            reverseTransitionDuration: const Duration(milliseconds: 250),
+            transitionDuration: const Duration(milliseconds: 200), // Reducido de 300ms
+            reverseTransitionDuration: const Duration(milliseconds: 150), // Reducido de 250ms
           ),
         ),
+        // Redirect raíz - DEBE estar al final para no interceptar otras rutas
         GoRoute(
           path: '/',
           redirect: (_, __) => '/home',
@@ -254,9 +289,19 @@ class GoRouterNotifier extends ChangeNotifier {
 
   String? handleRedirect(BuildContext context, GoRouterState state) {
     final authState = _authState;
-    final isSplashRoute = state.matchedLocation == '/splash';
-    final isAuthRoute = state.matchedLocation == '/login' ||
-        state.matchedLocation == '/register';
+    final location = state.matchedLocation;
+    final isSplashRoute = location == '/splash';
+    final isAuthRoute = location == '/login' || location == '/register';
+    
+    // No redirigir rutas de player u otras rutas específicas fuera del ShellRoute
+    // Nota: /song/ ahora está dentro del ShellRoute, así que no necesita tratamiento especial aquí
+    if (location == '/player') {
+      // Permitir acceso a estas rutas si el usuario está autenticado
+      if (!authState.isAuthenticated && authState.isInitialized) {
+        return '/login';
+      }
+      return null; // No redirigir, permitir acceso
+    }
 
     if (!authState.isInitialized) {
       return isSplashRoute ? null : '/splash';

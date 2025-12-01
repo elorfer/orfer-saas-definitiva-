@@ -452,18 +452,22 @@ export class SongsService {
 
     // VALIDACIÓN: Si se están actualizando los géneros, verificar que no quede vacío
     if (updateData.genres !== undefined) {
-      if (!updateData.genres || updateData.genres.length === 0) {
+      // Verificar si los géneros están vacíos
+      const genresEmpty = !updateData.genres || updateData.genres.length === 0;
+      
+      if (genresEmpty) {
+        // Si la canción es destacada, no puede quedarse sin géneros
+        if (song.isFeatured) {
+          throw new BadRequestException(
+            'No se pueden quitar todos los géneros de una canción destacada. ' +
+            'Las canciones destacadas requieren géneros para el sistema de recomendaciones automáticas.'
+          );
+        }
+        
+        // Si no es destacada, igualmente no puede quedarse sin géneros
         throw new BadRequestException(
           'Es obligatorio mantener al menos un género musical asignado. ' +
           'Los géneros son necesarios para el sistema de recomendaciones.'
-        );
-      }
-      
-      // VALIDACIÓN ADICIONAL: Si la canción es destacada, no puede quedarse sin géneros
-      if (song.isFeatured) {
-        throw new BadRequestException(
-          'No se pueden quitar todos los géneros de una canción destacada. ' +
-          'Las canciones destacadas requieren géneros para el sistema de recomendaciones automáticas.'
         );
       }
     }

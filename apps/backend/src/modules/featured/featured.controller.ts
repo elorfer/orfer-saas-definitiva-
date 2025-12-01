@@ -71,6 +71,7 @@ export class FeaturedController {
   @Post('songs/:id/feature')
   @ApiOperation({ summary: 'Destacar una canción' })
   @ApiResponse({ status: 200, description: 'Canción destacada exitosamente' })
+  @ApiResponse({ status: 400, description: 'Error de validación: la canción no tiene géneros asignados o no está publicada' })
   @ApiResponse({ status: 404, description: 'Canción no encontrada' })
   async featureSong(@Param('id') id: string) {
     return this.featuredService.setSongFeatured(id, true);

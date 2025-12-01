@@ -2,9 +2,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/theme/text_styles.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/providers/playlist_provider.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
@@ -16,6 +17,7 @@ import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/utils/data_normalizer.dart';
 import '../../../core/utils/retry_handler.dart';
 import '../../../core/utils/url_normalizer.dart';
+import '../../song_detail/screens/song_detail_screen.dart';
 
 // Función top-level para procesar playlist en isolate
 Playlist? _parsePlaylist(Map<String, dynamic> jsonData) {
@@ -67,24 +69,29 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   bool _loadingMore = false;
   String? _error;
   bool _hasLoadedOnce = false; // Flag para saber si ya se cargó una vez
-  DateTime? _lastLoadTime; // Timestamp de última carga
   
   // Cache estático para mantener datos entre navegaciones (evita parpadeo)
   // Estructura: { playlistId: { 'playlist': ..., 'songs': ..., 'lastLoad': ... } }
   static final Map<String, Map<String, dynamic>> _playlistCache = {};
   
-  // Timer para debounce en botones de play
-  Timer? _playSongDebounce;
-  Timer? _playAllDebounce;
+  // Flags ligeros para evitar taps múltiples sin añadir retardos artificiales
+  bool _isPlaySongInProgress = false;
+  bool _isPlayAllInProgress = false;
   
   static const int _initialSongsLimit = 20;
   static const int _loadMoreSongsLimit = 20;
-  static const Duration _debounceDuration = Duration(milliseconds: 300);
   static const Duration _cacheValidDuration = Duration(minutes: 5); // Cache válido por 5 minutos
   
   // Cachear dimensiones de pantalla para evitar recálculos
   double? _cachedScreenWidth;
   double? _cachedDevicePixelRatio;
+  
+  // URLs normalizadas cacheadas (optimización: calcular una vez, no en cada build)
+  String? _cachedCoverUrl;
+  
+  // Constantes para skeleton loaders
+  static const Color _shimmerBaseColor = Color(0xFFE0E0E0);
+  static const Color _shimmerHighlightColor = Color(0xFFF5F5F5);
 
   @override
   bool get wantKeepAlive => true;
@@ -93,27 +100,32 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   void initState() {
     super.initState();
     
-    // Intentar cargar desde caché estático primero (evita parpadeo)
+    // CRÍTICO: Intentar cargar desde caché estático primero (evita parpadeo)
+    // Esto debe hacerse ANTES de establecer cualquier estado de loading
     final cachedData = _playlistCache[widget.playlistId];
     if (cachedData != null) {
       final lastLoadTime = cachedData['lastLoadTime'] as DateTime;
       if (!_shouldReloadCache(lastLoadTime)) {
-        // Restaurar datos desde caché inmediatamente
+        // Restaurar datos desde caché inmediatamente SIN setState
+        // Esto evita cualquier parpadeo porque el estado se establece antes del primer render
         _playlist = cachedData['playlist'] as Playlist?;
         _displayedSongs = List<Song>.from(
           cachedData['displayedSongs'] as List,
         );
         _hasMoreSongs = cachedData['hasMoreSongs'] as bool;
-        _lastLoadTime = lastLoadTime;
         _hasLoadedOnce = true;
-        _loading = false; // NO mostrar loading si tenemos datos en caché
+        _loading = false; // Establecer directamente sin setState (estamos en initState)
         
-        // Pre-cachear imagen de portada inmediatamente
-        if (_playlist?.coverArtUrl != null && _playlist!.coverArtUrl!.isNotEmpty) {
-          scheduleMicrotask(() {
+        // Normalizar URL de portada desde cache
+        _normalizeCoverUrl();
+        
+        // Pre-cachear imagen de portada inmediatamente (síncrono para evitar parpadeo)
+        if (_cachedCoverUrl != null && _cachedCoverUrl!.isNotEmpty) {
+          // Precargar inmediatamente sin esperar al siguiente frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               precacheImage(
-                CachedNetworkImageProvider(_playlist!.coverArtUrl!),
+                CachedNetworkImageProvider(_cachedCoverUrl!),
                 context,
               ).catchError((_) {
                 // Ignorar errores de pre-cache
@@ -121,26 +133,124 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             }
           });
         }
+        
+        // CRÍTICO: Salir temprano si tenemos cache válido para evitar cualquier operación adicional
+        // Esto evita el parpadeo al retroceder
+        return;
       } else {
-        // Caché expirado, limpiar y cargar
+        // Caché expirado, limpiar
         _playlistCache.remove(widget.playlistId);
-        _loadPlaylist();
       }
-    } else {
-      // No hay caché, cargar normalmente
-      _loadPlaylist();
     }
+    
+    // Solo llegar aquí si NO hay cache válido
+    // CRÍTICO: Establecer loading en true SOLO si NO tenemos cache válido
+    // Esto evita que se muestre skeleton loader cuando volvemos atrás con cache
+    _loading = true;
+    _hasLoadedOnce = false;
+    
+    // Cargar datos desde el backend
+    _loadPlaylist();
   }
   
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Cachear dimensiones de pantalla una sola vez
-    if (_cachedScreenWidth == null) {
+    // Cachear dimensiones de pantalla una sola vez (optimización: evitar MediaQuery en cada build)
+    // Asegurar que siempre tengamos valores cacheados
+    if (_cachedScreenWidth == null || _cachedDevicePixelRatio == null) {
       final mediaQuery = MediaQuery.of(context);
-      _cachedScreenWidth = mediaQuery.size.width;
-      _cachedDevicePixelRatio = mediaQuery.devicePixelRatio;
+      _cachedScreenWidth ??= mediaQuery.size.width;
+      _cachedDevicePixelRatio ??= mediaQuery.devicePixelRatio;
     }
+  }
+  
+  /// Normaliza URL de portada una sola vez (optimización de rendimiento)
+  void _normalizeCoverUrl() {
+    if (_playlist?.coverArtUrl != null && _playlist!.coverArtUrl!.isNotEmpty) {
+      _cachedCoverUrl = UrlNormalizer.normalizeImageUrl(_playlist!.coverArtUrl);
+    } else {
+      _cachedCoverUrl = null;
+    }
+  }
+  
+  /// Widget skeleton para la portada de la playlist
+  Widget _buildCoverSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: _shimmerBaseColor,
+      highlightColor: _shimmerHighlightColor,
+      child: Container(
+        width: double.infinity,
+        height: 300,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+  
+  /// Widget skeleton para el título de la playlist
+  Widget _buildTitleSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: _shimmerBaseColor,
+      highlightColor: _shimmerHighlightColor,
+      child: Container(
+        height: 24,
+        width: 200,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+  
+  /// Widget skeleton para metadata (estadísticas)
+  Widget _buildMetadataSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: _shimmerBaseColor,
+      highlightColor: _shimmerHighlightColor,
+      child: Container(
+        height: 16,
+        width: 250,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+    );
+  }
+  
+  /// Widget skeleton para botón "Reproducir todo"
+  Widget _buildPlayAllButtonSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: _shimmerBaseColor,
+      highlightColor: _shimmerHighlightColor,
+      child: Container(
+        height: 48,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+  
+  /// Widget skeleton para fila de canción
+  Widget _buildSongRowSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: _shimmerBaseColor,
+      highlightColor: _shimmerHighlightColor,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    );
   }
   
   /// Verifica si el caché estático expiró
@@ -171,17 +281,15 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
 
   @override
   void dispose() {
-    // Cancelar timers de debounce al destruir el widget
-    _playSongDebounce?.cancel();
-    _playAllDebounce?.cancel();
     super.dispose();
   }
 
   Future<void> _loadPlaylist() async {
     if (!mounted) return;
     
-    // Solo mostrar loading si NO tenemos datos previos (evita parpadeo al volver)
-    if (!_hasLoadedOnce && mounted) {
+    // CRÍTICO: NO mostrar loading si tenemos datos del cache (evita parpadeo al volver)
+    // Solo mostrar loading si realmente NO tenemos datos previos
+    if (!_hasLoadedOnce && _displayedSongs.isEmpty && mounted) {
       setState(() {
         _loading = true;
         _error = null;
@@ -277,15 +385,17 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     final initialSongs = allSongs.take(_initialSongsLimit).toList();
     final hasMore = allSongs.length > _initialSongsLimit;
 
+    // Normalizar URL de portada ANTES del setState (optimización)
+    _playlist = playlist;
+    _normalizeCoverUrl();
+    
     final now = DateTime.now();
     if (mounted) {
       setState(() {
-        _playlist = playlist;
         _displayedSongs = initialSongs;
         _hasMoreSongs = hasMore;
         _loading = false;
         _hasLoadedOnce = true;
-        _lastLoadTime = now;
       });
     }
 
@@ -295,6 +405,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       'displayedSongs': initialSongs,
       'hasMoreSongs': hasMore,
       'lastLoadTime': now,
+      'coverUrl': _cachedCoverUrl, // Guardar URL normalizada en cache
     };
     
     // Limpiar caché antiguo periódicamente (solo si hay muchas entradas)
@@ -351,26 +462,40 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       );
     }
 
-    if (_loading) {
-      return _buildLoadingState(context);
+    // CRÍTICO: Si tenemos cache válido, mostrar contenido inmediatamente sin verificaciones
+    // Esto evita cualquier parpadeo al retroceder
+    final hasValidCache = _hasLoadedOnce && 
+                         _displayedSongs.isNotEmpty && 
+                         _cachedCoverUrl != null &&
+                         _playlist != null;
+    
+    if (hasValidCache) {
+      // Tenemos cache válido - renderizar contenido inmediatamente SIN skeleton loaders
+      return _buildContentFromCache(context);
     }
-
-    if (_error != null || _playlist == null) {
+    
+    // Solo llegar aquí si NO hay cache válido
+    if (_error != null || (_playlist == null && !_loading)) {
       return _buildErrorState(context, _error ?? 'Playlist no encontrada');
     }
 
-    final playlist = _playlist!;
+    final playlist = _playlist;
+    
+    // Usar dimensiones cacheadas (ya calculadas en didChangeDependencies) - NO recalcular en build
+    final screenWidth = _cachedScreenWidth!;
+    final devicePixelRatio = _cachedDevicePixelRatio!;
 
     return Scaffold(
+      key: ValueKey('playlist_detail_scaffold_${widget.playlistId}'), // Key estable para evitar rebuilds
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: true,
         child: CustomScrollView(
-          cacheExtent: 1000, // Aumentado para mejor scroll performance
+          cacheExtent: 300, // Optimizado: reducir cache de scroll para mejor rendimiento
           physics: const FastScrollPhysics(),
-          clipBehavior: Clip.none, // Evitar clipping innecesario
+          clipBehavior: Clip.none,
           slivers: [
-            // App Bar con imagen de fondo
+            // App Bar con imagen de fondo - con skeleton loader
             SliverAppBar(
               expandedHeight: 300,
               pinned: true,
@@ -380,60 +505,60 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 onPressed: () => context.pop(),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    OptimizedImage(
-                      key: ValueKey('playlist_cover_${playlist.id}_${playlist.coverArtUrl ?? 'null'}'),
-                      imageUrl: playlist.coverArtUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      isLargeCover: true,
-                      maxCacheWidth: _cachedScreenWidth != null && _cachedDevicePixelRatio != null
-                          ? (_cachedScreenWidth! * _cachedDevicePixelRatio! * 2).toInt()
-                          : null,
-                      maxCacheHeight: (300 * (_cachedDevicePixelRatio ?? 2.0)).toInt(),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.7),
-                          ],
-                        ),
+                background: (_loading && _cachedCoverUrl == null)
+                    ? _buildCoverSkeleton()
+                    : Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          OptimizedImage(
+                            key: ValueKey('playlist_cover_${playlist?.id ?? widget.playlistId}_${_cachedCoverUrl ?? 'null'}'),
+                            imageUrl: _cachedCoverUrl ?? playlist?.coverArtUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            isLargeCover: true,
+                            maxCacheWidth: (screenWidth * devicePixelRatio * 2).toInt(),
+                            maxCacheHeight: (300 * devicePixelRatio).toInt(),
+                            skipFade: _cachedCoverUrl != null, // Sin fade cuando hay cache (evita parpadeo)
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.7),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                title: Text(
-                  (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
+                title: (_loading && _playlist == null)
+                    ? _buildTitleSkeleton()
+                    : Text(
+                        (playlist?.name?.isNotEmpty == true) ? playlist!.name! : 'Playlist',
+                        style: AppTextStyles.titleMedium.copyWith(color: Colors.white),
+                      ),
                 titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
               ),
             ),
 
-            // Contenido
+            // Contenido - con skeleton loaders
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Información de la playlist
-                    if (playlist.description != null && playlist.description!.isNotEmpty) ...[
+                    // Información de la playlist - con skeleton
+                    if (_loading && _playlist == null)
+                      _buildMetadataSkeleton()
+                    else if (playlist != null && playlist.description != null && playlist.description!.isNotEmpty) ...[
                       Text(
                         playlist.description!,
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
+                        style: AppTextStyles.bodyMedium.copyWith(
                           color: Colors.grey[700],
                           height: 1.5,
                         ),
@@ -441,114 +566,110 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                       const SizedBox(height: 16),
                     ],
 
-                    // Estadísticas
-                    Row(
-                      children: [
-                        if (playlist.user != null) ...[
-                          Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
+                    // Estadísticas - con skeleton
+                    if (_loading && _playlist == null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: _buildMetadataSkeleton(),
+                      )
+                    else if (playlist != null)
+                      Row(
+                        children: [
+                          if (playlist.user != null) ...[
+                            const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              playlist.user?.firstName ?? 'Usuario',
+                              style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+                            ),
+                            const SizedBox(width: 16),
+                          ],
+                          const Icon(Icons.queue_music, size: 16, color: Colors.grey),
                           const SizedBox(width: 4),
                           Text(
-                            playlist.user?.firstName ?? 'Usuario',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                            '${playlist.totalSongs} canciones',
+                            style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
                           ),
                           const SizedBox(width: 16),
+                          const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            playlist.durationFormatted,
+                            style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+                          ),
                         ],
-                        Icon(Icons.queue_music, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${playlist.totalSongs} canciones',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          playlist.durationFormatted,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
 
                     const SizedBox(height: 24),
 
-                    // Botón de reproducir todo con nuevo estilo
-                    SizedBox(
-                      width: double.infinity,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              NeumorphismTheme.coffeeMedium,
-                              NeumorphismTheme.coffeeDark,
+                    // Botón de reproducir todo - con skeleton
+                    if (_loading && _playlist == null)
+                      _buildPlayAllButtonSkeleton()
+                    else if (playlist != null && playlist.songs.isNotEmpty)
+                      SizedBox(
+                        width: double.infinity,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                NeumorphismTheme.coffeeMedium,
+                                NeumorphismTheme.coffeeDark,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                                spreadRadius: 0,
+                              ),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                              blurRadius: 15,
-                              offset: const Offset(0, 5),
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              if (_playlist != null && _playlist!.songs.isNotEmpty) {
-                                _onPlayAll(context, _playlist!.songs);
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Reproducir todo',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                if (_playlist != null && _playlist!.songs.isNotEmpty) {
+                                  _onPlayAll(context, _playlist!.songs);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.play_arrow_rounded,
                                       color: Colors.white,
+                                      size: 24,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Reproducir todo',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
 
                     const SizedBox(height: 24),
 
                     // Título de canciones
                     Text(
                       'Canciones',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                      style: AppTextStyles.sectionTitle,
                     ),
 
                     const SizedBox(height: 16),
@@ -557,8 +678,18 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
               ),
             ),
 
-            // Lista de canciones con paginación
-            if (_displayedSongs.isEmpty)
+            // Lista de canciones con paginación - con skeleton loaders
+            if (_loading && _displayedSongs.isEmpty)
+              // Mostrar skeleton loaders mientras carga (solo si NO hay cache)
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildSongRowSkeleton(),
+                  childCount: 5, // Mostrar 5 skeletons
+                  addAutomaticKeepAlives: false,
+                  addRepaintBoundaries: false,
+                ),
+              )
+            else if (_displayedSongs.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.only(
@@ -578,10 +709,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                         const SizedBox(height: 16),
                         Text(
                           'Esta playlist no tiene canciones',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
+                          style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -616,7 +744,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     );
                   },
                   childCount: _displayedSongs.length + (_hasMoreSongs ? 1 : 0),
-                  addAutomaticKeepAlives: false, // Ya usamos AutomaticKeepAliveClientMixin
+                  addAutomaticKeepAlives: false,
                   addRepaintBoundaries: false, // Ya agregamos RepaintBoundary manualmente
                 ),
               ),
@@ -651,8 +779,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 ),
                 child: Text(
                   'Ver más canciones',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: AppTextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
                     color: NeumorphismTheme.coffeeMedium,
                   ),
@@ -684,19 +811,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             const SizedBox(height: 16),
             Text(
               message ?? 'Playlist no encontrada',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
+              style: AppTextStyles.titleMedium.copyWith(color: Colors.grey[800]),
             ),
             const SizedBox(height: 8),
             Text(
               'La playlist que buscas no existe o fue eliminada',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -705,23 +825,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     );
   }
 
-  Widget _buildLoadingState(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: Center(
-        child: CircularProgressIndicator(
-          color: NeumorphismTheme.coffeeMedium,
-        ),
-      ),
-    );
-  }
 
   Widget _buildErrorState(BuildContext context, Object error) {
     return Scaffold(
@@ -745,19 +848,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             const SizedBox(height: 16),
             Text(
               'Error al cargar playlist',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
+              style: AppTextStyles.titleMedium.copyWith(color: Colors.grey[800]),
             ),
             const SizedBox(height: 8),
             Text(
               error.toString(),
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -772,8 +868,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
               ),
               child: Text(
                 'Volver',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
+                style: AppTextStyles.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -786,110 +881,300 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   }
 
   void _onSongTap(BuildContext context, Song song) {
-    _onPlaySong(context, song);
+    // Navegar a la pantalla de detalles de la canción
+    SongDetailScreen.navigateToSong(context, song);
   }
 
   void _onPlaySong(BuildContext context, Song song) async {
-    // Debounce: cancelar acción anterior si existe
-    _playSongDebounce?.cancel();
-    
-    // Crear nuevo timer con debounce
-    _playSongDebounce = Timer(_debounceDuration, () async {
-      if (!mounted) return;
-      
-      final container = ProviderScope.containerOf(context);
-      final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
-      final messenger = ScaffoldMessenger.of(context);
-      
-      try {
-        // Validar que la canción tenga URL de archivo
-        if (song.fileUrl == null || song.fileUrl!.isEmpty) {
-          throw Exception('La canción "${song.title}" no tiene archivo de audio disponible');
-        }
-        
-        // Validar que tengamos la playlist completa
-        if (_playlist == null || _playlist!.songs.isEmpty) {
-          throw Exception('No se puede reproducir: playlist no disponible');
-        }
-        
-        // Usar provider unificado corregido - reproducir canción específica
-        AppLogger.info('[PlaylistDetailScreen] 🎵 Reproduciendo desde playlist: ${song.title}');
-        await audioNotifier.playSong(song);
-        
-        // TODO: Implementar contexto de playlist completa en el provider unificado
-        
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Reproduciendo playlist desde "${song.title ?? "Canción"}"'),
-            backgroundColor: NeumorphismTheme.coffeeMedium,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } catch (error) {
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Error al reproducir: ${error.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+    if (!mounted || _isPlaySongInProgress) return;
+
+    _isPlaySongInProgress = true;
+
+    final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      // Validar que la canción tenga URL de archivo
+      if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+        throw Exception('La canción "${song.title}" no tiene archivo de audio disponible');
       }
-    });
+      
+      // Validar que tengamos la playlist completa
+      if (_playlist == null || _playlist!.songs.isEmpty) {
+        throw Exception('No se puede reproducir: playlist no disponible');
+      }
+      
+      // Usar provider unificado corregido - reproducir canción específica
+      AppLogger.info('[PlaylistDetailScreen] 🎵 Reproduciendo desde playlist: ${song.title}');
+      await audioNotifier.playSong(song);
+      
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Reproduciendo playlist desde "${song.title ?? "Canción"}"'),
+          backgroundColor: NeumorphismTheme.coffeeMedium,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al reproducir: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      _isPlaySongInProgress = false;
+    }
   }
 
   void _onPlayAll(BuildContext context, List<Song> songs) async {
-    // Debounce: cancelar acción anterior si existe
-    _playAllDebounce?.cancel();
-    
-    // Crear nuevo timer con debounce
-    _playAllDebounce = Timer(_debounceDuration, () async {
-      if (!mounted) return;
-      
-      final messenger = ScaffoldMessenger.of(context);
-      
-      if (songs.isEmpty) {
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('No hay canciones para reproducir'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
+    if (!mounted || _isPlayAllInProgress) return;
 
-      final container = ProviderScope.containerOf(context);
-      final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
+    _isPlayAllInProgress = true;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (songs.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('No hay canciones para reproducir'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      _isPlayAllInProgress = false;
+      return;
+    }
+
+    final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
+    
+    try {
+      // Usar provider unificado corregido - reproducir primera canción de la playlist
+      AppLogger.info('[PlaylistDetailScreen] 🎵 Reproduciendo playlist completa desde el inicio');
+      await audioNotifier.playSong(songs.first);
       
-      try {
-        // Usar provider unificado corregido - reproducir primera canción de la playlist
-        if (songs.isNotEmpty) {
-          AppLogger.info('[PlaylistDetailScreen] 🎵 Reproduciendo playlist completa desde el inicio');
-          await audioNotifier.playSong(songs.first);
-          
-          // TODO: Implementar contexto de playlist completa en el provider unificado
-        }
-        
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Reproduciendo playlist con ${songs.length} canciones'),
-            backgroundColor: NeumorphismTheme.coffeeMedium,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      } catch (error) {
-        if (!mounted) return;
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Error al reproducir playlist: ${error.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    });
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Reproduciendo playlist con ${songs.length} canciones'),
+          backgroundColor: NeumorphismTheme.coffeeMedium,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Error al reproducir playlist: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      _isPlayAllInProgress = false;
+    }
+  }
+
+  /// Construir contenido desde cache (sin skeleton loaders)
+  Widget _buildContentFromCache(BuildContext context) {
+    final playlist = _playlist!;
+    final screenWidth = _cachedScreenWidth!;
+    final devicePixelRatio = _cachedDevicePixelRatio!;
+
+    return Scaffold(
+      key: ValueKey('playlist_detail_scaffold_${widget.playlistId}'),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: true,
+        child: CustomScrollView(
+          cacheExtent: 300,
+          physics: const FastScrollPhysics(),
+          clipBehavior: Clip.none,
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 300,
+              pinned: true,
+              backgroundColor: Colors.white,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => context.pop(),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    OptimizedImage(
+                      key: ValueKey('playlist_cover_${playlist.id}_${_cachedCoverUrl ?? 'null'}'),
+                      imageUrl: _cachedCoverUrl ?? playlist.coverArtUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      isLargeCover: true,
+                      maxCacheWidth: (screenWidth * devicePixelRatio * 2).toInt(),
+                      maxCacheHeight: (300 * devicePixelRatio).toInt(),
+                      skipFade: true, // Sin fade cuando hay cache (evita parpadeo al retroceder)
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.7),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                title: Text(
+                  (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
+                  style: AppTextStyles.titleMedium.copyWith(color: Colors.white),
+                ),
+                titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (playlist.description != null && playlist.description!.isNotEmpty) ...[
+                      Text(
+                        playlist.description!,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: Colors.grey[700],
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Row(
+                      children: [
+                        if (playlist.user != null) ...[
+                          const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            playlist.user?.firstName ?? 'Usuario',
+                            style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(width: 16),
+                        ],
+                        const Icon(Icons.queue_music, size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${playlist.totalSongs} canciones',
+                          style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+                        ),
+                        const SizedBox(width: 16),
+                        const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          playlist.durationFormatted,
+                          style: AppTextStyles.bodySmall.copyWith(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (playlist.songs.isNotEmpty)
+                      SizedBox(
+                        width: double.infinity,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                NeumorphismTheme.coffeeMedium,
+                                NeumorphismTheme.coffeeDark,
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                if (_playlist != null && _playlist!.songs.isNotEmpty) {
+                                  _onPlayAll(context, _playlist!.songs);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Reproducir todo',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                    Text('Canciones', style: AppTextStyles.sectionTitle),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index >= _displayedSongs.length) {
+                    if (_hasMoreSongs) {
+                      return _buildLoadMoreButton();
+                    }
+                    return null;
+                  }
+                  final song = _displayedSongs[index];
+                  final songIndex = index + 1;
+                  return RepaintBoundary(
+                    key: ValueKey('song_item_${song.id}'),
+                    child: _SongListItem(
+                      key: ValueKey(song.id),
+                      song: song,
+                      index: songIndex,
+                      onTap: () => _onSongTap(context, song),
+                      onPlay: () => _onPlaySong(context, song),
+                    ),
+                  );
+                },
+                childCount: _displayedSongs.length + (_hasMoreSongs ? 1 : 0),
+                addAutomaticKeepAlives: false,
+                addRepaintBoundaries: false,
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 16),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -954,7 +1239,7 @@ class _SongListItem extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     '${index + 1}',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.6),
@@ -962,94 +1247,54 @@ class _SongListItem extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Portada con efecto de elevación
-                Hero(
-                  tag: 'playlist_song_cover_${song.id}',
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    constraints: const BoxConstraints(
-                      minWidth: 64,
-                      maxWidth: 64,
-                      minHeight: 64,
-                      maxHeight: 64,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      clipBehavior: Clip.antiAlias,
-                      child: coverUrl != null
-                          ? SizedBox(
-                              width: 64,
-                              height: 64,
-                              child: Image.network(
-                                coverUrl,
-                                fit: BoxFit.cover,
-                                width: 64,
-                                height: 64,
-                                alignment: Alignment.center,
-                                repeat: ImageRepeat.noRepeat,
-                              // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
-                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                if (wasSynchronouslyLoaded) return child;
-                                return AnimatedOpacity(
-                                  opacity: frame == null ? 0 : 1,
-                                  duration: const Duration(milliseconds: 200),
-                                  curve: Curves.easeOut,
-                                  child: child,
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) {
-                                  return child;
-                                }
-                                // Placeholder simple sin CircularProgressIndicator para mejor rendimiento
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        NeumorphismTheme.coffeeMedium,
-                                        NeumorphismTheme.coffeeDark,
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        NeumorphismTheme.coffeeMedium,
-                                        NeumorphismTheme.coffeeDark,
-                                      ],
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.music_note,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                );
-                              },
+                // Portada con efecto de elevación - Hero removido para mejor rendimiento
+                Container(
+                  width: 64,
+                  height: 64,
+                  constraints: const BoxConstraints(
+                    minWidth: 64,
+                    maxWidth: 64,
+                    minHeight: 64,
+                    maxHeight: 64,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                        spreadRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    clipBehavior: Clip.antiAlias,
+                    child: coverUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: coverUrl,
+                            fit: BoxFit.cover,
+                            width: 64,
+                            height: 64,
+                            memCacheWidth: 128,
+                            memCacheHeight: 128,
+                            fadeInDuration: const Duration(milliseconds: 200),
+                            fadeOutDuration: const Duration(milliseconds: 100),
+                            placeholder: (context, url) => Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    NeumorphismTheme.coffeeMedium,
+                                    NeumorphismTheme.coffeeDark,
+                                  ],
+                                ),
+                              ),
                             ),
-                          )
-                          : Container(
+                            errorWidget: (context, url, error) => Container(
                               decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
@@ -1066,7 +1311,24 @@ class _SongListItem extends StatelessWidget {
                                 size: 28,
                               ),
                             ),
-                    ),
+                          )
+                        : Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  NeumorphismTheme.coffeeMedium,
+                                  NeumorphismTheme.coffeeDark,
+                                ],
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.music_note,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1078,7 +1340,7 @@ class _SongListItem extends StatelessWidget {
                     children: [
                       Text(
                         song.title ?? 'Canción sin título',
-                        style: GoogleFonts.inter(
+                        style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
                           color: NeumorphismTheme.textPrimary,
@@ -1090,7 +1352,7 @@ class _SongListItem extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.person_outline,
                             size: 14,
                             color: NeumorphismTheme.textSecondary,
@@ -1099,7 +1361,7 @@ class _SongListItem extends StatelessWidget {
                           Expanded(
                             child: Text(
                               _getArtistName(song),
-                              style: GoogleFonts.inter(
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color: NeumorphismTheme.textSecondary,
@@ -1117,49 +1379,65 @@ class _SongListItem extends StatelessWidget {
                 // Duración
                 Text(
                   song.durationFormatted,
-                  style: GoogleFonts.inter(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: NeumorphismTheme.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Botón de play circular marrón (como en la foto)
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        NeumorphismTheme.coffeeMedium,
-                        NeumorphismTheme.coffeeDark,
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onPlay,
-                      borderRadius: BorderRadius.circular(22),
-                      child: const Center(
-                        child: Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                          size: 24,
+                // Botón de play/pause optimizado profesionalmente (estilo Spotify)
+                Consumer(
+                  builder: (context, ref, child) {
+                    // Usar select para escuchar solo los cambios relevantes
+                    final currentSong = ref.watch(
+                      unifiedAudioProviderFixed.select((state) => state.currentSong),
+                    );
+                    final isPlaying = ref.watch(
+                      unifiedAudioProviderFixed.select((state) => state.isPlaying),
+                    );
+                    final isCurrentSong = currentSong?.id == song.id;
+                    final showPause = isCurrentSong && isPlaying;
+                    
+                    return RepaintBoundary(
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              NeumorphismTheme.coffeeMedium,
+                              NeumorphismTheme.coffeeDark,
+                            ],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: onPlay,
+                            borderRadius: BorderRadius.circular(22),
+                            child: Center(
+                              child: Icon(
+                                showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ),

@@ -48,9 +48,22 @@ class _AlbumCoverWidget extends StatelessWidget {
     if (song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty) {
       final normalizedUrl = UrlNormalizer.normalizeImageUrl(song.coverArtUrl);
       
+      // Calcular memCache basado en tamaño de pantalla y devicePixelRatio
+      final mediaQuery = MediaQuery.of(context);
+      final screenWidth = mediaQuery.size.width;
+      final devicePixelRatio = mediaQuery.devicePixelRatio;
+      // Tamaño de la imagen: 85% del ancho de pantalla
+      final imageSize = screenWidth * 0.85;
+      final memCacheSize = (imageSize * devicePixelRatio).round();
+      
       return CachedNetworkImage(
         imageUrl: normalizedUrl!,
         fit: BoxFit.cover,
+        // Optimización: límite de memoria para imágenes grandes
+        memCacheWidth: memCacheSize,
+        memCacheHeight: memCacheSize,
+        maxWidthDiskCache: memCacheSize,
+        maxHeightDiskCache: memCacheSize,
         // 🎭 OPTIMIZADO PARA HERO ANIMATION - Sin transiciones que interfieran
         fadeInDuration: Duration.zero, // Sin fade para Hero suave
         fadeOutDuration: Duration.zero,
@@ -120,19 +133,21 @@ class _ProfessionalAudioPlayerState
   Widget build(BuildContext context) {
     try {
       // 🚀 USAR EL PROVIDER UNIFICADO CORREGIDO - ÚNICA FUENTE DE VERDAD
-      final audioState = ref.watch(unifiedAudioProviderFixed);
+      // Optimización: usar select para escuchar solo los campos necesarios
+      final currentSong = ref.watch(
+        unifiedAudioProviderFixed.select((state) => state.currentSong),
+      );
+      final isPlaying = ref.watch(
+        unifiedAudioProviderFixed.select((state) => state.isPlaying),
+      );
       
-      if (audioState.currentSong == null) {
+      if (currentSong == null) {
         return const SizedBox.shrink();
       }
 
-      final song = audioState.currentSong!;
-      final isPlaying = audioState.isPlaying;
-      
       // Crear la UI estática una sola vez
       return _StaticPlayerUI(
-        song: song,
-        audioState: audioState,
+        song: currentSong,
         isPlaying: isPlaying,
       );
     } catch (e, stackTrace) {
@@ -145,12 +160,10 @@ class _ProfessionalAudioPlayerState
 /// Widget estático que no se reconstruye con cada actualización de progreso
 class _StaticPlayerUI extends ConsumerWidget {
   final Song song;
-  final UnifiedAudioState audioState;
   final bool isPlaying;
 
   const _StaticPlayerUI({
     required this.song,
-    required this.audioState,
     required this.isPlaying,
   });
 
@@ -217,7 +230,7 @@ class _StaticPlayerUI extends ConsumerWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(24),
                       child: _AlbumCoverWidget(
-                        key: ValueKey('album_cover_${song.id}'), // 🔑 KEY ESTABLE PARA TODO EL WIDGET
+                        key: ValueKey('album_cover_${song.id}'), // 🔑 KEY ESTABLE PARA EL WIDGET COMPLETO
                         song: song,
                       ),
                     ),
@@ -275,10 +288,7 @@ class _StaticPlayerUI extends ConsumerWidget {
                       const SizedBox(height: 24),
                       
                       // Progress Control - DINÁMICO usando provider unificado
-                      _ProgressControl(
-                        audioState: audioState,
-                        ref: ref,
-                      ),
+                      const _ProgressControl(),
                       
                       const SizedBox(height: 32),
                       
@@ -296,11 +306,8 @@ class _StaticPlayerUI extends ConsumerWidget {
                               await ref.read(unifiedAudioProviderFixed.notifier).previous();
                             },
                           ),
-                          // Solo el botón play/pause se actualiza
-                          _PlayPauseButton(
-                            ref: ref,
-                            isPlaying: isPlaying,
-                          ),
+                          // Solo el botón play/pause se actualiza - observa el estado directamente
+                          _PlayPauseButton(ref: ref),
                           IconButton(
                             icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 42),
                             onPressed: () async {
@@ -327,17 +334,19 @@ class _StaticPlayerUI extends ConsumerWidget {
 }
 
 /// Widget separado para el botón play/pause que se actualiza independientemente
-class _PlayPauseButton extends StatelessWidget {
+/// Observa el estado directamente del provider para sincronización perfecta
+class _PlayPauseButton extends ConsumerWidget {
   final WidgetRef ref;
-  final bool isPlaying;
 
   const _PlayPauseButton({
     required this.ref,
-    required this.isPlaying,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Observar isPlaying directamente del provider para actualización inmediata
+    final isPlaying = ref.watch(isPlayingProviderFixed);
+    
     return GestureDetector(
       onTap: () async {
         try {
@@ -346,17 +355,19 @@ class _PlayPauseButton extends StatelessWidget {
           AppLogger.error('[PlayPauseButton] Error: $e');
         }
       },
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-          color: Colors.black,
-          size: 36,
+      child: RepaintBoundary(
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            color: Colors.black,
+            size: 36,
+          ),
         ),
       ),
     );
@@ -365,13 +376,7 @@ class _PlayPauseButton extends StatelessWidget {
 
 /// Widget separado para el control de progreso usando provider unificado
 class _ProgressControl extends ConsumerStatefulWidget {
-  final UnifiedAudioState audioState;
-  final WidgetRef ref;
-
-  const _ProgressControl({
-    required this.audioState,
-    required this.ref,
-  });
+  const _ProgressControl();
 
   @override
   ConsumerState<_ProgressControl> createState() => _ProgressControlState();
@@ -391,25 +396,31 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
   @override
   Widget build(BuildContext context) {
     // 🚀 USAR DIRECTAMENTE EL PROVIDER UNIFICADO CORREGIDO - ÚNICA FUENTE DE VERDAD
-    final audioState = ref.watch(unifiedAudioProviderFixed);
+    // Optimización: usar select para escuchar solo los campos necesarios
+    final currentPositionRaw = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentPosition),
+    );
+    final totalDuration = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.totalDuration),
+    );
+    final progress = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.progress),
+    );
     
-    Duration position;
-    if (_isDraggingSeek && _dragPosition != null) {
-      position = _dragPosition!;
-    } else {
-      position = audioState.currentPosition;
-    }
+    // Usar posición de drag si está activa, sino usar la posición actual
+    final currentPosition = _isDraggingSeek && _dragPosition != null
+        ? _dragPosition!
+        : currentPositionRaw;
 
-    final currentPosition = position;
-    final currentDuration = audioState.totalDuration;
+    final currentDuration = totalDuration;
 
     // 🚀 PROGRESO ULTRA FLUIDO - Usar el progreso calculado del provider
-    final progress = _isDraggingSeek && _dragPosition != null
+    final finalProgress = _isDraggingSeek && _dragPosition != null
         ? (currentDuration.inMilliseconds > 0
             ? (_dragPosition!.inMilliseconds / currentDuration.inMilliseconds).clamp(0.0, 1.0)
             : 0.0)
-        : audioState.progress;
-    final clampedProgress = progress.clamp(0.0, 1.0);
+        : progress;
+    final clampedProgress = finalProgress.clamp(0.0, 1.0);
 
     return Column(
       children: [

@@ -23,7 +23,8 @@ export class FeaturedService {
     // Validar y limitar el límite para evitar consultas costosas
     const validLimit = Math.min(Math.max(1, limit), 100);
 
-    // 1) Primero, canciones marcadas explícitamente como destacadas
+    // SOLO devolver canciones marcadas explícitamente como destacadas por el admin
+    // NO completar con canciones de artistas destacados
     const featuredExplicit = await this.songRepository.find({
       where: { isFeatured: true, status: SongStatus.PUBLISHED },
       relations: ['artist', 'album', 'genre'],
@@ -31,27 +32,14 @@ export class FeaturedService {
       take: validLimit,
     });
 
-    if (featuredExplicit.length >= validLimit) {
-      return featuredExplicit.slice(0, validLimit);
-    }
+    // Log para diagnóstico
+    this.logger.log(`[getFeaturedSongs] Encontradas ${featuredExplicit.length} canciones con isFeatured=true y status=PUBLISHED`);
+    featuredExplicit.forEach((song, index) => {
+      this.logger.log(`[getFeaturedSongs] ${index + 1}. ${song.title} (ID: ${song.id}, status: ${song.status}, isFeatured: ${song.isFeatured})`);
+    });
 
-    // 2) Si faltan, completar con canciones de artistas destacados (sin duplicar)
-    const remaining = validLimit - featuredExplicit.length;
-    const explicitIds = new Set(featuredExplicit.map((s) => s.id));
-
-    const fromFeaturedArtists = await this.songRepository
-      .createQueryBuilder('song')
-      .leftJoinAndSelect('song.artist', 'artist')
-      .leftJoinAndSelect('song.album', 'album')
-      .leftJoinAndSelect('song.genre', 'genre')
-      .where('song.status = :status', { status: SongStatus.PUBLISHED })
-      .andWhere('artist.isFeatured = true')
-      .orderBy('song.createdAt', 'DESC')
-      .limit(remaining * 2) // pedir un poco más para filtrar duplicados si hay
-      .getMany();
-
-    const deduped = fromFeaturedArtists.filter((s) => !explicitIds.has(s.id));
-    return [...featuredExplicit, ...deduped.slice(0, remaining)];
+    // Devolver SOLO las canciones explícitamente destacadas (puede ser menos que el límite)
+    return featuredExplicit;
   }
 
   async getFeaturedArtists(limit: number = 10) {
@@ -100,8 +88,13 @@ export class FeaturedService {
       throw new NotFoundException('Canción no encontrada');
     }
 
+    // Log para diagnóstico
+    this.logger.log(`Intentando ${featured ? 'destacar' : 'quitar destacado'} canción: ${song.title} (ID: ${songId})`);
+    this.logger.log(`Estado actual: status=${song.status}, isFeatured=${song.isFeatured}, genres=${JSON.stringify(song.genres)}`);
+
     // VALIDACIÓN: Si se está destacando, verificar que tenga géneros asignados
     if (featured && (!song.genres || song.genres.length === 0)) {
+      this.logger.warn(`No se puede destacar canción ${songId}: no tiene géneros asignados`);
       throw new BadRequestException(
         'No se puede destacar una canción sin géneros asignados. ' +
         'Por favor, asigna al menos un género musical antes de destacar esta canción.'
@@ -110,6 +103,7 @@ export class FeaturedService {
 
     // VALIDACIÓN: Si se está destacando, verificar que esté publicada
     if (featured && song.status !== SongStatus.PUBLISHED) {
+      this.logger.warn(`No se puede destacar canción ${songId}: estado=${song.status}, requiere PUBLISHED`);
       throw new BadRequestException(
         'Solo se pueden destacar canciones que estén publicadas. ' +
         'Por favor, publica la canción antes de destacarla.'

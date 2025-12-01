@@ -295,3 +295,11 @@ Las optimizaciones implementadas abordan los principales cuellos de botella:
 
 **Resultado**: Una clase 5-10x más eficiente manteniendo la misma funcionalidad.
 
+
+
+
+
+
+
+
+

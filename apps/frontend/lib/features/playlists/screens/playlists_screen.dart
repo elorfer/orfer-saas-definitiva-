@@ -17,7 +17,11 @@ class PlaylistsScreen extends ConsumerStatefulWidget {
   ConsumerState<PlaylistsScreen> createState() => _PlaylistsScreenState();
 }
 
-class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> {
+class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> 
+    with AutomaticKeepAliveClientMixin {
+  
+  @override
+  bool get wantKeepAlive => true;
   final ScrollController _scrollController = ScrollController();
   final int _pageSize = 20;
   int _currentPage = 1;
@@ -87,12 +91,15 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
+    
     // Acumular todas las playlists de todas las páginas
     final allPlaylistsAsync = ref.watch(
       playlistsProvider((page: 1, limit: _currentPage * _pageSize)),
     );
 
     return Scaffold(
+      key: const ValueKey('playlists_scaffold'), // Key estable para evitar rebuilds
       backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
@@ -129,7 +136,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> {
                   },
                   child: CustomScrollView(
                     controller: _scrollController,
-                    cacheExtent: 800, // Aumentado a 800px para scroll más rápido
+                    cacheExtent: 500, // Optimizado: grid de playlists, reducir de 800 a 500 para mejor uso de memoria
                     physics: const FastScrollPhysics(), // Scroll más rápido y fluido
                     slivers: [
                   // Grid de playlists
@@ -233,7 +240,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen> {
 
   Widget _buildLoadingState() {
     return CustomScrollView(
-      cacheExtent: 800, // Aumentado para scroll más rápido
+      cacheExtent: 500, // Optimizado: reducir de 800 a 500 para consistencia
       physics: const FastScrollPhysics(), // Scroll más rápido y fluido
       slivers: [
         SliverPadding(

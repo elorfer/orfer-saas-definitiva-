@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/theme/text_styles.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -10,6 +10,7 @@ import '../widgets/auth_text_field.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/social_auth_button.dart';
 import '../widgets/role_selector.dart';
+import '../utils/validators.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -47,7 +48,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
+    // OPTIMIZACIÓN: usar select para escuchar solo isLoading y evitar rebuilds innecesarios
+    final isLoading = ref.watch(authStateProvider.select((state) => state.isLoading));
     final authNotifier = ref.read(authStateProvider.notifier);
 
     ref.listen<AuthState>(authStateProvider, (previous, next) {
@@ -80,7 +82,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 
                 // Header con botón de regreso
                 FadeInDown(
-                  duration: const Duration(milliseconds: 600),
+                  duration: const Duration(milliseconds: 300), // Optimizado: reducido de 600ms a 300ms
                   child: Row(
                     children: [
                       IconButton(
@@ -96,18 +98,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           children: [
                             Text(
                               'Crear Cuenta',
-                              style: GoogleFonts.inter(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                              style: AppTextStyles.authFormTitle,
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Únete a la comunidad musical',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                color: Colors.white.withValues(alpha:0.8),
+                              style: AppTextStyles.authFormSubtitle.copyWith(
+                                color: Colors.white.withValues(alpha: 0.8),
                               ),
                             ),
                           ],
@@ -121,7 +118,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                 // Formulario de registro
                 FadeInUp(
-                  duration: const Duration(milliseconds: 800),
+                  duration: const Duration(milliseconds: 350), // Optimizado: reducido de 800ms a 350ms
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -161,12 +158,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   label: 'Nombre',
                                   hint: 'Tu nombre',
                                   prefixIcon: Icons.person_outline,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Ingresa tu nombre';
-                                    }
-                                    return null;
-                                  },
+                                  validator: (value) => AuthValidators.name(value, fieldName: 'nombre'),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -176,12 +168,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   label: 'Apellido',
                                   hint: 'Tu apellido',
                                   prefixIcon: Icons.person_outline,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Ingresa tu apellido';
-                                    }
-                                    return null;
-                                  },
+                                  validator: (value) => AuthValidators.name(value, fieldName: 'apellido'),
                                 ),
                               ),
                             ],
@@ -196,15 +183,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             hint: 'tu@email.com',
                             keyboardType: TextInputType.emailAddress,
                             prefixIcon: Icons.email_outlined,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Ingresa tu correo electrónico';
-                              }
-                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                return 'Ingresa un correo válido';
-                              }
-                              return null;
-                            },
+                            validator: AuthValidators.email,
                           ),
 
                           const SizedBox(height: 20),
@@ -215,18 +194,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             label: 'Nombre de usuario',
                             hint: '@tu_usuario',
                             prefixIcon: Icons.alternate_email,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Ingresa tu nombre de usuario';
-                              }
-                              if (value.length < 3) {
-                                return 'El nombre de usuario debe tener al menos 3 caracteres';
-                              }
-                              if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
-                                return 'Solo se permiten letras, números y guiones bajos';
-                              }
-                              return null;
-                            },
+                            validator: AuthValidators.username,
                           ),
 
                           // Campo de nombre artístico (solo para artistas)
@@ -237,14 +205,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               label: 'Nombre artístico',
                               hint: 'Tu nombre artístico',
                               prefixIcon: Icons.music_note,
-                              validator: (value) {
-                                if (_selectedRole == UserRole.artist) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Ingresa tu nombre artístico';
-                                  }
-                                }
-                                return null;
-                              },
+                              validator: (value) => AuthValidators.stageName(value, isArtist: _selectedRole == UserRole.artist),
                             ),
                           ],
 
@@ -268,15 +229,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 });
                               },
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Ingresa tu contraseña';
-                              }
-                              if (value.length < 8) {
-                                return 'La contraseña debe tener al menos 8 caracteres';
-                              }
-                              return null;
-                            },
+                            validator: AuthValidators.password,
                           ),
 
                           const SizedBox(height: 20),
@@ -299,15 +252,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 });
                               },
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Confirma tu contraseña';
-                              }
-                              if (value != _passwordController.text) {
-                                return 'Las contraseñas no coinciden';
-                              }
-                              return null;
-                            },
+                            validator: (value) => AuthValidators.confirmPassword(value, _passwordController.text),
                           ),
 
                           const SizedBox(height: 20),
@@ -330,26 +275,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   padding: const EdgeInsets.only(top: 12),
                                   child: RichText(
                                     text: TextSpan(
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
+                                      style: AppTextStyles.authText,
                                       children: [
                                         const TextSpan(text: 'Acepto los '),
                                         TextSpan(
                                           text: 'Términos y Condiciones',
-                                          style: GoogleFonts.inter(
-                                            color: NeumorphismTheme.coffeeMedium,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                          style: AppTextStyles.authTextSecondary,
                                         ),
                                         const TextSpan(text: ' y la '),
                                         TextSpan(
                                           text: 'Política de Privacidad',
-                                          style: GoogleFonts.inter(
-                                            color: NeumorphismTheme.coffeeMedium,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                          style: AppTextStyles.authTextSecondary,
                                         ),
                                       ],
                                     ),
@@ -364,7 +300,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           // Botón de registro
                           AuthButton(
                             text: 'Crear Cuenta',
-                            isLoading: authState.isLoading,
+                            isLoading: isLoading,
                             onPressed: _acceptTerms ? () async {
                               if (_formKey.currentState!.validate()) {
                                 await authNotifier.register(
@@ -397,10 +333,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
                                   'O regístrate con',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
+                                  style: AppTextStyles.authText,
                                 ),
                               ),
                               Expanded(
@@ -455,20 +388,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             children: [
                               Text(
                                 '¿Ya tienes cuenta? ',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
+                                style: AppTextStyles.authText,
                               ),
                               TextButton(
                                 onPressed: () => context.go('/login'),
                                 child: Text(
                                   'Inicia sesión',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: NeumorphismTheme.coffeeMedium,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: AppTextStyles.authLink,
                                 ),
                               ),
                             ],

@@ -1,11 +1,10 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/favorites_provider.dart';
 import '../utils/logger.dart';
 
-/// Botón de favorito reutilizable con animaciones chidas
-/// Muestra un corazón que cambia de estado al tocar con efectos visuales
+/// Botón de favorito optimizado con animación sencilla y eficiente
+/// Animación simple de escala tipo "bounce" rápido
 class FavoriteButton extends ConsumerStatefulWidget {
   final String songId;
   final bool? isFavorite; // Opcional: si se proporciona, se usa este valor inicial
@@ -27,80 +26,37 @@ class FavoriteButton extends ConsumerStatefulWidget {
 }
 
 class _FavoriteButtonState extends ConsumerState<FavoriteButton>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late AnimationController _scaleController;
-  late AnimationController _rotationController;
-  late AnimationController _pulseController;
-  late AnimationController _particlesController;
-  
   late Animation<double> _scaleAnimation;
-  late Animation<double> _rotationAnimation;
-  late Animation<double> _pulseAnimation;
   
   bool _isToggling = false;
-  bool _showParticles = false;
 
   @override
   void initState() {
     super.initState();
     
-    // Controlador de escala (bounce effect)
+    // 🆕 Controlador único de escala - Animación rápida y suave
     _scaleController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 200), // Más rápido
     );
-    _scaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 1.4).chain(
-          CurveTween(curve: Curves.easeOut),
-        ),
-        weight: 50,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: 1.4, end: 1.0).chain(
-          CurveTween(curve: Curves.elasticOut),
-        ),
-        weight: 50,
-      ),
-    ]).animate(_scaleController);
     
-    // Controlador de rotación
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
+    // 🆕 Animación simple de escala tipo bounce suave
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.2, // Escala más pequeña para ser más sutil
+    ).animate(
       CurvedAnimation(
-        parent: _rotationController,
-        curve: Curves.easeInOut,
+        parent: _scaleController,
+        curve: Curves.easeOut, // Curva suave sin rebote excesivo
       ),
-    );
-    
-    // Controlador de pulso (para cuando está activo)
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    
-    // Controlador de partículas
-    _particlesController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
     );
   }
 
   @override
   void dispose() {
     _scaleController.dispose();
-    _rotationController.dispose();
-    _pulseController.dispose();
-    _particlesController.dispose();
     super.dispose();
   }
 
@@ -109,43 +65,23 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
 
     setState(() {
       _isToggling = true;
-      _showParticles = true;
     });
 
     try {
-      // Animaciones simultáneas chidas
-      await Future.wait([
-        _scaleController.forward(),
-        _rotationController.forward(),
-        _particlesController.forward(),
-      ]);
+      // 🆕 Animación simple: escala hacia arriba y luego vuelve
+      await _scaleController.forward();
+      await _scaleController.reverse();
 
       // Toggle en el provider
       await ref.read(favoritesProvider.notifier).toggleFavorite(widget.songId);
 
       // Callback opcional
       widget.onToggle?.call();
-      
-      // Resetear animaciones
-      _scaleController.reset();
-      _rotationController.reset();
-      
-      // Ocultar partículas después de un delay
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) {
-          setState(() {
-            _showParticles = false;
-          });
-          _particlesController.reset();
-        }
-      });
     } catch (e, stackTrace) {
       AppLogger.error('[FavoriteButton] Error al toggle favorito: $e', stackTrace);
       
-      // Resetear animaciones en caso de error
+      // Resetear animación en caso de error
       _scaleController.reset();
-      _rotationController.reset();
-      _particlesController.reset();
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -177,64 +113,20 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
     final iconColor = widget.iconColor ?? Colors.white;
     final iconSize = widget.iconSize ?? 24.0;
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Partículas de fondo (solo cuando se agrega a favoritos)
-        if (_showParticles && isFavorite)
-          ...List.generate(8, (index) {
-            final angle = (index * 2 * math.pi) / 8;
-            return AnimatedBuilder(
-              animation: _particlesController,
-              builder: (context, child) {
-                final progress = _particlesController.value;
-                final distance = progress * 30;
-                final opacity = 1.0 - progress;
-                
-                return Positioned(
-                  left: math.cos(angle) * distance,
-                  top: math.sin(angle) * distance,
-                  child: Opacity(
-                    opacity: opacity,
-                    child: Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          }),
-        
-        // Icono principal con animaciones
-        RotationTransition(
-          turns: _rotationAnimation,
-          child: ScaleTransition(
-            scale: _scaleAnimation,
-            child: AnimatedBuilder(
-              animation: isFavorite ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: isFavorite ? _pulseAnimation.value : 1.0,
-                  child: IconButton(
-                    icon: Icon(
-                      isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: isFavorite ? Colors.red : iconColor,
-                      size: iconSize,
-                    ),
-                    onPressed: _isToggling ? null : _handleTap,
-                    tooltip: isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
-                  ),
-                );
-              },
-            ),
-          ),
+    // 🆕 Widget simple con solo animación de escala
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: IconButton(
+        icon: Icon(
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: isFavorite ? Colors.red : iconColor,
+          size: iconSize,
         ),
-      ],
+        onPressed: _isToggling ? null : _handleTap,
+        tooltip: isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
+        padding: EdgeInsets.zero, // 🆕 Sin padding para mejor rendimiento
+        constraints: const BoxConstraints(), // 🆕 Sin constraints innecesarios
+      ),
     );
   }
 }

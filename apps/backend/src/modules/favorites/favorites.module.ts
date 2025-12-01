@@ -17,3 +17,11 @@ import { User } from '../../common/entities/user.entity';
 })
 export class FavoritesModule {}
 
+
+
+
+
+
+
+
+

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/theme/text_styles.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/social_auth_button.dart';
+import '../utils/validators.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -32,7 +33,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
+    // OPTIMIZACIÓN: usar select para escuchar solo isLoading y evitar rebuilds innecesarios
+    final isLoading = ref.watch(authStateProvider.select((state) => state.isLoading));
     final authNotifier = ref.read(authStateProvider.notifier);
 
     ref.listen<AuthState>(authStateProvider, (previous, next) {
@@ -65,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 
                 // Logo y título
                 FadeInDown(
-                  duration: const Duration(milliseconds: 600),
+                  duration: const Duration(milliseconds: 300), // Optimizado: reducido de 600ms a 300ms
                   child: Column(
                     children: [
                       Container(
@@ -84,17 +86,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 24),
                       Text(
                         'Vintage Music',
-                        style: GoogleFonts.inter(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                        style: AppTextStyles.authTitle,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Inicia sesión en tu cuenta',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
+                        style: AppTextStyles.authSubtitle.copyWith(
                           color: Colors.white.withValues(alpha: 0.8),
                         ),
                       ),
@@ -106,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Formulario de login
                 FadeInUp(
-                  duration: const Duration(milliseconds: 800),
+                  duration: const Duration(milliseconds: 350), // Optimizado: reducido de 800ms a 350ms
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -132,15 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             hint: 'tu@email.com',
                             keyboardType: TextInputType.emailAddress,
                             prefixIcon: Icons.email_outlined,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Ingresa tu correo electrónico';
-                              }
-                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                                return 'Ingresa un correo válido';
-                              }
-                              return null;
-                            },
+                            validator: AuthValidators.email,
                           ),
 
                           const SizedBox(height: 20),
@@ -163,15 +152,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 });
                               },
                             ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Ingresa tu contraseña';
-                              }
-                              if (value.length < 8) {
-                                return 'La contraseña debe tener al menos 8 caracteres';
-                              }
-                              return null;
-                            },
+                            validator: AuthValidators.password,
                           ),
 
                           const SizedBox(height: 16),
@@ -193,10 +174,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                   Text(
                                     'Recordarme',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
-                                    ),
+                                    style: AppTextStyles.authText,
                                   ),
                                 ],
                               ),
@@ -211,11 +189,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 },
                                 child: Text(
                                   '¿Olvidaste tu contraseña?',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: NeumorphismTheme.coffeeMedium,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: AppTextStyles.authTextSecondary,
                                 ),
                               ),
                             ],
@@ -226,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           // Botón de login
                           AuthButton(
                             text: 'Iniciar Sesión',
-                            isLoading: authState.isLoading,
+                            isLoading: isLoading,
                             onPressed: () async {
                               if (_formKey.currentState!.validate()) {
                                 await authNotifier.login(
@@ -252,10 +226,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
                                   'O continúa con',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
+                                  style: AppTextStyles.authText,
                                 ),
                               ),
                               Expanded(
@@ -312,10 +283,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             children: [
                               Text(
                                 '¿No tienes cuenta? ',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: Colors.grey[600],
-                                ),
+                                style: AppTextStyles.authText,
                               ),
                               TextButton(
                                 onPressed: () {
@@ -323,11 +291,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 },
                                 child: Text(
                                   'Regístrate',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: NeumorphismTheme.coffeeMedium,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: AppTextStyles.authLink,
                                 ),
                               ),
                             ],

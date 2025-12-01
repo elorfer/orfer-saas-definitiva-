@@ -5,15 +5,26 @@ import 'logger.dart';
 /// Maneja conversión de localhost a 10.0.2.2 para emulador Android,
 /// corrección de puertos, y construcción de URLs relativas
 class UrlNormalizer {
+  // OPTIMIZACIÓN: Cache simple para URLs normalizadas (evita recalcular en cada build)
+  static final Map<String, String> _urlCache = {};
+  static const int _maxCacheSize = 100; // Limitar tamaño del cache
+
   /// Normaliza una URL de imagen para que funcione correctamente en todas las plataformas
   /// 
   /// - Convierte localhost/127.0.0.1 a 10.0.2.2 para emulador Android
   /// - Corrige puerto 3000 a 3001
   /// - Corrige rutas /covers/ sin /uploads/ antes
   /// - Construye URLs completas desde rutas relativas
+  /// - OPTIMIZACIÓN: Usa cache para evitar recalcular URLs ya normalizadas
   static String? normalizeImageUrl(String? imageUrl, {bool enableLogging = false}) {
     if (imageUrl == null || imageUrl.isEmpty) {
       return null;
+    }
+
+    // OPTIMIZACIÓN: Verificar cache primero
+    final cached = _urlCache[imageUrl];
+    if (cached != null) {
+      return cached;
     }
 
     // Si ya es una URL completa, usar la lógica centralizada
@@ -28,6 +39,9 @@ class UrlNormalizer {
       if (enableLogging) {
         AppLogger.refresh('[UrlNormalizer] URL de imagen normalizada: $imageUrl -> $normalized');
       }
+      
+      // OPTIMIZACIÓN: Guardar en cache y limpiar si es necesario
+      _addToCache(imageUrl, normalized);
       return normalized;
     }
 
@@ -46,6 +60,9 @@ class UrlNormalizer {
       if (enableLogging) {
         AppLogger.refresh('[UrlNormalizer] URL construida desde ruta relativa: $imageUrl -> $finalUrl');
       }
+      
+      // OPTIMIZACIÓN: Guardar en cache
+      _addToCache(imageUrl, finalUrl);
       return finalUrl;
     }
 
@@ -55,15 +72,21 @@ class UrlNormalizer {
       if (enableLogging) {
         AppLogger.refresh('[UrlNormalizer] URL construida desde nombre de archivo: $imageUrl -> $finalUrl');
       }
+      
+      // OPTIMIZACIÓN: Guardar en cache
+      _addToCache(imageUrl, finalUrl);
       return finalUrl;
     }
 
     // Si ya tiene / al inicio pero no es /uploads, construir URL completa
     final finalUrl = '$cleanBaseUrl$imageUrl';
-    if (enableLogging) {
-      AppLogger.refresh('[UrlNormalizer] URL construida desde ruta absoluta: $imageUrl -> $finalUrl');
-    }
-    return finalUrl;
+      if (enableLogging) {
+        AppLogger.refresh('[UrlNormalizer] URL construida desde ruta absoluta: $imageUrl -> $finalUrl');
+      }
+      
+      // OPTIMIZACIÓN: Guardar en cache
+      _addToCache(imageUrl, finalUrl);
+      return finalUrl;
   }
 
   /// Normaliza una URL de archivo (audio, video, etc.) para que funcione correctamente en todas las plataformas
@@ -161,6 +184,21 @@ class UrlNormalizer {
     }
     
     return normalized;
+  }
+
+  /// Agrega una URL al cache y limpia entradas antiguas si es necesario
+  static void _addToCache(String original, String normalized) {
+    // Limpiar cache si excede el tamaño máximo (FIFO simple)
+    if (_urlCache.length >= _maxCacheSize) {
+      final firstKey = _urlCache.keys.first;
+      _urlCache.remove(firstKey);
+    }
+    _urlCache[original] = normalized;
+  }
+
+  /// Limpia el cache de URLs (útil para testing o cuando cambia la configuración)
+  static void clearCache() {
+    _urlCache.clear();
   }
 }
 

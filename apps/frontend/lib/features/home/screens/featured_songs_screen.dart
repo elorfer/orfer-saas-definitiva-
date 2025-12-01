@@ -6,9 +6,8 @@ import '../../../core/providers/intelligent_featured_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/config/performance_config.dart';
-import '../../../core/widgets/favorite_button.dart';
+import '../../../core/widgets/optimized_image.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
-import '../../../core/utils/logger.dart';
 import '../../../core/utils/url_normalizer.dart';
 
 /// 🚀 PANTALLA OPTIMIZADA DE CANCIONES DESTACADAS
@@ -284,42 +283,13 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
   }
 
   void _onSongTap(BuildContext context, Song song) {
-    try {
-      Navigator.of(context).push(
-        PageRouteBuilder<void>(
-          pageBuilder: (context, animation, secondaryAnimation) {
-            return SongDetailScreen(song: song);
-          },
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOut;
-
-            var tween = Tween(begin: begin, end: end).chain(
-              CurveTween(curve: curve),
-            );
-
-            return SlideTransition(
-              position: animation.drive(tween),
-              child: child,
-            );
-          },
-        ),
-      );
-      debugPrint('[FeaturedSongsScreen] Navegación exitosa');
-    } catch (e, stackTrace) {
-      AppLogger.error('[FeaturedSongsScreen] Error navegación: $e', stackTrace);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al abrir detalles de la canción'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+    // Usar go_router a través de la función estática que previene duplicados
+    // go_router maneja las transiciones automáticamente según la configuración en app_router.dart
+    SongDetailScreen.navigateToSong(context, song);
   }
 }
 
-/// Widget de tarjeta con estilo de favoritos (sin blur)
+/// Widget de tarjeta con estilo igual al perfil del artista (sin número, corazón ni play)
 class _BlurSongCard extends ConsumerWidget {
   final FeaturedSong featuredSong;
   final VoidCallback onTap;
@@ -351,14 +321,9 @@ class _BlurSongCard extends ConsumerWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            blurRadius: 8, // Igual que en perfil de artista
+            offset: const Offset(0, 3), // Igual que en perfil de artista
             spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(-2, -2),
           ),
         ],
       ),
@@ -388,9 +353,9 @@ class _BlurSongCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                          color: Colors.black.withValues(alpha: 0.15), // Igual que perfil de artista
+                          blurRadius: 6, // Igual que perfil de artista
+                          offset: const Offset(0, 2), // Igual que perfil de artista
                           spreadRadius: 0,
                         ),
                       ],
@@ -398,82 +363,14 @@ class _BlurSongCard extends ConsumerWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       clipBehavior: Clip.antiAlias,
-                      child: coverUrl != null
-                          ? SizedBox(
-                              width: 64,
-                              height: 64,
-                              child: Image.network(
-                                coverUrl,
-                                fit: BoxFit.cover,
-                                width: 64,
-                                height: 64,
-                                alignment: Alignment.center,
-                                repeat: ImageRepeat.noRepeat,
-                              // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
-                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                if (wasSynchronouslyLoaded) return child;
-                                return AnimatedOpacity(
-                                  opacity: frame == null ? 0 : 1,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: child,
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) {
-                                  return child;
-                                }
-                                // Placeholder simple sin CircularProgressIndicator para mejor rendimiento
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        NeumorphismTheme.coffeeMedium,
-                                        NeumorphismTheme.coffeeDark,
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        NeumorphismTheme.coffeeMedium,
-                                        NeumorphismTheme.coffeeDark,
-                                      ],
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.music_note,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                          : Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    NeumorphismTheme.coffeeMedium,
-                                    NeumorphismTheme.coffeeDark,
-                                  ],
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.music_note,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
+                      child: OptimizedImage(
+                        imageUrl: coverUrl,
+                        fit: BoxFit.cover,
+                        width: 64,
+                        height: 64,
+                        borderRadius: 16,
+                        useThumbnail: true,
+                      ),
                     ),
                   ),
                 ),
@@ -484,22 +381,21 @@ class _BlurSongCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Título
                       Text(
-                        song.title ?? 'Canción Desconocida',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        song.title ?? 'Sin título',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                           color: NeumorphismTheme.textPrimary,
+                          letterSpacing: -0.3,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      // Artista
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.person_outline,
                             size: 14,
                             color: NeumorphismTheme.textSecondary,
@@ -507,10 +403,12 @@ class _BlurSongCard extends ConsumerWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              song.artist?.stageName ?? 'Artista Desconocido',
-                              style: GoogleFonts.inter(
+                              song.artist?.stageName ?? 
+                              song.artist?.displayName ?? 
+                              'Artista Desconocido',
+                              style: const TextStyle(
                                 fontSize: 14,
-                                fontWeight: FontWeight.w400,
+                                fontWeight: FontWeight.w500,
                                 color: NeumorphismTheme.textSecondary,
                               ),
                               maxLines: 1,
@@ -521,37 +419,6 @@ class _BlurSongCard extends ConsumerWidget {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                // Iconos: Corazón y Menú
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Icono de corazón
-                    FavoriteButton(
-                      songId: song.id,
-                      iconSize: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    // Icono de tres rayitas (menú)
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () {
-                          // TODO: Implementar menú de opciones
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(
-                            Icons.more_vert,
-                            color: NeumorphismTheme.textSecondary,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),

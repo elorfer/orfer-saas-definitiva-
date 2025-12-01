@@ -1,57 +1,147 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/navigation/app_router.dart';
 import 'core/services/http_cache_service.dart';
 import 'core/services/http_client_service.dart';
 import 'core/theme/neumorphism_theme.dart';
+import 'core/utils/logger.dart';
 
 /// Builder personalizado para manejar errores no capturados
-/// Ignora errores no críticos y muestra un mensaje amigable solo para errores importantes
+/// Ignora errores no críticos y reporta adecuadamente los errores críticos
 Widget _errorWidgetBuilder(FlutterErrorDetails details) {
-  // Log del error para debugging
-  debugPrint('ERROR: ${details.exception}');
-  debugPrint('Stack trace: ${details.stack}');
-  
   final errorStr = details.exception.toString().toLowerCase();
   final stackStr = details.stack?.toString().toLowerCase() ?? '';
+  final library = details.library ?? '';
   
-  // Ignorar errores relacionados con audio que no son críticos
-  if (errorStr.contains('platformexception') || 
+  // Categorizar errores para mejor manejo
+  final isAudioError = errorStr.contains('platformexception') || 
       errorStr.contains('audioservice') ||
       errorStr.contains('audio_service') ||
       stackStr.contains('audioservice') ||
-      stackStr.contains('audio_service')) {
-    debugPrint('Error relacionado con audio ignorado (no crítico)');
-    return const SizedBox.shrink();
-  }
+      stackStr.contains('audio_service');
   
-  // Ignorar errores de Provider/Stream que no son críticos
-  if (errorStr.contains('provider') && 
-      (errorStr.contains('disposed') || errorStr.contains('null'))) {
-    debugPrint('Error de Provider ignorado (no crítico)');
-    return const SizedBox.shrink();
-  }
+  final isProviderDisposedError = errorStr.contains('provider') && 
+      (errorStr.contains('disposed') || errorStr.contains('null'));
   
-  // Ignorar errores de AsyncValue/StreamProvider que no son críticos
-  if (errorStr.contains('asyncvalue') || 
+  final isAsyncValueError = errorStr.contains('asyncvalue') || 
       errorStr.contains('streamprovider') ||
-      (errorStr.contains('null') && stackStr.contains('provider'))) {
-    debugPrint('Error de AsyncValue/StreamProvider ignorado (no crítico)');
+      (errorStr.contains('null') && stackStr.contains('provider'));
+  
+  final isNetworkError = errorStr.contains('socketexception') ||
+      errorStr.contains('network') ||
+      errorStr.contains('connection') ||
+      errorStr.contains('timeout');
+  
+  final isRenderingError = errorStr.contains('rendering') ||
+      errorStr.contains('layout') ||
+      errorStr.contains('overflow') ||
+      library.contains('rendering');
+  
+  // Ignorar errores no críticos (mantener UI funcionando)
+  if (isAudioError) {
+    // Errores de audio son comunes y no críticos para la UI
+    if (kDebugMode) {
+      AppLogger.debug('[ErrorHandler] Error de audio ignorado (no crítico): ${details.exception}');
+    }
     return const SizedBox.shrink();
   }
   
-  // Para errores críticos reales, solo loguearlos pero no bloquear la UI
-  // En producción, podrías reportar estos errores a un servicio de monitoreo
-  debugPrint('ERROR CRÍTICO (no bloquea UI): ${details.exception}');
+  if (isProviderDisposedError) {
+    // Errores de provider disposed son comunes durante navegación
+    if (kDebugMode) {
+      AppLogger.debug('[ErrorHandler] Error de Provider disposed ignorado (no crítico): ${details.exception}');
+    }
+    return const SizedBox.shrink();
+  }
   
-  // Retornar widget vacío en lugar de mostrar error para no bloquear la UI
+  if (isAsyncValueError) {
+    // Errores de AsyncValue son comunes y se manejan internamente
+    if (kDebugMode) {
+      AppLogger.debug('[ErrorHandler] Error de AsyncValue ignorado (no crítico): ${details.exception}');
+    }
+    return const SizedBox.shrink();
+  }
+  
+  // Errores de red: reportar pero no bloquear UI (el usuario puede reintentar)
+  if (isNetworkError) {
+    AppLogger.warning('[ErrorHandler] Error de red detectado: ${details.exception}');
+    // En producción, podrías reportar a un servicio de monitoreo
+    return const SizedBox.shrink();
+  }
+  
+  // Errores de renderizado: reportar con más detalle pero no bloquear UI
+  if (isRenderingError) {
+    AppLogger.error(
+      '[ErrorHandler] Error de renderizado detectado',
+      details.exception,
+      details.stack,
+    );
+    // En producción, podrías reportar a un servicio de monitoreo
+    return const SizedBox.shrink();
+  }
+  
+  // ERRORES CRÍTICOS: Reportar con máximo detalle
+  // Estos son errores que no deberían ocurrir y necesitan atención
+  AppLogger.error(
+    '[ErrorHandler] ERROR CRÍTICO DETECTADO',
+    details.exception,
+    details.stack,
+  );
+  
+  // Log adicional con información del contexto
+  if (kDebugMode) {
+    debugPrint('═══════════════════════════════════════════════════════════');
+    debugPrint('ERROR CRÍTICO - Información detallada:');
+    debugPrint('Exception: ${details.exception}');
+    debugPrint('Library: ${details.library ?? 'N/A'}');
+    debugPrint('Context: ${details.context?.toString() ?? 'N/A'}');
+    debugPrint('Information: ${details.informationCollector?.call().join('\n') ?? 'N/A'}');
+    debugPrint('═══════════════════════════════════════════════════════════');
+  }
+  
+  // TODO: En producción, reportar a un servicio de monitoreo de errores
+  // Ejemplo: Firebase Crashlytics, Sentry, etc.
+  // _reportToErrorService(details);
+  
+  // Retornar widget vacío para no bloquear la UI
   // El usuario puede continuar usando la app
   return const SizedBox.shrink();
 }
 
+/// Manejar errores de Flutter framework (errores no capturados)
+void _setupErrorHandlers() {
+  // Manejar errores de Flutter (widgets, rendering, etc.)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    // Usar nuestro builder personalizado
+    _errorWidgetBuilder(details);
+    
+    // En modo debug, también usar el handler por defecto de Flutter
+    if (kDebugMode) {
+      FlutterError.presentError(details);
+    }
+  };
+  
+  // Manejar errores de zona (async errors no capturados)
+  PlatformDispatcher.instance.onError = (error, stack) {
+    // Reportar errores críticos de zona
+    AppLogger.error(
+      '[ErrorHandler] Error de zona no capturado',
+      error,
+      stack,
+    );
+    
+    // Retornar true para indicar que el error fue manejado
+    return true;
+  };
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configurar manejo de errores ANTES de cualquier otra inicialización
+  _setupErrorHandlers();
   
   // Inicializar caché HTTP para mejorar rendimiento
   await HttpCacheService.initialize();

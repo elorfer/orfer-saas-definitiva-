@@ -27,6 +27,21 @@ class NeumorphismTheme {
     ],
   );
 
+  // Gradiente para placeholders de imágenes (usado en widgets de búsqueda y otros)
+  static const LinearGradient imagePlaceholderGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      accent, // coffeeMedium
+      accentDark, // coffeeDark
+    ],
+  );
+
+  // Colores para efectos Shimmer (skeleton loaders)
+  static const Color shimmerBaseColor = Color(0xFFE0E0E0);
+  static const Color shimmerHighlightColor = Color(0xFFF5F5F5);
+  static const Color shimmerContentColor = Color(0xFFF0F0F0);
+
   /// Sombras "Soft UI" - Sutiles y difusas
   static List<BoxShadow> get softShadow => [
     BoxShadow(

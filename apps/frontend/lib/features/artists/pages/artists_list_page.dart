@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../models/artist.dart';
 import '../services/artists_api.dart';
 import '../widgets/artist_card.dart';
@@ -50,7 +51,13 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
                 itemCount: _items.length,
                 itemBuilder: (context, index) {
                   final a = _items[index];
-                  return ArtistCard(artist: a, onTap: () {});
+                  return ArtistCard(
+                    artist: a,
+                    onTap: () {
+                      // Usar go_router para navegación consistente
+                      context.push('/artist/${a.id}', extra: a);
+                    },
+                  );
                 },
               ),
             ),

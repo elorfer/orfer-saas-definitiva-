@@ -407,6 +407,12 @@ class UnifiedPlayerNotifier extends Notifier<UnifiedPlayerState> {
     _setupAudioManagerListeners();
     // _setupProfessionalListeners(); // Ya no es necesario
     _startProgressTimer();
+    
+    // Limpiar recursos cuando se dispose el provider
+    ref.onDispose(() {
+      cleanup();
+    });
+    
     return const UnifiedPlayerState();
   }
   
@@ -518,6 +524,12 @@ final unifiedPlayerProvider = NotifierProvider<UnifiedPlayerNotifier, UnifiedPla
 
 /// Provider de compatibilidad para el formato anterior (para transición gradual)
 final audioStateProvider = Provider<({Song? currentSong, bool isPlaying})>((ref) {
-  final unifiedState = ref.watch(unifiedPlayerProvider);
-  return (currentSong: unifiedState.currentSong, isPlaying: unifiedState.isPlaying);
+  // Optimización: usar select para escuchar solo los campos necesarios
+  final currentSong = ref.watch(
+    unifiedPlayerProvider.select((state) => state.currentSong),
+  );
+  final isPlaying = ref.watch(
+    unifiedPlayerProvider.select((state) => state.isPlaying),
+  );
+  return (currentSong: currentSong, isPlaying: isPlaying);
 });

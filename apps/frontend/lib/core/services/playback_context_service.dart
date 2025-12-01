@@ -292,7 +292,7 @@ class PlaybackContextService {
       AppLogger.info('[PlaybackContextService] 🌟 Creando contexto de canciones destacadas');
       
       // Por ahora, crear un contexto simple con la canción actual
-      // TODO: Obtener todas las canciones destacadas del HomeService
+      // Nota: Futura mejora - obtener todas las canciones destacadas del HomeService
       final context = PlaybackContext.featuredSongs(
         currentSongId: startingSong.id,
         name: 'Canciones Destacadas',

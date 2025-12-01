@@ -21,6 +21,7 @@ class OptimizedImage extends StatelessWidget {
   final bool isLargeCover; // Para portadas grandes (SliverAppBar)
   final int? maxCacheWidth; // Ancho máximo de caché personalizado
   final int? maxCacheHeight; // Alto máximo de caché personalizado
+  final bool skipFade; // Si es true, elimina fade cuando la imagen está en cache (evita parpadeo)
 
   const OptimizedImage({
     super.key,
@@ -36,6 +37,7 @@ class OptimizedImage extends StatelessWidget {
     this.isLargeCover = false, // Para portadas grandes
     this.maxCacheWidth,
     this.maxCacheHeight,
+    this.skipFade = false, // Por defecto mantener fade para nuevas imágenes
   });
 
 
@@ -84,68 +86,49 @@ class OptimizedImage extends StatelessWidget {
           : result.round();
     }
 
-    int? getMaxWidthDiskCache() {
-      if (maxCacheWidth != null) return maxCacheWidth;
-      
-      if (isLargeCover) {
-        // Para portadas grandes, caché en disco limitado a 1920px (Full HD)
-        return 1920;
-      }
-      
-      if (width == null || !width!.isFinite || width!.isNaN || width!.isInfinite) return 1200;
-      final result = width! * 2;
-      if (!result.isFinite || result.isNaN || result.isInfinite) return 1200;
-      // Limitar a máximo 1920px para no usar demasiado espacio en disco
-      return (result > 1920) ? 1920 : result.round();
-    }
 
-    int? getMaxHeightDiskCache() {
-      if (maxCacheHeight != null) return maxCacheHeight;
-      
-      if (isLargeCover) {
-        // Para portadas grandes, caché en disco limitado a 1080px
-        return 1080;
-      }
-      
-      if (height == null || !height!.isFinite || height!.isNaN || height!.isInfinite) return 1200;
-      final result = height! * 2;
-      if (!result.isFinite || result.isNaN || result.isInfinite) return 1200;
-      // Limitar a máximo 1920px para no usar demasiado espacio en disco
-      return (result > 1920) ? 1920 : result.round();
-    }
+    // CRÍTICO: Cuando skipFade es true, usar placeholder solo si no se proporciona uno personalizado
+    // Si skipFade es true pero no hay placeholder personalizado, usar el placeholder por defecto
+    // Esto asegura que siempre haya algo visible mientras la imagen carga
+    final Widget effectivePlaceholder = placeholder ?? _buildPlaceholder();
 
-    final Widget imageWidget = CachedNetworkImage(
-      imageUrl: imageUrl!,
+    // CRÍTICO: CachedNetworkImage usa octo_image que NO permite placeholder y progressIndicatorBuilder simultáneamente
+    // Solución: Usar Image con CachedNetworkImageProvider y manejar placeholder manualmente con frameBuilder
+    // Esto evita el conflicto de assertion de octo_image
+    final imageProvider = CachedNetworkImageProvider(
+      imageUrl!,
+      cacheKey: imageUrl,
+      headers: const {
+        'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
+        'Cache-Control': 'max-age=86400',
+      },
+    );
+    
+    // Precargar imagen en memoria con tamaño optimizado
+    final memCacheWidth = getMemCacheWidth();
+    final memCacheHeight = getMemCacheHeight();
+    
+    final Widget imageWidget = Image(
+      image: ResizeImage(
+        imageProvider,
+        width: memCacheWidth,
+        height: memCacheHeight,
+      ),
       fit: fit,
       width: (width != null && width!.isFinite && !width!.isNaN && !width!.isInfinite) ? width : null,
       height: (height != null && height!.isFinite && !height!.isNaN && !height!.isInfinite) ? height : null,
-      // Transiciones más rápidas para mejor UX (OPTIMIZADO 🚀)
-      // Si la imagen ya está en caché, usar transición instantánea
-      fadeInDuration: isLargeCover 
-          ? const Duration(milliseconds: 50) // Más rápido para portadas grandes
-          : const Duration(milliseconds: 30), // Más rápido para imágenes pequeñas
-      fadeOutDuration: const Duration(milliseconds: 0), // Sin fade out para evitar parpadeo
-      placeholderFadeInDuration: const Duration(milliseconds: 0), // Sin fade para placeholder
-      fadeInCurve: Curves.easeOut, // Curva más rápida
-      // Usar imagen anterior si la URL cambia (mejor UX durante transiciones)
-      useOldImageOnUrlChange: true,
-      // Caché optimizado según el contexto
-      memCacheWidth: getMemCacheWidth(),
-      memCacheHeight: getMemCacheHeight(),
-      maxWidthDiskCache: getMaxWidthDiskCache(),
-      maxHeightDiskCache: getMaxHeightDiskCache(),
-      placeholder: (context, url) => placeholder ?? _buildPlaceholder(),
-      errorWidget: (context, url, error) => errorWidget ?? _buildErrorWidget(),
-      // Configuración de caché optimizada (MEJORADO 🚀)
-      cacheKey: imageUrl,
-      httpHeaders: const {
-        'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
-        'Cache-Control': 'max-age=86400', // Cache por 24 horas (más agresivo)
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        // Si la imagen se cargó sincrónicamente o ya tiene frame, mostrarla
+        if (wasSynchronouslyLoaded || frame != null) {
+          return child;
+        }
+        // Mientras carga, mostrar placeholder
+        return effectivePlaceholder;
       },
-      // Configuración de cache más agresiva
-      cacheManager: null, // Usar cache manager por defecto
-      // Configuración adicional para evitar parpadeo
-      filterQuality: FilterQuality.medium, // Balance entre calidad y performance
+      errorBuilder: (context, error, stackTrace) {
+        return errorWidget ?? _buildErrorWidget();
+      },
+      filterQuality: FilterQuality.medium,
     );
 
     if (borderRadius != null) {

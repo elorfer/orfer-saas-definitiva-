@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../core/providers/intelligent_featured_provider.dart';
 import '../../../core/models/song_model.dart';
-import '../../../core/utils/logger.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/widgets/optimized_image.dart';
+import '../../../core/utils/url_normalizer.dart';
 
 /// 🧠 SECCIÓN DE CANCIONES DESTACADAS INTELIGENTES
 /// Usa tu algoritmo avanzado de recomendaciones para mostrar:
@@ -18,13 +21,18 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Inicializar el sistema inteligente
-    ref.watch(intelligentFeaturedInitProvider);
+    // Inicializar el sistema inteligente (usar read para evitar rebuilds innecesarios)
+    ref.read(intelligentFeaturedInitProvider);
+    // Pre-inicializar el reproductor unificado para que el primer play sea más rápido
+    ref.read(unifiedAudioProviderFixed.notifier).ensureInitialized();
     
-    final featuredSongs = ref.watch(intelligentFeaturedSongsProvider);
-    final isLoading = ref.watch(intelligentFeaturedLoadingProvider);
-    final error = ref.watch(intelligentFeaturedErrorProvider);
+    // Optimización: usar select para escuchar solo cambios específicos
+    final featuredSongs = ref.watch(intelligentFeaturedSongsProvider.select((state) => state));
+    final isLoading = ref.watch(intelligentFeaturedLoadingProvider.select((state) => state));
+    final error = ref.watch(intelligentFeaturedErrorProvider.select((state) => state));
 
+    // CRÍTICO: Solo mostrar skeleton durante carga inicial (cuando no hay datos)
+    // Si hay datos pero está cargando (refresh), mostrar contenido existente
     if (isLoading && featuredSongs.isEmpty) {
       return _buildLoadingSection();
     }
@@ -68,10 +76,10 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.auto_awesome,
                           size: 12,
-                          color: const Color(0xFF8B7A6A),
+                          color: Color(0xFF8B7A6A),
                         ),
                         const SizedBox(width: 2),
                         Text(
@@ -89,20 +97,6 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
               ),
               Row(
                 children: [
-                  // Botón de refresh
-                  if (!isLoading)
-                    IconButton(
-                      onPressed: () {
-                        ref.read(intelligentFeaturedProvider.notifier)
-                            .refreshIntelligentRecommendations();
-                      },
-                      icon: const Icon(
-                        Icons.refresh,
-                        size: 18,
-                        color: Color(0xFF8B7A6A),
-                      ),
-                      tooltip: 'Actualizar recomendaciones',
-                    ),
                   TextButton(
                     onPressed: () {
                       context.push('/search');
@@ -169,8 +163,8 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
           ),
         ],
         
-        // Botón para ver más canciones
-        if (featuredSongs.length > 4) ...[
+        // Botón para ver todas las canciones destacadas
+        if (featuredSongs.isNotEmpty) ...[
           const SizedBox(height: 12),
           Center(
             child: TextButton(
@@ -181,7 +175,9 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                 foregroundColor: NeumorphismTheme.accentDark, // ✅ Marrón oscuro
               ),
               child: Text(
-                'Ver ${featuredSongs.length - 4} recomendaciones más',
+                featuredSongs.length > 4
+                    ? 'Ver ${featuredSongs.length - 4} recomendaciones más'
+                    : 'Ver todas las canciones destacadas',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: NeumorphismTheme.accentDark, // ✅ Marrón oscuro
@@ -232,55 +228,113 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
               return RepaintBoundary(
                 key: ValueKey('loading_intelligent_song_$index'),
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), // Mismo margin que el real
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
-                    borderRadius: const BorderRadius.all(Radius.circular(12)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.auto_awesome,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              height: 16,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              height: 12,
-                              width: 150,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                            ),
-                          ],
-                        ),
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      stops: const [0.0, 0.25, 1.0],
+                      colors: [
+                        NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
+                        NeumorphismTheme.surface.withValues(alpha: 0.8),
+                        NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(20), // Mismo borderRadius que el real
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                        spreadRadius: 0,
                       ),
                     ],
+                  ),
+                  child: Shimmer.fromColors(
+                    baseColor: NeumorphismTheme.shimmerBaseColor,
+                    highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0), // Mismo padding que el real (no 12)
+                      child: Row(
+                        children: [
+                          // Portada skeleton - CRÍTICO: 64x64 con borderRadius 16 y sombra
+                          Container(
+                            width: 64,
+                            height: 64,
+                            constraints: const BoxConstraints(
+                              minWidth: 64,
+                              maxWidth: 64,
+                              minHeight: 64,
+                              maxHeight: 64,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(16), // Mismo borderRadius que el real
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                  spreadRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: NeumorphismTheme.shimmerContentColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16), // Mismo espacio que el real
+                          // Información skeleton - CRÍTICO: Mismas alturas que los textos reales
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Título skeleton - fontSize: 17
+                                Container(
+                                  height: 17, // Mismo fontSize que el texto real
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: NeumorphismTheme.shimmerContentColor,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                                const SizedBox(height: 6), // Mismo espacio que el real
+                                // Artista skeleton - fontSize: 14 con icono
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 14, // Mismo tamaño que el icono real
+                                      height: 14,
+                                      decoration: BoxDecoration(
+                                        color: NeumorphismTheme.shimmerContentColor,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4), // Mismo espacio que el real
+                                    Container(
+                                      height: 14, // Mismo fontSize que el texto real
+                                      width: 150,
+                                      decoration: BoxDecoration(
+                                        color: NeumorphismTheme.shimmerContentColor,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -345,8 +399,9 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () {
-                      ref.read(intelligentFeaturedProvider.notifier)
+                    onPressed: () async {
+                      // Refrescar recomendaciones inteligentes
+                      await ref.read(intelligentFeaturedProvider.notifier)
                           .refreshIntelligentRecommendations();
                     },
                     style: ElevatedButton.styleFrom(
@@ -436,34 +491,14 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
     
     debugPrint('[IntelligentFeaturedSongs] Navegando a canción inteligente: ${song.title} (${song.id})');
     
-    try {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SongDetailScreen(song: song),
-          settings: RouteSettings(arguments: {
-            'isFeatured': true,
-            'isIntelligent': true,
-            'source': 'intelligent_recommendations'
-          }),
-        ),
-      );
-      debugPrint('[IntelligentFeaturedSongs] Navegación exitosa');
-    } catch (e, stackTrace) {
-      AppLogger.error('[IntelligentFeaturedSongs] Error al navegar: $e', stackTrace);
-      if (context.mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => SongDetailScreen(song: song),
-          ),
-        );
-      }
-    }
+    // Usar go_router a través de la función estática que previene duplicados
+    SongDetailScreen.navigateToSong(context, song);
   }
 }
 
 /// 🎵 TARJETA DE CANCIÓN DESTACADA INTELIGENTE
-/// Versión mejorada que muestra la razón de la recomendación
-class IntelligentFeaturedSongCard extends StatelessWidget {
+/// Estilo igual al perfil del artista (sin número, corazón ni play)
+class IntelligentFeaturedSongCard extends ConsumerWidget {
   final FeaturedSong featuredSong;
   final VoidCallback onTap;
 
@@ -474,110 +509,130 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final song = featuredSong.song;
+    final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
+        ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
+        : null;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          stops: const [0.0, 0.25, 1.0],
+          colors: [
+            NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15), // Toque de marrón en la izquierda
+            NeumorphismTheme.surface.withValues(alpha: 0.8),
+            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8, // Igual que en perfil de artista
+            offset: const Offset(0, 3), // Igual que en perfil de artista
+            spreadRadius: 0,
+          ),
+        ],
+      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+          borderRadius: BorderRadius.circular(20),
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(12),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // Imagen de la canción con indicador de IA
-                Stack(
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8B7A6A),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: featuredSong.song.coverArtUrl != null
-                            ? Image.network(
-                                featuredSong.song.coverArtUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.music_note,
-                                    color: Colors.white,
-                                    size: 24,
-                                  );
-                                },
-                              )
-                            : const Icon(
-                                Icons.music_note,
-                                color: Colors.white,
-                                size: 24,
-                              ),
+                // Portada con efecto de elevación (igual que perfil de artista)
+                Container(
+                    width: 64,
+                    height: 64,
+                    constraints: const BoxConstraints(
+                      minWidth: 64,
+                      maxWidth: 64,
+                      minHeight: 64,
+                      maxHeight: 64,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15), // Igual que perfil de artista
+                          blurRadius: 6, // Igual que perfil de artista
+                          offset: const Offset(0, 2), // Igual que perfil de artista
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: OptimizedImage(
+                        imageUrl: coverUrl,
+                        fit: BoxFit.cover,
+                        width: 64,
+                        height: 64,
+                        borderRadius: 16,
+                        useThumbnail: true, // Usar thumbnail para carga más rápida
                       ),
                     ),
-                    // Indicador de IA para recomendaciones dinámicas
-                    if (featuredSong.featuredReason?.contains('IA') == true ||
-                        featuredSong.featuredReason?.contains('Recomendada') == true)
-                      Positioned(
-                        top: 2,
-                        right: 2,
-                        child: Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B7A6A),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.auto_awesome,
-                            size: 10,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Información de la canción
+                  ),
+                const SizedBox(width: 16),
+                // Información de la canción (igual estilo que perfil de artista)
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        featuredSong.song.title ?? 'Sin título',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF3D2E20),
+                        song.title ?? 'Sin título',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: NeumorphismTheme.textPrimary,
+                          letterSpacing: -0.3,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        featuredSong.song.artist?.displayName ?? 'Artista desconocido',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: const Color(0xFF8B7A6A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: NeumorphismTheme.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              song.artist?.stageName ?? 
+                              song.artist?.displayName ?? 
+                              'Artista Desconocido',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: NeumorphismTheme.textSecondary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
+                      // Mostrar razón de destacado si existe
                       if (featuredSong.featuredReason != null) ...[
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           featuredSong.featuredReason!,
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: const Color(0xFF8B7A6A).withValues(alpha: 0.8),
+                            color: NeumorphismTheme.textSecondary.withValues(alpha: 0.7),
                             fontStyle: FontStyle.italic,
                           ),
                           maxLines: 1,
@@ -585,23 +640,6 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
                         ),
                       ],
                     ],
-                  ),
-                ),
-                
-                const SizedBox(width: 8),
-                
-                // Botón de reproducir
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B7A6A),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                    size: 20,
                   ),
                 ),
               ],

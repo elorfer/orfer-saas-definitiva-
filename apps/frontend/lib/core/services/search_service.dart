@@ -21,7 +21,7 @@ class SearchService {
   }
 
   /// Realiza una búsqueda global de artistas, canciones y playlists
-  Future<SearchResults> search(String query, {int limit = 10}) async {
+  Future<SearchResults> search(String query, {int limit = 10, CancelToken? cancelToken}) async {
     try {
       // Asegurar que el servicio esté inicializado
       await initialize();
@@ -36,6 +36,7 @@ class SearchService {
           'q': query.trim(),
           'limit': limit,
         },
+        cancelToken: cancelToken, // OPTIMIZACIÓN: Permitir cancelación de búsquedas
       );
 
       if (response.statusCode != 200 || response.data == null) {

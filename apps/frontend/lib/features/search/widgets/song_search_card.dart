@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/favorite_button.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
@@ -59,9 +59,7 @@ class SongSearchCard extends StatelessWidget {
             child: Row(
               children: [
                 // Portada
-                Hero(
-                  tag: 'search_song_cover_${song.id}',
-                  child: Container(
+                Container(
                     width: 64,
                     height: 64,
                     constraints: const BoxConstraints(
@@ -94,6 +92,8 @@ class SongSearchCard extends StatelessWidget {
                                 fit: BoxFit.cover,
                                 width: 64,
                                 height: 64,
+                                cacheWidth: 64, // OPTIMIZACIÓN: límite de memoria
+                                cacheHeight: 64, // OPTIMIZACIÓN: límite de memoria
                                 alignment: Alignment.center,
                                 repeat: ImageRepeat.noRepeat,
                               // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
@@ -113,28 +113,14 @@ class SongSearchCard extends StatelessWidget {
                                 // Placeholder simple sin CircularProgressIndicator para mejor rendimiento
                                 return Container(
                                   decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        NeumorphismTheme.coffeeMedium,
-                                        NeumorphismTheme.coffeeDark,
-                                      ],
-                                    ),
+                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
                                   ),
                                 );
                               },
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
                                   decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        NeumorphismTheme.coffeeMedium,
-                                        NeumorphismTheme.coffeeDark,
-                                      ],
-                                    ),
+                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
                                   ),
                                   child: const Icon(
                                     Icons.music_note,
@@ -147,14 +133,7 @@ class SongSearchCard extends StatelessWidget {
                           )
                           : Container(
                               decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    NeumorphismTheme.coffeeMedium,
-                                    NeumorphismTheme.coffeeDark,
-                                  ],
-                                ),
+                                gradient: NeumorphismTheme.imagePlaceholderGradient,
                               ),
                               child: const Icon(
                                 Icons.music_note,
@@ -164,7 +143,6 @@ class SongSearchCard extends StatelessWidget {
                             ),
                     ),
                   ),
-                ),
                 const SizedBox(width: 16),
                 // Información de la canción
                 Expanded(
@@ -174,12 +152,7 @@ class SongSearchCard extends StatelessWidget {
                     children: [
                       Text(
                         song.title ?? 'Canción Desconocida',
-                        style: GoogleFonts.inter(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: NeumorphismTheme.textPrimary,
-                          letterSpacing: -0.3,
-                        ),
+                        style: AppTextStyles.songTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -195,11 +168,7 @@ class SongSearchCard extends StatelessWidget {
                           Expanded(
                             child: Text(
                               song.artist?.stageName ?? 'Artista Desconocido',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: NeumorphismTheme.textSecondary,
-                              ),
+                              style: AppTextStyles.artistName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -225,7 +194,7 @@ class SongSearchCard extends StatelessWidget {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
                         onTap: () {
-                          // TODO: Implementar menú de opciones
+                          // Menú de opciones - funcionalidad pendiente
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),

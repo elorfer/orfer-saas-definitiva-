@@ -83,3 +83,55 @@ PARA EL ADMIN
 
  NOMBRE 
  LOGO 
+
+
+ oraniza rpor numero de escuchas las play list 
+
+ editar canciones y cambiar de artista cammbiar de caratula
+
+ top de artistas mas escuchados
+
+
+9. Operaciones asíncronas sin debounce
+SongDetailScreen.navigateToSong(): tiene debounce de 300ms, pero podría optimizarse.
+Búsquedas sin debounce pueden causar múltiples llamadas API.
+
+
+10. Imágenes sin límites de memoria
+CachedNetworkImage sin memCacheWidth/memCacheHeight en varios lugares.
+Impacto: Alto uso de memoria con imágenes grandes.
+
+
+11.
+12. 
+13. Operaciones en isolate sin optimizar
+ArtistPage._parseAndProcessSongs(): procesa todas las canciones aunque solo se muestren 15 inicialmente.
+Impacto: Procesamiento innecesario de datos no visibles.
+14. Falta de keys en listas
+Algunas listas no tienen keys estables.
+Impacto: Flutter no puede optimizar correctamente el reciclaje de widgets.
+15. Animaciones pesadas
+Ya optimizadas, pero revisar si hay más TweenAnimationBuilder con duraciones largas.
+Problemas específicos por archivo
+home_screen.dart
+Línea 42: ref.read(homeStateProvider) sin watch puede causar que no se actualice la UI.
+_getInitials() debería cachearse o moverse fuera de build.
+artist_page.dart
+Múltiples .map() y .toList() en el isolate.
+Cache estático podría ser más eficiente con WeakReference.
+song_detail_screen.dart
+Normalización de URLs en cada build.
+Múltiples checks mounted redundantes.
+favorites_screen.dart
+GoogleFonts.inter() en cada item de la lista.
+TweenAnimationBuilder ya optimizado (300ms).
+
+
+
+
+PROXIMA 
+
+FUNCION PANTALLA DE GUSTOS GENEROS 
+RECOMENDACION DE ARTISTA POR GENERO 
+SITEMA DE  SEGUIMIENTOS 
+SISTEMA DE REPRODUCCIONE

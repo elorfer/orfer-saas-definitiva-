@@ -99,7 +99,7 @@ class GlobalAudioState {
 }
 
 /// Notifier global del reproductor de audio
-/// ÚNICA instancia que maneja TODO el estado del audio
+/// ÚNICA instancia que maneja el estado del audio
 class GlobalAudioNotifier extends Notifier<GlobalAudioState> {
   // UN SOLO AudioPlayer para toda la aplicación
   AudioPlayer? _player;
@@ -229,7 +229,7 @@ class GlobalAudioNotifier extends Notifier<GlobalAudioState> {
 
   /// Manejar cuando una canción termina
   void _handleSongCompletion() {
-    // TODO: Implementar lógica de siguiente canción
+    // Nota: Implementar lógica de siguiente canción cuando se agregue soporte para playlists
     state = state.copyWith(
       isPlaying: false,
       currentPosition: state.totalDuration,

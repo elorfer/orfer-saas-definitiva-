@@ -63,9 +63,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // Observar el estado de favoritos para mostrar el número correcto
-    final favoritesState = ref.watch(favoritesProvider);
-    final favoritesCount = favoritesState.favorites.length;
+    // Optimización: usar select para escuchar solo cambios en favorites
+    final favoritesCount = ref.watch(favoritesProvider.select((state) => state.favorites.length));
     
     return Scaffold(
       body: Container(
@@ -174,7 +173,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 // Library sections optimizadas
                 Expanded(
                   child: ListView.builder(
-                    cacheExtent: 800, // Aumentado a 800px para scroll más rápido
+                    cacheExtent: 300, // Optimizado: lista pequeña (máx 5-6 elementos), reducir de 800 a 300
                     physics: const FastScrollPhysics(), // Scroll más rápido y fluido
                     itemCount: _librarySections.length,
                     itemExtent: 80.0, // Altura fija para mejor rendimiento

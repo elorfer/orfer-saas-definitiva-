@@ -62,18 +62,24 @@ class IntelligentFeaturedService {
       final staticFeatured = await _getStaticFeaturedSongs();
       debugPrint('📌 [IntelligentFeatured] Canciones estáticas: ${staticFeatured.length}');
 
-      // 3. Obtener recomendaciones dinámicas si hay espacio
-      final remainingSlots = limit - staticFeatured.length;
+      // 3. Si hay suficientes canciones estáticas (al menos 4), solo mostrar esas
+      // Solo agregar dinámicas si hay menos de 4 canciones estáticas
       List<FeaturedSong> dynamicRecommendations = [];
       
-      if (remainingSlots > 0) {
-        dynamicRecommendations = await _getDynamicRecommendations(
-          count: remainingSlots,
-          user: user,
-          currentSongId: currentSongId,
-          excludeIds: staticFeatured.map((f) => f.song.id).toSet(),
-        );
-        debugPrint('🤖 [IntelligentFeatured] Recomendaciones dinámicas: ${dynamicRecommendations.length}');
+      if (staticFeatured.length < 4) {
+        // Solo agregar recomendaciones dinámicas si hay menos de 4 estáticas
+        final remainingSlots = limit - staticFeatured.length;
+        if (remainingSlots > 0) {
+          dynamicRecommendations = await _getDynamicRecommendations(
+            count: remainingSlots,
+            user: user,
+            currentSongId: currentSongId,
+            excludeIds: staticFeatured.map((f) => f.song.id).toSet(),
+          );
+          debugPrint('🤖 [IntelligentFeatured] Recomendaciones dinámicas: ${dynamicRecommendations.length}');
+        }
+      } else {
+        debugPrint('✅ [IntelligentFeatured] Suficientes canciones estáticas (${staticFeatured.length}), no agregar dinámicas');
       }
 
       // 4. Combinar y diversificar
@@ -244,14 +250,26 @@ class IntelligentFeaturedService {
 
   /// 🎭 COMBINAR Y DIVERSIFICAR RESULTADOS
   /// Mezcla canciones estáticas y dinámicas para máxima variedad
+  /// Si solo hay estáticas suficientes (4+), solo devuelve esas sin agregar dinámicas
   List<FeaturedSong> _combineAndDiversify({
     required List<FeaturedSong> staticFeatured,
     required List<FeaturedSong> dynamicRecommendations,
     required int limit,
   }) {
-    final List<FeaturedSong> result = [];
+    // Si hay suficientes canciones estáticas (4 o más), solo devolver esas
+    if (staticFeatured.length >= 4 && dynamicRecommendations.isEmpty) {
+      debugPrint('✅ [IntelligentFeatured] Solo estáticas suficientes: ${staticFeatured.length} canciones');
+      return staticFeatured.take(limit).toList();
+    }
     
-    // Estrategia de intercalado para máxima diversidad
+    // Si no hay dinámicas, solo devolver las estáticas disponibles (sin completar hasta el límite)
+    if (dynamicRecommendations.isEmpty) {
+      debugPrint('📌 [IntelligentFeatured] Solo estáticas disponibles: ${staticFeatured.length} canciones');
+      return staticFeatured;
+    }
+    
+    // Si hay ambas, combinar con estrategia de intercalado
+    final List<FeaturedSong> result = [];
     int staticIndex = 0;
     int dynamicIndex = 0;
     bool useStatic = true;

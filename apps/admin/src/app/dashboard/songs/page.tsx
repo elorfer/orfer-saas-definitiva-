@@ -309,6 +309,7 @@ export default function SongsPage() {
         songData: {
           title: uploadForm.title,
           artistId: uploadForm.artistId,
+          genres: uploadForm.genres, // Incluir géneros seleccionados
           status: 'published', // Estado publicado por defecto
         },
         onProgress: (progress) => {

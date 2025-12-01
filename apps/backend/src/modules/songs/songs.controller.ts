@@ -496,19 +496,39 @@ export class SongsController {
     let genres: any = body?.genres;
     
     // Si no existe en genres, buscar en genres[] (formato FormData)
-    if (!genres && body?.['genres[]']) {
-      genres = body['genres[]'];
+    // FormData puede enviar múltiples valores con el mismo nombre como array
+    if (!genres) {
+      // Intentar diferentes variaciones del nombre
+      if (body?.['genres[]']) {
+        genres = body['genres[]'];
+      } else if (body?.['genres']) {
+        genres = body['genres'];
+      }
+    }
+
+    // Si aún no hay géneros, buscar en todas las claves que contengan 'genre'
+    if (!genres) {
+      const genreKeys = Object.keys(body || {}).filter(key => 
+        key.toLowerCase().includes('genre') && body[key]
+      );
+      if (genreKeys.length > 0) {
+        genres = body[genreKeys[0]];
+      }
     }
 
     if (!genres) {
+      this.logger.log('⚠️ No se encontraron géneros en el body');
       return undefined;
     }
+
+    this.logger.log(`📋 Géneros recibidos (raw): ${JSON.stringify(genres)}`);
 
     // Si es un array, retornarlo directamente (ya filtrado)
     if (Array.isArray(genres)) {
       const filtered = genres
         .filter((g: any) => g != null && typeof g === 'string' && g.trim().length > 0)
         .map((g: string) => g.trim());
+      this.logger.log(`📋 Géneros parseados (array): ${JSON.stringify(filtered)}`);
       return filtered.length > 0 ? filtered : undefined;
     }
 

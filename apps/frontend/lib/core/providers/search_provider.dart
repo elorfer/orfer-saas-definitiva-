@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../services/search_service.dart';
 import '../utils/logger.dart';
 
@@ -32,13 +33,11 @@ class SearchState {
     Map<String, SearchResults>? cache,
   }) {
     // Limitar tamaño del cache para evitar memory leaks
+    // OPTIMIZACIÓN: Usar LRU (Least Recently Used) en lugar de FIFO
     Map<String, SearchResults>? limitedCache = cache;
     if (limitedCache != null && limitedCache.length > _maxCacheSize) {
-      // Eliminar las entradas más antiguas (FIFO)
-      final keysToRemove = limitedCache.keys.take(limitedCache.length - _maxCacheSize).toList();
-      for (final key in keysToRemove) {
-        limitedCache.remove(key);
-      }
+      // No hacer nada aquí, la limpieza LRU se hace en el notifier
+      // Esto evita crear una nueva lista innecesariamente
     }
 
     return SearchState(
@@ -55,10 +54,23 @@ class SearchState {
 
 class SearchNotifier extends Notifier<SearchState> {
   Timer? _debounceTimer;
-  static const Duration _debounceDuration = Duration(milliseconds: 300);
+  static const Duration _debounceDuration = Duration(milliseconds: 400); // Aumentado de 300ms a 400ms para menos llamadas
+  static const int _minQueryLength = 2; // Mínimo de 2 caracteres antes de buscar (optimización)
+  
+  // Mapa para rastrear acceso al cache (LRU)
+  final Map<String, DateTime> _cacheAccessTimes = {};
+  
+  // CancelToken para cancelar búsquedas anteriores
+  CancelToken? _currentSearchCancelToken;
 
   @override
   SearchState build() {
+    // OPTIMIZACIÓN: Limpiar recursos cuando el provider se dispose
+    ref.onDispose(() {
+      _debounceTimer?.cancel();
+      _currentSearchCancelToken?.cancel();
+    });
+    
     return SearchState();
   }
 
@@ -69,8 +81,19 @@ class SearchNotifier extends Notifier<SearchState> {
     // Actualizar query inmediatamente
     state = state.copyWith(query: newQuery, error: null);
 
+    final trimmedQuery = newQuery.trim();
+    
     // Si la query está vacía, limpiar resultados
-    if (newQuery.trim().isEmpty) {
+    if (trimmedQuery.isEmpty) {
+      state = state.copyWith(
+        results: SearchResults.empty(),
+        isLoading: false,
+      );
+      return;
+    }
+
+    // OPTIMIZACIÓN: No buscar si tiene menos del mínimo de caracteres
+    if (trimmedQuery.length < _minQueryLength) {
       state = state.copyWith(
         results: SearchResults.empty(),
         isLoading: false,
@@ -79,25 +102,35 @@ class SearchNotifier extends Notifier<SearchState> {
     }
 
     // Verificar cache
-    final cachedResults = state.cache[newQuery.trim().toLowerCase()];
+    final cacheKey = trimmedQuery.toLowerCase();
+    final cachedResults = state.cache[cacheKey];
     if (cachedResults != null) {
-      AppLogger.info('[SearchNotifier] 📦 Usando resultados en caché para: "$newQuery"');
+      // Actualizar tiempo de acceso para LRU
+      _cacheAccessTimes[cacheKey] = DateTime.now();
+      AppLogger.info('[SearchNotifier] 📦 Usando resultados en caché para: "$trimmedQuery"');
       state = state.copyWith(results: cachedResults, isLoading: false);
       return;
     }
 
     // Debounce: esperar antes de buscar
     _debounceTimer = Timer(_debounceDuration, () {
-      _performSearch(newQuery.trim());
+      _performSearch(trimmedQuery);
     });
   }
 
   Future<void> _performSearch(String query) async {
-    if (query.isEmpty) return;
+    if (query.isEmpty || query.length < _minQueryLength) return;
+
+    // OPTIMIZACIÓN: Cancelar búsqueda anterior si existe
+    _currentSearchCancelToken?.cancel();
+    _currentSearchCancelToken = CancelToken();
 
     // Verificar cache nuevamente (por si cambió mientras esperábamos)
-    final cachedResults = state.cache[query.toLowerCase()];
+    final cacheKey = query.toLowerCase();
+    final cachedResults = state.cache[cacheKey];
     if (cachedResults != null) {
+      // Actualizar tiempo de acceso para LRU
+      _cacheAccessTimes[cacheKey] = DateTime.now();
       state = state.copyWith(results: cachedResults, isLoading: false);
       return;
     }
@@ -112,7 +145,7 @@ class SearchNotifier extends Notifier<SearchState> {
 
     try {
       final searchService = ref.read(searchServiceProvider);
-      final results = await searchService.search(query, limit: 10);
+      final results = await searchService.search(query, limit: 10, cancelToken: _currentSearchCancelToken);
 
       // Verificar nuevamente que la query no cambió durante la búsqueda
       if (state.query != query) {
@@ -120,9 +153,13 @@ class SearchNotifier extends Notifier<SearchState> {
         return;
       }
 
-      // Guardar en cache
+      // OPTIMIZACIÓN: Limpiar cache LRU antes de agregar nueva entrada
+      _cleanOldCacheEntries();
+
+      // Guardar en cache con LRU
       final newCache = Map<String, SearchResults>.from(state.cache);
-      newCache[query.toLowerCase()] = results;
+      newCache[cacheKey] = results;
+      _cacheAccessTimes[cacheKey] = DateTime.now();
 
       state = state.copyWith(
         results: results,
@@ -132,16 +169,37 @@ class SearchNotifier extends Notifier<SearchState> {
 
       AppLogger.info('[SearchNotifier] ✅ Búsqueda completada: ${results.artists.length} artistas, ${results.songs.length} canciones, ${results.playlists.length} playlists');
     } catch (e) {
-      AppLogger.error('[SearchNotifier] ❌ Error en búsqueda: $e');
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      // Ignorar errores de cancelación
+      if (e is! Exception || !e.toString().contains('cancel')) {
+        AppLogger.error('[SearchNotifier] ❌ Error en búsqueda: $e');
+        state = state.copyWith(
+          isLoading: false,
+          error: e.toString(),
+        );
+      }
+    }
+  }
+  
+  /// Limpia entradas antiguas del cache usando LRU (Least Recently Used)
+  void _cleanOldCacheEntries() {
+    if (state.cache.length <= SearchState._maxCacheSize) return;
+    
+    // Ordenar por tiempo de acceso (más antiguas primero)
+    final sortedEntries = _cacheAccessTimes.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+    
+    // Eliminar las entradas más antiguas hasta llegar al límite
+    final entriesToRemove = state.cache.length - SearchState._maxCacheSize;
+    for (int i = 0; i < entriesToRemove && i < sortedEntries.length; i++) {
+      final key = sortedEntries[i].key;
+      state.cache.remove(key);
+      _cacheAccessTimes.remove(key);
     }
   }
 
   void clear() {
     _debounceTimer?.cancel();
+    _currentSearchCancelToken?.cancel(); // OPTIMIZACIÓN: Cancelar búsqueda en progreso
     state = SearchState();
   }
 }

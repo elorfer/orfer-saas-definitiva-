@@ -145,6 +145,8 @@ export const apiClient = {
   toggleArtistFeatured: (id: string, featured: boolean) =>
     api.put(`/artists/${id}/feature`, { featured }),
   
+  deleteArtist: (id: string) => api.delete(`/artists/${id}`),
+  
   getArtistStats: (id: string) => api.get(`/artists/${id}/stats`),
   
   verifyArtist: (id: string) => api.patch(`/artists/${id}/verify`),

@@ -78,7 +78,7 @@ class IntelligentFeaturedNotifier extends Notifier<IntelligentFeaturedState> {
       final audioState = ref.read(unifiedAudioProviderFixed);
       final currentSongId = audioState.currentSong?.id;
       
-      // TODO: Obtener usuario actual cuando esté implementado el sistema de auth
+      // Nota: Obtener usuario actual cuando esté implementado el sistema de auth
       User? currentUser;
 
       // Usar el servicio inteligente con tu algoritmo

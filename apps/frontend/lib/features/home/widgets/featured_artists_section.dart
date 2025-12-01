@@ -15,14 +15,17 @@ class FeaturedArtistsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final featuredArtists = ref.watch(featuredArtistsProvider);
-    final isLoading = ref.watch(isLoadingProvider);
+    // Optimización: usar select para escuchar solo cambios específicos
+    final featuredArtists = ref.watch(featuredArtistsProvider.select((state) => state));
+    final isLoading = ref.watch(isLoadingProvider.select((state) => state));
 
-    if (isLoading) {
+    // CRÍTICO: Solo mostrar skeleton durante carga inicial (cuando no hay datos)
+    // Si hay datos pero está cargando (refresh), mostrar contenido existente
+    if (isLoading && featuredArtists.isEmpty) {
       return _buildLoadingSection();
     }
 
-    if (featuredArtists.isEmpty) {
+    if (featuredArtists.isEmpty && !isLoading) {
       return _buildEmptySection();
     }
 
@@ -132,7 +135,7 @@ class FeaturedArtistsSection extends ConsumerWidget {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.only(left: 24, right: 8),
-              cacheExtent: 800, // Aumentado a 800px para scroll más rápido y fluido
+              cacheExtent: 300, // ✅ OPTIMIZACIÓN: Reducido de 800 a 300px para mejor rendimiento
               physics: const FastScrollPhysics(), // Scroll más rápido y fluido
               itemCount: featuredArtists.length,
               itemBuilder: (context, index) {
@@ -159,64 +162,224 @@ class FeaturedArtistsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Artistas Destacados',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            decoration: TextDecoration.none,
+        // Header skeleton - CRÍTICO: Misma estructura que el header real
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24), // Mismo padding que el real
+          child: Container(
+            padding: const EdgeInsets.all(16.0), // Mismo padding que el real
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
+                  NeumorphismTheme.coffeeDark.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20), // Mismo borderRadius que el real
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Icono skeleton - CRÍTICO: 48x48 circular con gradiente y sombra
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                        NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Shimmer.fromColors(
+                    baseColor: NeumorphismTheme.shimmerBaseColor,
+                    highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: NeumorphismTheme.shimmerContentColor,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12), // Mismo espacio que el real
+                // Título skeleton - CRÍTICO: fontSize 20
+                Expanded(
+                  child: Shimmer.fromColors(
+                    baseColor: NeumorphismTheme.shimmerBaseColor,
+                    highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                    child: Container(
+                      height: 20, // Mismo fontSize que el texto real
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.shimmerContentColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ),
+                // Botón "Ver todos" skeleton - CRÍTICO: Mismo tamaño que el botón real
+                Shimmer.fromColors(
+                  baseColor: NeumorphismTheme.shimmerBaseColor,
+                  highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Mismo padding que el botón real
+                    decoration: BoxDecoration(
+                      color: NeumorphismTheme.shimmerContentColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Container(
+                      height: 14, // Mismo fontSize que el texto del botón
+                      width: 70, // Ancho aproximado del texto "Ver todos"
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 16), // Mismo espacio que el real
         SizedBox(
           height: 235, // Aumentado para consistencia
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            cacheExtent: 800, // Aumentado para scroll más rápido
+            cacheExtent: 300, // ✅ OPTIMIZACIÓN: Reducido de 800 a 300px
             physics: const FastScrollPhysics(), // Scroll más rápido y fluido
             itemCount: 3,
             itemBuilder: (context, index) {
               return RepaintBoundary(
                 key: ValueKey('loading_artist_$index'),
-                child: Shimmer.fromColors(
-                  baseColor: Colors.white.withValues(alpha: 0.1),
-                  highlightColor: Colors.white.withValues(alpha: 0.3),
-                  period: const Duration(milliseconds: 1200),
-                  child: Container(
-                    width: 140,
-                    margin: const EdgeInsets.only(right: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 140,
-                          height: 140,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                child: Container(
+                  width: 140,
+                  margin: const EdgeInsets.only(right: 16), // Mismo margin que el real
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Imagen skeleton - CRÍTICO: 140x140 circular con sombra
+                      Container(
+                        width: 140,
+                        height: 140,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle, // Mismo shape que el real (circular)
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Shimmer.fromColors(
+                            baseColor: NeumorphismTheme.shimmerBaseColor,
+                            highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                            child: Container(
+                              width: 140,
+                              height: 140,
+                              decoration: const BoxDecoration(
+                                color: NeumorphismTheme.shimmerContentColor,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Container(
-                          height: 16,
-                          width: 100,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
-                          ),
+                      ),
+                      const SizedBox(height: 12), // Mismo espacio que el real
+                      // Nombre skeleton - CRÍTICO: fontSize 15
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Shimmer.fromColors(
+                              baseColor: NeumorphismTheme.shimmerBaseColor,
+                              highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                              child: Container(
+                                height: 15, // Mismo fontSize que el texto real
+                                width: 100,
+                                decoration: BoxDecoration(
+                                  color: NeumorphismTheme.shimmerContentColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6), // Mismo espacio que el real
+                            // Seguidores skeleton - CRÍTICO: fontSize 12 con icono
+                            Row(
+                              children: [
+                                Container(
+                                  width: 12, // Mismo tamaño que el icono real
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: NeumorphismTheme.shimmerContentColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4), // Mismo espacio que el real
+                                Shimmer.fromColors(
+                                  baseColor: NeumorphismTheme.shimmerBaseColor,
+                                  highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                                  child: Container(
+                                    height: 12, // Mismo fontSize que el texto real
+                                    width: 80,
+                                    decoration: BoxDecoration(
+                                      color: NeumorphismTheme.shimmerContentColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8), // Mismo espacio que el real
+                            // Badge skeleton - CRÍTICO: Mismo padding y altura
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // Mismo padding que el real
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                                    NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12), // Mismo borderRadius que el real
+                              ),
+                              child: Shimmer.fromColors(
+                                baseColor: NeumorphismTheme.shimmerBaseColor,
+                                highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                                child: Container(
+                                  height: 11, // Mismo fontSize que el texto del badge
+                                  width: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 12,
-                          width: 80,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.all(Radius.circular(6)),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               );

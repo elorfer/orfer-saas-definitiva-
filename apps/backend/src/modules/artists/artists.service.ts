@@ -283,6 +283,30 @@ export class ArtistsService {
 
     return { artists, total };
   }
+
+  async deleteArtist(id: string): Promise<void> {
+    const artist = await this.findOne(id);
+    
+    // Verificar si el artista tiene canciones asociadas
+    const songsCount = await this.songRepository.count({ where: { artistId: id } });
+    if (songsCount > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar el artista porque tiene ${songsCount} ${songsCount === 1 ? 'canción' : 'canciones'} asociadas. ` +
+        'Por favor, elimina o reasigna las canciones antes de eliminar el artista.'
+      );
+    }
+
+    // Verificar si el artista tiene álbumes asociados
+    const albumsCount = await this.albumRepository.count({ where: { artistId: id } });
+    if (albumsCount > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar el artista porque tiene ${albumsCount} ${albumsCount === 1 ? 'álbum' : 'álbumes'} asociados. ` +
+        'Por favor, elimina o reasigna los álbumes antes de eliminar el artista.'
+      );
+    }
+
+    await this.artistRepository.remove(artist);
+  }
 }
 
 

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/models/song_model.dart';
-import '../../../core/utils/logger.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import 'featured_song_card.dart';
 import '../../../core/theme/neumorphism_theme.dart';
@@ -14,8 +13,9 @@ class FeaturedSongsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final featuredSongs = ref.watch(featuredSongsProvider);
-    final isLoading = ref.watch(isLoadingProvider);
+    // Optimización: usar select para escuchar solo cambios específicos
+    final featuredSongs = ref.watch(featuredSongsProvider.select((state) => state));
+    final isLoading = ref.watch(isLoadingProvider.select((state) => state));
 
     if (isLoading) {
       return _buildLoadingSection();
@@ -267,29 +267,9 @@ class FeaturedSongsSection extends ConsumerWidget {
     
     debugPrint('[FeaturedSongsSection] Navegando a canción: ${song.title} (${song.id})');
     
-    // Navegar a la pantalla de detalle de canción
-    // Usar la función estática que verifica si ya existe la pantalla
-    try {
-      // Pasar parámetro indicando que es una canción destacada
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SongDetailScreen(song: song),
-          settings: RouteSettings(arguments: {'isFeatured': true}),
-        ),
-      );
-      debugPrint('[FeaturedSongsSection] Navegación exitosa');
-    } catch (e, stackTrace) {
-      // Si hay un error, intentar navegación directa como fallback
-      AppLogger.error('[FeaturedSongsSection] Error al navegar: $e', stackTrace);
-      debugPrint('[FeaturedSongsSection] Error: $e, usando fallback');
-      if (context.mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => SongDetailScreen(song: song),
-          ),
-        );
-      }
-    }
+    // Navegar a la pantalla de detalle de canción usando go_router
+    // La función estática previene duplicados y maneja errores
+    SongDetailScreen.navigateToSong(context, song);
   }
 
 }

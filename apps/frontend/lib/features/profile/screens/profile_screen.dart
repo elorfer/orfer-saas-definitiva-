@@ -62,6 +62,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     final user = authState.user;
 
     return Scaffold(
+      key: const ValueKey('profile_scaffold'), // Key estable para evitar rebuilds
       body: Container(
         decoration: const BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
@@ -242,7 +243,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 // Settings sections optimizadas
                 Expanded(
                   child: ListView.builder(
-                    cacheExtent: 800, // Aumentado a 800px para scroll más rápido
+                    cacheExtent: 300, // Optimizado: lista pequeña (máx 5-6 elementos), reducir de 800 a 300
                     physics: const FastScrollPhysics(), // Scroll más rápido y fluido
                     itemCount: _settingsSections.length + 1, // +1 para el botón de logout
                     itemBuilder: (context, index) {

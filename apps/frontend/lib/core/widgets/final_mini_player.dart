@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../theme/neumorphism_theme.dart';
@@ -36,9 +37,29 @@ class FinalMiniPlayer extends ConsumerWidget {
 
     // Sin logs para máximo rendimiento
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    return Builder(
+      builder: (builderContext) {
+        return GestureDetector(
+          onTap: onTap ?? () {
+            // Si no hay callback personalizado, abrir reproductor completo
+            // ✅ FUNCIONA SIEMPRE que haya currentSong, sin importar dónde se inició la reproducción
+            try {
+              // Verificar que hay una canción antes de expandir
+              final audioState = ref.read(unifiedAudioProviderFixed);
+              if (audioState.currentSong != null) {
+                // Actualizar estado primero
+                ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+                
+                // Navegar inmediatamente sin delay
+                if (builderContext.mounted) {
+                  builderContext.push('/player');
+                }
+              }
+            } catch (e) {
+              AppLogger.error('[FinalMiniPlayer] Error al abrir reproductor: $e');
+            }
+          },
+          child: Container(
         height: 72, // Altura ajustada para incluir la barra de progreso
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -134,7 +155,7 @@ class FinalMiniPlayer extends ConsumerWidget {
                 
                 const SizedBox(width: 8),
                 
-                // Botón play/pause más compacto
+                // Botón play/pause más compacto - Sincronizado con SongDetailScreen
                 Container(
                   width: 36,
                   height: 36,
@@ -147,7 +168,7 @@ class FinalMiniPlayer extends ConsumerWidget {
                     child: InkWell(
                       onTap: () async {
                         try {
-                          await ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
+                          await ref.read(unifiedAudioProviderFixed.notifier).togglePlay();
                         } catch (e) {
                           AppLogger.error('[FinalMiniPlayer] Error toggle: $e');
                         }
@@ -163,13 +184,14 @@ class FinalMiniPlayer extends ConsumerWidget {
                     ),
                   ),
                 ),
+                
               ],
             ),
             
             const SizedBox(height: 8),
             
             // 🚀 BARRA DE PROGRESO HORIZONTAL - Como estaba originalmente
-            Container(
+            SizedBox(
               height: 3,
               child: LinearProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
@@ -180,7 +202,9 @@ class FinalMiniPlayer extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

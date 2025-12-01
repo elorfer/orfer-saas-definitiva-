@@ -97,7 +97,11 @@ export default function FeaturedPage() {
         queryClient.invalidateQueries(['songs', 'all']);
         toast.success('Canción destacada exitosamente');
       },
-      onError: () => toast.error('Error al destacar canción'),
+      onError: (error: any) => {
+        const errorMessage = error?.response?.data?.message || error?.message || 'Error al destacar canción';
+        console.error('Error al destacar canción:', error);
+        toast.error(errorMessage);
+      },
     }
   );
 
@@ -109,7 +113,11 @@ export default function FeaturedPage() {
         queryClient.invalidateQueries(['songs', 'all']);
         toast.success('Canción ya no está destacada');
       },
-      onError: () => toast.error('Error al quitar destacado'),
+      onError: (error: any) => {
+        const errorMessage = error?.response?.data?.message || error?.message || 'Error al quitar destacado';
+        console.error('Error al quitar destacado:', error);
+        toast.error(errorMessage);
+      },
     }
   );
 

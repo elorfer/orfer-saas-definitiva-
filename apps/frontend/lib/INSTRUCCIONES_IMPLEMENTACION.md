@@ -144,3 +144,11 @@ Para verificar que funciona correctamente, revisa los logs:
 
 ¡El sistema está listo para usar! Las barras de progreso ahora funcionarán correctamente en tiempo real. 🎵
 
+
+
+
+
+
+
+
+

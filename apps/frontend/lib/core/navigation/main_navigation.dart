@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../widgets/final_mini_player.dart';
 import '../theme/neumorphism_theme.dart';
+import '../utils/logger.dart';
 
 /// Navegación principal con bottom navigation bar y mini player
 class MainNavigation extends ConsumerStatefulWidget {
@@ -86,7 +87,22 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
                 child: FinalMiniPlayer(
                   onTap: () {
                     // Abrir reproductor completo con transición estilo Spotify
-                    context.push('/player');
+                    // ✅ FUNCIONA SIEMPRE que haya currentSong, sin importar dónde se inició la reproducción
+                    try {
+                      // Verificar que hay una canción antes de expandir
+                      final audioState = ref.read(unifiedAudioProviderFixed);
+                      if (audioState.currentSong != null) {
+                        // Actualizar estado primero
+                        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+                        
+                        // Navegar inmediatamente sin delay
+                        if (context.mounted) {
+                          context.push('/player');
+                        }
+                      }
+                    } catch (e) {
+                      AppLogger.error('[MainNavigation] Error al abrir reproductor: $e');
+                    }
                   },
                 ),
               ),

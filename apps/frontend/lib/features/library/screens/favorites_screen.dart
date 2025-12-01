@@ -1,11 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/favorites_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/theme/text_styles.dart';
 import '../../../core/widgets/favorite_button.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
@@ -41,7 +40,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final favoritesState = ref.watch(favoritesProvider);
+    // Optimización: usar select para escuchar solo cambios en isLoading y favorites
+    final isLoading = ref.watch(favoritesProvider.select((state) => state.isLoading));
+    final favorites = ref.watch(favoritesProvider.select((state) => state.favorites));
+    final error = ref.watch(favoritesProvider.select((state) => state.error));
 
     return Scaffold(
       backgroundColor: NeumorphismTheme.background,
@@ -62,17 +64,13 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             }
           },
         ),
-        title: Text(
+        title: const Text(
           'Mis Favoritos',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: NeumorphismTheme.textPrimary,
-          ),
+          style: AppTextStyles.subtitleLarge,
         ),
         centerTitle: true,
         actions: [
-          if (favoritesState.isLoading)
+          if (isLoading)
             const Padding(
               padding: EdgeInsets.all(16.0),
               child: SizedBox(
@@ -97,44 +95,37 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         },
         color: Colors.white,
         backgroundColor: NeumorphismTheme.coffeeMedium,
-        child: _buildContent(favoritesState),
+        child: _buildContent(isLoading, favorites, error),
       ),
     );
   }
 
-  Widget _buildContent(FavoritesState state) {
-    if (state.isLoading && state.favorites.isEmpty) {
+  Widget _buildContent(bool isLoading, List<Song> favorites, String? error) {
+    if (isLoading && favorites.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
 
-    if (state.error != null && state.favorites.isEmpty) {
+    if (error != null && favorites.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.error_outline,
               size: 64,
               color: NeumorphismTheme.textSecondary,
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Error al cargar favoritos',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: NeumorphismTheme.textPrimary,
-              ),
+              style: AppTextStyles.subtitleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              state.error!,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: NeumorphismTheme.textSecondary,
-              ),
+              error,
+              style: AppTextStyles.bodySmall,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -149,18 +140,18 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
       );
     }
 
-    if (state.favorites.isEmpty) {
+    if (favorites.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Icono animado
+              // Icono animado (optimizado - animación más rápida)
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.elasticOut,
+                duration: const Duration(milliseconds: 300), // Reducido de 800ms
+                curve: Curves.easeOut, // Cambiado de elasticOut (más pesado) a easeOut
                 builder: (context, value, child) {
                   return Transform.scale(
                     scale: value,
@@ -182,28 +173,20 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                         Icons.favorite_border,
                         size: 64,
                         color: Colors.red.shade400,
-                      ),
+                      ), // No puede ser const porque usa Colors.red.shade400 que es dinámico
                     ),
                   );
                 },
               ),
               const SizedBox(height: 32),
-              Text(
+              const Text(
                 'No tienes favoritos aún',
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: NeumorphismTheme.textPrimary,
-                ),
+                style: AppTextStyles.emptyStateTitle,
               ),
               const SizedBox(height: 12),
-              Text(
+              const Text(
                 'Agrega canciones a tus favoritos\ntocando el corazón ❤️',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: NeumorphismTheme.textSecondary,
-                  height: 1.5,
-                ),
+                style: AppTextStyles.emptyStateBody,
                 textAlign: TextAlign.center,
               ),
             ],
@@ -276,31 +259,22 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Mis Favoritos',
-                        style: GoogleFonts.inter(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: NeumorphismTheme.textPrimary,
-                          letterSpacing: -0.5,
-                        ),
+                        style: AppTextStyles.titleLarge,
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.music_note,
                             size: 16,
                             color: NeumorphismTheme.textSecondary,
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${state.favorites.length} ${state.favorites.length == 1 ? 'canción guardada' : 'canciones guardadas'}',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: NeumorphismTheme.textSecondary,
-                            ),
+                            '${favorites.length} ${favorites.length == 1 ? 'canción guardada' : 'canciones guardadas'}',
+                            style: AppTextStyles.bodyMedium,
                           ),
                         ],
                       ),
@@ -315,18 +289,21 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
-              final song = state.favorites[index];
+              final song = favorites[index];
+              // Cachear devicePixelRatio una sola vez para toda la lista (optimización)
+              final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
               return RepaintBoundary(
                 key: ValueKey('favorite_song_${song.id}'),
                 child: _FavoriteSongItem(
                   key: ValueKey('favorite_item_${song.id}'), // ✅ Key estable para mejor reciclaje
                   song: song,
                   index: index,
+                  devicePixelRatio: devicePixelRatio, // Pasar como parámetro para evitar MediaQuery en cada item
                   onTap: () => _onSongTap(context, song),
                 ),
               );
             },
-            childCount: state.favorites.length,
+            childCount: favorites.length,
             addAutomaticKeepAlives: false, // ✅ No mantener estado fuera de vista (ahorra memoria)
             addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual
           ),
@@ -361,12 +338,14 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
 class _FavoriteSongItem extends ConsumerWidget {
   final Song song;
   final int index;
+  final double devicePixelRatio; // Recibir como parámetro para evitar MediaQuery en cada build
   final VoidCallback onTap;
 
   const _FavoriteSongItem({
     super.key,
     required this.song,
     required this.index,
+    required this.devicePixelRatio,
     required this.onTap,
   });
 
@@ -378,31 +357,31 @@ class _FavoriteSongItem extends ConsumerWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              NeumorphismTheme.surface.withValues(alpha: 0.8),
-              NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-              spreadRadius: 0,
-            ),
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(-2, -2),
-            ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            NeumorphismTheme.surface.withValues(alpha: 0.8),
+            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
           ],
         ),
-        child: Material(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(-2, -2),
+          ),
+        ],
+      ),
+      child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
@@ -418,7 +397,7 @@ class _FavoriteSongItem extends ConsumerWidget {
                     alignment: Alignment.center,
                     child: Text(
                       '${index + 1}',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.6),
@@ -427,33 +406,32 @@ class _FavoriteSongItem extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
                   // Portada con efecto de elevación
-                  Hero(
-                    tag: 'favorite_cover_${song.id}',
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      constraints: const BoxConstraints(
-                        minWidth: 64,
-                        maxWidth: 64,
-                        minHeight: 64,
-                        maxHeight: 64,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        clipBehavior: Clip.antiAlias,
-                        child: coverUrl != null
+                  // Hero eliminado para evitar animaciones pesadas al navegar desde favoritos
+                  Container(
+                    width: 64,
+                    height: 64,
+                    constraints: const BoxConstraints(
+                      minWidth: 64,
+                      maxWidth: 64,
+                      minHeight: 64,
+                      maxHeight: 64,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: coverUrl != null
                             ? SizedBox(
                                 width: 64,
                                 height: 64,
@@ -464,6 +442,9 @@ class _FavoriteSongItem extends ConsumerWidget {
                                   height: 64,
                                   alignment: Alignment.center,
                                   repeat: ImageRepeat.noRepeat,
+                                  // Optimización: cachear imagen en memoria con límites
+                                  cacheWidth: (64 * devicePixelRatio).round(),
+                                  cacheHeight: (64 * devicePixelRatio).round(),
                                   // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
                                   frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
                                     if (wasSynchronouslyLoaded) return child;
@@ -532,7 +513,6 @@ class _FavoriteSongItem extends ConsumerWidget {
                               ),
                       ),
                     ),
-                  ),
                   const SizedBox(width: 16),
                   // Información
                   Expanded(
@@ -542,19 +522,14 @@ class _FavoriteSongItem extends ConsumerWidget {
                       children: [
                         Text(
                           song.title ?? 'Sin título',
-                          style: GoogleFonts.inter(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: NeumorphismTheme.textPrimary,
-                            letterSpacing: -0.3,
-                          ),
+                          style: AppTextStyles.songTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.person_outline,
                               size: 14,
                               color: NeumorphismTheme.textSecondary,
@@ -563,11 +538,7 @@ class _FavoriteSongItem extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 song.artist?.displayName ?? 'Artista desconocido',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: NeumorphismTheme.textSecondary,
-                                ),
+                                style: AppTextStyles.artistName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -619,7 +590,7 @@ class _FavoriteSongItem extends ConsumerWidget {
                             color: Colors.white,
                             size: 22,
                           ),
-                        ),
+                        ), // Ya es const
                       ),
                     ),
                   ),
