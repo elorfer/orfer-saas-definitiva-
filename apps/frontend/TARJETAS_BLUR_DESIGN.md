@@ -183,3 +183,19 @@ Las nuevas tarjetas con efecto blur transforman completamente la experiencia vis
 
 El diseño ahora compite directamente con las mejores aplicaciones de música del mercado. 🎉
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

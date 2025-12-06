@@ -74,28 +74,40 @@ class HomeService {
 
   /// Obtener artistas destacados
   /// - Normaliza claves camelCase/snake_case
-  /// - Aplica cache-busting y fuerza refresh del caché HTTP
+  /// - ✅ OPTIMIZACIÓN: Usa cache HTTP normal (solo fuerza refresh si se solicita)
   /// - Tolera respuestas en arreglo plano o con wrapper { artists: [] }
   /// - Incluye retry automático con backoff exponencial
-  Future<List<FeaturedArtist>> getFeaturedArtists({int limit = 6}) async {
+  Future<List<FeaturedArtist>> getFeaturedArtists({int limit = 6, bool forceRefresh = false}) async {
     try {
       final url = '/public/featured/artists';
+      
+      // ✅ OPTIMIZACIÓN: Solo usar cache-busting si forceRefresh es true
+      final queryParams = <String, dynamic>{
+        'limit': limit,
+      };
+      
+      if (forceRefresh) {
+        queryParams['_t'] = DateTime.now().millisecondsSinceEpoch;
+      }
+      
+      final options = Options(
+        receiveTimeout: const Duration(seconds: 10),
+        sendTimeout: const Duration(seconds: 10),
+      );
+      
+      // ✅ OPTIMIZACIÓN: Solo forzar refresh del cache si se solicita explícitamente
+      if (forceRefresh) {
+        options.extra = {
+          'dio_cache_force_refresh': true,
+        };
+      }
       
       final response = await RetryHandler.retryDataLoad(
         shouldRetry: RetryHandler.isDioErrorRetryable,
         operation: () => _dio.get(
           url,
-          queryParameters: {
-            'limit': limit,
-            '_t': DateTime.now().millisecondsSinceEpoch,
-          },
-          options: Options(
-            receiveTimeout: const Duration(seconds: 10),
-            sendTimeout: const Duration(seconds: 10),
-            extra: {
-              'dio_cache_force_refresh': true,
-            },
-          ),
+          queryParameters: queryParams,
+          options: options,
         ),
       );
 
@@ -113,19 +125,14 @@ class HomeService {
           parser: (item) {
             // Usar DataNormalizer para normalizar el artista
             final normalized = DataNormalizer.normalizeArtist(item);
-            AppLogger.data('[HomeService] Datos normalizados: ${normalized.keys.toList()}');
 
             // Imagen preferida - buscar en múltiples lugares
             final rawImage = normalized['profile_photo_url'] as String? ??
                 normalized['cover_photo_url'] as String?;
-
-            AppLogger.media('[HomeService] Imagen raw encontrada: $rawImage');
             
-            final normalizedImage = UrlNormalizer.normalizeImageUrl(rawImage, enableLogging: true);
-            AppLogger.media('[HomeService] Imagen normalizada: $normalizedImage');
+            final normalizedImage = UrlNormalizer.normalizeImageUrl(rawImage, enableLogging: false);
 
             final artist = Artist.fromJson(normalized);
-            AppLogger.success('[HomeService] Artista parseado correctamente: ${artist.stageName ?? artist.id}');
             
             // Usar la imagen normalizada o la del artista parseado
             final finalImageUrl = normalizedImage ?? 
@@ -163,7 +170,7 @@ class HomeService {
     try {
       final url = '/public/featured/songs';
       
-      // Agregar timestamp para evitar caché si se fuerza el refresh
+      // ✅ OPTIMIZACIÓN: Solo usar cache-busting si forceRefresh es true
       final queryParams = <String, dynamic>{
         'limit': limit,
       };
@@ -172,11 +179,21 @@ class HomeService {
         queryParams['_t'] = DateTime.now().millisecondsSinceEpoch;
       }
       
+      final options = Options();
+      
+      // ✅ OPTIMIZACIÓN: Solo forzar refresh del cache si se solicita explícitamente
+      if (forceRefresh) {
+        options.extra = {
+          'dio_cache_force_refresh': true,
+        };
+      }
+      
       final response = await RetryHandler.retryDataLoad(
         shouldRetry: RetryHandler.isDioErrorRetryable,
         operation: () => _dio.get(
           url,
           queryParameters: queryParams,
+          options: options,
         ),
       );
 
@@ -184,45 +201,29 @@ class HomeService {
           // Usar ResponseParser para extraer la lista
           final data = ResponseParser.extractList(response, listKey: 'songs');
           
-          debugPrint('[HomeService] 📊 Total canciones recibidas del backend: ${data.length}');
-          
           if (data.isEmpty) {
-            debugPrint('[HomeService] ⚠️ No se recibieron canciones del backend');
             return [];
           }
 
           // Validar y parsear usando ResponseParser y DataNormalizer
           final validData = ResponseParser.validateList(data);
-          debugPrint('[HomeService] ✅ Canciones válidas después de validación: ${validData.length}');
           
           final parsedSongs = ResponseParser.parseList<FeaturedSong>(
             data: validData,
             parser: (songData) {
-              // DEBUG: Ver datos originales
-              debugPrint('[HomeService] 🔍 Datos originales de canción destacada:');
-              debugPrint('[HomeService] 🔍 fileUrl: ${songData['fileUrl']}');
-              debugPrint('[HomeService] 🔍 file_url: ${songData['file_url']}');
-              
               // CORRECCIÓN CRÍTICA: Asegurar que fileUrl se mapee correctamente
               if (songData['fileUrl'] != null && songData['file_url'] == null) {
                 songData['file_url'] = songData['fileUrl'];
-                debugPrint('[HomeService] 🔧 CORRECCIÓN: Mapeando fileUrl -> file_url');
               }
               
               // Usar DataNormalizer para normalizar la canción
               final normalizedSong = DataNormalizer.normalizeSong(songData);
-              
-              // DEBUG: Ver datos después de normalizar
-              debugPrint('[HomeService] 🔍 Después de DataNormalizer:');
-              debugPrint('[HomeService] 🔍 fileUrl: ${normalizedSong['fileUrl']}');
-              debugPrint('[HomeService] 🔍 file_url: ${normalizedSong['file_url']}');
               
               // CORRECCIÓN ADICIONAL: Si aún no hay file_url, usar fileUrl original
               if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') && 
                   songData['fileUrl'] != null) {
                 normalizedSong['file_url'] = songData['fileUrl'];
                 normalizedSong['fileUrl'] = songData['fileUrl'];
-                debugPrint('[HomeService] 🔧 CORRECCIÓN ADICIONAL: Usando fileUrl original');
               }
               
               // Normalizar URL de portada
@@ -234,14 +235,10 @@ class HomeService {
               
               // IMPORTANTE: También normalizar URL del archivo de audio
               final rawFileUrl = normalizedSong['file_url'] as String?;
-              debugPrint('[HomeService] 🔍 rawFileUrl para normalizar: $rawFileUrl');
               if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
                 final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
                 normalizedSong['file_url'] = normalizedFileUrl;
                 normalizedSong['fileUrl'] = normalizedFileUrl; // También mantener camelCase
-                debugPrint('[HomeService] 🔧 URL de audio normalizada: $normalizedFileUrl');
-              } else {
-                debugPrint('[HomeService] ❌ ERROR: rawFileUrl es null o vacío');
               }
               
               final song = Song.fromJson(normalizedSong);
@@ -252,14 +249,10 @@ class HomeService {
                 rank: validData.indexOf(songData) + 1,
               );
               
-              debugPrint('[HomeService] ✅ Canción parseada: ${song.title} (ID: ${song.id})');
-              
               return featuredSong;
             },
-            logErrors: true, // Cambiar a true para ver errores de parseo
+            logErrors: false,
           );
-          
-          debugPrint('[HomeService] 📊 Total canciones parseadas exitosamente: ${parsedSongs.length}');
           
           return parsedSongs;
       } else {
@@ -288,8 +281,6 @@ class HomeService {
   /// @returns Canción recomendada o null si no hay canciones disponibles
   Future<Song?> getRecommendedSong(String currentSongId, {List<String>? currentGenres}) async {
     try {
-      AppLogger.info('[HomeService] getRecommendedSong llamado para canción: $currentSongId');
-      
       final url = '/songs/recommended/$currentSongId';
       
       // Agregar géneros como query params si se proporcionan
@@ -310,7 +301,6 @@ class HomeService {
         final data = response.data;
         
         if (data == null || data['song'] == null) {
-          AppLogger.warning('[HomeService] No se encontró canción recomendada');
           return null;
         }
 
@@ -325,10 +315,8 @@ class HomeService {
         }
         
         final song = Song.fromJson(normalizedSong);
-        AppLogger.info('[HomeService] Canción recomendada obtenida: ${song.title} (géneros: ${song.genres?.join(', ') ?? 'ninguno'})');
         return song;
       } else {
-        AppLogger.warning('[HomeService] Respuesta no exitosa al obtener canción recomendada');
         return null;
       }
     } on DioException catch (e) {
@@ -458,8 +446,7 @@ class HomeService {
       ErrorHandler.handleDioError(e, context: 'HomeService.getFeaturedPlaylists', logError: true);
       return [];
     } catch (e, stackTrace) {
-      ErrorHandler.handleGenericError(e, context: 'HomeService.getFeaturedPlaylists', logError: true);
-      AppLogger.error('[HomeService] Error inesperado al obtener playlists destacadas', e, stackTrace);
+      ErrorHandler.handleGenericError(e, context: 'HomeService.getFeaturedPlaylists', logError: false);
       return [];
     }
   }

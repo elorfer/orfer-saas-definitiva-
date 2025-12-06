@@ -168,7 +168,7 @@ export default function FeaturedPage() {
             if (activeTab === 'artists') refetchArtists();
             if (activeTab === 'playlists') refetchPlaylists();
           }}
-          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
+          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-brown-600 hover:text-brown-700"
         >
           <ArrowPathIcon className="h-4 w-4" />
           Actualizar
@@ -187,7 +187,7 @@ export default function FeaturedPage() {
                       onClick={() => setActiveTab(tab.id as any)}
                       className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition ${
                         isActive
-                          ? 'border-purple-500 text-purple-600'
+                          ? 'border-brown-700 text-brown-700'
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                       }`}
                     >
@@ -277,7 +277,7 @@ function SongsSection({ allSongs, featuredSongsIds, onFeature, onUnfeature }: an
                     className="h-12 w-12 rounded-lg object-cover"
                   />
                 ) : (
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-brown-700 to-brown-700 flex items-center justify-center">
                     <MusicalNoteIcon className="h-6 w-6 text-white" />
                   </div>
                 )}

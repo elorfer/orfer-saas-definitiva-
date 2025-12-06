@@ -7,26 +7,63 @@ import '../../../core/theme/neumorphism_theme.dart';
 
 /// Pantalla del reproductor completo
 /// Se abre cuando el usuario toca el mini player
-class FullPlayerScreen extends ConsumerWidget {
+/// OPTIMIZADO: Usa select para evitar rebuilds innecesarios
+class FullPlayerScreen extends ConsumerStatefulWidget {
   const FullPlayerScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final audioState = ref.watch(unifiedAudioProviderFixed);
+  ConsumerState<FullPlayerScreen> createState() => _FullPlayerScreenState();
+}
 
-    // Marcar como expandido cuando se abre la pantalla
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted && !audioState.isPlayerExpanded) {
-        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-      }
-    });
+class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
+  // ✅ OPTIMIZACIÓN: Guardar notifier para usar en dispose() de forma segura
+  UnifiedAudioNotifier? _audioNotifier;
 
-    // Si no hay canción, regresar
-    if (audioState.currentSong == null) {
+  @override
+  void initState() {
+    super.initState();
+    // ✅ OPTIMIZACIÓN: Guardar notifier inmediatamente, sin addPostFrameCallback
+    // No hay necesidad de esperar al siguiente frame
+    _audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
+  }
+
+  @override
+  void dispose() {
+    // ✅ CORRECCIÓN: Usar Future.microtask para evitar modificar provider durante dispose
+    if (_audioNotifier != null) {
+      Future.microtask(() {
+        try {
+          _audioNotifier!.closeFullPlayer();
+        } catch (e) {
+          // Ignorar errores si el provider ya fue disposed
+        }
+      });
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ OPTIMIZACIÓN: Solo escuchar currentSong, no todo el estado
+    final currentSong = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentSong),
+    );
+
+    // Si no hay canción, regresar de forma segura
+    // ✅ CORRECCIÓN: Usar Future.delayed para evitar conflictos con animaciones Hero
+    if (currentSong == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) {
-          ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
-          context.pop();
+        if (mounted && context.mounted) {
+          // Pequeño delay para permitir que las animaciones Hero terminen
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted && context.mounted) {
+              try {
+                context.pop();
+              } catch (e) {
+                // Ignorar errores de navegación si el contexto ya no es válido
+              }
+            }
+          });
         }
       });
       return const Scaffold(
@@ -37,42 +74,87 @@ class FullPlayerScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      backgroundColor: NeumorphismTheme.background,
-      body: Stack(
-        children: [
-          // Reproductor profesional completo
-          const ProfessionalAudioPlayer(),
-          
-          // Botón de cerrar en la esquina izquierda
-          Positioned(
-            top: 12,
-            left: 16,
-            child: SafeArea(
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: IconButton(
-                  onPressed: () {
-                    // Cerrar el reproductor y actualizar el estado
-                    ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
-                    context.pop();
-                  },
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.white,
-                    size: 24,
+    // ✅ OPTIMIZACIÓN: Mostrar UI básica primero, luego cargar fondo premium
+    return PopScope(
+      canPop: false, // ✅ Prevenir cierre automático con botón de retroceso
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return; // Ya se cerró, no hacer nada
+        
+        // ✅ Manejar cierre del reproductor sin afectar la reproducción
+        if (mounted && context.mounted) {
+          ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
+          if (context.mounted) {
+            try {
+              context.pop();
+            } catch (e) {
+              // Ignorar errores de navegación si el contexto ya no es válido
+            }
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBody: true, // ✅ Extender el body debajo del sistema
+        extendBodyBehindAppBar: true, // ✅ Extender detrás de la app bar
+        body: RepaintBoundary(
+          child: Stack(
+            children: [
+              // ✅ Reproductor profesional completo (con fondo lazy)
+              // Key única basada en el ID de la canción para forzar reconstrucción cuando cambia
+              ProfessionalAudioPlayer(key: ValueKey('full_player_${currentSong.id}')),
+              
+              // Botón de cerrar - OPTIMIZADO con const
+              Positioned(
+                top: 12,
+                left: 16,
+                child: SafeArea(
+                  child: RepaintBoundary(
+                    child: _CloseButton(
+                      onPressed: () {
+                        if (mounted && context.mounted) {
+                          ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
+                          try {
+                            context.pop();
+                          } catch (e) {
+                            // Ignorar errores de navegación si el contexto ya no es válido
+                          }
+                        }
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón de cerrar optimizado como widget separado
+class _CloseButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _CloseButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        icon: const Icon(
+          Icons.keyboard_arrow_down,
+          color: Colors.white,
+          size: 24,
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
@@ -9,7 +10,6 @@ import '../../../core/models/user_model.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/social_auth_button.dart';
-import '../widgets/role_selector.dart';
 import '../utils/validators.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -27,23 +27,127 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _stageNameController = TextEditingController();
   
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
-  UserRole _selectedRole = UserRole.user;
+  
+  // Estados para validación en tiempo real
+  bool? _usernameAvailable;
+  bool? _emailAvailable;
+  Timer? _usernameCheckTimer;
+  Timer? _emailCheckTimer;
+  bool _isCheckingUsername = false;
+  bool _isCheckingEmail = false;
 
   @override
   void dispose() {
+    _usernameCheckTimer?.cancel();
+    _emailCheckTimer?.cancel();
     _emailController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _stageNameController.dispose();
     super.dispose();
+  }
+
+  // Verificar disponibilidad de username con debounce
+  void _checkUsernameAvailability(String username) {
+    _usernameCheckTimer?.cancel();
+    
+    // Limpiar estado si el campo está vacío
+    if (username.isEmpty) {
+      setState(() {
+        _usernameAvailable = null;
+        _isCheckingUsername = false;
+      });
+      return;
+    }
+    
+    // Verificar desde la primera letra, pero solo si tiene al menos 1 carácter
+    // Validar formato básico (solo letras, números y guiones bajos)
+    if (!RegExp(r'^[a-zA-Z0-9_]*$').hasMatch(username)) {
+      // Si tiene caracteres inválidos, no verificar disponibilidad
+      setState(() {
+        _usernameAvailable = null;
+        _isCheckingUsername = false;
+      });
+      return;
+    }
+    
+    // Si tiene al menos 1 carácter válido, verificar disponibilidad
+    setState(() {
+      _isCheckingUsername = true;
+      _usernameAvailable = null; // Limpiar resultado anterior mientras verifica
+    });
+    
+    _usernameCheckTimer = Timer(const Duration(milliseconds: 800), () async {
+      // Verificar que el valor no haya cambiado mientras esperábamos
+      if (_usernameController.text != username) {
+        return; // El usuario siguió escribiendo, cancelar esta verificación
+      }
+      
+      final authNotifier = ref.read(authStateProvider.notifier);
+      try {
+        final available = await authNotifier.checkUsernameAvailability(username);
+        if (mounted && _usernameController.text == username) {
+          setState(() {
+            _usernameAvailable = available;
+            _isCheckingUsername = false;
+          });
+          // Forzar validación del campo
+          _formKey.currentState?.validate();
+        }
+      } catch (e) {
+        if (mounted && _usernameController.text == username) {
+          setState(() {
+            _usernameAvailable = null;
+            _isCheckingUsername = false;
+          });
+        }
+      }
+    });
+  }
+
+  // Verificar disponibilidad de email con debounce
+  void _checkEmailAvailability(String email) {
+    _emailCheckTimer?.cancel();
+    
+    if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      setState(() {
+        _emailAvailable = null;
+        _isCheckingEmail = false;
+      });
+      return;
+    }
+    
+    setState(() {
+      _isCheckingEmail = true;
+    });
+    
+    _emailCheckTimer = Timer(const Duration(milliseconds: 800), () async {
+      final authNotifier = ref.read(authStateProvider.notifier);
+      try {
+        final available = await authNotifier.checkEmailAvailability(email);
+        if (mounted) {
+          setState(() {
+            _emailAvailable = available;
+            _isCheckingEmail = false;
+          });
+          // Forzar validación del campo
+          _formKey.currentState?.validate();
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _emailAvailable = null;
+            _isCheckingEmail = false;
+          });
+        }
+      }
+    });
   }
 
   @override
@@ -82,33 +186,53 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 
                 // Header con botón de regreso
                 FadeInDown(
-                  duration: const Duration(milliseconds: 300), // Optimizado: reducido de 600ms a 300ms
-                  child: Row(
+                  duration: const Duration(milliseconds: 300),
+                  child: Column(
                     children: [
-                      IconButton(
-                        onPressed: () => context.go('/login'),
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text(
-                              'Crear Cuenta',
-                              style: AppTextStyles.authFormTitle,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Únete a la comunidad musical',
-                              style: AppTextStyles.authFormSubtitle.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
+                      // Botón de regreso alineado a la izquierda
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => context.go('/login'),
+                            icon: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back,
+                                color: Color(0xFF3E2723), // Marrón oscuro
+                                size: 20,
                               ),
                             ),
-                          ],
+                          ),
+                          const Spacer(),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Título y subtítulo centrados
+                      Text(
+                        'Crear Cuenta',
+                        style: AppTextStyles.authFormTitle.copyWith(
+                          color: const Color(0xFF3E2723), // Marrón muy oscuro
                         ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Únete a la comunidad musical',
+                        style: AppTextStyles.authFormSubtitle.copyWith(
+                          color: NeumorphismTheme.coffeeDark,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -137,17 +261,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Selector de rol
-                          RoleSelector(
-                            selectedRole: _selectedRole,
-                            onRoleChanged: (role) {
-                              setState(() {
-                                _selectedRole = role;
-                              });
-                            },
-                          ),
-
-                          const SizedBox(height: 24),
+                          // Selector de rol eliminado - solo se permite registro como usuario
 
                           // Campos de nombre
                           Row(
@@ -159,6 +273,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   hint: 'Tu nombre',
                                   prefixIcon: Icons.person_outline,
                                   validator: (value) => AuthValidators.name(value, fieldName: 'nombre'),
+                                  onChanged: (value) {
+                                    // Forzar validación cuando el usuario escribe
+                                    _formKey.currentState?.validate();
+                                  },
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -169,6 +287,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   hint: 'Tu apellido',
                                   prefixIcon: Icons.person_outline,
                                   validator: (value) => AuthValidators.name(value, fieldName: 'apellido'),
+                                  onChanged: (value) {
+                                    // Forzar validación cuando el usuario escribe
+                                    _formKey.currentState?.validate();
+                                  },
                                 ),
                               ),
                             ],
@@ -183,7 +305,44 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             hint: 'tu@email.com',
                             keyboardType: TextInputType.emailAddress,
                             prefixIcon: Icons.email_outlined,
-                            validator: AuthValidators.email,
+                            suffixIcon: _isCheckingEmail
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12.0),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          NeumorphismTheme.coffeeMedium,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : _emailAvailable == false
+                                    ? const Icon(
+                                        Icons.error_outline,
+                                        color: Colors.red,
+                                        size: 20,
+                                      )
+                                    : _emailAvailable == true
+                                        ? const Icon(
+                                            Icons.check_circle_outline,
+                                            color: Colors.green,
+                                            size: 20,
+                                          )
+                                        : null,
+                            validator: (value) {
+                              final emailError = AuthValidators.email(value);
+                              if (emailError != null) return emailError;
+                              if (_emailAvailable == false) {
+                                return 'Este email ya está registrado';
+                              }
+                              return null;
+                            },
+                            onChanged: (value) {
+                              _checkEmailAvailability(value);
+                            },
                           ),
 
                           const SizedBox(height: 20),
@@ -194,20 +353,56 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             label: 'Nombre de usuario',
                             hint: '@tu_usuario',
                             prefixIcon: Icons.alternate_email,
-                            validator: AuthValidators.username,
+                            suffixIcon: _isCheckingUsername
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(12.0),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          NeumorphismTheme.coffeeMedium,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : _usernameAvailable == false
+                                    ? const Icon(
+                                        Icons.error_outline,
+                                        color: Colors.red,
+                                        size: 20,
+                                      )
+                                    : _usernameAvailable == true
+                                        ? const Icon(
+                                            Icons.check_circle_outline,
+                                            color: Colors.green,
+                                            size: 20,
+                                          )
+                                        : null,
+                            validator: (value) {
+                              // Primero validar formato básico (longitud mínima, caracteres válidos)
+                              final basicValidation = AuthValidators.username(value);
+                              if (basicValidation != null) {
+                                return basicValidation; // Si hay error de formato, retornar ese
+                              }
+                              
+                              // Verificar disponibilidad si ya se verificó (independientemente de la longitud)
+                              // Esto permite mostrar el error de disponibilidad incluso si el usuario está escribiendo
+                              if (value != null && _usernameAvailable != null && _usernameAvailable == false) {
+                                return 'Este nombre de usuario no está disponible';
+                              }
+                              
+                              return null;
+                            },
+                            onChanged: (value) {
+                              _checkUsernameAvailability(value);
+                              // Forzar validación cuando el usuario escribe
+                              _formKey.currentState?.validate();
+                            },
                           ),
 
-                          // Campo de nombre artístico (solo para artistas)
-                          if (_selectedRole == UserRole.artist) ...[
-                            const SizedBox(height: 20),
-                            AuthTextField(
-                              controller: _stageNameController,
-                              label: 'Nombre artístico',
-                              hint: 'Tu nombre artístico',
-                              prefixIcon: Icons.music_note,
-                              validator: (value) => AuthValidators.stageName(value, isArtist: _selectedRole == UserRole.artist),
-                            ),
-                          ],
+                          // Campo de nombre artístico eliminado - solo se permite registro como usuario
 
                           const SizedBox(height: 20),
 
@@ -230,6 +425,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               },
                             ),
                             validator: AuthValidators.password,
+                            onChanged: (value) {
+                              // Forzar validación cuando el usuario escribe
+                              _formKey.currentState?.validate();
+                            },
                           ),
 
                           const SizedBox(height: 20),
@@ -253,6 +452,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               },
                             ),
                             validator: (value) => AuthValidators.confirmPassword(value, _passwordController.text),
+                            onChanged: (value) {
+                              // Forzar validación cuando el usuario escribe
+                              _formKey.currentState?.validate();
+                            },
                           ),
 
                           const SizedBox(height: 20),
@@ -309,10 +512,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   password: _passwordController.text,
                                   firstName: _firstNameController.text.trim(),
                                   lastName: _lastNameController.text.trim(),
-                                  role: _selectedRole,
-                                  stageName: _selectedRole == UserRole.artist 
-                                    ? _stageNameController.text.trim() 
-                                    : null,
+                                  role: UserRole.user, // Siempre usuario
+                                  stageName: null, // No aplica para usuarios
                                 );
                               }
                             } : null,
@@ -350,7 +551,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           // Botones de autenticación social
                           Row(
                             children: [
-                              Expanded(
+                              Flexible(
+                                flex: 1,
                                 child: SocialAuthButton(
                                   icon: Icons.g_mobiledata,
                                   text: 'Google',
@@ -364,7 +566,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Expanded(
+                              Flexible(
+                                flex: 1,
                                 child: SocialAuthButton(
                                   icon: Icons.apple,
                                   text: 'Apple',

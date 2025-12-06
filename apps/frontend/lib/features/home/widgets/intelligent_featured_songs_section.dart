@@ -10,6 +10,7 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/url_normalizer.dart';
+import '../../../core/widgets/verified_badge.dart';
 
 /// 🧠 SECCIÓN DE CANCIONES DESTACADAS INTELIGENTES
 /// Usa tu algoritmo avanzado de recomendaciones para mostrar:
@@ -52,68 +53,43 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(
-                    'Destacadas para Ti',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF3D2E20),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Indicador de IA
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF8B7A6A).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 12,
-                          color: Color(0xFF8B7A6A),
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          'IA',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF8B7A6A),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                'Destacadas para Ti',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF3D2E20),
+                  decoration: TextDecoration.none,
+                ),
               ),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      context.push('/search');
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFF8B7A6A),
+              const SizedBox(width: 8),
+              // Indicador de IA
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B7A6A).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 12,
+                      color: Color(0xFF8B7A6A),
                     ),
-                    child: Text(
-                      'Ver todas',
+                    const SizedBox(width: 2),
+                    Text(
+                      'IA',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                         color: const Color(0xFF8B7A6A),
-                        decoration: TextDecoration.none,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -121,19 +97,19 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
         
         const SizedBox(height: 16),
         
-        // Lista vertical de canciones optimizada (máximo 4)
-        ...featuredSongs.take(4).map((featuredSong) {
-          return RepaintBoundary(
-            key: ValueKey('intelligent_song_${featuredSong.song.id}'),
-            child: IntelligentFeaturedSongCard(
-              key: ValueKey('intelligent_song_card_${featuredSong.song.id}'),
-              featuredSong: featuredSong,
-              onTap: () {
-                _onSongTap(context, featuredSong.song);
-              },
-            ),
-          );
-        }),
+        // 🔥 OPTIMIZACIÓN: Column con items fijos (máximo 4) - más eficiente que ListView con shrinkWrap
+        Column(
+          children: [
+            for (int index = 0; index < featuredSongs.take(4).length; index++)
+              IntelligentFeaturedSongCard(
+                key: ValueKey('intelligent_song_card_${featuredSongs[index].song.id}'),
+                featuredSong: featuredSongs[index],
+                onTap: () {
+                  _onSongTap(context, ref, featuredSongs[index].song);
+                },
+              ),
+          ],
+        ),
         
         // Indicador de carga si está actualizando
         if (isLoading && featuredSongs.isNotEmpty) ...[
@@ -191,6 +167,7 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
     );
   }
 
+  /// ⚡ OPTIMIZADO: Skeleton ligero adaptado al contenido real
   Widget _buildLoadingSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,132 +185,68 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                   decoration: TextDecoration.none,
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: const Color(0xFF8B7A6A),
-                ),
-              ),
             ],
           ),
         ),
         const SizedBox(height: 16),
+        // ⚡ Solo 2 items skeleton - Tamaños exactos del contenido real
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            children: List.generate(3, (index) {
-              return RepaintBoundary(
-                key: ValueKey('loading_intelligent_song_$index'),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), // Mismo margin que el real
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      stops: const [0.0, 0.25, 1.0],
-                      colors: [
-                        NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
-                        NeumorphismTheme.surface.withValues(alpha: 0.8),
-                        NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20), // Mismo borderRadius que el real
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                        spreadRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: Shimmer.fromColors(
-                    baseColor: NeumorphismTheme.shimmerBaseColor,
-                    highlightColor: NeumorphismTheme.shimmerHighlightColor,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0), // Mismo padding que el real (no 12)
-                      child: Row(
-                        children: [
-                          // Portada skeleton - CRÍTICO: 64x64 con borderRadius 16 y sombra
-                          Container(
-                            width: 64,
-                            height: 64,
-                            constraints: const BoxConstraints(
-                              minWidth: 64,
-                              maxWidth: 64,
-                              minHeight: 64,
-                              maxHeight: 64,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(16), // Mismo borderRadius que el real
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                  spreadRadius: 0,
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                width: 64,
-                                height: 64,
+            children: List.generate(2, (index) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Shimmer.fromColors(
+                  baseColor: NeumorphismTheme.shimmerBaseColor,
+                  highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                  period: const Duration(milliseconds: 1200), // Más lento = más ligero
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0), // Igual que el contenido real
+                    child: Row(
+                      children: [
+                        // Portada skeleton - 64x64 exacto
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: NeumorphismTheme.shimmerContentColor,
+                            borderRadius: BorderRadius.circular(16), // Igual que el real
+                          ),
+                        ),
+                        const SizedBox(width: 16), // Igual que el real
+                        // Información skeleton - Tamaños exactos del texto real
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Título skeleton - 17px (igual que fontSize del título real)
+                              Container(
+                                height: 17,
+                                width: double.infinity,
                                 decoration: BoxDecoration(
                                   color: NeumorphismTheme.shimmerContentColor,
+                                  borderRadius: BorderRadius.circular(4),
                                 ),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 16), // Mismo espacio que el real
-                          // Información skeleton - CRÍTICO: Mismas alturas que los textos reales
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Título skeleton - fontSize: 17
-                                Container(
-                                  height: 17, // Mismo fontSize que el texto real
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: NeumorphismTheme.shimmerContentColor,
-                                    borderRadius: BorderRadius.circular(4),
+                              const SizedBox(height: 6), // Igual que el real
+                              // Artista skeleton - 14px (igual que fontSize del artista real) + espacio para badge
+                              Row(
+                                children: [
+                                  Container(
+                                    height: 14,
+                                    width: 120, // Ancho aproximado para artista + badge
+                                    decoration: BoxDecoration(
+                                      color: NeumorphismTheme.shimmerContentColor,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 6), // Mismo espacio que el real
-                                // Artista skeleton - fontSize: 14 con icono
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 14, // Mismo tamaño que el icono real
-                                      height: 14,
-                                      decoration: BoxDecoration(
-                                        color: NeumorphismTheme.shimmerContentColor,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4), // Mismo espacio que el real
-                                    Container(
-                                      height: 14, // Mismo fontSize que el texto real
-                                      width: 150,
-                                      decoration: BoxDecoration(
-                                        color: NeumorphismTheme.shimmerContentColor,
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -483,15 +396,18 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
     );
   }
 
-  void _onSongTap(BuildContext context, Song song) {
+  /// ✅ SOLUCIÓN: Las canciones destacadas NO tienen contextos de reproducción
+  /// Solo navegan a song_detail_screen.dart sin reproducir automáticamente
+  void _onSongTap(BuildContext context, WidgetRef ref, Song song) {
     if (!context.mounted) {
       debugPrint('[IntelligentFeaturedSongs] Contexto no montado');
       return;
     }
     
-    debugPrint('[IntelligentFeaturedSongs] Navegando a canción inteligente: ${song.title} (${song.id})');
+    debugPrint('[IntelligentFeaturedSongs] Navegando a canción destacada: ${song.title} (${song.id})');
     
-    // Usar go_router a través de la función estática que previene duplicados
+    // ✅ SOLUCIÓN: Solo navegar a song_detail_screen.dart (NO reproducir automáticamente)
+    // El usuario puede reproducir desde la pantalla de detalle si lo desea
     SongDetailScreen.navigateToSong(context, song);
   }
 }
@@ -516,6 +432,7 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
         : null;
     
     return Container(
+      key: ValueKey('intelligent_song_${song.id}'),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -538,93 +455,111 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                // Portada con efecto de elevación (igual que perfil de artista)
-                Container(
-                    width: 64,
-                    height: 64,
-                    constraints: const BoxConstraints(
-                      minWidth: 64,
-                      maxWidth: 64,
-                      minHeight: 64,
-                      maxHeight: 64,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15), // Igual que perfil de artista
-                          blurRadius: 6, // Igual que perfil de artista
-                          offset: const Offset(0, 2), // Igual que perfil de artista
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      clipBehavior: Clip.antiAlias,
-                      child: OptimizedImage(
-                        imageUrl: coverUrl,
-                        fit: BoxFit.cover,
-                        width: 64,
-                        height: 64,
-                        borderRadius: 16,
-                        useThumbnail: true, // Usar thumbnail para carga más rápida
+      child: RepaintBoundary(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  // Portada con efecto de elevación (igual que perfil de artista)
+                  Container(
+                      width: 64,
+                      height: 64,
+                      constraints: const BoxConstraints(
+                        minWidth: 64,
+                        maxWidth: 64,
+                        minHeight: 64,
+                        maxHeight: 64,
                       ),
-                    ),
-                  ),
-                const SizedBox(width: 16),
-                // Información de la canción (igual estilo que perfil de artista)
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        song.title ?? 'Sin título',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: NeumorphismTheme.textPrimary,
-                          letterSpacing: -0.3,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.person_outline,
-                            size: 14,
-                            color: NeumorphismTheme.textSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              song.artist?.stageName ?? 
-                              song.artist?.displayName ?? 
-                              'Artista Desconocido',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: NeumorphismTheme.textSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15), // Igual que perfil de artista
+                            blurRadius: 6, // Igual que perfil de artista
+                            offset: const Offset(0, 2), // Igual que perfil de artista
+                            spreadRadius: 0,
                           ),
                         ],
                       ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        clipBehavior: Clip.antiAlias,
+                        child: OptimizedImage(
+                          imageUrl: coverUrl,
+                          fit: BoxFit.cover,
+                          width: 64,
+                          height: 64,
+                          borderRadius: 16,
+                          useThumbnail: true,
+                          maxCacheWidth: 300, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (300px suficiente)
+                          maxCacheHeight: 300,
+                          skipFade: true, // 🔥 Sin fade para mejor rendimiento
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 16),
+                  // Información de la canción (igual estilo que perfil de artista)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          song.title ?? 'Sin título',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: NeumorphismTheme.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.person_outline,
+                              size: 14,
+                              color: NeumorphismTheme.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: song.artist != null
+                                  ? ArtistNameWithBadge(
+                                      artistName: song.artist!.stageName ?? 
+                                          (song.artist!.displayName.isNotEmpty 
+                                              ? song.artist!.displayName 
+                                              : 'Artista Desconocido'),
+                                      isVerified: song.artist!.isVerifiedValue,
+                                      textStyle: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: NeumorphismTheme.textSecondary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      badgeSize: 12.0,
+                                    )
+                                  : Text(
+                                      'Artista Desconocido',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: NeumorphismTheme.textSecondary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                            ),
+                          ],
+                        ),
                       // Mostrar razón de destacado si existe
                       if (featuredSong.featuredReason != null) ...[
                         const SizedBox(height: 4),
@@ -646,6 +581,7 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
             ),
           ),
         ),
+      ),
       ),
     );
   }

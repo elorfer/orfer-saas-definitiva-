@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'artist_model.g.dart';
@@ -17,6 +18,8 @@ class Artist {
   final String? websiteUrl;
   final Map<String, dynamic>? socialLinks;
   final bool verificationStatus;
+  @JsonKey(name: 'is_verified')
+  final bool? isVerified;
   final int totalStreams;
   final int totalFollowers;
   final int monthlyListeners;
@@ -33,6 +36,7 @@ class Artist {
     this.websiteUrl,
     this.socialLinks,
     this.verificationStatus = false,
+    this.isVerified,
     this.totalStreams = 0,
     this.totalFollowers = 0,
     this.monthlyListeners = 0,
@@ -44,7 +48,14 @@ class Artist {
   Map<String, dynamic> toJson() => _$ArtistToJson(this);
 
   String get displayName => stageName ?? 'Artista Desconocido';
-  bool get isVerified => verificationStatus;
+  bool get isVerifiedValue {
+    final result = isVerified ?? verificationStatus;
+    // Debug: Verificar valores de verificación
+    if (kDebugMode && (stageName?.contains('ORFER') ?? false)) {
+      debugPrint('🔍 [Artist] ${stageName}: isVerified=$isVerified, verificationStatus=$verificationStatus, isVerifiedValue=$result');
+    }
+    return result;
+  }
 
   String? getSocialLink(String platform) => socialLinks?[platform];
 }

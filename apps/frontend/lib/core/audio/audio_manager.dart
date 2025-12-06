@@ -672,7 +672,7 @@ class AudioManager {
       final nextSong = await recommendationService.getSmartRecommendation(
         currentSongId: currentSongId,
         genres: genres,
-        user: null, // Nota: Pasar usuario actual cuando esté disponible
+        user: null, // Nota: Usuario actual no disponible aún en esta versión
       );
       
       if (nextSong != null) {

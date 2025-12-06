@@ -57,6 +57,9 @@ export class Artist {
   @Column({ name: 'verification_status', default: false })
   verificationStatus: boolean;
 
+  @Column({ name: 'is_verified', type: 'boolean', default: false })
+  isVerified: boolean;
+
   @Column({ name: 'total_streams', default: 0 })
   totalStreams: number;
 
@@ -94,8 +97,8 @@ export class Artist {
     return this.stageName;
   }
 
-  isVerified(): boolean {
-    return this.verificationStatus;
+  isVerifiedMethod(): boolean {
+    return this.isVerified || this.verificationStatus;
   }
 
   getSocialLink(platform: string): string | undefined {

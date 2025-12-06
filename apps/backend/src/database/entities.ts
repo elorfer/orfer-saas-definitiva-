@@ -11,6 +11,8 @@ import { Song } from '../common/entities/song.entity';
 import { SongLike } from '../common/entities/song-like.entity';
 import { SongUpload } from '../common/entities/song-upload.entity';
 import { StreamingStats } from '../common/entities/streaming-stats.entity';
+import { Stream } from '../common/entities/stream.entity';
+import { UserListeningSession } from '../common/entities/user-listening-session.entity';
 import { User } from '../common/entities/user.entity';
 
 export const entities = [
@@ -27,5 +29,7 @@ export const entities = [
   SongLike,
   SongUpload,
   StreamingStats,
+  Stream,
+  UserListeningSession,
   User,
 ];

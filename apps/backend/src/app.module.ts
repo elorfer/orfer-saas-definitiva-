@@ -23,6 +23,8 @@ import { PublicModule } from './modules/public/public.module';
 import { FeaturedModule } from './modules/featured/featured.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { SearchModule } from './modules/search/search.module';
+import { StreamsModule } from './modules/streams/streams.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 import { entities } from './database/entities';
 
 // Configuración de la base de datos
@@ -187,6 +189,8 @@ import { dataSourceOptions } from './database/data-source';
     FeaturedModule,
     FavoritesModule,
     SearchModule,
+    StreamsModule,
+    RealtimeModule,
   ],
 })
 export class AppModule {}

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/artist.dart';
 import '../../../core/widgets/optimized_image.dart';
+import '../../../core/widgets/follow_button.dart';
+import '../../../core/widgets/verified_badge.dart';
 
 String flagEmoji(String? code) {
   if (code == null || code.length != 2) return '🏳️';
@@ -9,14 +12,14 @@ String flagEmoji(String? code) {
   return String.fromCharCodes(runes);
 }
 
-class ArtistCard extends StatelessWidget {
+class ArtistCard extends ConsumerWidget {
   final ArtistLite artist;
   final VoidCallback? onTap;
 
   const ArtistCard({super.key, required this.artist, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
       onTap: onTap,
       child: Column(
@@ -43,14 +46,22 @@ class ArtistCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  artist.name,
+                child: ArtistNameWithBadge(
+                  artistName: artist.name,
+                  isVerified: false, // ArtistLite no tiene isVerified, se puede extender si es necesario
+                  textStyle: const TextStyle(fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  badgeSize: 14.0,
                 ),
               ),
               Text(flagEmoji(artist.nationalityCode)),
+              const SizedBox(width: 4),
+              // Botón de seguir en modo compacto
+              FollowButton(
+                artistId: artist.id,
+                compact: true,
+              ),
             ],
           ),
         ],

@@ -64,6 +64,47 @@ export class AnalyticsController {
   async getSongAnalytics(@Param('id') songId: string) {
     return this.analyticsService.getSongAnalytics(songId);
   }
+
+  @Get('daily-streams')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener reproducciones diarias de los últimos N días (Solo Admin)' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Número de días (default: 7)' })
+  @ApiResponse({ status: 200, description: 'Reproducciones diarias' })
+  async getDailyStreams(
+    @Query('days', new ParseIntPipe({ optional: true })) days: number = 7,
+  ) {
+    return this.analyticsService.getDailyStreams(days);
+  }
+
+  @Get('daily-active-users')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener usuarios activos diarios de los últimos N días (Solo Admin)' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Número de días (default: 7)' })
+  @ApiResponse({ status: 200, description: 'Usuarios activos diarios' })
+  async getDailyActiveUsers(
+    @Query('days', new ParseIntPipe({ optional: true })) days: number = 7,
+  ) {
+    return this.analyticsService.getDailyActiveUsers(days);
+  }
+
+  @Get('genre-distribution')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener distribución de reproducciones por género (Solo Admin)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Límite de géneros (default: 5)' })
+  @ApiResponse({ status: 200, description: 'Distribución por géneros' })
+  async getGenreDistribution(
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 5,
+  ) {
+    return this.analyticsService.getGenreDistribution(limit);
+  }
+
+  @Get('peak-hours')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener horas pico de actividad (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Horas pico de actividad' })
+  async getPeakHours() {
+    return this.analyticsService.getPeakHours();
+  }
 }
 
 

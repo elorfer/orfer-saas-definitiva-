@@ -164,7 +164,7 @@ export default function CreateArtistPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Nombre artístico</label>
               <input
-                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-purple-500 focus:ring-purple-100"
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-brown-700 focus:ring-brown-100"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={async () => {
@@ -179,7 +179,7 @@ export default function CreateArtistPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Correo del artista (opcional)</label>
               <input
-                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-purple-500 focus:ring-purple-100"
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-brown-700 focus:ring-brown-100"
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value);
@@ -209,7 +209,7 @@ export default function CreateArtistPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Contraseña</label>
                 <input
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-purple-500 focus:ring-purple-100"
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-brown-700 focus:ring-brown-100"
                   type="password"
                   value={password}
                   onChange={(e) => {
@@ -225,7 +225,7 @@ export default function CreateArtistPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Teléfono</label>
                 <input
-                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-purple-500 focus:ring-purple-100"
+                  className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-brown-700 focus:ring-brown-100"
                   value={phone}
                   onChange={(e) => {
                     setPhone(e.target.value);
@@ -243,7 +243,7 @@ export default function CreateArtistPage() {
               <label className="block text-sm font-medium text-gray-700">Nacionalidad</label>
               <div className="mt-1 flex items-center gap-2">
                 <select
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-purple-500 focus:ring-purple-100"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-brown-700 focus:ring-brown-100"
                   value={nationality}
                   onChange={(e) => setNationality(e.target.value)}
                 >
@@ -261,7 +261,7 @@ export default function CreateArtistPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Biografía</label>
               <textarea
-                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-purple-500 focus:ring-purple-100"
+                className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-brown-700 focus:ring-brown-100"
                 rows={6}
                 value={biography}
                 onChange={(e) => setBiography(e.target.value)}
@@ -272,7 +272,7 @@ export default function CreateArtistPage() {
             <div className="pt-2">
               <button
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800 disabled:opacity-50"
               >
                 {loading ? 'Guardando...' : 'Crear'}
               </button>

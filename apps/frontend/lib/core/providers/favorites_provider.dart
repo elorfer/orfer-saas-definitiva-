@@ -53,8 +53,15 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
   @override
   FavoritesState build() {
     _service = ref.read(favoritesServiceProvider);
-    // Cargar favoritos automáticamente
-    Future.microtask(() => _loadFavorites());
+    // ⚡ OPTIMIZACIÓN: Cargar favoritos de forma lazy (solo cuando se necesite)
+    // Diferir la carga hasta que realmente se acceda al estado
+    // Esto evita cargar favoritos cuando solo se expande el reproductor
+    Future.delayed(const Duration(milliseconds: 500), () {
+      // Solo cargar si el estado aún está en loading (no se ha cargado antes)
+      if (state.isLoading) {
+        _loadFavorites();
+      }
+    });
     return const FavoritesState(isLoading: true);
   }
 

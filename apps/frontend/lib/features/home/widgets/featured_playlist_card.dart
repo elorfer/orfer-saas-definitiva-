@@ -42,14 +42,17 @@ class FeaturedPlaylistCard extends StatelessWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: OptimizedImage(
-                  imageUrl: playlist.coverArtUrl,
-                  fit: BoxFit.cover,
-                  width: 160,
-                  height: 160,
-                  borderRadius: 16,
-                  placeholderColor: NeumorphismTheme.accentLight,
-                ),
+              child: OptimizedImage(
+                imageUrl: playlist.coverArtUrl,
+                fit: BoxFit.cover,
+                width: 160,
+                height: 160,
+                borderRadius: 16,
+                placeholderColor: NeumorphismTheme.accentLight,
+                maxCacheWidth: 300, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (300px suficiente)
+                maxCacheHeight: 300,
+                skipFade: true, // 🔥 Sin fade para mejor rendimiento
+              ),
               ),
             ),
             

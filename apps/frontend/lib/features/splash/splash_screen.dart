@@ -1,52 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../core/theme/neumorphism_theme.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final isMediumScreen = screenWidth < 600;
+    
+    // Logo con tamaño aumentado y prominente (igual que en login)
+    final logoSize = isSmallScreen ? 150.0 : (isMediumScreen ? 180.0 : 200.0);
+    final logoIconSize = isSmallScreen ? 75.0 : (isMediumScreen ? 90.0 : 100.0);
+    
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: NeumorphismTheme.backgroundGradient,
+          color: Color(0xFF3E2723), // Marrón oscuro (igual que login)
         ),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Logo con tamaño aumentado
               Container(
-                width: 72,
-                height: 72,
+                width: logoSize,
+                height: logoSize,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.4),
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 30,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: logoSize,
+                    height: logoSize,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback a icono si la imagen no se carga
+                      return Icon(
+                        Icons.music_note,
+                        size: logoIconSize,
+                        color: Colors.white,
+                      );
+                    },
                   ),
                 ),
-                child: const Icon(
-                  Icons.music_note,
-                  size: 36,
-                  color: Colors.white,
-                ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
-                'Vintage Music',
+                'Srtuky',
                 style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
+                  fontSize: isSmallScreen ? 28 : (isMediumScreen ? 32 : 36),
+                  fontWeight: FontWeight.bold,
                   color: Colors.white,
                   letterSpacing: 0.8,
                 ),
               ),
-              const SizedBox(height: 12),
-              const SizedBox(
-                width: 36,
-                height: 36,
-                child: CircularProgressIndicator(
+              SizedBox(height: isSmallScreen ? 24 : 32),
+              SizedBox(
+                width: isSmallScreen ? 32 : 40,
+                height: isSmallScreen ? 32 : 40,
+                child: const CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   strokeWidth: 3,
                 ),

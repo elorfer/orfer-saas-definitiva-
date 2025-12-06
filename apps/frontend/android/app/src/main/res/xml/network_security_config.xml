@@ -7,7 +7,37 @@
         <domain includeSubdomains="true">*.amazonaws.com</domain>
     </domain-config>
     
-    <!-- Para desarrollo local (si es necesario) -->
+    <!-- Permitir conexiones HTTP para desarrollo local -->
+    <!-- Emulador Android (10.0.2.2) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+    
+    <!-- Localhost -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+    
+    <!-- Rangos de IP locales comunes para desarrollo en dispositivos físicos -->
+    <!-- 192.168.x.x (redes domésticas comunes) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.0.0</domain>
+        <domain includeSubdomains="true">192.168.1.0</domain>
+        <domain includeSubdomains="true">192.168.2.0</domain>
+    </domain-config>
+    
+    <!-- 10.0.0.0/8 (redes privadas) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.0.0</domain>
+    </domain-config>
+    
+    <!-- 172.16.0.0/12 (redes privadas) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">172.16.0.0</domain>
+    </domain-config>
+    
+    <!-- Configuración base: permitir cleartext en desarrollo -->
     <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />

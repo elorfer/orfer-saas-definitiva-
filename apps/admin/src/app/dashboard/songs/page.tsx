@@ -121,7 +121,7 @@ function SongRow({
               />
             </div>
           ) : (
-            <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center shadow-sm">
+            <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gradient-to-br from-brown-700 to-brown-700 text-white flex items-center justify-center shadow-sm">
               <MusicalNoteIcon className="h-5 w-5" />
             </div>
           )}
@@ -143,7 +143,7 @@ function SongRow({
               {song.genres.slice(0, 3).map((genre, index) => (
                 <span
                   key={index}
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700"
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-brown-100 text-brown-800"
                 >
                   {genre}
                 </span>
@@ -186,7 +186,7 @@ function SongRow({
         <div className="flex items-center justify-end gap-2">
           <button
             onClick={() => onEdit(song)}
-            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-purple-300 hover:text-purple-600"
+            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-brown-500 hover:text-brown-700"
           >
             <PencilIcon className="h-4 w-4" />
             <span className="ml-1">Editar</span>
@@ -431,14 +431,14 @@ export default function SongsPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-brown-600 hover:text-brown-700"
             >
               <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
               Actualizar
             </button>
             <button
               onClick={openUploadModal}
-              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+              className="flex items-center gap-2 rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800"
             >
               <PlusIcon className="h-4 w-4" />
               Subir canción
@@ -453,7 +453,7 @@ export default function SongsPage() {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Buscar por título o artista..."
-                    className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   />
                   <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
@@ -524,14 +524,14 @@ export default function SongsPage() {
                   <button
                     onClick={handlePrev}
                     disabled={page === 1}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Anterior
                   </button>
                   <button
                     onClick={handleNext}
                     disabled={page === totalPages}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Siguiente
                   </button>
@@ -575,16 +575,16 @@ export default function SongsPage() {
                   {uploadForm.file ? (
                     <div className={`w-full border-2 rounded-lg p-4 transition ${
                       uploading 
-                        ? 'border-purple-300 bg-purple-50' 
+                        ? 'border-brown-500 bg-brown-50' 
                         : 'border-green-300 bg-green-50 border-dashed'
                     }`}>
                       <div className="flex items-center gap-4">
                         <div className="flex-shrink-0 relative">
                           <div className={`h-16 w-16 rounded-lg flex items-center justify-center ${
-                            uploading ? 'bg-purple-100 border-2 border-purple-400' : 'bg-green-100'
+                            uploading ? 'bg-brown-100 border-2 border-brown-600' : 'bg-green-100'
                           }`}>
                             {uploading ? (
-                              <ArrowPathIcon className="h-8 w-8 text-purple-600 animate-spin" />
+                              <ArrowPathIcon className="h-8 w-8 text-brown-700 animate-spin" />
                             ) : (
                               <MusicalNoteIcon className="h-8 w-8 text-green-600" />
                             )}
@@ -593,7 +593,7 @@ export default function SongsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             {uploading ? (
-                              <ArrowPathIcon className="h-5 w-5 text-purple-600 flex-shrink-0 animate-spin" />
+                              <ArrowPathIcon className="h-5 w-5 text-brown-700 flex-shrink-0 animate-spin" />
                             ) : (
                               <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
                             )}
@@ -606,11 +606,11 @@ export default function SongsPage() {
                               <div className="mb-2">
                                 <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                                   <span>Subiendo...</span>
-                                  <span className="font-semibold text-purple-600">{uploadProgress}%</span>
+                                  <span className="font-semibold text-brown-700">{uploadProgress}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                                   <div
-                                    className="bg-gradient-to-r from-purple-500 to-purple-600 h-full rounded-full transition-all duration-300 ease-out"
+                                    className="bg-gradient-to-r from-brown-700 to-brown-700 h-full rounded-full transition-all duration-300 ease-out"
                                     style={{ width: `${uploadProgress}%` }}
                                   />
                                 </div>
@@ -639,10 +639,10 @@ export default function SongsPage() {
                       </div>
                     </div>
                   ) : (
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-purple-400 transition group">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-brown-600 transition group">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <div className="h-12 w-12 rounded-lg bg-purple-100 flex items-center justify-center mb-3 group-hover:bg-purple-200 transition">
-                          <DocumentArrowUpIcon className="h-6 w-6 text-purple-600" />
+                        <div className="h-12 w-12 rounded-lg bg-brown-100 flex items-center justify-center mb-3 group-hover:bg-brown-300 transition">
+                          <DocumentArrowUpIcon className="h-6 w-6 text-brown-700" />
                         </div>
                         <p className="mb-2 text-sm text-gray-600 group-hover:text-gray-900">
                           <span className="font-semibold">Click para seleccionar</span> o arrastra el archivo
@@ -669,13 +669,13 @@ export default function SongsPage() {
                   {uploadForm.coverFile ? (
                     <div className={`w-full border-2 rounded-lg p-4 transition ${
                       uploading 
-                        ? 'border-purple-300 bg-purple-50' 
+                        ? 'border-brown-500 bg-brown-50' 
                         : 'border-blue-300 bg-blue-50'
                     }`}>
                       <div className="flex items-center gap-4">
                         <div className="flex-shrink-0 relative">
                           <div className={`h-20 w-20 rounded-lg overflow-hidden border-2 ${
-                            uploading ? 'border-purple-400' : 'border-blue-300'
+                            uploading ? 'border-brown-600' : 'border-blue-300'
                           }`}>
                             {uploadForm.coverFile.type.startsWith('image/') ? (
                               <>
@@ -687,17 +687,17 @@ export default function SongsPage() {
                                   }`}
                                 />
                                 {uploading && (
-                                  <div className="absolute inset-0 flex items-center justify-center bg-purple-500/20 backdrop-blur-sm">
-                                    <ArrowPathIcon className="h-8 w-8 text-purple-600 animate-spin" />
+                                  <div className="absolute inset-0 flex items-center justify-center bg-brown-700/20 backdrop-blur-sm">
+                                    <ArrowPathIcon className="h-8 w-8 text-brown-700 animate-spin" />
                                   </div>
                                 )}
                               </>
                             ) : (
                               <div className={`h-full w-full flex items-center justify-center ${
-                                uploading ? 'bg-purple-100' : 'bg-blue-100'
+                                uploading ? 'bg-brown-100' : 'bg-blue-100'
                               }`}>
                                 {uploading ? (
-                                  <ArrowPathIcon className="h-8 w-8 text-purple-600 animate-spin" />
+                                  <ArrowPathIcon className="h-8 w-8 text-brown-700 animate-spin" />
                                 ) : (
                                   <PhotoIcon className="h-6 w-6 text-blue-600" />
                                 )}
@@ -708,7 +708,7 @@ export default function SongsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             {uploading ? (
-                              <ArrowPathIcon className="h-5 w-5 text-purple-600 flex-shrink-0 animate-spin" />
+                              <ArrowPathIcon className="h-5 w-5 text-brown-700 flex-shrink-0 animate-spin" />
                             ) : (
                               <CheckCircleIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
                             )}
@@ -721,11 +721,11 @@ export default function SongsPage() {
                               <div className="mb-2">
                                 <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
                                   <span>Subiendo...</span>
-                                  <span className="font-semibold text-purple-600">{uploadProgress}%</span>
+                                  <span className="font-semibold text-brown-700">{uploadProgress}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                                   <div
-                                    className="bg-gradient-to-r from-purple-500 to-purple-600 h-full rounded-full transition-all duration-300 ease-out"
+                                    className="bg-gradient-to-r from-brown-700 to-brown-700 h-full rounded-full transition-all duration-300 ease-out"
                                     style={{ width: `${uploadProgress}%` }}
                                   />
                                 </div>
@@ -788,7 +788,7 @@ export default function SongsPage() {
                   }
                   required
                   disabled={uploading}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   placeholder="Ej. Canción de ejemplo"
                 />
               </div>
@@ -831,8 +831,8 @@ export default function SongsPage() {
                           key={genre}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
                             isSelected
-                              ? 'bg-purple-100 border-2 border-purple-500 text-purple-700'
-                              : 'bg-white border border-gray-200 hover:border-purple-300 text-gray-700'
+                              ? 'bg-brown-100 border-2 border-brown-700 text-brown-800'
+                              : 'bg-white border border-gray-200 hover:border-brown-500 text-gray-700'
                           }`}
                         >
                           <input
@@ -852,7 +852,7 @@ export default function SongsPage() {
                               }
                             }}
                             disabled={uploading}
-                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            className="rounded border-gray-300 text-brown-700 focus:ring-brown-700"
                           />
                           <span className="text-sm font-medium">{genre}</span>
                         </label>
@@ -885,7 +885,7 @@ export default function SongsPage() {
                 <button
                   type="submit"
                   disabled={uploading || !uploadForm.file || !uploadForm.title.trim() || !uploadForm.artistId}
-                  className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-400"
+                  className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800 disabled:cursor-not-allowed disabled:bg-brown-600"
                 >
                   {uploading ? (
                     <>
@@ -941,7 +941,7 @@ export default function SongsPage() {
                   }
                   required
                   disabled={updating}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   placeholder="Ej. Canción de ejemplo"
                 />
               </div>
@@ -967,7 +967,7 @@ export default function SongsPage() {
                     setEditForm((prev) => ({ ...prev, status: event.target.value }))
                   }
                   disabled={updating}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 >
                   <option value="draft">Borrador</option>
                   <option value="published">Publicada</option>
@@ -1002,8 +1002,8 @@ export default function SongsPage() {
                           key={genre}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
                             isSelected
-                              ? 'bg-purple-100 border-2 border-purple-500 text-purple-700'
-                              : 'bg-white border border-gray-200 hover:border-purple-300 text-gray-700'
+                              ? 'bg-brown-100 border-2 border-brown-700 text-brown-800'
+                              : 'bg-white border border-gray-200 hover:border-brown-500 text-gray-700'
                           }`}
                         >
                           <input
@@ -1023,7 +1023,7 @@ export default function SongsPage() {
                               }
                             }}
                             disabled={updating}
-                            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                            className="rounded border-gray-300 text-brown-700 focus:ring-brown-700"
                           />
                           <span className="text-sm font-medium">{genre}</span>
                         </label>
@@ -1056,7 +1056,7 @@ export default function SongsPage() {
                 <button
                   type="submit"
                   disabled={updating || !editForm.title.trim() || !editForm.artistId}
-                  className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-400"
+                  className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800 disabled:cursor-not-allowed disabled:bg-brown-600"
                 >
                   {updating ? (
                     <>

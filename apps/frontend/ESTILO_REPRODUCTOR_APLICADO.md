@@ -122,3 +122,19 @@ Tu aplicación ahora tiene una **identidad visual unificada** donde tanto el rep
 
 ¡Las tarjetas se ven espectaculares con el estilo del reproductor aplicado! 🎵✨
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

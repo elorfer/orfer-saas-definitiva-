@@ -18,6 +18,12 @@ const normalizeApiBaseUrl = (url?: string) => {
 
 const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 
+// Función para obtener la URL base de la API (sin /api/v1)
+export const getApiUrl = () => {
+  const url = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  return url.replace(/\/api\/v\d+$/i, '').replace(/\/api$/i, '');
+};
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -98,6 +104,11 @@ export const apiClient = {
     api.get(`/artists?page=${page}&limit=${limit}`),
   
   getArtist: (id: string) => api.get(`/artists/${id}`),
+
+  // Verificar/desverificar artista
+  verifyArtist: (id: string) => api.patch(`/artists/${id}/verify`),
+  
+  unverifyArtist: (id: string) => api.patch(`/artists/${id}/unverify`),
 
   // Crear artista (multipart/form-data)
   createArtist: (data: {
@@ -277,6 +288,15 @@ export const apiClient = {
   getTopArtists: (limit = 10) => api.get(`/analytics/top-artists?limit=${limit}`),
   
   getTopSongs: (limit = 10) => api.get(`/analytics/top-songs?limit=${limit}`),
+
+  // Analytics - Datos históricos
+  getDailyStreams: (days = 7) => api.get(`/analytics/daily-streams?days=${days}`),
+  
+  getDailyActiveUsers: (days = 7) => api.get(`/analytics/daily-active-users?days=${days}`),
+  
+  getGenreDistribution: (limit = 5) => api.get(`/analytics/genre-distribution?limit=${limit}`),
+  
+  getPeakHours: () => api.get('/analytics/peak-hours'),
 
   // Payments
   getPayments: (page = 1, limit = 10) =>

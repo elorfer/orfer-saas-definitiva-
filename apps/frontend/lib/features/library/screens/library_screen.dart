@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/favorites_provider.dart';
+import '../../../core/providers/play_history_provider.dart';
+import '../../../core/providers/follow_provider.dart';
 
 /// LibraryScreen optimizado con AutomaticKeepAliveClientMixin
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -19,52 +21,66 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   @override
   bool get wantKeepAlive => true; // Mantener estado al cambiar de pestaña
 
-  // Lista de secciones estáticas para optimización
-  static final List<Map<String, dynamic>> _librarySections = [
-    {
-      'icon': Icons.favorite,
-      'title': 'Canciones Favoritas',
-      'subtitle': '0 canciones',
-      'onTap': null, // Se maneja en el build
-    },
-    {
-      'icon': Icons.playlist_play,
-      'title': 'Mis Playlists',
-      'subtitle': '0 playlists',
-      'onTap': null, // Se maneja en el build
-    },
-    {
-      'icon': Icons.download,
-      'title': 'Descargadas',
-      'subtitle': '0 canciones',
-      'onTap': () {},
-    },
-    {
-      'icon': Icons.history,
-      'title': 'Recientemente Reproducidas',
-      'subtitle': '0 canciones',
-      'onTap': () {},
-    },
-    {
-      'icon': Icons.album,
-      'title': 'Álbumes Guardados',
-      'subtitle': '0 álbumes',
-      'onTap': () {},
-    },
-    {
-      'icon': Icons.person,
-      'title': 'Artistas Seguidos',
-      'subtitle': '0 artistas',
-      'onTap': () {},
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Cargar artistas seguidos inmediatamente al montar la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(followProvider.notifier).ensureLoaded();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // Optimización: usar select para escuchar solo cambios en favorites
+    // Optimización: usar select para escuchar solo cambios en favorites, historial y artistas seguidos
     final favoritesCount = ref.watch(favoritesProvider.select((state) => state.favorites.length));
+    final historyCount = ref.watch(playHistoryProvider.select((state) => state.length));
+    final followedArtistsCount = ref.watch(followProvider.select((state) => state.followedArtistIds.length));
+    final isLoadingFollowed = ref.watch(followProvider.select((state) => state.isLoading && state.followedArtistIds.isEmpty));
+    
+    // Construir secciones con datos reales
+    final librarySections = [
+      {
+        'icon': Icons.favorite,
+        'title': 'Canciones Favoritas',
+        'subtitle': '$favoritesCount ${favoritesCount == 1 ? 'canción' : 'canciones'}',
+        'onTap': () => context.push('/favorites'),
+      },
+      {
+        'icon': Icons.playlist_play,
+        'title': 'Mis Playlists',
+        'subtitle': '0 playlists',
+        'onTap': () => context.push('/playlists'),
+      },
+      {
+        'icon': Icons.download,
+        'title': 'Descargadas',
+        'subtitle': '0 canciones',
+        'onTap': () {},
+      },
+      {
+        'icon': Icons.history,
+        'title': 'Recientemente Reproducidas',
+        'subtitle': '$historyCount ${historyCount == 1 ? 'canción' : 'canciones'}',
+        'onTap': () => context.push('/recently-played'),
+      },
+      {
+        'icon': Icons.album,
+        'title': 'Álbumes Guardados',
+        'subtitle': '0 álbumes',
+        'onTap': () {},
+      },
+      {
+        'icon': Icons.person,
+        'title': 'Artistas Seguidos',
+        'subtitle': isLoadingFollowed 
+            ? 'Cargando...' 
+            : '$followedArtistsCount ${followedArtistsCount == 1 ? 'artista' : 'artistas'}',
+        'onTap': () => context.push('/followed-artists'),
+      },
+    ];
     
     return Scaffold(
       body: Container(
@@ -173,36 +189,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 // Library sections optimizadas
                 Expanded(
                   child: ListView.builder(
-                    cacheExtent: 300, // Optimizado: lista pequeña (máx 5-6 elementos), reducir de 800 a 300
-                    physics: const FastScrollPhysics(), // Scroll más rápido y fluido
-                    itemCount: _librarySections.length,
-                    itemExtent: 80.0, // Altura fija para mejor rendimiento
+                    cacheExtent: 300,
+                    physics: const FastScrollPhysics(),
+                    itemCount: librarySections.length,
+                    itemExtent: 80.0,
                     itemBuilder: (context, index) {
-                      final section = _librarySections[index];
-                      
-                      // Actualizar subtitle para favoritos
-                      String subtitle = section['subtitle'] as String;
-                      if (index == 0) {
-                        // Canciones Favoritas
-                        subtitle = '$favoritesCount ${favoritesCount == 1 ? 'canción' : 'canciones'}';
-                      }
+                      final section = librarySections[index];
                       
                       return RepaintBoundary(
                         key: ValueKey('library_section_$index'),
                         child: _buildLibrarySection(
                           icon: section['icon'] as IconData,
                           title: section['title'] as String,
-                          subtitle: subtitle,
-                          onTap: section['onTap'] as VoidCallback? ?? () {
-                            // Manejar tap específico para cada sección
-                            if (index == 0) {
-                              // Canciones Favoritas
-                              context.push('/favorites');
-                            } else if (index == 1) {
-                              // Mis Playlists
-                              context.push('/playlists');
-                            }
-                          },
+                          subtitle: section['subtitle'] as String,
+                          onTap: section['onTap'] as VoidCallback,
                         ),
                       );
                     },
@@ -249,6 +249,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             fontWeight: FontWeight.w600,
             color: NeumorphismTheme.textPrimary,
           ),
+          maxLines: 1, // 🔥 Evitar desbordamiento
+          overflow: TextOverflow.ellipsis, // 🔥 Mostrar "..." si es muy largo
         ),
         subtitle: Text(
           subtitle,
@@ -256,6 +258,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             fontSize: 14,
             color: NeumorphismTheme.textSecondary,
           ),
+          maxLines: 1, // 🔥 Evitar desbordamiento
+          overflow: TextOverflow.ellipsis, // 🔥 Mostrar "..." si es muy largo
         ),
         trailing: Icon(
           Icons.chevron_right,

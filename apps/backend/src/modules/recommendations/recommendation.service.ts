@@ -25,7 +25,7 @@ export class RecommendationService {
   
   // Historial de canciones recientes por usuario para evitar repeticiones
   private readonly recentSongsHistory = new Map<string, RecentSongsHistory>();
-  private readonly HISTORY_SIZE = 10; // Recordar últimas 10 canciones
+  private readonly HISTORY_SIZE = 5; // Recordar últimas 5 canciones (reducido para más variedad)
   private readonly HISTORY_TTL = 30 * 60 * 1000; // 30 minutos
 
   constructor(
@@ -41,8 +41,8 @@ export class RecommendationService {
   }
 
   /**
-   * 🎯 ALGORITMO PRINCIPAL DE RECOMENDACIONES
-   * Combina múltiples estrategias como Spotify
+   * 🎯 ALGORITMO SIMPLE DE RECOMENDACIONES
+   * Solo usa: Género + Número de Reproducciones
    */
   async getRecommendedSong(
     currentSongId: string, 
@@ -50,81 +50,34 @@ export class RecommendationService {
     genres?: string[]
   ): Promise<Song | null> {
     const startTime = Date.now();
-    this.logger.log(`🎵 [SPOTIFY-STYLE] Iniciando recomendación para canción: ${currentSongId}`);
+    this.logger.log(`🎵 [SIMPLE] Iniciando recomendación simple para canción: ${currentSongId}`);
 
     try {
-      // 1. Actualizar historial de canciones recientes
-      this.addToRecentHistory(userId || 'anonymous', currentSongId);
-
-      // 2. Verificar cache (pero con menos probabilidad de usar cache para más variedad)
-      const cacheKey = `${currentSongId}-${userId || 'anonymous'}-${genres?.join(',') || ''}`;
-      const cached = this.getCachedRecommendation(cacheKey);
-      if (cached && Math.random() > 0.3) { // Solo 70% de probabilidad de usar cache
-        this.logger.log(`⚡ Cache hit para: ${cacheKey}`);
-        return cached;
-      }
-
-      // 3. Obtener canción actual
+      // 1. Obtener canción actual
       const currentSong = await this.getCurrentSong(currentSongId);
       if (!currentSong) {
         this.logger.warn(`❌ Canción actual no encontrada: ${currentSongId}`);
         return null;
       }
 
-      // 4. Obtener candidatos usando múltiples estrategias
-      const candidates = await this.getCandidateSongs(currentSong, userId, genres);
-      
-      // 5. Filtrar canciones recientes para evitar repeticiones
-      const recentSongs = this.getRecentHistory(userId || 'anonymous');
-      const filteredCandidates = candidates.filter(song => !recentSongs.includes(song.id));
-      
-      this.logger.log(`🚫 Filtradas ${candidates.length - filteredCandidates.length} canciones recientes`);
-      
-      const finalCandidates = filteredCandidates.length > 0 ? filteredCandidates : candidates;
-      
-      if (finalCandidates.length === 0) {
-        this.logger.warn(`❌ No hay candidatos disponibles, intentando fallback general`);
-        
-        // Fallback: obtener cualquier canción disponible CON URL VÁLIDA
-        const fallbackSongs = await this.songRepository.createQueryBuilder('song')
-          .leftJoinAndSelect('song.artist', 'artist')
-          .leftJoinAndSelect('song.album', 'album')
-          .where('song.status = :status', { status: SongStatus.PUBLISHED })
-          .andWhere('song.id != :currentId', { currentId: currentSongId })
-          .andWhere('song.fileUrl IS NOT NULL')
-          .andWhere('song.fileUrl != \'\'')
-          .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
-          .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' })
-          .orderBy('song.totalStreams', 'DESC')
-          .limit(10)
-          .getMany();
-        
-        if (fallbackSongs.length > 0) {
-          const randomSong = fallbackSongs[Math.floor(Math.random() * fallbackSongs.length)];
-          this.logger.log(`🎲 Fallback: seleccionada canción aleatoria: ${randomSong.title}`);
-          return randomSong;
-        }
-        
-        return null;
+      // 2. Obtener géneros (de parámetros o de la canción actual)
+      const songGenres = genres || currentSong.genres || [];
+      if (songGenres.length === 0) {
+        this.logger.warn(`❌ No hay géneros disponibles para: ${currentSongId}`);
+        // Si no hay géneros, buscar por popularidad general
+        return await this.getPopularSongs(currentSongId, userId);
       }
 
-      // 6. Aplicar scoring inteligente (el corazón del algoritmo)
-      const scoredCandidates = await this.applySimilarityScoring(
-        currentSong, 
-        finalCandidates, 
-        userId
-      );
-
-      // 7. Seleccionar la mejor recomendación con diversidad mejorada
-      const recommendation = this.selectBestRecommendation(scoredCandidates, userId);
-
-      // 8. Cachear resultado (con menor TTL para más variedad)
-      if (recommendation) {
-        this.cacheRecommendation(cacheKey, recommendation);
-      }
-
+      // 3. Verificar si necesitamos cambiar de género (después de 3 canciones del mismo género)
+      const shouldChangeGenre = await this.shouldChangeToDifferentGenre(currentSongId, songGenres, userId);
+      
+      // 4. Buscar canciones: mismo género o diferente según corresponda
+      const recommendation = shouldChangeGenre
+        ? await this.getSongsFromDifferentGenre(songGenres, currentSongId, userId)
+        : await this.getSongsByGenreAndPopularity(songGenres, currentSongId, userId);
+      
       const duration = Date.now() - startTime;
-      this.logger.log(`✅ Recomendación completada en ${duration}ms: ${recommendation?.title || 'ninguna'}`);
+      this.logger.log(`✅ Recomendación simple completada en ${duration}ms: ${recommendation?.title || 'ninguna'}`);
       
       return recommendation;
 
@@ -153,6 +106,297 @@ export class RecommendationService {
       return song;
     } catch (error) {
       this.logger.error(`❌ Error obteniendo canción actual: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 🎵 ALGORITMO SIMPLE: Buscar canciones por género y popularidad
+   */
+  private async getSongsByGenreAndPopularity(
+    genres: string[],
+    currentSongId: string,
+    userId?: string
+  ): Promise<Song | null> {
+    try {
+      // Obtener historial reciente (solo últimas 3 canciones)
+      const recentSongs = this.getRecentHistory(userId || 'anonymous');
+      const recentIds = recentSongs.slice(0, 3); // Solo últimas 3
+      
+      // Buscar canciones del mismo género, ordenadas por reproducciones
+      const query = this.songRepository.createQueryBuilder('song')
+        .leftJoinAndSelect('song.artist', 'artist')
+        .leftJoinAndSelect('song.album', 'album')
+        .where('song.status = :status', { status: SongStatus.PUBLISHED })
+        .andWhere('song.id != :currentId', { currentId: currentSongId })
+        .andWhere('song.fileUrl IS NOT NULL')
+        .andWhere('song.fileUrl != \'\'')
+        .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
+        .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' });
+
+      // Filtrar por género usando LIKE (simple-array se guarda como texto)
+      if (genres.length > 0) {
+        const genreConditions = genres.map((_, index) => 
+          `LOWER(song.genres) LIKE :genre${index}`
+        ).join(' OR ');
+        
+        query.andWhere(`(${genreConditions})`);
+        genres.forEach((genre, index) => {
+          query.setParameter(`genre${index}`, `%${genre.toLowerCase()}%`);
+        });
+      }
+
+      // Excluir canciones muy recientes (solo últimas 3)
+      if (recentIds.length > 0) {
+        query.andWhere('song.id NOT IN (:...recentIds)', { recentIds: recentIds });
+      }
+
+      // Ordenar por número de reproducciones (más popular primero)
+      query.orderBy('song.totalStreams', 'DESC');
+      query.limit(20); // Tomar las 20 más populares
+
+      let songs = await query.getMany();
+
+      // Si no hay suficientes canciones, relajar filtros
+      if (songs.length < 5) {
+        this.logger.log(`⚠️ Pocas canciones encontradas (${songs.length}), relajando filtros...`);
+        
+        // Intentar sin filtrar recientes
+        const relaxedQuery = this.songRepository.createQueryBuilder('song')
+          .leftJoinAndSelect('song.artist', 'artist')
+          .leftJoinAndSelect('song.album', 'album')
+          .where('song.status = :status', { status: SongStatus.PUBLISHED })
+          .andWhere('song.id != :currentId', { currentId: currentSongId })
+          .andWhere('song.fileUrl IS NOT NULL')
+          .andWhere('song.fileUrl != \'\'')
+          .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
+          .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' });
+
+        if (genres.length > 0) {
+          const genreConditions = genres.map((_, index) => 
+            `LOWER(song.genres) LIKE :relaxedGenre${index}`
+          ).join(' OR ');
+          
+          relaxedQuery.andWhere(`(${genreConditions})`);
+          genres.forEach((genre, index) => {
+            relaxedQuery.setParameter(`relaxedGenre${index}`, `%${genre.toLowerCase()}%`);
+          });
+        }
+
+        relaxedQuery.orderBy('song.totalStreams', 'DESC').limit(10);
+        songs = await relaxedQuery.getMany();
+      }
+
+      // Si aún no hay canciones, buscar cualquier canción popular
+      if (songs.length === 0) {
+        this.logger.log(`⚠️ No hay canciones del género, buscando cualquier canción popular...`);
+        songs = await this.songRepository.find({
+          where: {
+            status: SongStatus.PUBLISHED,
+            id: Not(currentSongId),
+            fileUrl: Not(''),
+          },
+          relations: ['artist', 'album'],
+          order: { totalStreams: 'DESC' },
+          take: 10,
+        });
+      }
+
+      if (songs.length === 0) {
+        this.logger.warn(`❌ No se encontraron canciones para recomendar`);
+        return null;
+      }
+
+      // Seleccionar una canción aleatoria de las top (diversidad)
+      const topSongs = songs.slice(0, Math.min(5, songs.length)); // Top 5
+      const randomSong = topSongs[Math.floor(Math.random() * topSongs.length)];
+
+      this.logger.log(`✅ Recomendación seleccionada: ${randomSong.title} (${randomSong.totalStreams || 0} reproducciones)`);
+      
+      return randomSong;
+    } catch (error) {
+      this.logger.error(`❌ Error buscando canciones por género: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 🎵 Buscar canciones populares cuando no hay géneros
+   */
+  private async getPopularSongs(
+    currentSongId: string,
+    userId?: string
+  ): Promise<Song | null> {
+    try {
+      const recentSongs = this.getRecentHistory(userId || 'anonymous');
+      const recentIds = recentSongs.slice(0, 3);
+
+      const query = this.songRepository.createQueryBuilder('song')
+        .leftJoinAndSelect('song.artist', 'artist')
+        .leftJoinAndSelect('song.album', 'album')
+        .where('song.status = :status', { status: SongStatus.PUBLISHED })
+        .andWhere('song.id != :currentId', { currentId: currentSongId })
+        .andWhere('song.fileUrl IS NOT NULL')
+        .andWhere('song.fileUrl != \'\'')
+        .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
+        .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' });
+
+      if (recentIds.length > 0) {
+        query.andWhere('song.id NOT IN (:...recentIds)', { recentIds: recentIds });
+      }
+
+      const songs = await query
+        .orderBy('song.totalStreams', 'DESC')
+        .limit(10)
+        .getMany();
+
+      if (songs.length === 0) {
+        return null;
+      }
+
+      const topSongs = songs.slice(0, Math.min(5, songs.length));
+      const randomSong = topSongs[Math.floor(Math.random() * topSongs.length)];
+
+      this.logger.log(`✅ Recomendación popular seleccionada: ${randomSong.title}`);
+      return randomSong;
+    } catch (error) {
+      this.logger.error(`❌ Error buscando canciones populares: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * 🎯 Detectar si debemos cambiar a otro género (después de 3 canciones consecutivas del mismo género)
+   */
+  private async shouldChangeToDifferentGenre(
+    currentSongId: string,
+    currentGenres: string[],
+    userId?: string
+  ): Promise<boolean> {
+    try {
+      const recentSongIds = this.getRecentHistory(userId || 'anonymous');
+      
+      // Necesitamos verificar las últimas 2 canciones (la actual es la tercera)
+      if (recentSongIds.length < 2) {
+        return false; // No hay suficientes canciones para cambiar
+      }
+
+      // Obtener las últimas 2 canciones reproducidas
+      const recentSongs = await this.songRepository
+        .createQueryBuilder('song')
+        .select(['song.id', 'song.genres'])
+        .where('song.id IN (:...ids)', { ids: recentSongIds.slice(0, 2) })
+        .getMany();
+
+      // Contar cuántas canciones consecutivas tienen el mismo género (incluyendo la actual)
+      let sameGenreCount = 1; // Empezamos con 1 (la canción actual)
+
+      // Verificar las últimas 2 canciones
+      for (const song of recentSongs) {
+        if (song.genres && song.genres.length > 0) {
+          // Verificar si comparte algún género con la canción actual
+          const hasCommonGenre = song.genres.some(genre => 
+            currentGenres.some(currentGenre => 
+              genre.toLowerCase() === currentGenre.toLowerCase()
+            )
+          );
+          
+          if (hasCommonGenre) {
+            sameGenreCount++;
+          } else {
+            break; // Si encontramos una diferente, paramos el conteo
+          }
+        }
+      }
+
+      // Si hay 3 o más canciones consecutivas del mismo género (actual + 2 anteriores), cambiar
+      if (sameGenreCount >= 3) {
+        this.logger.log(`🔄 Cambiando de género después de ${sameGenreCount} canciones consecutivas del mismo género`);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      this.logger.error(`❌ Error verificando cambio de género: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * 🎵 Buscar canciones de OTROS géneros (diversidad)
+   */
+  private async getSongsFromDifferentGenre(
+    excludeGenres: string[],
+    currentSongId: string,
+    userId?: string
+  ): Promise<Song | null> {
+    try {
+      const recentSongs = this.getRecentHistory(userId || 'anonymous');
+      const recentIds = recentSongs.slice(0, 3);
+
+      // Buscar canciones que NO sean de los géneros excluidos
+      const query = this.songRepository.createQueryBuilder('song')
+        .leftJoinAndSelect('song.artist', 'artist')
+        .leftJoinAndSelect('song.album', 'album')
+        .where('song.status = :status', { status: SongStatus.PUBLISHED })
+        .andWhere('song.id != :currentId', { currentId: currentSongId })
+        .andWhere('song.fileUrl IS NOT NULL')
+        .andWhere('song.fileUrl != \'\'')
+        .andWhere('song.fileUrl NOT LIKE :exampleUrl', { exampleUrl: '%example.com%' })
+        .andWhere('song.fileUrl NOT LIKE :picsumUrl', { picsumUrl: '%picsum.photos%' });
+
+      // Excluir géneros actuales (buscar géneros diferentes)
+      if (excludeGenres.length > 0) {
+        const excludeConditions = excludeGenres.map((_, index) => 
+          `LOWER(song.genres) NOT LIKE :excludeGenre${index}`
+        ).join(' AND ');
+        
+        query.andWhere(`(${excludeConditions})`);
+        excludeGenres.forEach((genre, index) => {
+          query.setParameter(`excludeGenre${index}`, `%${genre.toLowerCase()}%`);
+        });
+      }
+
+      // Excluir canciones recientes
+      if (recentIds.length > 0) {
+        query.andWhere('song.id NOT IN (:...recentIds)', { recentIds: recentIds });
+      }
+
+      // Ordenar por reproducciones (popular primero)
+      query.orderBy('song.totalStreams', 'DESC');
+      query.limit(20);
+
+      let songs = await query.getMany();
+
+      // Si no hay canciones de otros géneros, buscar cualquier canción popular
+      if (songs.length === 0) {
+        this.logger.log(`⚠️ No hay canciones de otros géneros, buscando cualquier canción popular...`);
+        songs = await this.songRepository.find({
+          where: {
+            status: SongStatus.PUBLISHED,
+            id: Not(currentSongId),
+            fileUrl: Not(''),
+          },
+          relations: ['artist', 'album'],
+          order: { totalStreams: 'DESC' },
+          take: 10,
+        });
+      }
+
+      if (songs.length === 0) {
+        this.logger.warn(`❌ No se encontraron canciones de otros géneros`);
+        return null;
+      }
+
+      // Seleccionar una canción aleatoria de las top 5
+      const topSongs = songs.slice(0, Math.min(5, songs.length));
+      const randomSong = topSongs[Math.floor(Math.random() * topSongs.length)];
+
+      this.logger.log(`✅ Recomendación de otro género seleccionada: ${randomSong.title} (géneros: ${randomSong.genres?.join(', ') || 'ninguno'})`);
+      
+      return randomSong;
+    } catch (error) {
+      this.logger.error(`❌ Error buscando canciones de otros géneros: ${error.message}`);
       return null;
     }
   }

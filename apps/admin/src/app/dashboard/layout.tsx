@@ -75,7 +75,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-purple-600 border-t-transparent mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-brown-700 border-t-transparent mx-auto"></div>
           <p className="mt-4 text-gray-600">Cargando...</p>
         </div>
       </div>
@@ -90,9 +90,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-gray-100 flex">
       <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
         <div className="flex flex-col items-center xl:items-start px-4 mb-8">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold">
-            VM
-          </div>
+          <img 
+            src="/logo-icon.png" 
+            alt="Logo" 
+            className="h-20 w-20 object-contain"
+            onError={(e) => {
+              console.error('Error cargando logo-icon.png');
+              e.currentTarget.style.display = 'none';
+            }}
+          />
           <span className="mt-3 text-sm font-semibold text-gray-900 hidden xl:block">
             Vintage Admin
           </span>
@@ -111,7 +117,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 }}
                 className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
                   isActive
-                    ? 'bg-purple-100 text-purple-700'
+                    ? 'bg-brown-100 text-brown-700'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
@@ -135,7 +141,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <input
                     type="text"
                     placeholder="Buscar..."
-                    className="pl-10 pr-4 py-2 w-full rounded-full bg-gray-50 border border-gray-200 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 text-sm transition"
+                    className="pl-10 pr-4 py-2 w-full rounded-full bg-gray-50 border border-gray-200 focus:outline-none focus:border-brown-700 focus:ring-2 focus:ring-brown-100 text-sm transition"
                   />
                   <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
@@ -149,10 +155,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen((prev) => !prev)}
-                    className="flex items-center space-x-2 rounded-full bg-white border border-gray-200 px-3 py-1.5 shadow-sm hover:border-purple-500 transition"
+                    className="flex items-center space-x-2 rounded-full bg-white border border-gray-200 px-3 py-1.5 shadow-sm hover:border-brown-700 transition"
                   >
-                    <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-semibold text-purple-700">
+                    <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-semibold text-brown-700">
                         {session?.user?.name?.charAt(0)?.toUpperCase() ??
                           session?.user?.email?.charAt(0)?.toUpperCase() ??
                           'A'}
@@ -180,7 +186,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       </div>
                       <button
                         onClick={handleSignOut}
-                        className="w-full px-4 py-2 text-sm text-left text-gray-600 hover:bg-purple-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-sm text-left text-gray-600 hover:bg-brown-50 flex items-center gap-2"
                       >
                         <ArrowRightOnRectangleIcon className="h-4 w-4" />
                         Cerrar sesión
@@ -200,6 +206,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

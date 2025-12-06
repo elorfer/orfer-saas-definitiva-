@@ -7,7 +7,9 @@ class NumberFormatter {
   /// - 1000 -> "1.0K"
   /// - 1500000 -> "1.5M"
   /// - 500 -> "500"
+  /// - 0 -> "0"
   static String format(int number) {
+    if (number < 0) return '0';
     if (number >= 1000000) {
       return '${(number / 1000000).toStringAsFixed(1)}M';
     } else if (number >= 1000) {

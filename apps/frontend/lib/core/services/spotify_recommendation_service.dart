@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 import '../models/song_model.dart';
 import '../models/user_model.dart';
 import 'http_client_service.dart';
@@ -17,9 +18,10 @@ import '../utils/url_normalizer.dart';
 class SpotifyRecommendationService {
   final HttpClientService _httpClient;
   
-  // Cache local con TTL
+  // Cache local con TTL - OPTIMIZADO: TTL más largo y tamaño aumentado
   final Map<String, CachedRecommendation> _cache = {};
-  static const int _cacheTtlMs = 5 * 60 * 1000; // 5 minutos
+  static const int _cacheTtlMs = 15 * 60 * 1000; // 15 minutos (aumentado para más cache hits)
+  static const int _maxCacheSize = 200; // Aumentado de 100 a 200 para más hits
   
   // Métricas
   int _totalRequests = 0;
@@ -36,14 +38,8 @@ class SpotifyRecommendationService {
     User? user,
     bool useCache = true,
   }) async {
-    final startTime = DateTime.now();
     _totalRequests++;
     
-    debugPrint('🎵 [SpotifyRec] === INICIANDO RECOMENDACIÓN INTELIGENTE ===');
-    debugPrint('🎵 [SpotifyRec] Canción actual: $currentSongId');
-    debugPrint('👤 [SpotifyRec] Usuario: ${user?.id ?? 'anónimo'}');
-    debugPrint('🏷️ [SpotifyRec] Géneros: ${genres?.join(', ') ?? 'auto-detectar'}');
-
     try {
       // 1. Verificar cache
       if (useCache) {
@@ -51,7 +47,6 @@ class SpotifyRecommendationService {
         final cached = _getCachedRecommendation(cacheKey);
         if (cached != null) {
           _cacheHits++;
-          debugPrint('⚡ [SpotifyRec] Cache hit! Recomendación desde cache');
           return cached;
         }
       }
@@ -67,59 +62,35 @@ class SpotifyRecommendationService {
         queryParams['userId'] = user.id;
       }
 
-      // 3. Realizar petición al algoritmo avanzado
+      // 3. Realizar petición al algoritmo avanzado con timeout reducido
       final response = await _httpClient.dio.get(
         '/public/songs/recommended/$currentSongId',
         queryParameters: queryParams,
+        options: Options(
+          receiveTimeout: const Duration(milliseconds: 2000), // Timeout reducido para más velocidad
+          sendTimeout: const Duration(milliseconds: 2000),
+        ),
       );
-
-      debugPrint('🌐 [SpotifyRec] Respuesta del servidor: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = response.data;
         
-        // Log de métricas del algoritmo
-        if (data['algorithm'] != null) {
-          debugPrint('🤖 [SpotifyRec] Algoritmo: ${data['algorithm']}');
-          debugPrint('⏱️ [SpotifyRec] Tiempo backend: ${data['processingTime']}ms');
-        }
-        
-        if (data['metadata'] != null) {
-          final metadata = data['metadata'];
-          debugPrint('🧠 [SpotifyRec] Motor: ${metadata['recommendationEngine']}');
-          debugPrint('📊 [SpotifyRec] Estrategias: ${metadata['strategies']?.join(', ')}');
-          debugPrint('🎯 [SpotifyRec] Factores: ${metadata['scoringFactors']?.join(', ')}');
-        }
-
         if (data['song'] != null) {
-          debugPrint('🔍 [SpotifyRec] Raw song data: ${data['song']}');
-          
-          // APLICAR LA MISMA NORMALIZACIÓN QUE EN HomeService
           final songData = Map<String, dynamic>.from(data['song']);
           
-          debugPrint('[SpotifyRec] 🔍 Datos originales de canción recomendada:');
-          debugPrint('[SpotifyRec] 🔍 fileUrl: ${songData['fileUrl']}');
-          debugPrint('[SpotifyRec] 🔍 file_url: ${songData['file_url']}');
-          
-          // CORRECCIÓN CRÍTICA: Asegurar que fileUrl se mapee correctamente
+          // CORRECCIÓN: Asegurar que fileUrl se mapee correctamente
           if (songData['fileUrl'] != null && songData['file_url'] == null) {
             songData['file_url'] = songData['fileUrl'];
-            debugPrint('[SpotifyRec] 🔧 CORRECCIÓN: Mapeando fileUrl -> file_url');
           }
           
-          // Usar DataNormalizer para normalizar la canción
+          // Normalizar canción
           final normalizedSong = DataNormalizer.normalizeSong(songData);
-          
-          debugPrint('[SpotifyRec] 🔍 Después de DataNormalizer:');
-          debugPrint('[SpotifyRec] 🔍 fileUrl: ${normalizedSong['fileUrl']}');
-          debugPrint('[SpotifyRec] 🔍 file_url: ${normalizedSong['file_url']}');
           
           // CORRECCIÓN ADICIONAL: Si aún no hay file_url, usar fileUrl original
           if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') && 
               songData['fileUrl'] != null) {
             normalizedSong['file_url'] = songData['fileUrl'];
             normalizedSong['fileUrl'] = songData['fileUrl'];
-            debugPrint('[SpotifyRec] 🔧 CORRECCIÓN ADICIONAL: Usando fileUrl original');
           }
           
           // Normalizar URL de portada
@@ -129,23 +100,15 @@ class SpotifyRecommendationService {
             normalizedSong['cover_art_url'] = normalizedCoverUrl;
           }
           
-          // IMPORTANTE: También normalizar URL del archivo de audio
+          // Normalizar URL del archivo de audio
           final rawFileUrl = normalizedSong['file_url'] as String?;
-          debugPrint('[SpotifyRec] 🔍 rawFileUrl para normalizar: $rawFileUrl');
           if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
             final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
             normalizedSong['file_url'] = normalizedFileUrl;
-            normalizedSong['fileUrl'] = normalizedFileUrl; // También mantener camelCase
-            debugPrint('[SpotifyRec] 🔧 URL de audio normalizada: $normalizedFileUrl');
-          } else {
-            debugPrint('[SpotifyRec] ❌ ERROR: rawFileUrl es null o vacío');
+            normalizedSong['fileUrl'] = normalizedFileUrl;
           }
           
           Song song = Song.fromJson(normalizedSong);
-          debugPrint('🔍 [SpotifyRec] Parsed song fileUrl: ${song.fileUrl}');
-          
-          // Corrección temporal de URL (hasta que se reinicie el backend) - YA NO NECESARIA
-          // song = _correctSongUrl(song);
           
           // Cachear resultado
           if (useCache) {
@@ -154,28 +117,12 @@ class SpotifyRecommendationService {
           }
           
           _successfulRecommendations++;
-          
-          final duration = DateTime.now().difference(startTime);
-          debugPrint('✅ [SpotifyRec] Recomendación exitosa en ${duration.inMilliseconds}ms');
-          debugPrint('🎵 [SpotifyRec] Canción: ${song.title}');
-          debugPrint('👤 [SpotifyRec] Artista: ${song.artist?.stageName ?? 'Desconocido'}');
-          debugPrint('🏷️ [SpotifyRec] Géneros: ${song.genres?.join(', ') ?? 'ninguno'}');
-          debugPrint('⭐ [SpotifyRec] Es destacada: ${song.featured}');
-          
           return song;
-        } else {
-          debugPrint('❌ [SpotifyRec] No hay recomendaciones disponibles');
-          debugPrint('💡 [SpotifyRec] Mensaje: ${data['message']}');
-          return null;
         }
-      } else {
-        debugPrint('❌ [SpotifyRec] Error HTTP: ${response.statusCode}');
-        debugPrint('📄 [SpotifyRec] Respuesta: ${response.data}');
         return null;
       }
-    } catch (error, stackTrace) {
-      debugPrint('❌ [SpotifyRec] Error en recomendación: $error');
-      debugPrint('📍 [SpotifyRec] Stack trace: $stackTrace');
+      return null;
+    } catch (error) {
       return null;
     }
   }
@@ -207,8 +154,8 @@ class SpotifyRecommendationService {
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
     
-    // Limpiar cache antiguo (LRU simple)
-    if (_cache.length > 100) {
+    // Limpiar cache antiguo (LRU simple) - OPTIMIZADO: tamaño aumentado
+    if (_cache.length > _maxCacheSize) {
       final oldestKey = _cache.keys.first;
       _cache.remove(oldestKey);
     }

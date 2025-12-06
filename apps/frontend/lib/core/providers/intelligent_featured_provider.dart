@@ -125,13 +125,14 @@ class IntelligentFeaturedNotifier extends Notifier<IntelligentFeaturedState> {
 
   /// 🎵 ACTUALIZAR BASADO EN CANCIÓN ACTUAL
   /// Se llama cuando cambia la canción para obtener nuevas recomendaciones
+  /// ✅ OPTIMIZACIÓN: Solo actualiza si han pasado más de 3 minutos desde la última actualización
   Future<void> updateBasedOnCurrentSong() async {
     if (!state.isInitialized || state.isLoading) return;
     
-    // Solo actualizar si han pasado más de 2 minutos desde la última actualización
+    // ✅ OPTIMIZACIÓN: Aumentado de 2 a 3 minutos para reducir llamadas API
     if (state.lastUpdated != null) {
       final timeSinceUpdate = DateTime.now().difference(state.lastUpdated!);
-      if (timeSinceUpdate.inMinutes < 2) return;
+      if (timeSinceUpdate.inMinutes < 3) return;
     }
 
     await loadIntelligentFeaturedSongs();
@@ -177,13 +178,15 @@ final intelligentFeaturedErrorProvider = Provider<String?>((ref) {
 });
 
 /// Provider que escucha cambios en la canción actual para actualizar recomendaciones
+/// ✅ OPTIMIZACIÓN: Delay aumentado de 5 segundos a 2 minutos para reducir llamadas API
 final _audioStateListenerProvider = Provider<void>((ref) {
   // Escuchar cambios en el estado de audio
   ref.listen(unifiedAudioProviderFixed, (previous, next) {
     // Si cambió la canción, actualizar recomendaciones
     if (previous?.currentSong?.id != next.currentSong?.id && next.currentSong != null) {
-      // Usar un timer para evitar actualizaciones muy frecuentes
-      Future.delayed(const Duration(seconds: 5), () {
+      // ✅ OPTIMIZACIÓN: Aumentado de 5 segundos a 2 minutos para reducir llamadas API
+      // Esto permite que el usuario escuche varias canciones antes de actualizar recomendaciones
+      Future.delayed(const Duration(minutes: 2), () {
         ref.read(intelligentFeaturedProvider.notifier).updateBasedOnCurrentSong();
       });
     }

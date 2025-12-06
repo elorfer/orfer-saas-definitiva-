@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,6 +6,10 @@ import '../../../core/models/song_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/widgets/play_button_card.dart';
+import '../../../core/services/audio_cache_service.dart';
+import '../../../core/utils/url_normalizer.dart';
+import '../../../core/widgets/verified_badge.dart';
 
 /// 🚀 TARJETA OPTIMIZADA DE CANCIÓN DESTACADA
 /// Implementa optimizaciones de rendimiento:
@@ -25,7 +30,15 @@ class FeaturedSongCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final song = featuredSong.song;
 
-    return Container(
+    // ⚡ PRECARGA AUTOMÁTICA: Precargar audio cuando la tarjeta es visible
+    if (song.fileUrl != null && song.fileUrl!.isNotEmpty) {
+      final normalizedUrl = UrlNormalizer.normalizeUrl(song.fileUrl!);
+      // Precargar en background sin bloquear UI
+      AudioCacheManager.precacheAudio(normalizedUrl);
+    }
+
+    return RepaintBoundary(
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: NeumorphismTheme.surface.withValues(alpha: 0.6),
@@ -103,44 +116,81 @@ class FeaturedSongCard extends ConsumerWidget {
                       
                       const SizedBox(height: 4),
                       
-                      Text(
-                        _getArtistName(song),
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: NeumorphismTheme.textSecondary,
-                          fontWeight: FontWeight.w400,
+                      // Nombre del artista con badge de verificación
+                      if (song.artist != null)
+                        ArtistNameWithBadge(
+                          artistName: _getArtistName(song),
+                          isVerified: song.artist!.isVerifiedValue,
+                          textStyle: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: NeumorphismTheme.textSecondary,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          badgeSize: 12.0,
+                        )
+                      else
+                        Text(
+                          _getArtistName(song),
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: NeumorphismTheme.textSecondary,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                       
                       const SizedBox(height: 4),
                       
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.play_arrow_rounded,
-                            size: 16,
-                            color: NeumorphismTheme.accent,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${NumberFormatter.format(song.totalStreams)} • ${song.durationFormatted}',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: NeumorphismTheme.textSecondary.withValues(alpha: 0.8),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      // Mostrar streams y duración - Siempre visible (incluyendo 0)
+                      Builder(
+                        builder: (context) {
+                          // DEBUG: Verificar valor
+                          if (kDebugMode && song.totalStreams > 0) {
+                            debugPrint('[FeaturedSongCard] ${song.title}: totalStreams=${song.totalStreams}');
+                          }
+                          
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Icon(
+                                Icons.play_arrow_rounded,
+                                size: 16,
+                                color: NeumorphismTheme.accent,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${NumberFormatter.format(song.totalStreams)} • ${song.durationFormatted}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: NeumorphismTheme.textSecondary.withValues(alpha: 0.8),
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.0, // Sin altura adicional para mejor alineación
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
+                ),
+                
+                const SizedBox(width: 12),
+                
+                // ⚡ Botón de play optimizado (solo actualiza ícono)
+                PlayButtonCard(
+                  song: song,
+                  size: 40,
                 ),
               ],
             ),
           ),
         ),
+      ),
       ),
     );
   }

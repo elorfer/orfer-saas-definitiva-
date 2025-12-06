@@ -133,7 +133,13 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  // Swagger disponible en: http://localhost:3001/api/docs
+  // (sin el prefijo /api/v1 porque Swagger se configura antes del prefijo)
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true, // Mantener autorización entre recargas
+    },
+  });
 
   const port = configService.get('PORT', 3001);
   const host = configService.get('HOST', '0.0.0.0'); // Escuchar en todas las interfaces para permitir acceso desde emulador Android

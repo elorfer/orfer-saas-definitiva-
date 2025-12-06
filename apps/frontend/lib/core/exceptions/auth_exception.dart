@@ -31,6 +31,28 @@ class AuthException implements Exception {
       );
     }
 
+    // Manejar errores de conexión con mensajes más informativos
+    final errorType = error.type?.toString() ?? '';
+    final isConnectionError = errorType.contains('connectionTimeout') ||
+        errorType.contains('sendTimeout') ||
+        errorType.contains('receiveTimeout') ||
+        errorType.contains('connectionError') ||
+        error.message?.toString().toLowerCase().contains('failed host lookup') == true ||
+        error.message?.toString().toLowerCase().contains('network') == true ||
+        error.message?.toString().toLowerCase().contains('socket') == true;
+
+    if (isConnectionError) {
+      return const AuthException(
+        'No se pudo conectar al servidor. Verifica:\n'
+        '1. Que el backend esté corriendo\n'
+        '2. Que estés en la misma red (si usas dispositivo físico)\n'
+        '3. Que la IP configurada sea correcta\n'
+        '4. Usa: flutter run --dart-define=API_BASE_URL=http://TU_IP:3001/api/v1',
+        code: 'CONNECTION_ERROR',
+        statusCode: null,
+      );
+    }
+
     final message = error.response?.data?['message'] ?? 
                    error.message ?? 
                    'Error de autenticación';
@@ -50,6 +72,12 @@ class AuthException implements Exception {
     );
   }
 }
+
+
+
+
+
+
 
 
 

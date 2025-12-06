@@ -24,7 +24,7 @@ const DEFAULT_CREATE_FORM = {
 };
 
 const roleLabels: Record<string, { label: string; badge: string; text: string }> = {
-  admin: { label: 'Administrador', badge: 'bg-purple-100 text-purple-700', text: 'Administrador' },
+  admin: { label: 'Administrador', badge: 'bg-brown-100 text-brown-800', text: 'Administrador' },
   artist: { label: 'Artista', badge: 'bg-blue-100 text-blue-700', text: 'Artista' },
   user: { label: 'Usuario', badge: 'bg-gray-100 text-gray-700', text: 'Usuario' },
 };
@@ -136,14 +136,14 @@ export default function UsersPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-brown-600 hover:text-brown-700"
             >
               <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
               Actualizar
             </button>
             <button
               onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+              className="flex items-center gap-2 rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800"
             >
               <UserPlusIcon className="h-4 w-4" />
               Nuevo usuario
@@ -158,7 +158,7 @@ export default function UsersPage() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Buscar por nombre, correo o usuario..."
-                  className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                  className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                 />
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
@@ -210,7 +210,7 @@ export default function UsersPage() {
                         <tr key={user.id} className="hover:bg-gray-50 transition">
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center text-sm font-semibold">
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brown-700 to-brown-700 text-white flex items-center justify-center text-sm font-semibold">
                                 {user.firstName?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -218,6 +218,7 @@ export default function UsersPage() {
                                   {`${user.firstName} ${user.lastName}`.trim() || user.username}
                                 </p>
                                 <p className="text-xs text-gray-500">{user.email}</p>
+                                <p className="text-xs text-gray-400">@{user.username}</p>
                               </div>
                             </div>
                           </td>
@@ -284,14 +285,14 @@ export default function UsersPage() {
                 <button
                   onClick={handlePrev}
                   disabled={page === 1}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Anterior
                 </button>
                 <button
                   onClick={handleNext}
                   disabled={page === totalPages}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Siguiente
                 </button>
@@ -329,7 +330,7 @@ export default function UsersPage() {
                       setCreateForm((prev) => ({ ...prev, firstName: event.target.value }))
                     }
                     required
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="Juan"
                   />
                 </div>
@@ -344,7 +345,7 @@ export default function UsersPage() {
                       setCreateForm((prev) => ({ ...prev, lastName: event.target.value }))
                     }
                     required
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="Pérez"
                   />
                 </div>
@@ -362,7 +363,7 @@ export default function UsersPage() {
                       setCreateForm((prev) => ({ ...prev, email: event.target.value }))
                     }
                     required
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="usuario@vintagemusic.com"
                   />
                 </div>
@@ -377,7 +378,7 @@ export default function UsersPage() {
                       setCreateForm((prev) => ({ ...prev, username: event.target.value }))
                     }
                     required
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="usuario123"
                   />
                 </div>
@@ -395,7 +396,7 @@ export default function UsersPage() {
                       setCreateForm((prev) => ({ ...prev, password: event.target.value }))
                     }
                     required
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="••••••••"
                   />
                 </div>
@@ -408,7 +409,7 @@ export default function UsersPage() {
                     onChange={(event) =>
                       setCreateForm((prev) => ({ ...prev, role: event.target.value as 'admin' | 'artist' | 'user' }))
                     }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   >
                     <option value="admin">Administrador</option>
                     <option value="artist">Artista</option>
@@ -428,7 +429,7 @@ export default function UsersPage() {
                     onChange={(event) =>
                       setCreateForm((prev) => ({ ...prev, stageName: event.target.value }))
                     }
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="Ej. The Vintage"
                   />
                 </div>
@@ -446,7 +447,7 @@ export default function UsersPage() {
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-400"
+                  className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800 disabled:cursor-not-allowed disabled:bg-brown-600"
                 >
                   {isCreating ? 'Creando...' : 'Crear usuario'}
                 </button>

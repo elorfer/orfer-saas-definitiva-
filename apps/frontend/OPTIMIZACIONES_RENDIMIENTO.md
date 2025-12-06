@@ -154,3 +154,19 @@ La aplicación ahora cuenta con un sistema de optimización robusto que:
 
 Todas las optimizaciones están centralizadas en `PerformanceConfig` para fácil mantenimiento y ajustes futuros.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

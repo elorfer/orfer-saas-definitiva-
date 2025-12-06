@@ -9,9 +9,27 @@ import 'dart:io' show Platform;
 class HttpCacheService {
   static CacheOptions? _cacheOptions;
   static HiveCacheStore? _cacheStore;
+  static bool _isInitialized = false;
+  static Future<void>? _initializationFuture;
 
-  /// Inicializar caché HTTP
+  /// Inicializar caché HTTP (lazy - solo cuando se necesite)
   static Future<void> initialize() async {
+    // Si ya está inicializado, retornar inmediatamente
+    if (_isInitialized) return;
+    
+    // Si hay una inicialización en curso, esperar a que termine
+    if (_initializationFuture != null) {
+      await _initializationFuture;
+      return;
+    }
+    
+    // Iniciar nueva inicialización
+    _initializationFuture = _doInitialize();
+    await _initializationFuture;
+  }
+  
+  /// Inicialización real del caché
+  static Future<void> _doInitialize() async {
     try {
       // Obtener directorio de caché
       final cacheDir = await getTemporaryDirectory();
@@ -25,7 +43,7 @@ class HttpCacheService {
       // Crear store de caché con Hive
       _cacheStore = HiveCacheStore(cachePath);
 
-      // Configurar opciones de caché
+      // ✅ OPTIMIZACIÓN: Configurar opciones de caché optimizadas
       // HiveCacheStore extiende CacheStore de dio_cache_interceptor
       _cacheOptions = CacheOptions(
         store: _cacheStore! as CacheStore,
@@ -37,15 +55,32 @@ class HttpCacheService {
         keyBuilder: CacheOptions.defaultCacheKeyBuilder,
         allowPostMethod: false, // Solo caché para GET
       );
+      _isInitialized = true;
     } catch (e) {
       // Si falla, continuar sin caché
       _cacheOptions = null;
       _cacheStore = null;
+      _isInitialized = false;
+    } finally {
+      _initializationFuture = null;
+    }
+  }
+  
+  /// Asegurar que el caché esté inicializado (lazy initialization)
+  static Future<void> ensureInitialized() async {
+    if (!_isInitialized) {
+      await initialize();
     }
   }
 
-  /// Obtener opciones de caché
-  static CacheOptions? get cacheOptions => _cacheOptions;
+  /// Obtener opciones de caché (inicializa si es necesario)
+  static CacheOptions? get cacheOptions {
+    // Lazy initialization: si no está inicializado, inicializar en background
+    if (!_isInitialized && _initializationFuture == null) {
+      initialize(); // No await - inicializar en background
+    }
+    return _cacheOptions;
+  }
 
   /// Limpiar caché
   static Future<void> clearCache() async {

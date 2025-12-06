@@ -249,8 +249,24 @@ export class ArtistsController {
   @ApiOperation({ summary: 'Verificar artista (Solo Admin)' })
   @ApiResponse({ status: 200, description: 'Artista verificado exitosamente' })
   @ApiResponse({ status: 404, description: 'Artista no encontrado' })
-  async verifyArtist(@Param('id') id: string) {
-    return this.artistsService.verifyArtist(id);
+  async verifyArtist(
+    @Param('id') id: string,
+    @CurrentUser() admin: User,
+  ) {
+    return this.artistsService.verifyArtist(id, admin.id);
+  }
+
+  @Patch(':id/unverify')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Quitar verificación de artista (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Verificación removida exitosamente' })
+  @ApiResponse({ status: 404, description: 'Artista no encontrado' })
+  async unverifyArtist(
+    @Param('id') id: string,
+    @CurrentUser() admin: User,
+  ) {
+    return this.artistsService.unverifyArtist(id, admin.id);
   }
 
   @Delete(':id')

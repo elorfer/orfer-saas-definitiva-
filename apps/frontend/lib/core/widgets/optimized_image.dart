@@ -48,8 +48,10 @@ class OptimizedImage extends StatelessWidget {
     }
 
     // ✅ OPTIMIZACIÓN: Obtener el tamaño de pantalla para optimizar caché
-    final screenSize = MediaQuery.of(context).size;
-    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    // ✅ OPTIMIZACIÓN: Cachear MediaQuery para evitar múltiples llamadas
+    final mediaQuery = MediaQuery.of(context);
+    final screenSize = mediaQuery.size;
+    final devicePixelRatio = mediaQuery.devicePixelRatio;
     
     // Para portadas grandes (SliverAppBar), usar tamaño optimizado
     int? getMemCacheWidth() {
@@ -63,10 +65,8 @@ class OptimizedImage extends StatelessWidget {
       if (width == null || !width!.isFinite || width!.isNaN || width!.isInfinite) return null;
       final result = width! * devicePixelRatio;
       if (!result.isFinite || result.isNaN || result.isInfinite) return null;
-      // Limitar a máximo 2x el tamaño para no sobrecargar memoria (antes 3x)
-      return (result > screenSize.width * devicePixelRatio * 2)
-          ? (screenSize.width * devicePixelRatio * 2).round()
-          : result.round();
+      // 🔥 OPTIMIZACIÓN: Limitar a 300px máximo (suficiente para calidad)
+      return (result > 300) ? 300 : result.round();
     }
 
     int? getMemCacheHeight() {
@@ -80,10 +80,8 @@ class OptimizedImage extends StatelessWidget {
       if (height == null || !height!.isFinite || height!.isNaN || height!.isInfinite) return null;
       final result = height! * devicePixelRatio;
       if (!result.isFinite || result.isNaN || result.isInfinite) return null;
-      // Limitar a máximo 2x el tamaño para no sobrecargar memoria (antes 3x)
-      return (result > 800 * devicePixelRatio * 2)
-          ? (800 * devicePixelRatio * 2).round()
-          : result.round();
+      // 🔥 OPTIMIZACIÓN: Limitar a 300px máximo (suficiente para calidad)
+      return (result > 300) ? 300 : result.round();
     }
 
 
@@ -108,12 +106,21 @@ class OptimizedImage extends StatelessWidget {
     final memCacheWidth = getMemCacheWidth();
     final memCacheHeight = getMemCacheHeight();
     
+    // ✅ OPTIMIZACIÓN: Para imágenes pequeñas (thumbnails), evitar ResizeImage
+    // ResizeImage es costoso y para thumbnails pequeños no es necesario
+    final bool isSmallThumbnail = width != null && width! <= 128 && height != null && height! <= 128;
+    
+    // Construir el ImageProvider apropiado
+    final ImageProvider effectiveImageProvider = isSmallThumbnail && !isLargeCover
+        ? imageProvider // Usar provider directo para thumbnails pequeños
+        : ResizeImage(
+            imageProvider,
+            width: memCacheWidth,
+            height: memCacheHeight,
+          ) as ImageProvider;
+    
     final Widget imageWidget = Image(
-      image: ResizeImage(
-        imageProvider,
-        width: memCacheWidth,
-        height: memCacheHeight,
-      ),
+      image: effectiveImageProvider,
       fit: fit,
       width: (width != null && width!.isFinite && !width!.isNaN && !width!.isInfinite) ? width : null,
       height: (height != null && height!.isFinite && !height!.isNaN && !height!.isInfinite) ? height : null,
@@ -128,7 +135,7 @@ class OptimizedImage extends StatelessWidget {
       errorBuilder: (context, error, stackTrace) {
         return errorWidget ?? _buildErrorWidget();
       },
-      filterQuality: FilterQuality.medium,
+      filterQuality: isSmallThumbnail ? FilterQuality.low : FilterQuality.medium, // ✅ OPTIMIZACIÓN: Low quality para thumbnails pequeños
     );
 
     if (borderRadius != null) {

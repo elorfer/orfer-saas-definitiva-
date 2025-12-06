@@ -10,7 +10,7 @@ export class SongMapper {
    * Convierte una entidad Song a SongResponseDto
    */
   static toDto(song: Song): SongResponseDto {
-    return {
+    const dto: any = {
       id: song.id,
       title: song.title,
       duration: song.duration,
@@ -26,7 +26,14 @@ export class SongMapper {
       artist: {
         id: song.artist?.id || song.artistId,
         stageName: song.artist?.stageName || 'Artista desconocido',
+        displayName: song.artist?.stageName || song.artist?.name || 'Artista desconocido',
         avatarUrl: song.artist?.user?.avatarUrl || undefined,
+        profilePhotoUrl: song.artist?.profilePhotoUrl || song.artist?.user?.avatarUrl || undefined,
+        verificationStatus: song.artist?.verificationStatus ?? false,
+        isVerified: song.artist?.isVerified ?? song.artist?.verificationStatus ?? false,
+        // Campos en snake_case para compatibilidad con Flutter
+        verification_status: song.artist?.verificationStatus ?? false,
+        is_verified: song.artist?.isVerified ?? song.artist?.verificationStatus ?? false,
       },
       album: song.album
         ? {
@@ -45,6 +52,14 @@ export class SongMapper {
       // Asegurar que genres sea siempre un array, incluso si TypeORM lo serializa como string (simple-array)
       genres: this.normalizeGenres(song.genres),
     };
+    
+    // ✅ CORRECCIÓN: Agregar también snake_case para compatibilidad con Flutter
+    // Flutter espera total_streams debido a @JsonSerializable(fieldRename: FieldRename.snake)
+    dto.total_streams = dto.totalStreams;
+    dto.total_likes = dto.totalLikes;
+    dto.total_shares = dto.totalShares;
+    
+    return dto as SongResponseDto;
   }
 
   /**

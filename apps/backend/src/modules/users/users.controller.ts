@@ -14,6 +14,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ArtistsService } from '../artists/artists.service';
+import { ArtistSerializer } from '../../common/utils/artist-serializer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -25,7 +27,10 @@ import { User, UserRole } from '../../common/entities/user.entity';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly artistsService: ArtistsService,
+  ) {}
 
   @Get()
   @Roles(UserRole.ADMIN)
@@ -156,6 +161,21 @@ export class UsersController {
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
   ) {
     return this.usersService.getVerifiedUsers(page, limit);
+  }
+
+  @Get(':userId/followed-artists')
+  @ApiOperation({ summary: 'Obtener artistas seguidos por un usuario' })
+  @ApiResponse({ status: 200, description: 'Lista de artistas seguidos' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async getFollowedArtists(@Param('userId') userId: string) {
+    // Verificar que el usuario existe
+    await this.usersService.findOne(userId);
+    
+    const artists = await this.artistsService.getFollowedArtists(userId);
+    return {
+      artists: artists.map((artist) => ArtistSerializer.serializeLite(artist)),
+      total: artists.length,
+    };
   }
 }
 

@@ -103,17 +103,20 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
 
   @override
   Widget build(BuildContext context) {
-    // Observar el estado de favoritos
-    final favoritesState = ref.watch(favoritesProvider);
+    // ⚡ OPTIMIZACIÓN: Cargar favoritos de forma lazy (solo cuando se necesite)
+    // Usar select para escuchar solo el estado de favoritos de esta canción específica
+    final isFavoriteFromProvider = ref.watch(
+      favoritesProvider.select((state) => state.isFavorite(widget.songId)),
+    );
     
     // Determinar si es favorita
     // Prioridad: 1) prop isFavorite, 2) estado del provider
-    final isFavorite = widget.isFavorite ?? favoritesState.isFavorite(widget.songId);
+    final isFavorite = widget.isFavorite ?? isFavoriteFromProvider;
     
     final iconColor = widget.iconColor ?? Colors.white;
     final iconSize = widget.iconSize ?? 24.0;
 
-    // 🆕 Widget simple con solo animación de escala
+    // ⚡ Widget simple con solo animación de escala
     return ScaleTransition(
       scale: _scaleAnimation,
       child: IconButton(
@@ -124,8 +127,8 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
         ),
         onPressed: _isToggling ? null : _handleTap,
         tooltip: isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos',
-        padding: EdgeInsets.zero, // 🆕 Sin padding para mejor rendimiento
-        constraints: const BoxConstraints(), // 🆕 Sin constraints innecesarios
+        padding: EdgeInsets.zero, // ⚡ Sin padding para mejor rendimiento
+        constraints: const BoxConstraints(), // ⚡ Sin constraints innecesarios
       ),
     );
   }

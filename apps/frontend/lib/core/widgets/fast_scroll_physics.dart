@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// Física de scroll optimizada para velocidad y fluidez
-/// Similar a ClampingScrollPhysics pero con mejor sensibilidad
+/// Física de scroll ultra rápida y sensible
+/// Scroll extremadamente rápido y responsivo con máxima sensibilidad
 class FastScrollPhysics extends ClampingScrollPhysics {
   const FastScrollPhysics({super.parent});
 
@@ -12,13 +12,13 @@ class FastScrollPhysics extends ClampingScrollPhysics {
 
   @override
   double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
-    // Aumentar la sensibilidad del scroll (multiplicador 1.2 para mayor velocidad)
-    return super.applyPhysicsToUserOffset(position, offset * 1.2);
+    // 🔥 MÁXIMA SENSIBILIDAD: Multiplicador alto para scroll muy rápido
+    return super.applyPhysicsToUserOffset(position, offset * 1.8);
   }
 
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
-    // Permitir scroll más rápido y fluido
+    // Sin rebote, solo clamp suave en los límites
     return super.applyBoundaryConditions(position, value);
   }
 
@@ -27,16 +27,22 @@ class FastScrollPhysics extends ClampingScrollPhysics {
     ScrollMetrics position,
     double velocity,
   ) {
-    // Reducir la fricción para scroll más rápido
+    // 🔥 FRICCIÓN MUY BAJA: Scroll más largo y rápido
     final tolerance = toleranceFor(position);
     if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
       return ClampingScrollSimulation(
         position: position.pixels,
-        velocity: velocity * 0.9, // Reducir fricción (de 1.0 a 0.9)
+        velocity: velocity * 1.2, // 🔥 Aumentar velocidad de fling
         tolerance: tolerance,
       );
     }
     return null;
   }
+
+  @override
+  double get minFlingVelocity => 25.0; // 🔥 Velocidad mínima muy baja para respuesta inmediata
+
+  @override
+  double get maxFlingVelocity => 15000.0; // 🔥 Velocidad máxima muy alta para scroll rápido
 }
 

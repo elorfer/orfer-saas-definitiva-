@@ -115,9 +115,9 @@ export default function ArtistSelector({
             disabled || isLoading
               ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
               : isOpen
-              ? 'border-purple-500 ring-2 ring-purple-100'
-              : 'border-gray-200 hover:border-purple-300'
-          } bg-white px-3 py-2 text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-purple-100`}
+              ? 'border-brown-700 ring-2 ring-brown-100'
+              : 'border-gray-200 hover:border-brown-500'
+          } bg-white px-3 py-2 text-sm text-left transition focus:outline-none focus:ring-2 focus:ring-brown-100`}
         >
           <div className="flex items-center justify-between">
             <span className={selectedArtist ? 'text-gray-900' : 'text-gray-500'}>
@@ -153,7 +153,7 @@ export default function ArtistSelector({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar artista por nombre, email..."
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   autoFocus
                 />
               </div>
@@ -192,7 +192,7 @@ export default function ArtistSelector({
                         onClick={() => handleSelect(artist.id)}
                         className={`w-full px-4 py-2.5 text-left text-sm transition ${
                           isSelected
-                            ? 'bg-purple-50 text-purple-700'
+                            ? 'bg-brown-50 text-brown-800'
                             : 'text-gray-900 hover:bg-gray-50'
                         }`}
                       >
@@ -200,7 +200,7 @@ export default function ArtistSelector({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               {isSelected && (
-                                <CheckIcon className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                                <CheckIcon className="h-4 w-4 text-brown-700 flex-shrink-0" />
                               )}
                               <span className="font-medium truncate">{displayName}</span>
                             </div>

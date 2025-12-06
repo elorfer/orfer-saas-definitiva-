@@ -4,9 +4,13 @@ import { api } from './api';
 import { config } from '@/config/env';
 
 // Asegurar que el secret tenga al menos 32 caracteres (requisito de NextAuth)
-const nextAuthSecret = config.nextAuth.secret || process.env.NEXTAUTH_SECRET || 'vintage-music-admin-secret-key-2024-development';
-if (nextAuthSecret.length < 32) {
-  console.warn('NEXTAUTH_SECRET es muy corto. Debe tener al menos 32 caracteres.');
+// ⚠️ SEGURIDAD: Nunca hardcodear secrets. Usar solo variables de entorno.
+const nextAuthSecret = config.nextAuth.secret || process.env.NEXTAUTH_SECRET;
+if (!nextAuthSecret || nextAuthSecret.length < 32) {
+  throw new Error(
+    'NEXTAUTH_SECRET debe estar configurado y tener al menos 32 caracteres. ' +
+    'Configúralo en las variables de entorno.'
+  );
 }
 
 export const authOptions: NextAuthOptions = {

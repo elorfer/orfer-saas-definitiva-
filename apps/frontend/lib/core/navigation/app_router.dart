@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
+import '../../features/auth/screens/forgot_password_screen.dart';
+import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/playlists/screens/playlists_screen.dart';
 import '../../features/playlists/screens/playlist_detail_screen.dart';
@@ -12,7 +14,11 @@ import '../../features/home/screens/featured_songs_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 import '../../features/library/screens/library_screen.dart';
 import '../../features/library/screens/favorites_screen.dart';
-import '../../features/profile/screens/profile_screen.dart';
+import '../../features/library/screens/recently_played_screen.dart';
+import '../../features/library/screens/followed_artists_screen.dart';
+import '../../features/premium/screens/premium_screen.dart';
+import '../../features/onboarding/screens/onboarding_screen.dart';
+import '../../core/providers/onboarding_provider.dart';
 import '../../features/artists/pages/artist_page.dart';
 import '../../features/artists/models/artist.dart';
 import '../../features/player/screens/full_player_screen.dart';
@@ -31,6 +37,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     routes: notifier.routes,
     redirect: notifier.handleRedirect,
     debugLogDiagnostics: false, // Deshabilitado para mejor rendimiento en producción
+    // 🔥 OPTIMIZACIÓN: Deshabilitar observadores para mejor rendimiento
+    observers: const [], // Sin observadores para navegación más rápida
   );
 
   ref.onDispose(() {
@@ -43,10 +51,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
 class GoRouterNotifier extends ChangeNotifier {
   GoRouterNotifier(this.ref) {
+    // ✅ OPTIMIZACIÓN: fireImmediately: false para evitar trabajo innecesario al inicio
+    // El estado de auth se leerá cuando realmente se necesite (en getters)
     _subscription = ref.listen<AuthState>(
       authStateProvider,
       (_, __) => notifyListeners(),
-      fireImmediately: true,
+      fireImmediately: false, // Optimización: no ejecutar inmediatamente
     );
   }
 
@@ -54,9 +64,18 @@ class GoRouterNotifier extends ChangeNotifier {
   late final ProviderSubscription<AuthState> _subscription;
 
   AuthState get _authState => ref.read(authStateProvider);
+  bool get _onboardingCompleted => ref.read(onboardingProvider);
 
-  String get initialLocation =>
-      _authState.isAuthenticated ? '/home' : '/splash';
+  String get initialLocation {
+    if (!_authState.isAuthenticated) {
+      return '/splash';
+    }
+    // Si está autenticado pero no completó onboarding, mostrar onboarding
+    if (!_onboardingCompleted) {
+      return '/onboarding';
+    }
+    return '/home';
+  }
 
   List<RouteBase> get routes => [
         // Splash - sin transición
@@ -65,6 +84,14 @@ class GoRouterNotifier extends ChangeNotifier {
           pageBuilder: (context, state) => createNoTransitionPage<void>(
             key: state.pageKey,
             child: const SplashScreen(),
+          ),
+        ),
+        // Onboarding - sin transición
+        GoRoute(
+          path: '/onboarding',
+          pageBuilder: (context, state) => createNoTransitionPage<void>(
+            key: state.pageKey,
+            child: const OnboardingScreen(),
           ),
         ),
         // Login - transición optimizada sin parpadeo
@@ -89,54 +116,78 @@ class GoRouterNotifier extends ChangeNotifier {
             reverseTransitionDuration: const Duration(milliseconds: 150),
           ),
         ),
+        // Forgot Password - transición optimizada sin parpadeo
+        GoRoute(
+          path: '/forgot-password',
+          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const ForgotPasswordScreen(),
+            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+            transitionDuration: const Duration(milliseconds: 200),
+            reverseTransitionDuration: const Duration(milliseconds: 150),
+          ),
+        ),
+        // Reset Password - transición optimizada sin parpadeo
+        GoRoute(
+          path: '/reset-password/:token',
+          pageBuilder: (context, state) {
+            final token = state.pathParameters['token'] ?? '';
+            return createCustomTransitionPage<void>(
+              key: state.pageKey,
+              child: ResetPasswordScreen(token: token),
+              transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+              transitionDuration: const Duration(milliseconds: 200),
+              reverseTransitionDuration: const Duration(milliseconds: 150),
+            );
+          },
+        ),
         // ShellRoute envuelve todas las rutas autenticadas para mantener la barra de navegación
         ShellRoute(
           builder: (context, state, child) {
             // Si estamos en rutas de autenticación o splash, no mostrar MainNavigation
             final path = state.matchedLocation;
-            if (path == '/splash' || path == '/login' || path == '/register') {
+            if (path == '/splash' || 
+                path == '/login' || 
+                path == '/register' || 
+                path.startsWith('/forgot-password') || 
+                path.startsWith('/reset-password')) {
               return child;
             }
             // Para todas las demás rutas autenticadas, mostrar MainNavigation con la barra
             return MainNavigation(child: child);
           },
           routes: [
-            // Home - sin transición para tabs (mejor rendimiento)
+            // 🔥 OPTIMIZACIÓN: Home - sin transición para tabs (mejor rendimiento)
             GoRoute(
               path: '/home',
               pageBuilder: (context, state) => createNoTransitionPage<void>(
-                key: state.pageKey,
+                key: const PageStorageKey('home_screen'), // 🔥 PageStorageKey para mantener scroll
                 child: const HomeScreen(),
               ),
             ),
-            // Search - transición optimizada sin parpadeo
+            // 🔥 OPTIMIZACIÓN: Search - sin transición para tabs (mejor rendimiento)
             GoRoute(
               path: '/search',
-              pageBuilder: (context, state) => createCustomTransitionPage<void>(
-                key: state.pageKey,
+              pageBuilder: (context, state) => createNoTransitionPage<void>(
+                key: const PageStorageKey('search_screen'), // 🔥 PageStorageKey para mantener estado
                 child: const SearchScreen(),
-                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                transitionDuration: const Duration(milliseconds: 200),
-                reverseTransitionDuration: const Duration(milliseconds: 150),
               ),
             ),
-            // Library - sin transición para tabs (mejor rendimiento)
+            // 🔥 OPTIMIZACIÓN: Library - sin transición para tabs (mejor rendimiento)
             GoRoute(
               path: '/library',
               pageBuilder: (context, state) => createNoTransitionPage<void>(
-                key: state.pageKey,
+                key: const PageStorageKey('library_screen'), // 🔥 PageStorageKey para mantener scroll
                 child: const LibraryScreen(),
               ),
             ),
-            // Profile - IDÉNTICO a song details (sin parpadeo)
+            // 🔥 OPTIMIZACIÓN: Premium - sin transición para tabs (mejor rendimiento)
             GoRoute(
-              path: '/profile',
-              pageBuilder: (context, state) => createCustomTransitionPage<void>(
-                key: state.pageKey,
-                child: const ProfileScreen(),
-                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                transitionDuration: const Duration(milliseconds: 200),
-                reverseTransitionDuration: const Duration(milliseconds: 150),
+              path: '/premium',
+              name: 'premium',
+              pageBuilder: (context, state) => createNoTransitionPage<void>(
+                key: const PageStorageKey('premium_screen'), // 🔥 PageStorageKey para mantener estado
+                child: const PremiumScreen(),
               ),
             ),
             // Playlists - IDÉNTICO a song details (sin parpadeo)
@@ -167,6 +218,26 @@ class GoRouterNotifier extends ChangeNotifier {
               pageBuilder: (context, state) => createCustomTransitionPage<void>(
                 key: state.pageKey,
                 child: const FavoritesScreen(),
+                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                transitionDuration: const Duration(milliseconds: 200),
+                reverseTransitionDuration: const Duration(milliseconds: 150),
+              ),
+            ),
+            GoRoute(
+              path: '/recently-played',
+              pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                key: state.pageKey,
+                child: const RecentlyPlayedScreen(),
+                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                transitionDuration: const Duration(milliseconds: 200),
+                reverseTransitionDuration: const Duration(milliseconds: 150),
+              ),
+            ),
+            GoRoute(
+              path: '/followed-artists',
+              pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                key: state.pageKey,
+                child: const FollowedArtistsScreen(),
                 transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                 transitionDuration: const Duration(milliseconds: 200),
                 reverseTransitionDuration: const Duration(milliseconds: 150),
@@ -255,29 +326,15 @@ class GoRouterNotifier extends ChangeNotifier {
           ],
         ),
         // Full Player - FUERA del ShellRoute para que no muestre el mini player
-        // Transición vertical optimizada (más rápida)
+        // Animación de expansión desde abajo
         GoRoute(
           path: '/player',
           pageBuilder: (context, state) => CustomTransitionPage<void>(
             key: state.pageKey,
             child: const FullPlayerScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // Transición vertical desde abajo como Spotify (optimizada)
-              const begin = Offset(0.0, 1.0);
-              const end = Offset.zero;
-              const curve = Curves.easeOut; // Más rápida que easeOutCubic
-              
-              var tween = Tween(begin: begin, end: end).chain(
-                CurveTween(curve: curve),
-              );
-              
-              return SlideTransition(
-                position: animation.drive(tween),
-                child: child,
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 200), // Reducido de 300ms
-            reverseTransitionDuration: const Duration(milliseconds: 150), // Reducido de 250ms
+            transitionsBuilder: SpotifyPageTransitions.playerExpansionTransition,
+            transitionDuration: const Duration(milliseconds: 350), // ✅ Aumentado para animación más visible
+            reverseTransitionDuration: const Duration(milliseconds: 250), // ✅ Aumentado para cierre más suave
           ),
         ),
         // Redirect raíz - DEBE estar al final para no interceptar otras rutas
@@ -291,7 +348,10 @@ class GoRouterNotifier extends ChangeNotifier {
     final authState = _authState;
     final location = state.matchedLocation;
     final isSplashRoute = location == '/splash';
-    final isAuthRoute = location == '/login' || location == '/register';
+    final isAuthRoute = location == '/login' || 
+                        location == '/register' || 
+                        location == '/forgot-password' ||
+                        location.startsWith('/reset-password');
     
     // No redirigir rutas de player u otras rutas específicas fuera del ShellRoute
     // Nota: /song/ ahora está dentro del ShellRoute, así que no necesita tratamiento especial aquí
@@ -308,10 +368,20 @@ class GoRouterNotifier extends ChangeNotifier {
     }
 
     if (!authState.isAuthenticated) {
-      if (isAuthRoute) {
+      if (isAuthRoute || location == '/onboarding') {
         return null;
       }
       return '/login';
+    }
+
+    // Si está autenticado pero no completó onboarding, redirigir a onboarding
+    if (authState.isAuthenticated && !_onboardingCompleted && location != '/onboarding') {
+      return '/onboarding';
+    }
+
+    // Si completó onboarding y está en onboarding, redirigir a home
+    if (authState.isAuthenticated && _onboardingCompleted && location == '/onboarding') {
+      return '/home';
     }
 
     if (authState.isAuthenticated && (isAuthRoute || isSplashRoute)) {

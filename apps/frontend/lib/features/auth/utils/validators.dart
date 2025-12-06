@@ -15,12 +15,12 @@ class AuthValidators {
       return 'Ingresa tu correo electrónico';
     }
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Ingresa un correo válido';
+      return 'El email tiene formato incorrecto';
     }
     return null;
   }
 
-  /// Valida contraseña (mínimo 8 caracteres)
+  /// Valida contraseña (mínimo 8 caracteres, con verificación de fortaleza)
   static String? password(String? value) {
     if (value == null || value.isEmpty) {
       return 'Ingresa tu contraseña';
@@ -28,6 +28,23 @@ class AuthValidators {
     if (value.length < 8) {
       return 'La contraseña debe tener al menos 8 caracteres';
     }
+    
+    // Verificar fortaleza de contraseña
+    bool hasUpperCase = value.contains(RegExp(r'[A-Z]'));
+    bool hasLowerCase = value.contains(RegExp(r'[a-z]'));
+    bool hasNumbers = value.contains(RegExp(r'[0-9]'));
+    bool hasSpecialChar = value.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    
+    int strength = 0;
+    if (hasUpperCase) strength++;
+    if (hasLowerCase) strength++;
+    if (hasNumbers) strength++;
+    if (hasSpecialChar) strength++;
+    
+    if (strength < 2) {
+      return 'La contraseña es muy débil';
+    }
+    
     return null;
   }
 
@@ -43,7 +60,8 @@ class AuthValidators {
   }
 
   /// Valida nombre de usuario (mínimo 3 caracteres, solo letras, números y guiones bajos)
-  static String? username(String? value) {
+  /// El parámetro isAvailable se usa para validación en tiempo real
+  static String? username(String? value, {bool? isAvailable}) {
     if (value == null || value.isEmpty) {
       return 'Ingresa tu nombre de usuario';
     }
@@ -53,12 +71,20 @@ class AuthValidators {
     if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
       return 'Solo se permiten letras, números y guiones bajos';
     }
+    // Solo verificar disponibilidad si el campo está completo y válido
+    // y si se ha verificado la disponibilidad (isAvailable no es null)
+    if (isAvailable != null && !isAvailable) {
+      return 'Este nombre de usuario no está disponible';
+    }
     return null;
   }
 
   /// Valida nombre (requerido)
   static String? name(String? value, {String fieldName = 'Nombre'}) {
     if (value == null || value.isEmpty) {
+      if (fieldName.toLowerCase() == 'nombre') {
+        return 'Tu perfil necesita mínimo un nombre';
+      }
       return 'Ingresa tu $fieldName';
     }
     return null;
@@ -74,6 +100,14 @@ class AuthValidators {
     return null;
   }
 }
+
+
+
+
+
+
+
+
 
 
 

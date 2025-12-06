@@ -92,16 +92,12 @@ class UrlNormalizer {
   /// Normaliza una URL de archivo (audio, video, etc.) para que funcione correctamente en todas las plataformas
   /// Similar a normalizeImageUrl pero para URLs de archivos
   /// Valida que la URL sea válida y la construye correctamente
-  static String normalizeUrl(String url, {bool enableLogging = true}) {
+  static String normalizeUrl(String url, {bool enableLogging = false}) {
     if (url.isEmpty) {
       throw Exception('[UrlNormalizer] URL vacía o nula');
     }
 
-    // Validar formato básico de URL
-    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/') && !url.startsWith('./')) {
-      // Intentar construir desde ApiConfig si parece ser una ruta relativa
-      AppLogger.info('[UrlNormalizer] URL no parece ser absoluta ni relativa: $url');
-    }
+    // Validar formato básico de URL (sin logs verbosos)
 
     // Si ya es una URL completa (http:// o https://), normalizarla para el emulador
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -110,9 +106,6 @@ class UrlNormalizer {
       // CORREGIR RUTA: Si la URL tiene /songs/ pero debería ser /uploads/songs/
       if (normalized.contains('/songs/') && !normalized.contains('/uploads/songs/')) {
         normalized = normalized.replaceAll('/songs/', '/uploads/songs/');
-        if (enableLogging) {
-          AppLogger.refresh('[UrlNormalizer] Ruta corregida (/songs/ -> /uploads/songs/): $normalized');
-        }
       }
       
       // Validar que la URL sea válida
@@ -120,9 +113,6 @@ class UrlNormalizer {
         final uri = Uri.parse(normalized);
         if (uri.host.isEmpty) {
           throw Exception('[UrlNormalizer] URL sin host válido: $normalized');
-        }
-        if (enableLogging) {
-          AppLogger.info('[UrlNormalizer] URL absoluta validada: $normalized');
         }
         return normalized;
       } catch (e) {
@@ -151,9 +141,7 @@ class UrlNormalizer {
       finalUrl = '$cleanBaseUrl/$url';
     }
     
-    if (enableLogging) {
-      AppLogger.refresh('[UrlNormalizer] URL construida desde ruta relativa: $url -> $finalUrl');
-    }
+    // Sin logs verbosos - solo errores
     
     // Validar URL final
     try {

@@ -239,7 +239,8 @@ export class PlaylistsService {
   }
 
   async addSongToPlaylist(playlistId: string, songId: string, userId: string, userRole?: UserRole): Promise<void> {
-    const playlist = await this.findOne(playlistId);
+    // Usar findOneEntity para que los admins puedan editar cualquier playlist
+    const playlist = await this.findOneEntity(playlistId);
 
     // Verificar permisos: solo el dueño puede editar, excepto si es admin
     if (playlist.userId !== userId && userRole !== UserRole.ADMIN) {

@@ -3,12 +3,25 @@ import '../utils/logger.dart';
 
 class AppConfig {
   // Configuración de la aplicación
-  static const String appName = 'Vintage Music';
+  static const String appName = 'Srtuky';
   static const String appVersion = '1.0.0';
 
   // URLs de configuración
   static const String _productionUrl = 'http://backend-alb-1038609925.us-east-1.elb.amazonaws.com';
-  static const String _developmentUrlAndroid = 'http://10.0.2.2:3001'; // Emulador Android y dispositivos móviles (ajustado al puerto expuesto)
+  
+  // URL para emulador Android (10.0.2.2 es el alias del localhost del host en el emulador)
+  static const String _developmentUrlAndroidEmulator = 'http://10.0.2.2:3001';
+  
+  // URL para dispositivos físicos Android conectados por USB
+  // Si usas 'adb reverse tcp:3001 tcp:3001', puedes usar localhost
+  // Si prefieres usar la IP de red, cambia esto a tu IP local
+  static const String _developmentUrlAndroidPhysical = 'http://localhost:3001';
+  
+  // URL alternativa para dispositivos físicos por WiFi (IP local de tu computadora)
+  // IMPORTANTE: Reemplaza 192.168.1.100 con la IP local de tu computadora
+  // Para encontrar tu IP: Windows: ipconfig | Linux/Mac: ifconfig o ip addr
+  static const String _developmentUrlAndroidWiFi = 'http://192.168.1.100:3001';
+  
   static const String _developmentUrlWeb = 'http://localhost:3001'; // Flutter Web
 
   // Configuración de la API
@@ -32,6 +45,10 @@ class AppConfig {
     if (kDebugMode) {
       final devUrl = _getDevelopmentUrl();
       AppLogger.config('MODO DEBUG: Usando URL de desarrollo: $devUrl');
+      AppLogger.config('NOTA: Si estás en un dispositivo físico conectado por USB:');
+      AppLogger.config('  1. Ejecuta: adb reverse tcp:3001 tcp:3001');
+      AppLogger.config('  2. Luego ejecuta: flutter run');
+      AppLogger.config('Si estás usando WiFi, usa: flutter run --dart-define=USE_WIFI=true');
       return _buildFinalUrl(devUrl);
     }
 
@@ -46,9 +63,45 @@ class AppConfig {
       return _developmentUrlWeb;
     }
     
-    // Para móvil, usar la URL de Android por defecto (funciona en emulador)
-    // En dispositivos físicos, el usuario puede usar --dart-define si necesita otra IP
-    return _developmentUrlAndroid;
+    // Para Android, detectar si está en emulador o dispositivo físico
+    if (!kIsWeb) {
+      try {
+        // Verificar si hay una IP configurada manualmente
+        final manualIp = String.fromEnvironment('DEV_IP', defaultValue: '');
+        if (manualIp.isNotEmpty) {
+          AppLogger.config('Usando IP manual para desarrollo: $manualIp');
+          return 'http://$manualIp:3001';
+        }
+        
+        // Verificar si se especifica usar WiFi en lugar de USB
+        final useWiFi = String.fromEnvironment('USE_WIFI', defaultValue: 'false') == 'true';
+        if (useWiFi) {
+          AppLogger.config('Usando conexión WiFi (IP de red)');
+          return _developmentUrlAndroidWiFi;
+        }
+        
+        // Verificar si se especifica usar dispositivo físico explícitamente
+        final usePhysical = String.fromEnvironment('USE_PHYSICAL', defaultValue: 'false') == 'true';
+        if (usePhysical) {
+          AppLogger.config('Usando URL para dispositivo físico: $_developmentUrlAndroidPhysical');
+          AppLogger.config('NOTA: Requiere ejecutar: adb reverse tcp:3001 tcp:3001');
+          return _developmentUrlAndroidPhysical;
+        }
+        
+        // Por defecto, asumir que es emulador (más común en desarrollo)
+        // Para emulador Android, usar 10.0.2.2 que es el alias de localhost del host
+        AppLogger.config('Usando URL para emulador: $_developmentUrlAndroidEmulator');
+        AppLogger.config('Si es dispositivo físico, usa: flutter run --dart-define=USE_PHYSICAL=true');
+        return _developmentUrlAndroidEmulator;
+      } catch (e) {
+        AppLogger.warning('Error detectando plataforma: $e');
+        // Fallback: usar emulador por defecto
+        return _developmentUrlAndroidEmulator;
+      }
+    }
+    
+    // Para iOS u otras plataformas, usar localhost
+    return _developmentUrlAndroidPhysical;
   }
 
   static String _buildFinalUrl(String baseUrl) {

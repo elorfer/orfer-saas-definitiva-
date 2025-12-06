@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 
 import { Artist } from '../../common/entities/artist.entity';
 import { User } from '../../common/entities/user.entity';
 import { Song } from '../../common/entities/song.entity';
 import { Album } from '../../common/entities/album.entity';
+import { ArtistFollower } from '../../common/entities/artist-follower.entity';
 import { CoversStorageService } from '../covers/covers-storage.service';
 import { FeaturedService } from '../featured/featured.service';
 
@@ -20,6 +21,9 @@ export class ArtistsService {
     private readonly songRepository: Repository<Song>,
     @InjectRepository(Album)
     private readonly albumRepository: Repository<Album>,
+    @InjectRepository(ArtistFollower)
+    private readonly artistFollowerRepository: Repository<ArtistFollower>,
+    private readonly dataSource: DataSource,
     private readonly coversStorageService: CoversStorageService,
     @Inject(forwardRef(() => FeaturedService))
     private readonly featuredService?: FeaturedService,
@@ -245,10 +249,34 @@ export class ArtistsService {
     return { moved, deleted: true };
   }
 
-  async verifyArtist(artistId: string): Promise<Artist> {
+  async verifyArtist(artistId: string, adminId?: string): Promise<Artist> {
     const artist = await this.findOne(artistId);
+    
+    // Actualizar ambos campos para compatibilidad
+    artist.isVerified = true;
     artist.verificationStatus = true;
-    return this.artistRepository.save(artist);
+    
+    const savedArtist = await this.artistRepository.save(artist);
+    
+    // Log de auditoría (opcional - puedes crear una tabla de auditoría)
+    console.log(`[AUDIT] Artist ${artistId} verified by admin ${adminId || 'unknown'} at ${new Date().toISOString()}`);
+    
+    return savedArtist;
+  }
+
+  async unverifyArtist(artistId: string, adminId?: string): Promise<Artist> {
+    const artist = await this.findOne(artistId);
+    
+    // Actualizar ambos campos para compatibilidad
+    artist.isVerified = false;
+    artist.verificationStatus = false;
+    
+    const savedArtist = await this.artistRepository.save(artist);
+    
+    // Log de auditoría
+    console.log(`[AUDIT] Artist ${artistId} unverified by admin ${adminId || 'unknown'} at ${new Date().toISOString()}`);
+    
+    return savedArtist;
   }
 
   async getTopArtists(limit: number = 10): Promise<Artist[]> {
@@ -260,13 +288,17 @@ export class ArtistsService {
   }
 
   async getVerifiedArtists(page: number = 1, limit: number = 10): Promise<{ artists: Artist[]; total: number }> {
-    const [artists, total] = await this.artistRepository.findAndCount({
-      where: { verificationStatus: true },
-      relations: ['user'],
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { createdAt: 'DESC' },
-    });
+    // Buscar por ambos campos (isVerified o verificationStatus) y ordenar por popularidad
+    const [artists, total] = await this.artistRepository
+      .createQueryBuilder('artist')
+      .leftJoinAndSelect('artist.user', 'user')
+      .where('artist.isVerified = :isVerified', { isVerified: true })
+      .orWhere('artist.verificationStatus = :verificationStatus', { verificationStatus: true })
+      .orderBy('artist.totalStreams', 'DESC')
+      .addOrderBy('artist.totalFollowers', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
 
     return { artists, total };
   }
@@ -306,6 +338,147 @@ export class ArtistsService {
     }
 
     await this.artistRepository.remove(artist);
+  }
+
+  // ========== MÉTODOS DE SEGUIMIENTO DE ARTISTAS ==========
+
+  /**
+   * Seguir un artista
+   * Usa transacción para asegurar atomicidad
+   */
+  async followArtist(artistId: string, userId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
+    // Verificar que el artista existe
+    const artist = await this.findOne(artistId);
+    
+    // Verificar que el usuario existe
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // Verificar que no sea el mismo usuario (un artista no puede seguirse a sí mismo)
+    if (artist.userId === userId) {
+      throw new BadRequestException('No puedes seguirte a ti mismo');
+    }
+
+    // Verificar si ya está siguiendo
+    const existingFollow = await this.artistFollowerRepository.findOne({
+      where: { artistId, userId },
+    });
+
+    if (existingFollow) {
+      // Ya está siguiendo, retornar estado actual
+      return {
+        isFollowing: true,
+        followersCount: artist.totalFollowers,
+      };
+    }
+
+    // Usar transacción para atomicidad
+    return await this.dataSource.transaction(async (manager) => {
+      // Crear relación de seguimiento
+      const follow = this.artistFollowerRepository.create({
+        artistId,
+        userId,
+      });
+      await manager.save(ArtistFollower, follow);
+
+      // Incrementar contador de seguidores
+      await manager.increment(Artist, { id: artistId }, 'totalFollowers', 1);
+
+      // Obtener el artista actualizado
+      const updatedArtist = await manager.findOne(Artist, { where: { id: artistId } });
+
+      return {
+        isFollowing: true,
+        followersCount: updatedArtist?.totalFollowers || artist.totalFollowers + 1,
+      };
+    });
+  }
+
+  /**
+   * Dejar de seguir un artista
+   * Usa transacción para asegurar atomicidad
+   */
+  async unfollowArtist(artistId: string, userId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
+    // Verificar que el artista existe
+    const artist = await this.findOne(artistId);
+
+    // Buscar relación de seguimiento
+    const follow = await this.artistFollowerRepository.findOne({
+      where: { artistId, userId },
+    });
+
+    if (!follow) {
+      // No estaba siguiendo, retornar estado actual
+      return {
+        isFollowing: false,
+        followersCount: artist.totalFollowers,
+      };
+    }
+
+    // Usar transacción para atomicidad
+    return await this.dataSource.transaction(async (manager) => {
+      // Eliminar relación de seguimiento
+      await manager.remove(ArtistFollower, follow);
+
+      // Decrementar contador de seguidores (con protección para no ir por debajo de 0)
+      await manager.decrement(Artist, { id: artistId }, 'totalFollowers', 1);
+
+      // Obtener el artista actualizado
+      const updatedArtist = await manager.findOne(Artist, { where: { id: artistId } });
+      const followersCount = Math.max(0, updatedArtist?.totalFollowers || artist.totalFollowers - 1);
+
+      // Asegurar que el contador no sea negativo
+      if (followersCount < 0) {
+        await manager.update(Artist, { id: artistId }, { totalFollowers: 0 });
+      }
+
+      return {
+        isFollowing: false,
+        followersCount: Math.max(0, followersCount),
+      };
+    });
+  }
+
+  /**
+   * Verificar si un usuario sigue a un artista
+   */
+  async isFollowing(artistId: string, userId: string): Promise<boolean> {
+    const follow = await this.artistFollowerRepository.findOne({
+      where: { artistId, userId },
+    });
+    return !!follow;
+  }
+
+  /**
+   * Obtener lista de artistas seguidos por un usuario
+   */
+  async getFollowedArtists(userId: string): Promise<Artist[]> {
+    const follows = await this.artistFollowerRepository.find({
+      where: { userId },
+      relations: ['artist', 'artist.user'],
+      order: { followedAt: 'DESC' },
+    });
+
+    return follows.map((follow) => follow.artist);
+  }
+
+  /**
+   * Obtener contador de seguidores de un artista (actualizado desde la BD)
+   */
+  async getFollowersCount(artistId: string): Promise<number> {
+    const count = await this.artistFollowerRepository.count({
+      where: { artistId },
+    });
+    
+    // Sincronizar el contador en la entidad Artist
+    await this.artistRepository.update(
+      { id: artistId },
+      { totalFollowers: count }
+    );
+
+    return count;
   }
 }
 

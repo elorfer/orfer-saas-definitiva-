@@ -4,6 +4,7 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/models/artist_model.dart';
+import '../../../core/widgets/verified_badge.dart';
 
 class ArtistSearchCard extends StatelessWidget {
   final Artist artist;
@@ -139,25 +140,13 @@ class ArtistSearchCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              artist.displayName,
-                              style: AppTextStyles.songTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (artist.verificationStatus == true) ...[
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.verified,
-                              size: 18,
-                              color: NeumorphismTheme.coffeeMedium,
-                            ),
-                          ],
-                        ],
+                      ArtistNameWithBadge(
+                        artistName: artist.displayName,
+                        isVerified: artist.isVerifiedValue,
+                        textStyle: AppTextStyles.songTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        badgeSize: 16.0,
                       ),
                       const SizedBox(height: 6),
                       Row(

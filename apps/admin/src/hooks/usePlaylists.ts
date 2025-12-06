@@ -212,3 +212,43 @@ export const useUploadPlaylistCover = () => {
   );
 };
 
+export const useAddSongToPlaylist = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    async ({ playlistId, songId }: { playlistId: string; songId: string }) => {
+      await apiClient.addSongToPlaylist(playlistId, songId);
+    },
+    {
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries([PLAYLISTS_QUERY_KEY]);
+        queryClient.invalidateQueries(['playlist', variables.playlistId]);
+        toast.success('Canción agregada exitosamente');
+      },
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+
+export const useRemoveSongFromPlaylist = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    async ({ playlistId, songId }: { playlistId: string; songId: string }) => {
+      await apiClient.removeSongFromPlaylist(playlistId, songId);
+    },
+    {
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries([PLAYLISTS_QUERY_KEY]);
+        queryClient.invalidateQueries(['playlist', variables.playlistId]);
+        toast.success('Canción removida exitosamente');
+      },
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+

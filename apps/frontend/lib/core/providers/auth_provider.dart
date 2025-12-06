@@ -239,6 +239,52 @@ class AuthNotifier extends Notifier<AuthState> {
       await logout();
     }
   }
+
+  /// Verificar disponibilidad de nombre de usuario
+  Future<bool> checkUsernameAvailability(String username) async {
+    return await _authService.checkUsernameAvailability(username);
+  }
+
+  /// Verificar disponibilidad de email
+  Future<bool> checkEmailAvailability(String email) async {
+    return await _authService.checkEmailAvailability(email);
+  }
+
+  /// Verificar si un usuario existe (para login)
+  Future<bool> checkUserExists(String emailOrUsername) async {
+    return await _authService.checkUserExists(emailOrUsername);
+  }
+
+  /// Solicitar recuperación de contraseña
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+      final result = await _authService.forgotPassword(email);
+      state = state.copyWith(isLoading: false, error: null);
+      return result;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e is AuthException ? e.message : 'Error inesperado: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// Restablecer contraseña con token
+  Future<void> resetPassword(String token, String newPassword) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+      await _authService.resetPassword(token, newPassword);
+      state = state.copyWith(isLoading: false, error: null);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e is AuthException ? e.message : 'Error inesperado: $e',
+      );
+      rethrow;
+    }
+  }
 }
 
 /// Provider para verificar si el usuario está autenticado

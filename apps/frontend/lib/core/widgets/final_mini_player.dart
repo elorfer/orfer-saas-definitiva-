@@ -42,18 +42,25 @@ class FinalMiniPlayer extends ConsumerWidget {
         return GestureDetector(
           onTap: onTap ?? () {
             // Si no hay callback personalizado, abrir reproductor completo
-            // ✅ FUNCIONA SIEMPRE que haya currentSong, sin importar dónde se inició la reproducción
+            // ✅ OPTIMIZADO: Verificar estado antes de navegar para evitar múltiples llamadas
             try {
-              // Verificar que hay una canción antes de expandir
               final audioState = ref.read(unifiedAudioProviderFixed);
-              if (audioState.currentSong != null) {
+              if (audioState.currentSong != null && !audioState.isPlayerExpanded) {
                 // Actualizar estado primero
                 ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
                 
-                // Navegar inmediatamente sin delay
-                if (builderContext.mounted) {
-                  builderContext.push('/player');
-                }
+                // ✅ CORRECCIÓN: Pequeño delay para permitir que la animación se vea
+                // Usar SchedulerBinding para asegurar que la animación comience correctamente
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (builderContext.mounted) {
+                    // Navegar después del frame para que la animación se ejecute correctamente
+                    Future.microtask(() {
+                      if (builderContext.mounted) {
+                        builderContext.push('/player');
+                      }
+                    });
+                  }
+                });
               }
             } catch (e) {
               AppLogger.error('[FinalMiniPlayer] Error al abrir reproductor: $e');
@@ -93,92 +100,101 @@ class FinalMiniPlayer extends ConsumerWidget {
             Row(
               children: [
                 // Imagen del álbum - más pequeña y circular
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: NeumorphismTheme.coffeeMedium,
-                  ),
-                  child: ClipOval(
-                    child: song.coverArtUrl != null
-                        ? StableImageWidget(
-                            imageUrl: song.coverArtUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: const Icon(
+                // ✅ OPTIMIZACIÓN: RepaintBoundary para widget estático
+                RepaintBoundary(
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: NeumorphismTheme.coffeeMedium,
+                    ),
+                    child: ClipOval(
+                      child: song.coverArtUrl != null
+                          ? StableImageWidget(
+                              imageUrl: song.coverArtUrl,
+                              fit: BoxFit.cover,
+                              errorWidget: const Icon(
+                                Icons.music_note,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            )
+                          : const Icon(
                               Icons.music_note,
                               color: Colors.white,
                               size: 20,
                             ),
-                          )
-                        : const Icon(
-                            Icons.music_note,
-                            color: Colors.white,
-                            size: 20,
-                          ),
+                    ),
                   ),
                 ),
                 
                 const SizedBox(width: 12),
                 
                 // Información de la canción - más compacta
+                // ✅ OPTIMIZACIÓN: RepaintBoundary para widget estático
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        song.title ?? 'Sin título',
-                        style: GoogleFonts.inter(
-                          color: NeumorphismTheme.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                  child: RepaintBoundary(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          song.title ?? 'Sin título',
+                          style: GoogleFonts.inter(
+                            color: NeumorphismTheme.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        song.artist?.displayName ?? 'Artista desconocido',
-                        style: GoogleFonts.inter(
-                          color: NeumorphismTheme.textSecondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
+                        const SizedBox(height: 1),
+                        Text(
+                          song.artist?.displayName ?? 'Artista desconocido',
+                          style: GoogleFonts.inter(
+                            color: NeumorphismTheme.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 
                 const SizedBox(width: 8),
                 
                 // Botón play/pause más compacto - Sincronizado con SongDetailScreen
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: NeumorphismTheme.coffeeMedium,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () async {
-                        try {
-                          await ref.read(unifiedAudioProviderFixed.notifier).togglePlay();
-                        } catch (e) {
-                          AppLogger.error('[FinalMiniPlayer] Error toggle: $e');
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(18),
-                      child: Center(
-                        child: Icon(
-                          isPlaying ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
-                          size: 18,
+                // ✅ OPTIMIZACIÓN: RepaintBoundary para widget dinámico (cambia con isPlaying)
+                RepaintBoundary(
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: NeumorphismTheme.coffeeMedium,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () async {
+                          try {
+                            await ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
+                          } catch (e) {
+                            AppLogger.error('[FinalMiniPlayer] Error toggle: $e');
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(18),
+                        child: Center(
+                          child: Icon(
+                            isPlaying ? Icons.pause : Icons.play_arrow,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         ),
                       ),
                     ),

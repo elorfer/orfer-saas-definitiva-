@@ -5,6 +5,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/providers/intelligent_featured_provider.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
+import '../../../core/widgets/premium_profile_drawer.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../widgets/featured_artists_section.dart';
@@ -25,20 +26,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   bool get wantKeepAlive => true; // Mantener estado al cambiar de pestaña
 
+  // ScrollController para mejor control del scroll estilo Spotify
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // 🆕 OPTIMIZACIÓN: Usar ValueKey estable para evitar rebuilds innecesarios
+    // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
     return RepaintBoundary(
-      child: Container(
-        key: const ValueKey('home_screen_container'),
-        decoration: const BoxDecoration(
-          gradient: NeumorphismTheme.backgroundGradient,
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
+      child: Scaffold(
+        key: const ValueKey('home_screen_scaffold'),
+        backgroundColor: Colors.transparent,
+        drawer: const PremiumProfileDrawer(), // 🔥 Drawer lateral desde la izquierda
+        body: Container(
+          key: const ValueKey('home_screen_container'),
+          decoration: const BoxDecoration(
+            gradient: NeumorphismTheme.backgroundGradient,
+          ),
+          child: SafeArea(
+            child: RefreshIndicator(
             onRefresh: () async {
               // Refrescar todo el home (artistas, canciones, playlists, etc.)
               final homeNotifier = ref.read(homeStateProvider.notifier);
@@ -49,13 +68,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             },
             color: Colors.white,
             backgroundColor: NeumorphismTheme.coffeeMedium,
+            notificationPredicate: (_) => true,
             child: SingleChildScrollView(
-              physics: const FastScrollPhysics(), // Scroll más rápido y fluido
-              padding: const EdgeInsets.only(top: 24.0, bottom: 40.0), // ✅ Más padding inferior
+              controller: _scrollController,
+              physics: const FastScrollPhysics(), // Scroll optimizado sin lag
+              padding: const EdgeInsets.only(top: 24.0, bottom: 40.0),
+              clipBehavior: Clip.none, // 🚀 Mejor rendimiento - sin clipping costoso
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min, // 🚀 Optimización: tamaño mínimo
                 children: [
-                  // 🆕 Header optimizado con RepaintBoundary y select específico
+                  // Header optimizado con RepaintBoundary
                   RepaintBoundary(
                     child: _HomeHeader(
                       key: const ValueKey('home_header'),
@@ -71,7 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                   const SizedBox(height: 32),
 
-                  // Canciones destacadas inteligentes (usa tu algoritmo avanzado) - Optimizado con RepaintBoundary
+                  // Canciones destacadas inteligentes - Optimizado con RepaintBoundary
                   RepaintBoundary(
                     child: IntelligentFeaturedSongsSection(key: const ValueKey('intelligent_songs')),
                   ),
@@ -83,11 +107,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     child: FeaturedPlaylistsSection(key: const ValueKey('playlists')),
                   ),
 
-                  const SizedBox(height: 80), // ✅ Más espacio en blanco al final
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
           ),
+        ),
         ),
       ),
     );
@@ -118,32 +143,42 @@ class _HomeHeader extends ConsumerWidget {
           ? _buildHeaderSkeleton()
           : Row(
               children: [
-                // Avatar con inicial
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.9),
-                        Colors.white.withValues(alpha: 0.7),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                // 🔥 Avatar clickeable para abrir drawer
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      // Abrir drawer lateral desde la izquierda
+                      Scaffold.of(context).openDrawer();
+                    },
+                    borderRadius: BorderRadius.circular(28),
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.9),
+                            Colors.white.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      _getInitials(user?.firstName, user?.lastName),
-                      style: AppTextStyles.titleMedium,
+                      child: Center(
+                        child: Text(
+                          _getInitials(user?.firstName, user?.lastName),
+                          style: AppTextStyles.titleMedium,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -177,7 +212,7 @@ class _HomeHeader extends ConsumerWidget {
   Widget _buildHeaderSkeleton() {
     return Row(
       children: [
-        // Avatar skeleton - CRÍTICO: Mismo tamaño y decoración que el real
+        // Avatar skeleton - Tamaño exacto 56x56 (igual que el real)
         Container(
           width: 56,
           height: 56,
@@ -202,6 +237,7 @@ class _HomeHeader extends ConsumerWidget {
           child: Shimmer.fromColors(
             baseColor: NeumorphismTheme.shimmerBaseColor,
             highlightColor: NeumorphismTheme.shimmerHighlightColor,
+            period: const Duration(milliseconds: 1200), // Más lento = más ligero
             child: Container(
               width: 56,
               height: 56,
@@ -213,7 +249,7 @@ class _HomeHeader extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 16), // Mismo espacio que el real
-        // Texto skeleton - CRÍTICO: Mismas alturas que los textos reales
+        // Texto skeleton - Alturas exactas de los textos reales
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,6 +258,7 @@ class _HomeHeader extends ConsumerWidget {
               Shimmer.fromColors(
                 baseColor: NeumorphismTheme.shimmerBaseColor,
                 highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                period: const Duration(milliseconds: 1200),
                 child: Container(
                   height: 16, // Misma altura que welcomeText
                   width: 100,
@@ -236,6 +273,7 @@ class _HomeHeader extends ConsumerWidget {
               Shimmer.fromColors(
                 baseColor: NeumorphismTheme.shimmerBaseColor,
                 highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                period: const Duration(milliseconds: 1200),
                 child: Container(
                   height: 20, // Misma altura que userName
                   width: 150,

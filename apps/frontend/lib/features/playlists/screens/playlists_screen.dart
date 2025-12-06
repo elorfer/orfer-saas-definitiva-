@@ -170,9 +170,10 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
                           );
                         },
                         childCount: playlists.length + (_isLoadingMore ? 4 : 0),
-                        // Optimización: desactivar keepAlive y repaintBoundaries automáticos para mejor rendimiento
-                        addAutomaticKeepAlives: false, // No mantener vivos items fuera de la vista (mejor rendimiento)
-                        addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual
+                        // 🔥 OPTIMIZACIONES PARA GRANDES VOLÚMENES:
+                        addAutomaticKeepAlives: false, // No mantener vivos items fuera de la vista (ahorra memoria)
+                        addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual (evita duplicación)
+                        addSemanticIndexes: false, // Desactivar índices semánticos (mejor rendimiento)
                       ),
                     ),
                   ),
@@ -257,8 +258,10 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
                 child: _buildShimmerCard(),
               ),
               childCount: 6,
+              // 🔥 OPTIMIZACIONES PARA GRANDES VOLÚMENES:
               addAutomaticKeepAlives: false,
               addRepaintBoundaries: false,
+              addSemanticIndexes: false, // Desactivar índices semánticos (mejor rendimiento)
             ),
           ),
         ),
@@ -379,6 +382,12 @@ class _PlaylistCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   borderRadius: 12,
                   placeholderColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                  // 🔥 OPTIMIZADO: Tamaños de cache reducidos para mejor rendimiento con muchas imágenes
+                  // Calcular tamaño basado en el ancho de la pantalla (2 columnas)
+                  maxCacheWidth: 300, // Tamaño suficiente para grid de 2 columnas
+                  maxCacheHeight: 300,
+                  useThumbnail: true, // Usar thumbnails cuando estén disponibles
+                  skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
                 ),
               ),
             ),

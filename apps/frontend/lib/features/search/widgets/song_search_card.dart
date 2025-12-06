@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/url_normalizer.dart';
-import '../../../core/widgets/favorite_button.dart';
+import '../../../core/widgets/play_button_card.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/models/song_model.dart';
+import '../../../core/widgets/verified_badge.dart';
 
-class SongSearchCard extends StatelessWidget {
+class SongSearchCard extends ConsumerWidget {
   final Song song;
 
   const SongSearchCard({
@@ -15,136 +17,72 @@ class SongSearchCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
         ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
         : null;
 
-    return RepaintBoundary(
-      child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    // ⚡ OPTIMIZACIÓN: No precargar audio automáticamente (reduce carga inicial)
+
+    // ⚡ OPTIMIZADO: Tarjeta más pequeña y ligera sin botón de favorito
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // ⚡ Reducido de 6 a 4
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.surface.withValues(alpha: 0.8),
-            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(-2, -2),
-          ),
-        ],
+        color: NeumorphismTheme.surface.withValues(alpha: 0.6), // ⚡ Sin gradiente (más ligero)
+        borderRadius: BorderRadius.circular(16), // ⚡ Reducido de 20 a 16
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           onTap: () {
             SongDetailScreen.navigateToSong(context, song);
           },
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // ⚡ Reducido de 16 a 12/10
             child: Row(
               children: [
-                // Portada
-                Container(
-                    width: 64,
-                    height: 64,
-                    constraints: const BoxConstraints(
-                      minWidth: 64,
-                      maxWidth: 64,
-                      minHeight: 64,
-                      maxHeight: 64,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      clipBehavior: Clip.antiAlias,
-                      child: coverUrl != null
-                          ? SizedBox(
-                              width: 64,
-                              height: 64,
-                              child: Image.network(
-                                coverUrl,
-                                fit: BoxFit.cover,
-                                width: 64,
-                                height: 64,
-                                cacheWidth: 64, // OPTIMIZACIÓN: límite de memoria
-                                cacheHeight: 64, // OPTIMIZACIÓN: límite de memoria
-                                alignment: Alignment.center,
-                                repeat: ImageRepeat.noRepeat,
-                              // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
-                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                if (wasSynchronouslyLoaded) return child;
-                                return AnimatedOpacity(
-                                  opacity: frame == null ? 0 : 1,
-                                  duration: const Duration(milliseconds: 200),
-                                  curve: Curves.easeOut,
-                                  child: child,
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) {
-                                  return child;
-                                }
-                                // Placeholder simple sin CircularProgressIndicator para mejor rendimiento
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
-                                  ),
-                                  child: const Icon(
-                                    Icons.music_note,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                          : Container(
+                // ⚡ Portada más pequeña (sin sombras pesadas)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12), // ⚡ Reducido de 16 a 12
+                  child: coverUrl != null
+                      ? Image.network(
+                          coverUrl,
+                          width: 48, // ⚡ Reducido de 64 a 48
+                          height: 48, // ⚡ Reducido de 64 a 48
+                          fit: BoxFit.cover,
+                          cacheWidth: 48, // ⚡ Reducido
+                          cacheHeight: 48, // ⚡ Reducido
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 48,
+                              height: 48,
                               decoration: const BoxDecoration(
                                 gradient: NeumorphismTheme.imagePlaceholderGradient,
                               ),
                               child: const Icon(
                                 Icons.music_note,
                                 color: Colors.white,
-                                size: 28,
+                                size: 20, // ⚡ Reducido de 28
                               ),
-                            ),
-                    ),
-                  ),
-                const SizedBox(width: 16),
-                // Información de la canción
+                            );
+                          },
+                        )
+                      : Container(
+                          width: 48,
+                          height: 48,
+                          decoration: const BoxDecoration(
+                            gradient: NeumorphismTheme.imagePlaceholderGradient,
+                          ),
+                          child: const Icon(
+                            Icons.music_note,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 12), // ⚡ Reducido de 16 a 12
+                // ⚡ Información simplificada
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,68 +90,43 @@ class SongSearchCard extends StatelessWidget {
                     children: [
                       Text(
                         song.title ?? 'Canción Desconocida',
-                        style: AppTextStyles.songTitle,
+                        style: AppTextStyles.songTitle.copyWith(fontSize: 14), // ⚡ Reducido
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.person_outline,
-                            size: 14,
-                            color: NeumorphismTheme.textSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              song.artist?.stageName ?? 'Artista Desconocido',
-                              style: AppTextStyles.artistName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+                      const SizedBox(height: 4), // ⚡ Reducido de 6 a 4
+                      // Nombre del artista con badge de verificación
+                      if (song.artist != null)
+                        ArtistNameWithBadge(
+                          artistName: song.artist!.stageName ?? 
+                              (song.artist!.displayName.isNotEmpty ? song.artist!.displayName : 'Artista Desconocido'),
+                          isVerified: song.artist!.isVerifiedValue,
+                          textStyle: AppTextStyles.artistName.copyWith(fontSize: 12), // ⚡ Reducido
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          badgeSize: 10.0,
+                        )
+                      else
+                        Text(
+                          'Artista Desconocido',
+                          style: AppTextStyles.artistName.copyWith(fontSize: 12), // ⚡ Reducido
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                // Iconos: Corazón y Menú
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FavoriteButton(
-                      songId: song.id,
-                      iconColor: Colors.red,
-                      iconSize: 22,
-                    ),
-                    const SizedBox(width: 8),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () {
-                          // Menú de opciones - funcionalidad pendiente
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(
-                            Icons.more_vert,
-                            color: NeumorphismTheme.textSecondary,
-                            size: 22,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 8), // ⚡ Reducido de 12 a 8
+                // ⚡ Solo botón de play (sin favorito ni menú)
+                PlayButtonCard(
+                  song: song,
+                  size: 32, // ⚡ Reducido de 36 a 32
                 ),
               ],
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }

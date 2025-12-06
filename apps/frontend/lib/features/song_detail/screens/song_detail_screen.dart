@@ -11,12 +11,12 @@ import '../providers/song_detail_provider.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/favorite_button.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:intl/intl.dart';
 import '../../artists/models/artist.dart';
 import '../../../core/services/http_cache_service.dart' as cache_service;
 import '../../artists/services/artists_api.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/utils/data_normalizer.dart';
+import '../../../core/utils/number_formatter.dart';
 
 /// Pantalla de detalle de canción estilo Spotify con diseño moderno
 class SongDetailScreen extends ConsumerStatefulWidget {
@@ -225,9 +225,11 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       }
       
       // Precargar en memoria en segundo plano (no bloquea)
-      precacheImage(CachedNetworkImageProvider(imageUrl), context).catchError((_) {
-        // Ignorar errores - ya marcamos como lista
-      });
+      if (mounted) {
+        precacheImage(CachedNetworkImageProvider(imageUrl), context).catchError((_) {
+          // Ignorar errores - ya marcamos como lista
+        });
+      }
     }).catchError((_) {
       // Si no está en cache o falla, marcar como lista igual y precargar desde red
       if (mounted) {
@@ -235,9 +237,11 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       }
       
       // Precargar desde red en segundo plano
-      precacheImage(CachedNetworkImageProvider(imageUrl), context).catchError((_) {
-        // Ignorar errores
-      });
+      if (mounted) {
+        precacheImage(CachedNetworkImageProvider(imageUrl), context).catchError((_) {
+          // Ignorar errores
+        });
+      }
     });
   }
   
@@ -461,11 +465,46 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       context.push('/artist/${artist.id}', extra: artistLite);
     }
   }
-
-  String _formatReleaseDate(DateTime? date) {
-    if (date == null) return '';
-    final format = DateFormat('d \'de\' MMM \'de\' yyyy', 'es');
-    return format.format(date);
+  
+  /// Reproducir canción con lógica inteligente
+  /// - Si es la misma canción: pause/resume sin reiniciar
+  /// - Si es diferente: reproducir desde el inicio
+  /// ✅ IGUAL A artist_page.dart y playlist_detail_screen.dart
+  void _onPlaySong(Song song) async {
+    if (!mounted) return;
+    
+    try {
+      final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
+      final audioState = ref.read(unifiedAudioProviderFixed);
+      
+      final currentSong = audioState.currentSong;
+      final isPlaying = audioState.isPlaying;
+      final isCurrentSong = currentSong?.id == song.id;
+      
+      if (isCurrentSong) {
+        // ✅ MISMA CANCIÓN: Solo hacer pause/resume sin reiniciar
+        // No cambia el AudioSource, no reinicia la posición
+        if (isPlaying) {
+          await audioNotifier.togglePlayPause();
+        } else {
+          await audioNotifier.togglePlayPause();
+        }
+      } else {
+        // ✅ CANCIÓN DIFERENTE: Reproducir desde el inicio
+        // Esto cambia el AudioSource y reinicia la posición a 0
+        // ✅ CRÍTICO: useAlgorithm = true desactiva fixed queue automáticamente
+        await audioNotifier.playSong(song, useAlgorithm: true);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al reproducir: ${error.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
   
   // Constantes para skeleton loaders - Colores del tema claro de la app
@@ -566,6 +605,40 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
               borderRadius: BorderRadius.circular(4),
             ),
           ),
+        ),
+        const SizedBox(width: 8), // Mismo espacio que el real
+        // Contador de streams skeleton - Icono + texto (igual que el real)
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            // Icono skeleton - 14x14 (igual que el icono real)
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.textSecondary.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 4), // Mismo espacio que el real
+            // Texto del contador skeleton - fontSize: 14
+            Shimmer.fromColors(
+              baseColor: _shimmerBaseColor,
+              highlightColor: _shimmerHighlightColor,
+              period: _shimmerDuration,
+              direction: ShimmerDirection.ltr,
+              child: Container(
+                height: 14, // Mismo fontSize que el texto del contador
+                width: 40, // Ancho aproximado del número
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.textSecondary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(width: 8), // Mismo espacio que el real
         // "Sencillo" skeleton - fontSize: 14
@@ -742,86 +815,6 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
     );
   }
   
-  /// Widget skeleton para los botones (play, like, share) - Colores del tema claro
-  /// CRÍTICO: Debe tener exactamente las mismas dimensiones que los botones reales
-  Widget _buildButtonsSkeleton() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center, // Misma alineación que el real
-      children: [
-        // Icono de corazón skeleton - iconSize: 22
-        Shimmer.fromColors(
-          baseColor: _shimmerBaseColor,
-          highlightColor: _shimmerHighlightColor,
-          period: _shimmerDuration,
-          direction: ShimmerDirection.ltr,
-          child: Container(
-            width: 22, // Mismo tamaño que el icono real (iconSize: 22)
-            height: 22,
-            decoration: BoxDecoration(
-              color: NeumorphismTheme.textSecondary.withValues(alpha: 0.2), // Color del tema claro
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        const SizedBox(width: 4), // Mismo espacio que el real (entre corazón y menú)
-        // Icono de menú skeleton - size: 22
-        Shimmer.fromColors(
-          baseColor: _shimmerBaseColor,
-          highlightColor: _shimmerHighlightColor,
-          period: _shimmerDuration,
-          direction: ShimmerDirection.ltr,
-          child: Container(
-            width: 22, // Mismo tamaño que el icono real (size: 22)
-            height: 22,
-            decoration: BoxDecoration(
-              color: NeumorphismTheme.textSecondary.withValues(alpha: 0.2), // Color del tema claro
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        const SizedBox(width: 6), // Mismo espacio que el real (entre menú y play)
-        // Botón de Play skeleton - CRÍTICO: 52x52 con gradiente y sombra
-        Container(
-          width: 52, // Mismo tamaño que el botón real (52x52, no 56x56)
-          height: 52,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                NeumorphismTheme.coffeeDark.withValues(alpha: 0.2),
-              ],
-            ),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-                spreadRadius: 0,
-              ),
-            ],
-          ),
-          child: Shimmer.fromColors(
-            baseColor: _shimmerBaseColor,
-            highlightColor: _shimmerHighlightColor,
-            period: _shimmerDuration,
-            direction: ShimmerDirection.ltr,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-  
   /// Widget skeleton para géneros - Colores del tema claro
   /// CRÍTICO: Debe tener exactamente las mismas dimensiones que el género real
   /// Solo muestra 1 género (no 3) con la misma estructura que el real
@@ -838,8 +831,8 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         period: _shimmerDuration,
         direction: ShimmerDirection.ltr,
         child: Container(
-          height: 13, // Mismo fontSize que el texto real
-          width: 80, // Ancho aproximado de un género
+          height: 13, // Mismo fontSize que el texto real (fontSize: 13)
+          width: 70, // Ancho más realista para un género típico (ej: "pop", "rock", "reggaeton")
           decoration: BoxDecoration(
             color: NeumorphismTheme.textPrimary.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(4),
@@ -961,97 +954,35 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                               ),
                               const SizedBox(width: 8),
                               // Iconos: Corazón, Menú y Botón de Play - Compacto
-                              (!hasCacheData && _isLoadingSong)
-                                  ? _buildButtonsSkeleton()
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.center, // ✅ Alineación centrada
-                                      children: [
-                                        // Icono de corazón
-                                        FavoriteButton(
-                                          songId: song.id,
-                                          iconColor: NeumorphismTheme.textPrimary,
-                                          iconSize: 22,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        // Icono de tres rayitas (menú)
-                                        IconButton(
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          icon: const Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
-                                          onPressed: () {
-                                            // Menú de opciones - funcionalidad pendiente
-                                          },
-                                        ),
-                                        const SizedBox(width: 6),
-                                        // Botón de Play/Pause - Compacto
-                                        Consumer(
-                                          builder: (context, ref, child) {
-                                            final currentSong = ref.watch(
-                                              unifiedAudioProviderFixed.select((state) => state.currentSong),
-                                            );
-                                            final isPlaying = ref.watch(
-                                              unifiedAudioProviderFixed.select((state) => state.isPlaying),
-                                            );
-                                            final isCurrentSong = currentSong?.id == song.id;
-                                            final showPause = isCurrentSong && isPlaying;
-                                            
-                                            return RepaintBoundary(
-                                              child: Container(
-                                                width: 52,
-                                                height: 52,
-                                                decoration: BoxDecoration(
-                                                  gradient: const LinearGradient(
-                                                    begin: Alignment.topLeft,
-                                                    end: Alignment.bottomRight,
-                                                    colors: [
-                                                      NeumorphismTheme.coffeeMedium,
-                                                      NeumorphismTheme.coffeeDark,
-                                                    ],
-                                                  ),
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                                                      blurRadius: 12,
-                                                      offset: const Offset(0, 4),
-                                                      spreadRadius: 0,
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Material(
-                                                  color: Colors.transparent,
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
-                                                      audioNotifier.togglePlay(song).catchError((e) {
-                                                        if (context.mounted) {
-                                                          ScaffoldMessenger.of(context).showSnackBar(
-                                                            const SnackBar(
-                                                              content: Text('Error al reproducir la canción'),
-                                                              backgroundColor: Colors.red,
-                                                              duration: Duration(seconds: 2),
-                                                            ),
-                                                          );
-                                                        }
-                                                      });
-                                                    },
-                                                    borderRadius: BorderRadius.circular(26),
-                                                    child: Center(
-                                                      child: Icon(
-                                                        showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                                        color: Colors.white,
-                                                        size: 26,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center, // ✅ Alineación centrada
+                                children: [
+                                  // Icono de corazón
+                                  FavoriteButton(
+                                    songId: song.id,
+                                    iconColor: NeumorphismTheme.textPrimary,
+                                    iconSize: 28, // Aumentado de 22 a 28
+                                  ),
+                                  const SizedBox(width: 4),
+                                  // Icono de tres rayitas (menú)
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: const Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
+                                    onPressed: () {
+                                      // Menú de opciones - funcionalidad pendiente
+                                    },
+                                  ),
+                                  const SizedBox(width: 6),
+                                  // ✅ Botón de Play/Pause con lógica inteligente (igual que artist_page)
+                                  // Siempre mostrar el botón real, sin skeleton
+                                  _PlayPauseButtonLarge(
+                                    song: song,
+                                    onTap: () => _onPlaySong(song),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                         ),
@@ -1093,12 +1024,37 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  // Tipo (Sencillo)
+                                  // Contador de streams - Alineado con baseline
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Icon(
+                                        Icons.play_arrow_rounded,
+                                        size: 14,
+                                        color: NeumorphismTheme.textSecondary.withValues(alpha: 0.7),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        NumberFormatter.format(song.totalStreams),
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: NeumorphismTheme.textSecondary,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.0, // Sin altura adicional para mejor alineación
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Tipo (Sencillo) - Alineado en la misma línea base
                                   const Text(
                                     'Sencillo',
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: NeumorphismTheme.textLight,
+                                      height: 1.0, // Sin altura adicional para mejor alineación
                                     ),
                                   ),
                                 ],
@@ -1341,7 +1297,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                   FavoriteButton(
                                     songId: song.id,
                                     iconColor: NeumorphismTheme.textPrimary,
-                                    iconSize: 22,
+                                    iconSize: 28, // Aumentado de 22 a 28
                                   ),
                                   const SizedBox(width: 4),
                                   IconButton(
@@ -1351,70 +1307,10 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     onPressed: () {},
                                   ),
                                   const SizedBox(width: 6),
-                                  Consumer(
-                                    builder: (context, ref, child) {
-                                      final currentSong = ref.watch(
-                                        unifiedAudioProviderFixed.select((state) => state.currentSong),
-                                      );
-                                      final isPlaying = ref.watch(
-                                        unifiedAudioProviderFixed.select((state) => state.isPlaying),
-                                      );
-                                      final isCurrentSong = currentSong?.id == song.id;
-                                      final showPause = isCurrentSong && isPlaying;
-                                      
-                                      return RepaintBoundary(
-                                        child: Container(
-                                          width: 52,
-                                          height: 52,
-                                          decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                NeumorphismTheme.coffeeMedium,
-                                                NeumorphismTheme.coffeeDark,
-                                              ],
-                                            ),
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                                                blurRadius: 12,
-                                                offset: const Offset(0, 4),
-                                                spreadRadius: 0,
-                                              ),
-                                            ],
-                                          ),
-                                          child: Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              onTap: () {
-                                                final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
-                                                audioNotifier.togglePlay(song).catchError((e) {
-                                                  if (context.mounted) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text('Error al reproducir la canción'),
-                                                        backgroundColor: Colors.red,
-                                                        duration: Duration(seconds: 2),
-                                                      ),
-                                                    );
-                                                  }
-                                                });
-                                              },
-                                              borderRadius: BorderRadius.circular(26),
-                                              child: Center(
-                                                child: Icon(
-                                                  showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                                  color: Colors.white,
-                                                  size: 26,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                  // ✅ Botón de Play/Pause con lógica inteligente (igual que artist_page)
+                                  _PlayPauseButtonLarge(
+                                    song: song,
+                                    onTap: () => _onPlaySong(song),
                                   ),
                                 ],
                               ),
@@ -1454,7 +1350,38 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Text('Sencillo', style: TextStyle(fontSize: 14, color: NeumorphismTheme.textLight)),
+                            // Contador de streams - Alineado con baseline
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 14,
+                                  color: NeumorphismTheme.textSecondary.withValues(alpha: 0.7),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  NumberFormatter.format(song.totalStreams),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: NeumorphismTheme.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.0, // Sin altura adicional para mejor alineación
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Sencillo',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: NeumorphismTheme.textLight,
+                                height: 1.0, // Sin altura adicional para mejor alineación
+                              ),
+                            ),
                           ],
                         ),
                         ),
@@ -1592,6 +1519,86 @@ class _MenuButton extends StatelessWidget {
         onPressed: onPressed,
         // OPTIMIZADO: tooltip para accesibilidad sin costo de rendimiento
         tooltip: 'Más opciones',
+      ),
+    );
+  }
+}
+
+/// ✅ OPTIMIZACIÓN: Widget memoizado para botón de play/pause grande (52x52)
+/// Evita rebuilds innecesarios cuando cambia el estado del audio
+/// ✅ CORRECCIÓN: Usa selectores separados para detectar cambios en currentSongId e isPlaying
+/// Esto garantiza que el widget se reconstruya cuando cambie cualquiera de estos valores
+class _PlayPauseButtonLarge extends ConsumerWidget {
+  final Song song;
+  final VoidCallback onTap;
+
+  const _PlayPauseButtonLarge({
+    required this.song,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ✅ CORRECCIÓN: Usar selectores separados para escuchar cambios en currentSongId e isPlaying
+    // Esto garantiza que el widget se reconstruya cuando cambie cualquiera de estos valores
+    final currentSongId = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentSong?.id),
+    );
+    final isPlaying = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isPlaying),
+    );
+    
+    // ✅ LÓGICA EXACTA según especificación del usuario:
+    // - Si NO es la canción actual → siempre Play
+    // - Si ES la canción actual → Play si está pausada, Pause si está reproduciendo
+    final bool isCurrent = currentSongId == song.id;
+    final IconData icon;
+    
+    if (!isCurrent) {
+      // No es la canción actual → siempre mostrar Play
+      icon = Icons.play_arrow_rounded;
+    } else {
+      // Es la canción actual → mostrar Pause si está reproduciendo, Play si está pausada
+      icon = isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded;
+    }
+    
+    return RepaintBoundary(
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              NeumorphismTheme.coffeeMedium,
+              NeumorphismTheme.coffeeDark,
+            ],
+          ),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(26),
+            child: Center(
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

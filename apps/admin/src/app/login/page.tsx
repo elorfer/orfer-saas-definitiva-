@@ -90,7 +90,7 @@ function LoginContent() {
   };
 
   return (
-    <div className='relative min-h-screen overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-800 flex items-center justify-center px-4 py-10'>
+    <div className='relative min-h-screen overflow-hidden bg-gradient-to-br from-brown-800 via-brown-700 to-brown-900 flex items-center justify-center px-4 py-10'>
       <div className='absolute -top-32 -left-32 h-72 w-72 rounded-full bg-white/10 blur-3xl' />
       <div className='absolute -bottom-40 right-0 h-80 w-80 rounded-full bg-white/10 blur-3xl' />
       <div className='absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_60%)]' />
@@ -98,8 +98,16 @@ function LoginContent() {
       <div className='relative z-10 w-full max-w-lg'>
         <div className='rounded-3xl border border-white/20 bg-white/90 px-8 py-10 shadow-2xl backdrop-blur-xl sm:px-12 sm:py-12'>
           <div className='mb-10 text-center'>
-            <div className='mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 shadow-lg shadow-purple-600/40'>
-              <MusicalNoteIcon className='h-10 w-10 text-white' />
+            <div className='mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-brown-700 to-brown-800 shadow-lg shadow-brown-700/40'>
+              <img 
+                src="/logo-icon.png" 
+                alt="Logo" 
+                className="h-24 w-24 object-contain"
+                onError={(e) => {
+                  console.error('Error cargando logo-icon.png');
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </div>
             <h1 className='text-3xl font-black text-gray-900 sm:text-4xl'>Vintage Music</h1>
             <p className='mt-2 text-base font-medium text-gray-500'>Panel de Administración</p>
@@ -117,7 +125,7 @@ function LoginContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder='admin@vintagemusic.com'
-                  className='w-full rounded-xl border border-gray-200 bg-white/85 px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200'
+                  className='w-full rounded-xl border border-gray-200 bg-white/85 px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-200'
                   autoComplete='username'
                   required
                 />
@@ -135,14 +143,14 @@ function LoginContent() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder='••••••••'
-                  className='w-full rounded-xl border border-gray-200 bg-white/85 px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-200'
+                  className='w-full rounded-xl border border-gray-200 bg-white/85 px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-200'
                   autoComplete='current-password'
                   required
                 />
                 <button
                   type='button'
                   onClick={() => setShowPassword(!showPassword)}
-                  className='absolute inset-y-0 right-3 flex items-center text-gray-400 transition hover:text-purple-500'
+                  className='absolute inset-y-0 right-3 flex items-center text-gray-400 transition hover:text-brown-700'
                 >
                   {showPassword ? <EyeSlashIcon className='h-5 w-5' /> : <EyeIcon className='h-5 w-5' />}
                 </button>
@@ -151,7 +159,7 @@ function LoginContent() {
 
             <button
               type='submit'
-              className='flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 via-purple-600 to-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-500/25 transition hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-purple-200 disabled:cursor-not-allowed disabled:opacity-70'
+              className='flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brown-700 via-brown-800 to-brown-900 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brown-700/25 transition hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-brown-200 disabled:cursor-not-allowed disabled:opacity-70'
               disabled={isLoading}
             >
               <ShieldCheckIcon className='h-5 w-5' />

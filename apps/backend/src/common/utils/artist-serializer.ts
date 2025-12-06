@@ -30,6 +30,11 @@ export class ArtistSerializer {
       total_followers: artist.totalFollowers ?? 0,
       monthlyListeners: artist.monthlyListeners ?? 0,
       monthly_listeners: artist.monthlyListeners ?? 0,
+      // Campos de verificación
+      verificationStatus: artist.verificationStatus ?? false,
+      verification_status: artist.verificationStatus ?? false,
+      isVerified: artist.isVerified ?? artist.verificationStatus ?? false,
+      is_verified: artist.isVerified ?? artist.verificationStatus ?? false,
     };
   }
 
@@ -56,9 +61,15 @@ export class ArtistSerializer {
       nationalityCode,
       nationality_code: nationalityCode,
       verificationStatus: artist.verificationStatus ?? false,
+      verification_status: artist.verificationStatus ?? false,
+      isVerified: artist.isVerified ?? artist.verificationStatus ?? false,
+      is_verified: artist.isVerified ?? artist.verificationStatus ?? false,
       totalStreams: artist.totalStreams ?? 0,
+      total_streams: artist.totalStreams ?? 0,
       totalFollowers: artist.totalFollowers ?? 0,
+      total_followers: artist.totalFollowers ?? 0,
       monthlyListeners: artist.monthlyListeners ?? 0,
+      monthly_listeners: artist.monthlyListeners ?? 0,
     };
   }
 }

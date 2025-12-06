@@ -49,7 +49,7 @@ function SelectAllCheckbox({
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+      className="h-4 w-4 rounded border-gray-300 text-brown-700 focus:ring-brown-700 cursor-pointer"
     />
   );
 }
@@ -242,7 +242,7 @@ export default function ArtistsPage() {
           <Link href="/dashboard/artists/featured" className="px-3 py-2 rounded-lg border">
             Ver destacados
           </Link>
-          <Link href="/dashboard/artists/create" className="px-3 py-2 rounded-lg bg-purple-600 text-white">
+          <Link href="/dashboard/artists/create" className="px-3 py-2 rounded-lg bg-brown-700 text-white">
             Crear artista
           </Link>
         </div>
@@ -314,7 +314,7 @@ export default function ArtistsPage() {
                     type="checkbox"
                     checked={selectedArtistIds.has(a.id)}
                     onChange={(e) => handleSelectArtist(a.id, e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-gray-300 text-brown-700 focus:ring-brown-700 cursor-pointer"
                   />
                 </td>
                 <td className="p-3">

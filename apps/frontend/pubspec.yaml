@@ -117,8 +117,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # assets:
-  #   - assets/images/
+  assets:
+    - assets/images/
+    - assets/images/onboarding/
   #   - assets/icons/
   #   - assets/animations/
   #   - assets/fonts/

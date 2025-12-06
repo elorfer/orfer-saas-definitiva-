@@ -62,6 +62,57 @@ class SpotifyPageTransitions {
   ) {
     return songDetailTransition(context, animation, secondaryAnimation, child);
   }
+
+  /// Animación optimizada estilo Spotify: Slide + Scale + Opacity para máxima fluidez
+  /// Aplicando principios de performance: RepaintBoundary, curvas optimizadas, transformaciones eficientes
+  static Widget playerExpansionTransition(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // ✅ MEJORADO: Curva más suave y visible para la expansión
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic, // Curva suave para apertura
+      reverseCurve: Curves.easeInCubic, // Curva suave para cierre
+    );
+    
+    // ✅ OPTIMIZACIÓN: AnimatedBuilder con transformaciones combinadas para mejor performance
+    // Envuelto en RepaintBoundary para evitar repaints innecesarios
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: curvedAnimation,
+        builder: (context, child) {
+          final t = curvedAnimation.value;
+          
+          // ✅ MEJORADO: Slide desde abajo con efecto más pronunciado
+          // Usar una curva de easing para que el movimiento sea más natural
+          final easedT = Curves.easeOutCubic.transform(t);
+          final translateY = (1 - easedT) * MediaQuery.of(context).size.height;
+          
+          // ✅ MEJORADO: Escala más visible para efecto premium (0.95 a 1.0)
+          final scale = 0.95 + (0.05 * easedT);
+          
+          // ✅ MEJORADO: Opacity con fade más suave
+          final opacity = Curves.easeOut.transform(t);
+          
+          return Transform.translate(
+            offset: Offset(0, translateY),
+            child: Transform.scale(
+              scale: scale,
+              alignment: Alignment.bottomCenter,
+              child: Opacity(
+                opacity: opacity,
+                child: child,
+              ),
+            ),
+          );
+        },
+        child: child,
+      ),
+    );
+  }
 }
 
 /// Helper para crear CustomTransitionPage optimizado

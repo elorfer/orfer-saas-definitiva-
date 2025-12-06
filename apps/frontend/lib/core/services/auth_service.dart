@@ -46,6 +46,18 @@ class AuthService {
   /// Obtener instancia de Dio del HttpClientService
   Dio get _dio => _httpClient.dio;
 
+  /// Construir URL completa asegurando que tenga la barra correcta
+  String _buildUrl(String endpoint) {
+    final baseUrl = ApiConfig.baseUrl.endsWith('/') 
+        ? ApiConfig.baseUrl 
+        : '${ApiConfig.baseUrl}/';
+    // Remover la barra inicial del endpoint si existe
+    final cleanEndpoint = endpoint.startsWith('/') 
+        ? endpoint.substring(1) 
+        : endpoint;
+    return '$baseUrl$cleanEndpoint';
+  }
+
   /// Inicializar el servicio de autenticación
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -143,7 +155,7 @@ class AuthService {
       final response = await RetryHandler.retryCritical(
         shouldRetry: RetryHandler.isDioErrorRetryable,
         operation: () => _dio.post(
-          '${ApiConfig.baseUrl}${ApiConfig.loginEndpoint}',
+          _buildUrl(ApiConfig.loginEndpoint),
           data: LoginRequest(
             email: email,
             password: password,
@@ -154,13 +166,41 @@ class AuthService {
         ),
       );
 
+      // Manejar códigos de estado de error antes de procesar la respuesta
+      if (response.statusCode == 401) {
+        final errorMessage = response.data?['message'] ?? 'Credenciales inválidas';
+        throw AuthException(
+          errorMessage,
+          code: 'INVALID_CREDENTIALS',
+          statusCode: 401,
+        );
+      }
+      
+      if (response.statusCode == 403) {
+        throw const AuthException(
+          'Acceso denegado',
+          code: 'ACCESS_DENIED',
+          statusCode: 403,
+        );
+      }
+
       if (response.statusCode == 200) {
         final authResponse = AuthResponse.fromJson(response.data);
         await _saveAuthData(authResponse);
         return authResponse;
       } else {
-        throw AuthException('Error en el servidor: ${response.statusCode}');
+        // Otros códigos de error
+        final errorMessage = response.data?['message'] ?? 
+                           'Error en el servidor: ${response.statusCode}';
+        throw AuthException(
+          errorMessage,
+          code: 'SERVER_ERROR',
+          statusCode: response.statusCode,
+        );
       }
+    } on AuthException {
+      // Re-lanzar AuthException sin modificar
+      rethrow;
     } on DioException catch (e) {
       ErrorHandler.handleDioError(e, context: 'AuthService.login');
       throw AuthException.fromDioError(e, context: 'AuthService.login');
@@ -187,7 +227,7 @@ class AuthService {
     }
 
     try {
-      final url = '${ApiConfig.baseUrl}${ApiConfig.registerEndpoint}';
+      final url = _buildUrl(ApiConfig.registerEndpoint);
       
       final response = await RetryHandler.retryCritical(
         shouldRetry: RetryHandler.isDioErrorRetryable,
@@ -320,7 +360,7 @@ class AuthService {
       final response = await RetryHandler.retryCritical(
         shouldRetry: RetryHandler.isDioErrorRetryable,
         operation: () => _dio.post(
-          '${ApiConfig.baseUrl}${ApiConfig.changePasswordEndpoint}',
+          _buildUrl(ApiConfig.changePasswordEndpoint),
           data: ChangePasswordRequest(
             oldPassword: oldPassword,
             newPassword: newPassword,
@@ -355,7 +395,7 @@ class AuthService {
       final response = await RetryHandler.retryCritical(
         shouldRetry: RetryHandler.isDioErrorRetryable,
         operation: () => _dio.post(
-          '${ApiConfig.baseUrl}${ApiConfig.refreshTokenEndpoint}',
+          _buildUrl(ApiConfig.refreshTokenEndpoint),
           options: Options(
             headers: ApiConfig.defaultHeaders,
           ),
@@ -397,7 +437,7 @@ class AuthService {
       final response = await RetryHandler.retryDataLoad(
         shouldRetry: RetryHandler.isDioErrorRetryable,
         operation: () => _dio.get(
-          '${ApiConfig.baseUrl}${ApiConfig.profileEndpoint}',
+          _buildUrl(ApiConfig.profileEndpoint),
           options: Options(
             headers: ApiConfig.defaultHeaders,
           ),
@@ -449,6 +489,169 @@ class AuthService {
     
     // Limpiar token en HttpClientService
     await _httpClient.clearAuthToken();
+  }
+
+  /// Verificar disponibilidad de nombre de usuario
+  Future<bool> checkUsernameAvailability(String username) async {
+    try {
+      // Limpiar y normalizar el username antes de enviarlo
+      final cleanUsername = username.trim();
+      
+      // Permitir verificación desde 1 carácter (el backend validará el mínimo)
+      if (cleanUsername.isEmpty) {
+        return false; // No disponible si está vacío
+      }
+      
+      final encodedUsername = Uri.encodeComponent(cleanUsername);
+      final url = '${_buildUrl('auth/check-username')}/$encodedUsername';
+      AppLogger.debug('Verificando disponibilidad de username - URL: $url');
+      AppLogger.debug('Username limpio: "$cleanUsername", Encodificado: "$encodedUsername"');
+      
+      final response = await _dio.get(
+        url,
+        options: Options(
+          headers: ApiConfig.defaultHeaders,
+          validateStatus: (status) => status! < 500, // Aceptar 4xx como válidos
+        ),
+      );
+      
+      AppLogger.debug('Respuesta recibida - Status: ${response.statusCode}, Data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final available = response.data['available'] ?? false;
+        AppLogger.debug('Username "$cleanUsername" - Respuesta del servidor: available=$available');
+        AppLogger.debug('Respuesta completa: ${response.data}');
+        return available;
+      } else {
+        AppLogger.warning('Error verificando username: ${response.statusCode} - ${response.data}');
+        // En caso de error del servidor, asumir NO disponible para ser más seguro
+        return false;
+      }
+    } on DioException catch (e) {
+      AppLogger.error('Error de red verificando disponibilidad de username', e);
+      // En caso de error de red, asumir NO disponible para ser más seguro
+      return false;
+    } catch (e) {
+      AppLogger.error('Error verificando disponibilidad de username', e);
+      // En caso de error, asumir NO disponible para ser más seguro
+      return false;
+    }
+  }
+
+  /// Verificar disponibilidad de email
+  Future<bool> checkEmailAvailability(String email) async {
+    try {
+      // Limpiar y normalizar el email antes de enviarlo
+      final cleanEmail = email.trim();
+      
+      // Permitir verificación desde 1 carácter (el backend validará el formato)
+      if (cleanEmail.isEmpty) {
+        return false; // No disponible si está vacío
+      }
+      
+      final encodedEmail = Uri.encodeComponent(cleanEmail);
+      final url = '${_buildUrl('auth/check-email')}/$encodedEmail';
+      AppLogger.debug('Verificando disponibilidad de email - URL: $url');
+      AppLogger.debug('Email limpio: "$cleanEmail", Encodificado: "$encodedEmail"');
+      
+      final response = await _dio.get(
+        url,
+        options: Options(
+          headers: ApiConfig.defaultHeaders,
+          validateStatus: (status) => status! < 500, // Aceptar 4xx como válidos
+        ),
+      );
+      
+      AppLogger.debug('Respuesta recibida - Status: ${response.statusCode}, Data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final available = response.data['available'] ?? false;
+        AppLogger.debug('Email "$cleanEmail" - Respuesta del servidor: available=$available');
+        AppLogger.debug('Respuesta completa: ${response.data}');
+        return available;
+      } else {
+        AppLogger.warning('Error verificando email: ${response.statusCode} - ${response.data}');
+        // En caso de error del servidor, asumir NO disponible para ser más seguro
+        return false;
+      }
+    } on DioException catch (e) {
+      AppLogger.error('Error de red verificando disponibilidad de email', e);
+      // En caso de error de red, asumir NO disponible para ser más seguro
+      return false;
+    } catch (e) {
+      AppLogger.error('Error verificando disponibilidad de email', e);
+      // En caso de error, asumir NO disponible para ser más seguro
+      return false;
+    }
+  }
+
+  /// Verificar si un usuario existe (para login)
+  Future<bool> checkUserExists(String emailOrUsername) async {
+    try {
+      // Intentar verificar como email primero
+      if (emailOrUsername.contains('@')) {
+        final available = await checkEmailAvailability(emailOrUsername);
+        return !available; // Si no está disponible, existe
+      } else {
+        // Verificar como username
+        final available = await checkUsernameAvailability(emailOrUsername);
+        return !available; // Si no está disponible, existe
+      }
+    } catch (e) {
+      AppLogger.error('Error verificando existencia de usuario', e);
+      return false;
+    }
+  }
+
+  /// Solicitar recuperación de contraseña
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post(
+        _buildUrl('auth/forgot-password'),
+        data: {'email': email},
+        options: Options(
+          headers: ApiConfig.defaultHeaders,
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw AuthException('Error al solicitar recuperación de contraseña');
+      }
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'AuthService.forgotPassword');
+      throw AuthException.fromDioError(e, context: 'AuthService.forgotPassword');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'AuthService.forgotPassword');
+      throw AuthException.fromGenericError(e, context: 'AuthService.forgotPassword');
+    }
+  }
+
+  /// Restablecer contraseña con token
+  Future<void> resetPassword(String token, String newPassword) async {
+    try {
+      final response = await _dio.post(
+        _buildUrl('auth/reset-password'),
+        data: {
+          'token': token,
+          'newPassword': newPassword,
+        },
+        options: Options(
+          headers: ApiConfig.defaultHeaders,
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw AuthException('Error al restablecer contraseña');
+      }
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'AuthService.resetPassword');
+      throw AuthException.fromDioError(e, context: 'AuthService.resetPassword');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'AuthService.resetPassword');
+      throw AuthException.fromGenericError(e, context: 'AuthService.resetPassword');
+    }
   }
 
 }

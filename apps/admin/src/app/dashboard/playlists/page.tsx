@@ -17,7 +17,7 @@ import {
   CheckIcon,
 } from '@heroicons/react/24/outline';
 
-import { usePlaylists, useCreatePlaylist, useUpdatePlaylist, useDeletePlaylist, useToggleFeaturedPlaylist, useUploadPlaylistCover, useFeaturedPlaylists, usePlaylist } from '@/hooks/usePlaylists';
+import { usePlaylists, useCreatePlaylist, useUpdatePlaylist, useDeletePlaylist, useToggleFeaturedPlaylist, useUploadPlaylistCover, useFeaturedPlaylists, usePlaylist, useAddSongToPlaylist, useRemoveSongFromPlaylist } from '@/hooks/usePlaylists';
 import { useSongs } from '@/hooks/useSongs';
 import { apiClient } from '@/lib/api';
 import { useQueryClient } from 'react-query';
@@ -63,7 +63,7 @@ function SelectAllCheckbox({
       type="checkbox"
       checked={checked}
       onChange={(e) => onChange(e.target.checked)}
-      className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+      className="h-4 w-4 rounded border-gray-300 text-brown-700 focus:ring-brown-700 cursor-pointer"
     />
   );
 }
@@ -120,7 +120,7 @@ function PlaylistRow({
               onSelect(playlist.id, e.target.checked);
             }}
             onClick={(e) => e.stopPropagation()}
-            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+            className="h-4 w-4 rounded border-gray-300 text-brown-700 focus:ring-brown-700 cursor-pointer"
           />
           {coverUrl && !imageError ? (
             <div className="h-12 w-12 flex-shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 shadow-sm">
@@ -133,7 +133,7 @@ function PlaylistRow({
               />
             </div>
           ) : (
-            <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center shadow-sm">
+            <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gradient-to-br from-brown-700 to-brown-700 text-white flex items-center justify-center shadow-sm">
               <ListBulletIcon className="h-5 w-5" />
             </div>
           )}
@@ -222,6 +222,11 @@ export default function PlaylistsPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedPlaylistIds, setSelectedPlaylistIds] = useState<Set<string>>(new Set());
   const [isDeletingMultiple, setIsDeletingMultiple] = useState(false);
+  const [showAddSongsModal, setShowAddSongsModal] = useState(false);
+  const [selectedSongsToAdd, setSelectedSongsToAdd] = useState<Set<string>>(new Set());
+  const [isAddingSongs, setIsAddingSongs] = useState(false);
+  const [selectedSongsToDelete, setSelectedSongsToDelete] = useState<Set<string>>(new Set());
+  const [isDeletingSongs, setIsDeletingSongs] = useState(false);
   const notificationShownRef = useRef(false);
 
   const { data, isLoading } = usePlaylists({ page, limit: PAGE_SIZE, enabled: true });
@@ -244,6 +249,8 @@ export default function PlaylistsPage() {
   const { mutateAsync: deletePlaylist } = useDeletePlaylist();
   const { mutateAsync: toggleFeatured } = useToggleFeaturedPlaylist();
   const { mutateAsync: uploadCover } = useUploadPlaylistCover();
+  const { mutateAsync: addSongToPlaylist } = useAddSongToPlaylist();
+  const { mutateAsync: removeSongFromPlaylist } = useRemoveSongFromPlaylist();
 
 
   const openCreateModal = () => {
@@ -401,6 +408,257 @@ export default function PlaylistsPage() {
   const closeDetailsModal = () => {
     setShowDetailsModal(false);
     setSelectedPlaylist(null);
+    setShowAddSongsModal(false);
+    setSelectedSongsToAdd(new Set());
+    setSelectedSongsToDelete(new Set());
+  };
+
+  const openAddSongsModal = () => {
+    if (!selectedPlaylist) return;
+    // Filtrar canciones que ya están en la playlist
+    const existingSongIds = new Set(
+      playlistDetails?.playlistSongs?.map((ps) => ps.song.id) || []
+    );
+    setSelectedSongsToAdd(new Set());
+    setShowAddSongsModal(true);
+  };
+
+  const handleToggleSongToAdd = (songId: string) => {
+    setSelectedSongsToAdd((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(songId)) {
+        newSet.delete(songId);
+      } else {
+        newSet.add(songId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleAddSongsToPlaylist = async () => {
+    if (!selectedPlaylist || selectedSongsToAdd.size === 0) return;
+
+    try {
+      setIsAddingSongs(true);
+      const existingSongIds = new Set(
+        playlistDetails?.playlistSongs?.map((ps) => ps.song.id) || []
+      );
+
+      // Agregar cada canción seleccionada que no esté ya en la playlist
+      const songsToAdd = Array.from(selectedSongsToAdd).filter(
+        (songId) => !existingSongIds.has(songId)
+      );
+
+      if (songsToAdd.length === 0) {
+        toast.error('Todas las canciones seleccionadas ya están en la playlist');
+        setIsAddingSongs(false);
+        return;
+      }
+
+      // Usar Promise.allSettled para manejar errores individuales
+      const results = await Promise.allSettled(
+        songsToAdd.map((songId) =>
+          apiClient.addSongToPlaylist(selectedPlaylist.id, songId)
+        )
+      );
+
+      // Contar éxitos y fallos
+      const successful = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.filter((r) => r.status === 'rejected').length;
+
+      // Invalidar queries manualmente para refrescar los datos
+      queryClient.invalidateQueries(['playlists']);
+      queryClient.invalidateQueries(['playlist', selectedPlaylist.id]);
+
+      // Mostrar mensaje apropiado
+      if (successful > 0 && failed === 0) {
+        // Todas exitosas
+        toast.success(
+          `${successful} ${successful === 1 ? 'canción agregada' : 'canciones agregadas'} exitosamente`
+        );
+        setShowAddSongsModal(false);
+        setSelectedSongsToAdd(new Set());
+      } else if (successful > 0 && failed > 0) {
+        // Algunas exitosas, algunas fallaron
+        toast.success(
+          `${successful} ${successful === 1 ? 'canción agregada' : 'canciones agregadas'} exitosamente. ${failed} ${failed === 1 ? 'canción falló' : 'canciones fallaron'}.`
+        );
+        setShowAddSongsModal(false);
+        setSelectedSongsToAdd(new Set());
+      } else {
+        // Todas fallaron
+        const errorMessages = results
+          .filter((r) => r.status === 'rejected')
+          .map((r) => {
+            if (r.status === 'rejected') {
+              const error = r.reason;
+              if (error?.response?.data?.message) {
+                return Array.isArray(error.response.data.message)
+                  ? error.response.data.message[0]
+                  : error.response.data.message;
+              }
+              return error?.message || 'Error desconocido';
+            }
+            return '';
+          })
+          .filter(Boolean);
+
+        const uniqueErrors = [...new Set(errorMessages)];
+        const errorMsg = uniqueErrors.length > 0 
+          ? uniqueErrors[0] 
+          : 'Error al agregar las canciones';
+        
+        toast.error(errorMsg);
+      }
+    } catch (error) {
+      console.error('Error inesperado al agregar canciones:', error);
+      toast.error('Error inesperado al agregar canciones');
+    } finally {
+      setIsAddingSongs(false);
+    }
+  };
+
+  const handleRemoveSongFromPlaylist = async (songId: string) => {
+    if (!selectedPlaylist) return;
+
+    const confirmed = window.confirm('¿Seguro que deseas remover esta canción de la playlist?');
+    if (!confirmed) return;
+
+    try {
+      await removeSongFromPlaylist({
+        playlistId: selectedPlaylist.id,
+        songId,
+      });
+    } catch (error) {
+      console.error('Error al remover canción:', error);
+    }
+  };
+
+  const handleToggleSongToDelete = (songId: string) => {
+    setSelectedSongsToDelete((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(songId)) {
+        newSet.delete(songId);
+      } else {
+        newSet.add(songId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllSongsToDelete = () => {
+    if (!playlistDetails) return;
+    const allSongIds = new Set(
+      playlistDetails.playlistSongs?.map((ps) => ps.song.id).filter(Boolean) || []
+    );
+    setSelectedSongsToDelete(allSongIds);
+  };
+
+  const handleDeselectAllSongsToDelete = () => {
+    setSelectedSongsToDelete(new Set());
+  };
+
+  const handleDeleteSelectedSongs = async () => {
+    if (!selectedPlaylist || selectedSongsToDelete.size === 0) return;
+
+    const count = selectedSongsToDelete.size;
+    const confirmed = window.confirm(
+      `¿Seguro que deseas eliminar ${count} ${count === 1 ? 'canción' : 'canciones'} de esta playlist?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsDeletingSongs(true);
+      const songIds = Array.from(selectedSongsToDelete);
+
+      // Usar Promise.allSettled para manejar errores individuales
+      const results = await Promise.allSettled(
+        songIds.map((songId) =>
+          apiClient.removeSongFromPlaylist(selectedPlaylist.id, songId)
+        )
+      );
+
+      // Contar éxitos y fallos
+      const successful = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.filter((r) => r.status === 'rejected').length;
+
+      // Invalidar queries para refrescar
+      queryClient.invalidateQueries(['playlists']);
+      queryClient.invalidateQueries(['playlist', selectedPlaylist.id]);
+
+      // Limpiar selección
+      setSelectedSongsToDelete(new Set());
+
+      // Mostrar mensaje apropiado
+      if (successful > 0 && failed === 0) {
+        toast.success(
+          `${successful} ${successful === 1 ? 'canción eliminada' : 'canciones eliminadas'} exitosamente`
+        );
+      } else if (successful > 0 && failed > 0) {
+        toast.success(
+          `${successful} ${successful === 1 ? 'canción eliminada' : 'canciones eliminadas'}. ${failed} ${failed === 1 ? 'canción falló' : 'canciones fallaron'}.`
+        );
+      } else {
+        toast.error('Error al eliminar las canciones');
+      }
+    } catch (error) {
+      console.error('Error al eliminar canciones:', error);
+      toast.error('Error inesperado al eliminar canciones');
+    } finally {
+      setIsDeletingSongs(false);
+    }
+  };
+
+  const handleRemoveAllSongsFromPlaylist = async () => {
+    if (!selectedPlaylist || !playlistDetails) return;
+
+    const songCount = playlistDetails.playlistSongs?.length || 0;
+    if (songCount === 0) {
+      toast.error('La playlist no tiene canciones');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Seguro que deseas eliminar todas las ${songCount} canciones de esta playlist? Esta acción no se puede deshacer.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const songIds = playlistDetails.playlistSongs?.map((ps) => ps.song.id) || [];
+      
+      // Remover todas las canciones
+      await Promise.all(
+        songIds.map((songId) =>
+          apiClient.removeSongFromPlaylist(selectedPlaylist.id, songId)
+        )
+      );
+
+      // Invalidar queries para refrescar
+      queryClient.invalidateQueries(['playlists']);
+      queryClient.invalidateQueries(['playlist', selectedPlaylist.id]);
+
+      toast.success(`${songCount} ${songCount === 1 ? 'canción eliminada' : 'canciones eliminadas'} exitosamente`);
+    } catch (error) {
+      console.error('Error al eliminar canciones:', error);
+      toast.error('Error al eliminar las canciones');
+    }
+  };
+
+  const handleSelectAllSongsToAdd = () => {
+    if (!playlistDetails) return;
+
+    const existingSongIds = new Set(
+      playlistDetails.playlistSongs?.map((ps) => ps.song.id) || []
+    );
+
+    const availableSongs = allSongs.filter((song) => !existingSongIds.has(song.id));
+    const allAvailableIds = new Set(availableSongs.map((song) => song.id));
+    
+    setSelectedSongsToAdd(allAvailableIds);
+  };
+
+  const handleDeselectAllSongsToAdd = () => {
+    setSelectedSongsToAdd(new Set());
   };
 
   const filteredPlaylists = useMemo(() => {
@@ -454,7 +712,7 @@ export default function PlaylistsPage() {
             </div>
             <button
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-3 text-base font-semibold text-white shadow-md transition hover:bg-purple-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              className="inline-flex items-center gap-2 rounded-lg bg-brown-700 px-5 py-3 text-base font-semibold text-white shadow-md transition hover:bg-brown-800 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brown-700 focus:ring-offset-2"
             >
               <PlusIcon className="h-6 w-6" />
               <span>Crear Playlist</span>
@@ -482,8 +740,8 @@ export default function PlaylistsPage() {
                           className="h-10 w-10 rounded object-cover"
                         />
                       ) : (
-                        <div className="h-10 w-10 rounded bg-purple-100 flex items-center justify-center">
-                          <ListBulletIcon className="h-5 w-5 text-purple-600" />
+                        <div className="h-10 w-10 rounded bg-brown-100 flex items-center justify-center">
+                          <ListBulletIcon className="h-5 w-5 text-brown-700" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
@@ -505,7 +763,7 @@ export default function PlaylistsPage() {
               placeholder="Buscar playlists..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-brown-700 focus:border-transparent"
             />
           </div>
         </div>
@@ -608,14 +866,14 @@ export default function PlaylistsPage() {
             <button
               onClick={handlePrev}
               disabled={page === 1}
-              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Anterior
             </button>
             <button
               onClick={handleNext}
               disabled={page === totalPages}
-              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Siguiente
             </button>
@@ -721,7 +979,7 @@ export default function PlaylistsPage() {
                   }
                   required
                   disabled={uploadingCover}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   placeholder="Ej. Mis Canciones Favoritas"
                 />
               </div>
@@ -738,7 +996,7 @@ export default function PlaylistsPage() {
                   }
                   disabled={uploadingCover}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   placeholder="Describe tu playlist..."
                 />
               </div>
@@ -753,7 +1011,7 @@ export default function PlaylistsPage() {
                     setPlaylistForm((prev) => ({ ...prev, isFeatured: event.target.checked }))
                   }
                   disabled={uploadingCover}
-                  className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 disabled:cursor-not-allowed"
+                  className="h-4 w-4 rounded border-gray-300 text-brown-700 focus:ring-brown-700 disabled:cursor-not-allowed"
                 />
                 <label htmlFor="isFeatured" className="text-sm font-medium text-gray-700">
                   Marcar como destacada
@@ -780,7 +1038,7 @@ export default function PlaylistsPage() {
                             checked={playlistForm.songIds.includes(song.id)}
                             onChange={() => toggleSongSelection(song.id)}
                             disabled={uploadingCover}
-                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 disabled:cursor-not-allowed"
+                            className="h-4 w-4 rounded border-gray-300 text-brown-700 focus:ring-brown-700 disabled:cursor-not-allowed"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 truncate">{song.title}</p>
@@ -814,7 +1072,7 @@ export default function PlaylistsPage() {
                 <button
                   type="submit"
                   disabled={uploadingCover || !playlistForm.name.trim()}
-                  className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-400"
+                  className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800 disabled:cursor-not-allowed disabled:bg-brown-600"
                 >
                   {uploadingCover ? (
                     <>
@@ -853,7 +1111,7 @@ export default function PlaylistsPage() {
               {loadingDetails ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent"></div>
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-brown-700 border-r-transparent"></div>
                     <p className="mt-2 text-sm text-gray-500">Cargando detalles...</p>
                   </div>
                 </div>
@@ -870,7 +1128,7 @@ export default function PlaylistsPage() {
                         className="h-32 w-32 rounded-lg object-cover border border-gray-200 shadow-sm"
                       />
                     ) : (
-                      <div className="h-32 w-32 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center shadow-sm">
+                      <div className="h-32 w-32 rounded-lg bg-gradient-to-br from-brown-700 to-brown-700 text-white flex items-center justify-center shadow-sm">
                         <ListBulletIcon className="h-12 w-12" />
                       </div>
                     )}
@@ -908,7 +1166,75 @@ export default function PlaylistsPage() {
 
                   {/* Songs List */}
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">Canciones</h4>
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-lg font-semibold text-gray-900">
+                          Canciones ({playlistDetails.playlistSongs?.length || 0})
+                        </h4>
+                        {selectedSongsToDelete.size > 0 && (
+                          <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-red-100 text-red-700">
+                            {selectedSongsToDelete.size} {selectedSongsToDelete.size === 1 ? 'canción seleccionada' : 'canciones seleccionadas'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {playlistDetails.playlistSongs && playlistDetails.playlistSongs.length > 0 && (
+                          <>
+                            {selectedSongsToDelete.size > 0 ? (
+                              <>
+                                <button
+                                  onClick={handleDeselectAllSongsToDelete}
+                                  disabled={isDeletingSongs}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Deseleccionar
+                                </button>
+                                <button
+                                  onClick={handleDeleteSelectedSongs}
+                                  disabled={isDeletingSongs}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isDeletingSongs ? (
+                                    <>
+                                      <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                      Eliminando...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <TrashIcon className="h-4 w-4" />
+                                      Borrar Seleccionadas ({selectedSongsToDelete.size})
+                                    </>
+                                  )}
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={handleSelectAllSongsToDelete}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50"
+                                >
+                                  Seleccionar Todas
+                                </button>
+                                <button
+                                  disabled
+                                  className="inline-flex items-center justify-center rounded-lg border border-red-300 bg-red-50 p-2 text-red-700 opacity-50 cursor-not-allowed"
+                                  title="Selecciona canciones para borrar"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
+                          </>
+                        )}
+                        <button
+                          onClick={openAddSongsModal}
+                          className="inline-flex items-center gap-2 rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                          Agregar Canciones
+                        </button>
+                      </div>
+                    </div>
                     {playlistDetails.playlistSongs && playlistDetails.playlistSongs.length > 0 ? (
                       <div className="space-y-2">
                         {playlistDetails.playlistSongs
@@ -919,8 +1245,20 @@ export default function PlaylistsPage() {
                             return (
                           <div
                             key={playlistSong.id}
-                            className="flex items-center gap-4 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                            className={`flex items-center gap-4 p-3 rounded-lg border transition ${
+                              selectedSongsToDelete.has(song.id)
+                                ? 'border-red-300 bg-red-50'
+                                : 'border-gray-200 hover:bg-gray-50'
+                            }`}
                           >
+                            <input
+                              type="checkbox"
+                              checked={selectedSongsToDelete.has(song.id)}
+                              onChange={() => handleToggleSongToDelete(song.id)}
+                              disabled={isDeletingSongs}
+                              className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer disabled:cursor-not-allowed"
+                              onClick={(e) => e.stopPropagation()}
+                            />
                             <div className="flex-shrink-0 w-8 text-center text-sm text-gray-500 font-medium">
                               {index + 1}
                             </div>
@@ -949,6 +1287,13 @@ export default function PlaylistsPage() {
                                 {formatDurationShort(song.duration)}
                               </div>
                             </div>
+                            <button
+                              onClick={() => handleRemoveSongFromPlaylist(song.id)}
+                              className="flex-shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 transition"
+                              title="Remover canción"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
                           </div>
                             );
                           })
@@ -975,6 +1320,136 @@ export default function PlaylistsPage() {
               >
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Songs Modal */}
+      {showAddSongsModal && selectedPlaylist && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 sticky top-0 bg-white z-10">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Agregar Canciones</h2>
+                <p className="text-sm text-gray-500">Selecciona canciones para agregar a "{selectedPlaylist.name}"</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddSongsModal(false);
+                  setSelectedSongsToAdd(new Set());
+                }}
+                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Cerrar"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-6">
+              {/* Songs Selection */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Seleccionar canciones ({selectedSongsToAdd.size} seleccionadas)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllSongsToAdd}
+                      disabled={isAddingSongs}
+                      className="text-xs font-medium text-brown-700 hover:text-brown-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Seleccionar Todas
+                    </button>
+                    {selectedSongsToAdd.size > 0 && (
+                      <>
+                        <span className="text-gray-300">|</span>
+                        <button
+                          type="button"
+                          onClick={handleDeselectAllSongsToAdd}
+                          disabled={isAddingSongs}
+                          className="text-xs font-medium text-gray-600 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Deseleccionar Todas
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+                  {allSongs.length === 0 ? (
+                    <p className="p-4 text-sm text-gray-500 text-center">No hay canciones disponibles</p>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {allSongs
+                        .filter((song) => {
+                          // Filtrar canciones que ya están en la playlist
+                          const existingSongIds = new Set(
+                            playlistDetails?.playlistSongs?.map((ps) => ps.song.id) || []
+                          );
+                          return !existingSongIds.has(song.id);
+                        })
+                        .map((song) => (
+                          <label
+                            key={song.id}
+                            className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSongsToAdd.has(song.id)}
+                              onChange={() => handleToggleSongToAdd(song.id)}
+                              disabled={isAddingSongs}
+                              className="h-4 w-4 rounded border-gray-300 text-brown-700 focus:ring-brown-700 disabled:cursor-not-allowed"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">{song.title}</p>
+                              <p className="text-xs text-gray-500">
+                                {song.artist?.stageName || song.artist?.user?.email || 'Sin artista'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <ClockIcon className="h-3 w-3" />
+                              {formatDurationShort(song.duration)}
+                            </div>
+                          </label>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddSongsModal(false);
+                    setSelectedSongsToAdd(new Set());
+                  }}
+                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={isAddingSongs}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddSongsToPlaylist}
+                  disabled={isAddingSongs || selectedSongsToAdd.size === 0}
+                  className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800 disabled:cursor-not-allowed disabled:bg-brown-600"
+                >
+                  {isAddingSongs ? (
+                    <>
+                      <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                      Agregando...
+                    </>
+                  ) : (
+                    <>
+                      <PlusIcon className="h-4 w-4 mr-2" />
+                      Agregar ({selectedSongsToAdd.size})
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

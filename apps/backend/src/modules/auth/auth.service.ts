@@ -3,11 +3,14 @@ import {
   UnauthorizedException,
   ConflictException,
   BadRequestException,
+  NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 import { User, UserRole } from '../../common/entities/user.entity';
 import { Artist } from '../../common/entities/artist.entity';
@@ -17,6 +20,10 @@ import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  // Almacenamiento temporal de tokens de recuperación (en producción usar Redis o DB)
+  private readonly passwordResetTokens = new Map<string, { userId: string; expiresAt: Date }>();
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -125,26 +132,19 @@ export class AuthService {
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(registerDto.password, saltRounds);
 
-    // Crear usuario
+    // Crear usuario - siempre como USER (no se permite registro como artista o admin)
     const user = this.userRepository.create({
       email: registerDto.email,
       username: registerDto.username,
       passwordHash,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
-      role: registerDto.role || UserRole.USER,
+      role: UserRole.USER, // Siempre usuario, sin importar lo que venga en el DTO
     });
 
     const savedUser = await this.userRepository.save(user);
 
-    // Si es artista, crear perfil de artista
-    if (registerDto.role === UserRole.ARTIST) {
-      const artist = this.artistRepository.create({
-        userId: savedUser.id,
-        stageName: registerDto.stageName || `${savedUser.firstName} ${savedUser.lastName}`,
-      });
-      await this.artistRepository.save(artist);
-    }
+    // No se crea perfil de artista - solo se permite registro como usuario
 
     const payload: JwtPayload = {
       sub: savedUser.id,
@@ -210,5 +210,167 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
+    try {
+      // Limpiar el username
+      const cleanUsername = username.trim();
+      
+      // Permitir verificación desde 1 carácter (pero el registro requerirá mínimo 3)
+      if (!cleanUsername || cleanUsername.length < 1) {
+        return { available: false }; // Vacío, no disponible
+      }
+      
+      // Buscar usuario usando búsqueda exacta (case-sensitive primero, más rápido)
+      // Si no encuentra, hacer búsqueda case-insensitive
+      let existingUser = await this.userRepository.findOne({
+        where: { username: cleanUsername },
+      });
+      
+      // Si no encontró con búsqueda exacta, buscar case-insensitive
+      if (!existingUser) {
+        existingUser = await this.userRepository
+          .createQueryBuilder('user')
+          .where('LOWER(user.username) = LOWER(:username)', { username: cleanUsername })
+          .getOne();
+      }
+
+      // Si existe un usuario, NO está disponible
+      const available = !existingUser;
+      
+      this.logger.log(`[checkUsernameAvailability] Username: "${cleanUsername}", Existe: ${!!existingUser}, Disponible: ${available}`);
+      
+      return { available };
+    } catch (error) {
+      // En caso de error, registrar y asumir que NO está disponible para ser más seguro
+      this.logger.error(`[checkUsernameAvailability] Error verificando disponibilidad de username: "${username}"`, error);
+      return { available: false }; // En caso de error, asumir no disponible para ser más seguro
+    }
+  }
+
+  async checkEmailAvailability(email: string): Promise<{ available: boolean }> {
+    try {
+      // Limpiar el email
+      const cleanEmail = email.trim().toLowerCase();
+      
+      if (!cleanEmail || cleanEmail.length < 1) {
+        return { available: false }; // Vacío, no disponible
+      }
+      
+      // Buscar usuario usando búsqueda exacta (case-sensitive primero, más rápido)
+      // Si no encuentra, hacer búsqueda case-insensitive
+      let existingUser = await this.userRepository.findOne({
+        where: { email: cleanEmail },
+      });
+      
+      // Si no encontró con búsqueda exacta, buscar case-insensitive
+      if (!existingUser) {
+        existingUser = await this.userRepository
+          .createQueryBuilder('user')
+          .where('LOWER(user.email) = LOWER(:email)', { email: cleanEmail })
+          .getOne();
+      }
+
+      // Si existe un usuario, NO está disponible
+      const available = !existingUser;
+      
+      this.logger.log(`[checkEmailAvailability] Email: "${cleanEmail}", Existe: ${!!existingUser}, Disponible: ${available}`);
+      
+      return { available };
+    } catch (error) {
+      // En caso de error, registrar y asumir que NO está disponible para ser más seguro
+      this.logger.error(`[checkEmailAvailability] Error verificando disponibilidad de email: "${email}"`, error);
+      return { available: false }; // En caso de error, asumir no disponible para ser más seguro
+    }
+  }
+
+  async forgotPassword(email: string): Promise<{ message: string; token?: string }> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    // Por seguridad, siempre devolver el mismo mensaje aunque el usuario no exista
+    if (!user) {
+      return {
+        message: 'Si el email existe, recibirás un enlace para recuperar tu contraseña',
+      };
+    }
+
+    // Generar token de recuperación
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Token válido por 1 hora
+
+    // Almacenar token temporalmente
+    this.passwordResetTokens.set(resetToken, {
+      userId: user.id,
+      expiresAt,
+    });
+
+    // Limpiar tokens expirados periódicamente
+    this.cleanExpiredTokens();
+
+    // En producción, aquí enviarías un email con el token
+    // Por ahora, devolvemos el token en la respuesta (solo para desarrollo)
+    // En producción, esto NO debería devolverse
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[DEV] Token de recuperación para ${email}: ${resetToken}`);
+      return {
+        message: 'Si el email existe, recibirás un enlace para recuperar tu contraseña',
+        token: resetToken, // Solo en desarrollo
+      };
+    }
+
+    return {
+      message: 'Si el email existe, recibirás un enlace para recuperar tu contraseña',
+    };
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const tokenData = this.passwordResetTokens.get(token);
+
+    if (!tokenData) {
+      throw new BadRequestException('Token de recuperación inválido o expirado');
+    }
+
+    if (new Date() > tokenData.expiresAt) {
+      this.passwordResetTokens.delete(token);
+      throw new BadRequestException('Token de recuperación expirado');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: tokenData.userId },
+    });
+
+    if (!user) {
+      this.passwordResetTokens.delete(token);
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // Hash de la nueva contraseña
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+
+    // Actualizar contraseña
+    await this.userRepository.update(user.id, {
+      passwordHash,
+    });
+
+    // Eliminar token usado
+    this.passwordResetTokens.delete(token);
+
+    return {
+      message: 'Contraseña restablecida exitosamente',
+    };
+  }
+
+  private cleanExpiredTokens(): void {
+    const now = new Date();
+    for (const [token, data] of this.passwordResetTokens.entries()) {
+      if (now > data.expiresAt) {
+        this.passwordResetTokens.delete(token);
+      }
+    }
   }
 }

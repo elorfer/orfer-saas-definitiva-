@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/providers/favorites_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/widgets/favorite_button.dart';
+import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/utils/logger.dart';
@@ -23,18 +25,44 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   @override
   bool get wantKeepAlive => true;
   
-  // Cachear dimensiones de pantalla para evitar recálculos (si se necesita en el futuro)
-  // double? _cachedScreenWidth;
+  // Cache de URLs normalizadas para evitar recálculos
+  final Map<String, String?> _cachedCoverUrls = {};
   
-  // @override
-  // void didChangeDependencies() {
-  //   super.didChangeDependencies();
-  //   // Cachear dimensiones de pantalla una sola vez
-  //   if (_cachedScreenWidth == null) {
-  //     final mediaQuery = MediaQuery.of(context);
-  //     _cachedScreenWidth = mediaQuery.size.width;
-  //   }
-  // }
+  @override
+  void initState() {
+    super.initState();
+    // Precargar imágenes después del primer frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _precacheImages();
+    });
+  }
+  
+  /// Precargar imágenes de las primeras canciones favoritas visibles
+  void _precacheImages() {
+    final favorites = ref.read(favoritesProvider).favorites;
+    
+    // Precargar primeras 15 imágenes (las que probablemente estarán visibles)
+    for (var i = 0; i < favorites.length && i < 15; i++) {
+      final song = favorites[i];
+      final coverUrl = UrlNormalizer.normalizeImageUrl(song.coverArtUrl);
+      if (coverUrl != null && coverUrl.isNotEmpty) {
+        _cachedCoverUrls[song.id] = coverUrl;
+        // Precargar en background sin bloquear
+        precacheImage(CachedNetworkImageProvider(coverUrl), context).catchError((_) {
+          // Ignorar errores de precarga
+        });
+      }
+    }
+  }
+  
+  @override
+  void didUpdateWidget(FavoritesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si cambian los favoritos, precargar nuevas imágenes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _precacheImages();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,6 +320,25 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
               final song = favorites[index];
               // Cachear devicePixelRatio una sola vez para toda la lista (optimización)
               final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+              
+              // ✅ MEJORA: Precarga progresiva de imágenes mientras se hace scroll
+              // Precargar imágenes de las siguientes 5 canciones cuando se está cerca
+              if (index < favorites.length - 5) {
+                for (var i = index + 1; i <= index + 5 && i < favorites.length; i++) {
+                  final nextSong = favorites[i];
+                  final nextCoverUrl = UrlNormalizer.normalizeImageUrl(nextSong.coverArtUrl);
+                  if (nextCoverUrl != null && 
+                      nextCoverUrl.isNotEmpty && 
+                      !_cachedCoverUrls.containsKey(nextSong.id)) {
+                    _cachedCoverUrls[nextSong.id] = nextCoverUrl;
+                    // Precargar en background sin bloquear
+                    precacheImage(CachedNetworkImageProvider(nextCoverUrl), context).catchError((_) {
+                      // Ignorar errores de precarga
+                    });
+                  }
+                }
+              }
+              
               return RepaintBoundary(
                 key: ValueKey('favorite_song_${song.id}'),
                 child: _FavoriteSongItem(
@@ -432,67 +479,14 @@ class _FavoriteSongItem extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                       clipBehavior: Clip.antiAlias,
                       child: coverUrl != null
-                            ? SizedBox(
+                            ? OptimizedImage(
+                                imageUrl: coverUrl,
                                 width: 64,
                                 height: 64,
-                                child: Image.network(
-                                  coverUrl,
-                                  fit: BoxFit.cover,
-                                  width: 64,
-                                  height: 64,
-                                  alignment: Alignment.center,
-                                  repeat: ImageRepeat.noRepeat,
-                                  // Optimización: cachear imagen en memoria con límites
-                                  cacheWidth: (64 * devicePixelRatio).round(),
-                                  cacheHeight: (64 * devicePixelRatio).round(),
-                                  // Optimización: cargar imagen de forma asíncrona sin bloquear scroll
-                                  frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                    if (wasSynchronouslyLoaded) return child;
-                                    return AnimatedOpacity(
-                                      opacity: frame == null ? 0 : 1,
-                                      duration: const Duration(milliseconds: 200),
-                                      curve: Curves.easeOut,
-                                      child: child,
-                                    );
-                                  },
-                                  loadingBuilder: (context, child, loadingProgress) {
-                                    if (loadingProgress == null) {
-                                      return child;
-                                    }
-                                    // Placeholder simple sin CircularProgressIndicator para mejor rendimiento
-                                    return Container(
-                                      decoration: const BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            NeumorphismTheme.coffeeMedium,
-                                            NeumorphismTheme.coffeeDark,
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      decoration: const BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            NeumorphismTheme.coffeeMedium,
-                                            NeumorphismTheme.coffeeDark,
-                                          ],
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.music_note,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                    );
-                                  },
-                                ),
+                                fit: BoxFit.cover,
+                                isLargeCover: false,
+                                maxCacheWidth: (64 * devicePixelRatio).round(),
+                                maxCacheHeight: (64 * devicePixelRatio).round(),
                               )
                             : Container(
                                 decoration: BoxDecoration(

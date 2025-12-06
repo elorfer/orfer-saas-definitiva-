@@ -120,20 +120,22 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
 
   Widget _buildPlaylistsList() {
     return SizedBox(
-      height: 260, // ✅ Aumentado para evitar overflow con badges
+      height: 260,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        shrinkWrap: true, // Necesario cuando está dentro de un Column dentro de SingleChildScrollView
         padding: const EdgeInsets.only(left: 24, right: 8),
-        cacheExtent: 300, // ✅ OPTIMIZACIÓN: Reducido de 800 a 300px para mejor rendimiento
-        physics: const ClampingScrollPhysics(), // Cambiar a ClampingScrollPhysics para evitar conflictos
+        cacheExtent: 1200, // 🔥 OPTIMIZACIÓN MÁXIMA: Precarga 4-6 items extra
+        physics: const BouncingScrollPhysics(), // 🔥 Configuración perfecta
+        addAutomaticKeepAlives: false, // Menos reconstrucciones
+        addRepaintBoundaries: true, // 🔥 GPU trabaja menos
+        addSemanticIndexes: false, // 🔥 Más rápido
         itemCount: _featuredPlaylists.length,
         itemBuilder: (context, index) {
           final featuredPlaylist = _featuredPlaylists[index];
           return RepaintBoundary(
             key: ValueKey('playlist_${featuredPlaylist.playlist.id}'),
             child: FeaturedPlaylistCard(
-              key: ValueKey('playlist_card_${featuredPlaylist.playlist.id}'), // Key estable
+              key: ValueKey('playlist_card_${featuredPlaylist.playlist.id}'),
               featuredPlaylist: featuredPlaylist,
               onTap: () {
                 _onPlaylistTap(context, featuredPlaylist.playlist);
@@ -145,6 +147,7 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
     );
   }
 
+  /// ⚡ OPTIMIZADO: Skeleton ligero adaptado al contenido real
   Widget _buildLoadingSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,119 +165,53 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
           ),
         ),
         const SizedBox(height: 16),
+        // Lista skeleton - Tamaños exactos del contenido real
         SizedBox(
-          height: 260, // ✅ Misma altura que la lista real
+          height: 260, // Altura del contenido real
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            shrinkWrap: true, // Necesario cuando está dentro de un Column dentro de SingleChildScrollView
-            padding: const EdgeInsets.only(left: 24, right: 8),
-            cacheExtent: 300, // ✅ OPTIMIZACIÓN: Reducido de 800 a 300px
-            physics: const ClampingScrollPhysics(), // Cambiar a ClampingScrollPhysics para evitar conflictos
-            itemCount: 3,
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(left: 24, right: 8), // Igual que el real
+            cacheExtent: 300, // Reducido para ser más ligero
+            physics: const ClampingScrollPhysics(), // Igual que el real
+            itemCount: 2, // Solo 2 items para reducir carga
             itemBuilder: (context, index) {
-              return RepaintBoundary(
-                key: ValueKey('loading_playlist_$index'),
-                child: Container(
-                  width: 160,
-                  margin: const EdgeInsets.only(right: 16), // Mismo margin que el real
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Imagen skeleton - CRÍTICO: 160x160 con borderRadius 16 y sombra
-                      Container(
-                        width: 160,
-                        height: 160,
+              return Container(
+                width: 160, // Igual que FeaturedPlaylistCard
+                margin: const EdgeInsets.only(right: 16), // Igual que el real
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Imagen skeleton - 160x160 (igual que el real)
+                    Shimmer.fromColors(
+                      baseColor: NeumorphismTheme.shimmerBaseColor,
+                      highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                      period: const Duration(milliseconds: 1200), // Más lento = más ligero
+                      child: Container(
+                        width: 160, // Igual que el real
+                        height: 160, // Igual que el real
                         decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.all(Radius.circular(16)), // Mismo borderRadius que el real (no 12)
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Shimmer.fromColors(
-                            baseColor: NeumorphismTheme.shimmerBaseColor,
-                            highlightColor: NeumorphismTheme.shimmerHighlightColor,
-                            child: Container(
-                              width: 160,
-                              height: 160,
-                              decoration: const BoxDecoration(
-                                color: NeumorphismTheme.shimmerContentColor,
-                              ),
-                            ),
-                          ),
+                          color: NeumorphismTheme.shimmerContentColor,
+                          borderRadius: BorderRadius.circular(16), // Igual que el real
                         ),
                       ),
-                      const SizedBox(height: 12), // Mismo espacio que el real
-                      // Nombre skeleton - CRÍTICO: fontSize 15
-                      Shimmer.fromColors(
-                        baseColor: NeumorphismTheme.shimmerBaseColor,
-                        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-                        child: Container(
-                          height: 15, // Mismo fontSize que el texto real
-                          width: 120,
-                          decoration: BoxDecoration(
-                            color: NeumorphismTheme.shimmerContentColor,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+                    ),
+                    const SizedBox(height: 12), // Igual que el real
+                    // Texto skeleton - Tamaño aproximado del título
+                    Shimmer.fromColors(
+                      baseColor: NeumorphismTheme.shimmerBaseColor,
+                      highlightColor: NeumorphismTheme.shimmerHighlightColor,
+                      period: const Duration(milliseconds: 1200),
+                      child: Container(
+                        height: 15, // Altura aproximada del texto
+                        width: 120, // Ancho aproximado
+                        decoration: BoxDecoration(
+                          color: NeumorphismTheme.shimmerContentColor,
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
-                      const SizedBox(height: 4), // Mismo espacio que el real
-                      // Info adicional skeleton - CRÍTICO: fontSize 13 con icono
-                      SizedBox(
-                        width: 160, // Mismo ancho fijo que el real
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Shimmer.fromColors(
-                                baseColor: NeumorphismTheme.shimmerBaseColor,
-                                highlightColor: NeumorphismTheme.shimmerHighlightColor,
-                                child: Container(
-                                  height: 13, // Mismo fontSize que el texto real
-                                  width: 80,
-                                  decoration: BoxDecoration(
-                                    color: NeumorphismTheme.shimmerContentColor,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8), // Mismo espacio que el real
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 14, // Mismo tamaño que el icono real
-                                  height: 14,
-                                  decoration: BoxDecoration(
-                                    color: NeumorphismTheme.shimmerContentColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4), // Mismo espacio que el real
-                                Shimmer.fromColors(
-                                  baseColor: NeumorphismTheme.shimmerBaseColor,
-                                  highlightColor: NeumorphismTheme.shimmerHighlightColor,
-                                  child: Container(
-                                    height: 12, // Mismo fontSize que el texto real
-                                    width: 20,
-                                    decoration: BoxDecoration(
-                                      color: NeumorphismTheme.shimmerContentColor,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },

@@ -23,18 +23,18 @@ class MainNavigation extends ConsumerStatefulWidget {
 class _MainNavigationState extends ConsumerState<MainNavigation> 
     with AutomaticKeepAliveClientMixin {
   
-  // ✅ Cachear valores para evitar recálculos cuando cambia el teclado
+  // 🔥 OPTIMIZACIÓN: Cachear valores para evitar recálculos
   double? _cachedBottomPadding;
   double? _cachedNavBarHeight;
+  int? _cachedCurrentIndex; // 🔥 Cachear índice actual para evitar recálculos
   
   @override
-  bool get wantKeepAlive => true; // ✅ Mantener estado de navegación
+  bool get wantKeepAlive => true; // Mantener estado de navegación
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // ✅ Inicializar valores UNA SOLA VEZ cuando cambian las dependencias
-    // Esto se ejecuta antes del primer build y cuando cambian MediaQuery, etc.
+    // Inicializar valores UNA SOLA VEZ cuando cambian las dependencias
     if (_cachedBottomPadding == null) {
       final mediaQuery = MediaQuery.of(context);
       _cachedBottomPadding = mediaQuery.padding.bottom;
@@ -87,12 +87,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
                 child: FinalMiniPlayer(
                   onTap: () {
                     // Abrir reproductor completo con transición estilo Spotify
-                    // ✅ FUNCIONA SIEMPRE que haya currentSong, sin importar dónde se inició la reproducción
+                    // ✅ OPTIMIZADO: Verificar estado antes de navegar para evitar múltiples llamadas
                     try {
-                      // Verificar que hay una canción antes de expandir
                       final audioState = ref.read(unifiedAudioProviderFixed);
-                      if (audioState.currentSong != null) {
-                        // Actualizar estado primero
+                      if (audioState.currentSong != null && !audioState.isPlayerExpanded) {
+                        // Actualizar estado y navegar en una sola operación
                         ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
                         
                         // Navegar inmediatamente sin delay
@@ -113,9 +112,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
   }
 
   Widget _buildBottomNavigationBar(BuildContext context) {
-    final currentIndex = _getCurrentIndex(context);
+    // 🔥 OPTIMIZACIÓN: Cachear índice actual para evitar recálculos
+    final currentIndex = _getCurrentIndexCached(context);
     
-    // ✅ Usar valores cacheados para evitar recálculos - NUNCA cambiar
+    // Usar valores cacheados para evitar recálculos
     final bottomPadding = _cachedBottomPadding ?? 0.0;
     final totalHeight = _cachedNavBarHeight ?? 80.0;
     
@@ -150,28 +150,28 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
               activeIcon: Icons.home,
               label: 'Inicio',
               isSelected: currentIndex == 0,
-              onTap: () => context.go('/home'),
+              onTap: () => _navigateToTab(context, 0, '/home'),
             ),
             _buildNavItem(
               icon: Icons.search_outlined,
               activeIcon: Icons.search,
               label: 'Buscar',
               isSelected: currentIndex == 1,
-              onTap: () => context.go('/search'),
+              onTap: () => _navigateToTab(context, 1, '/search'),
             ),
             _buildNavItem(
               icon: Icons.library_music_outlined,
               activeIcon: Icons.library_music,
               label: 'Biblioteca',
               isSelected: currentIndex == 2,
-              onTap: () => context.go('/library'),
+              onTap: () => _navigateToTab(context, 2, '/library'),
             ),
             _buildNavItem(
-              icon: Icons.person_outline,
-              activeIcon: Icons.person,
-              label: 'Perfil',
+              icon: Icons.star_outline,
+              activeIcon: Icons.star,
+              label: 'Premium',
               isSelected: currentIndex == 3,
-              onTap: () => context.go('/profile'),
+              onTap: () => _navigateToTab(context, 3, '/premium'),
             ),
           ],
         ),
@@ -187,42 +187,51 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            height: 60, // ✅ Reducido de 64 a 60 para evitar overflow
-            padding: const EdgeInsets.symmetric(vertical: 4), // ✅ Reducido de 8 a 4
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isSelected ? activeIcon : icon,
-                  size: 30, // ✅ Reducido de 32 a 30 para mejor ajuste
-                  color: isSelected 
-                    ? NeumorphismTheme.coffeeDark // ✅ Marrón más oscuro cuando está seleccionado
-                    : NeumorphismTheme.textSecondary,
-                ),
-                const SizedBox(height: 3), // ✅ Reducido de 4 a 3
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 11, // ✅ Reducido de 12 a 11
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, // ✅ Más bold cuando está seleccionado
+    // 🔥 OPTIMIZACIÓN: RepaintBoundary para evitar repintados innecesarios
+    return RepaintBoundary(
+      child: Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              // 🔥 OPTIMIZACIÓN: Ejecutar callback inmediatamente sin delay
+              onTap();
+            },
+            borderRadius: BorderRadius.circular(12),
+            splashColor: Colors.transparent, // Sin splash para mejor rendimiento
+            highlightColor: Colors.transparent, // Sin highlight para mejor rendimiento
+            hoverColor: Colors.transparent, // Sin hover para mejor rendimiento
+            child: Container(
+              height: 60,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? activeIcon : icon,
+                    size: 30,
                     color: isSelected 
-                      ? NeumorphismTheme.coffeeDark // ✅ Marrón más oscuro cuando está seleccionado
+                      ? NeumorphismTheme.coffeeDark
                       : NeumorphismTheme.textSecondary,
-                    height: 1.1, // ✅ Reducido de 1.2 a 1.1
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected 
+                        ? NeumorphismTheme.coffeeDark
+                        : NeumorphismTheme.textSecondary,
+                      height: 1.1,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -230,29 +239,49 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
     );
   }
 
-  int _getCurrentIndex(BuildContext context) {
-    // ✅ Obtener la ruta actual de múltiples formas para asegurar detección correcta
+  // 🔥 OPTIMIZACIÓN: Cachear índice para evitar recálculos constantes
+  int _getCurrentIndexCached(BuildContext context) {
+    // Solo recalcular si el índice no está cacheado o cambió la ruta
     final router = GoRouter.of(context);
     final location = router.routerDelegate.currentConfiguration.uri.path;
     final matchedLocation = GoRouterState.of(context).matchedLocation;
-    
-    // Usar la ubicación más específica disponible
     final currentPath = location.isNotEmpty ? location : matchedLocation;
     
-    // ✅ Debug: Log para verificar qué ruta se está detectando
-    // print('[NavigationBar] Current path: $currentPath, Matched: $matchedLocation');
-    
+    int newIndex;
     if (currentPath == '/home' || currentPath.startsWith('/home/')) {
-      return 0;
+      newIndex = 0;
     } else if (currentPath == '/search' || currentPath.startsWith('/search')) {
-      return 1;
+      newIndex = 1;
     } else if (currentPath == '/library' || currentPath.startsWith('/library')) {
-      return 2;
-    } else if (currentPath == '/profile' || currentPath.startsWith('/profile')) {
-      return 3;
+      newIndex = 2;
+    } else if (currentPath == '/premium' || currentPath.startsWith('/premium')) {
+      newIndex = 3;
+    } else {
+      newIndex = 0; // Default
     }
     
-    return 0; // Default
+    // Solo actualizar cache si cambió
+    if (_cachedCurrentIndex != newIndex) {
+      _cachedCurrentIndex = newIndex;
+    }
+    
+    return _cachedCurrentIndex ?? 0;
+  }
+
+  // 🔥 OPTIMIZACIÓN: Navegación instantánea sin delay
+  void _navigateToTab(BuildContext context, int targetIndex, String route) {
+    // Solo navegar si no estamos ya en esa ruta
+    if (_cachedCurrentIndex == targetIndex) return;
+    
+    // Pre-actualizar cache para feedback visual inmediato
+    setState(() {
+      _cachedCurrentIndex = targetIndex;
+    });
+    
+    // 🔥 Navegación síncrona directa - sin microtask ni delay
+    if (context.mounted) {
+      context.go(route);
+    }
   }
 
 }

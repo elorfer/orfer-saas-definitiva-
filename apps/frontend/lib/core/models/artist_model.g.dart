@@ -16,6 +16,7 @@ Artist _$ArtistFromJson(Map<String, dynamic> json) => Artist(
       websiteUrl: json['website_url'] as String?,
       socialLinks: json['social_links'] as Map<String, dynamic>?,
       verificationStatus: json['verification_status'] as bool? ?? false,
+      isVerified: json['is_verified'] as bool?,
       totalStreams: (json['total_streams'] as num?)?.toInt() ?? 0,
       totalFollowers: (json['total_followers'] as num?)?.toInt() ?? 0,
       monthlyListeners: (json['monthly_listeners'] as num?)?.toInt() ?? 0,
@@ -46,6 +47,7 @@ Map<String, dynamic> _$ArtistToJson(Artist instance) {
   writeNotNull('website_url', instance.websiteUrl);
   writeNotNull('social_links', instance.socialLinks);
   val['verification_status'] = instance.verificationStatus;
+  writeNotNull('is_verified', instance.isVerified);
   val['total_streams'] = instance.totalStreams;
   val['total_followers'] = instance.totalFollowers;
   val['monthly_listeners'] = instance.monthlyListeners;

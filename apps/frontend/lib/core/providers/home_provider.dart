@@ -97,8 +97,8 @@ class HomeNotifier extends Notifier<HomeState> {
 
       // Cargar datos en paralelo para mejor rendimiento
       await Future.wait([
-        // Artistas destacados
-        _homeService.getFeaturedArtists(limit: 6).then((value) => featuredArtists = value).catchError((_) => <FeaturedArtist>[]),
+        // Artistas destacados (✅ OPTIMIZACIÓN: pasar forceRefresh para respetar cache)
+        _homeService.getFeaturedArtists(limit: 6, forceRefresh: forceRefresh).then((value) => featuredArtists = value).catchError((_) => <FeaturedArtist>[]),
         // Canciones destacadas
         _homeService.getFeaturedSongs(limit: 20, forceRefresh: forceRefresh).then((value) => featuredSongs = value).catchError((_) => <FeaturedSong>[]),
         // Playlists destacadas

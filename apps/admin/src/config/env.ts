@@ -93,7 +93,8 @@ const getConfig = (): Config => {
   return {
     nextAuth: {
       url: process.env.NEXTAUTH_URL || 'http://localhost:3002',
-      secret: process.env.NEXTAUTH_SECRET || 'vintage-music-admin-secret-key-2024',
+      // ⚠️ SEGURIDAD: En producción, NEXTAUTH_SECRET debe estar configurado
+      secret: process.env.NEXTAUTH_SECRET || (isDevelopment ? 'dev-secret-key-min-32-chars-for-local' : ''),
     },
     
     api: {
@@ -113,7 +114,8 @@ const getConfig = (): Config => {
     
     security: {
       bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12'),
-      jwtSecret: process.env.JWT_SECRET || 'vintage-music-jwt-secret-2024',
+      // ⚠️ SEGURIDAD: En producción, JWT_SECRET debe estar configurado
+      jwtSecret: process.env.JWT_SECRET || (isDevelopment ? 'dev-jwt-secret-for-local-only' : ''),
       jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
     },
     

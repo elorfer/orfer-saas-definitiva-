@@ -17,15 +17,19 @@ class SearchScreen extends ConsumerStatefulWidget {
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends ConsumerState<SearchScreen> {
+class _SearchScreenState extends ConsumerState<SearchScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // 🔥 Mantener estado al cambiar de pestaña
+
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  Timer? _searchDebounce; // ✅ Debounce para búsquedas
+  Timer? _searchDebounce; // Debounce para búsquedas
 
   @override
   void initState() {
     super.initState();
-    // ✅ Optimizar listener: solo actualizar si el texto realmente cambió
+    // Optimizar listener: solo actualizar si el texto realmente cambió
     _searchController.addListener(_onSearchTextChanged);
   }
 
@@ -59,6 +63,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // 🔥 Requerido por AutomaticKeepAliveClientMixin
+    
     // OPTIMIZACIÓN: usar select específico para cada campo y evitar rebuilds innecesarios
     final isLoading = ref.watch(searchProvider.select((state) => state.isLoading));
     final error = ref.watch(searchProvider.select((state) => state.error));
@@ -75,100 +81,32 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Header
-              Container(
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(20.0),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                      NeumorphismTheme.coffeeDark.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
+              // ⚡ Header simplificado (sin gradientes ni sombras pesadas)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), // ⚡ Reducido padding
                 child: Row(
                   children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            NeumorphismTheme.coffeeMedium,
-                            NeumorphismTheme.coffeeDark,
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.search_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
+                    Icon(
+                      Icons.search_rounded,
+                      color: NeumorphismTheme.coffeeMedium,
+                      size: 28, // ⚡ Reducido de 32
                     ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Buscar',
-                            style: AppTextStyles.searchTitle,
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.explore_rounded,
-                                size: 16,
-                                color: NeumorphismTheme.textSecondary,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Descubre nueva música',
-                                  style: AppTextStyles.searchSubtitle,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    const SizedBox(width: 12), // ⚡ Reducido de 20
+                    Text(
+                      'Buscar',
+                      style: AppTextStyles.searchTitle,
                     ),
                   ],
                 ),
               ),
 
-              // Search Bar
+              // ⚡ Search Bar simplificada (sin sombras pesadas)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Container(
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(26),
-                    boxShadow: NeumorphismTheme.neumorphismShadow,
+                    borderRadius: BorderRadius.circular(20), // ⚡ Reducido de 26
                   ),
                   child: TextField(
                     controller: _searchController,

@@ -71,7 +71,7 @@ function GenreRow({
         <div className="flex items-center justify-end gap-2">
           <button
             onClick={() => onEdit(genre)}
-            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-purple-300 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-brown-500 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isDeleting}
           >
             <PencilIcon className="h-4 w-4" />
@@ -244,14 +244,14 @@ export default function GenresPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => refetch()}
-              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-purple-400 hover:text-purple-600"
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-brown-600 hover:text-brown-700"
             >
               <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
               Actualizar
             </button>
             <button
               onClick={openCreateModal}
-              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+              className="flex items-center gap-2 rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800"
             >
               <PlusIcon className="h-4 w-4" />
               Crear género
@@ -266,7 +266,7 @@ export default function GenresPage() {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Buscar por nombre o descripción..."
-                    className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   />
                   <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
@@ -341,14 +341,14 @@ export default function GenresPage() {
                   <button
                     onClick={handlePrev}
                     disabled={page === 1}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Anterior
                   </button>
                   <button
                     onClick={handleNext}
                     disabled={page === totalPages}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-purple-400 hover:text-purple-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Siguiente
                   </button>
@@ -386,7 +386,7 @@ export default function GenresPage() {
                   onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   required
                   maxLength={50}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   placeholder="Ej. Reggaeton"
                 />
               </div>
@@ -399,7 +399,7 @@ export default function GenresPage() {
                   value={formData.description}
                   onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   placeholder="Descripción del género musical..."
                 />
               </div>
@@ -426,7 +426,7 @@ export default function GenresPage() {
                     }}
                     pattern="^#[0-9A-Fa-f]{6}$"
                     maxLength={7}
-                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="#FF5733"
                   />
                 </div>
@@ -443,7 +443,7 @@ export default function GenresPage() {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+                  className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800"
                 >
                   Crear género
                 </button>
@@ -482,7 +482,7 @@ export default function GenresPage() {
                   onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   required
                   maxLength={50}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   placeholder="Ej. Reggaeton"
                 />
               </div>
@@ -495,7 +495,7 @@ export default function GenresPage() {
                   value={formData.description}
                   onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   rows={3}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                   placeholder="Descripción del género musical..."
                 />
               </div>
@@ -522,7 +522,7 @@ export default function GenresPage() {
                     }}
                     pattern="^#[0-9A-Fa-f]{6}$"
                     maxLength={7}
-                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100"
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
                     placeholder="#FF5733"
                   />
                 </div>
@@ -539,7 +539,7 @@ export default function GenresPage() {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-purple-700"
+                  className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800"
                 >
                   Guardar cambios
                 </button>

@@ -262,6 +262,31 @@ class DataNormalizer {
       }
     });
     
+    // ✅ CORRECCIÓN CRÍTICA: Mapear campos camelCase a snake_case DESPUÉS del forEach
+    // El backend puede enviar totalStreams (camelCase) y necesitamos total_streams (snake_case)
+    if (data.containsKey('totalStreams')) {
+      final totalStreamsValue = data['totalStreams'];
+      // Solo mapear si no existe ya en snake_case o si el valor es diferente
+      if (!normalized.containsKey('total_streams') || 
+          (normalized['total_streams'] == null || normalized['total_streams'] == 0)) {
+        normalized['total_streams'] = totalStreamsValue ?? 0;
+      }
+    }
+    if (data.containsKey('totalLikes')) {
+      final totalLikesValue = data['totalLikes'];
+      if (!normalized.containsKey('total_likes') || 
+          (normalized['total_likes'] == null || normalized['total_likes'] == 0)) {
+        normalized['total_likes'] = totalLikesValue ?? 0;
+      }
+    }
+    if (data.containsKey('totalShares')) {
+      final totalSharesValue = data['totalShares'];
+      if (!normalized.containsKey('total_shares') || 
+          (normalized['total_shares'] == null || normalized['total_shares'] == 0)) {
+        normalized['total_shares'] = totalSharesValue ?? 0;
+      }
+    }
+    
     // Normalizar URL de portada de la canción
     final coverArtUrl = _normalizeImageUrlField(
       {...data, ...normalized},
@@ -278,6 +303,11 @@ class DataNormalizer {
     _ensureDefaultValue(normalized, 'duration', _defaultNumericValue);
     _ensureDefaultValue(normalized, 'status', 'published');
     _ensureDefaultValue(normalized, 'id', '');
+    
+    // IMPORTANTE: Asegurar valores por defecto para contadores SOLO si no existen o son null
+    _ensureDefaultValue(normalized, 'total_streams', 0);
+    _ensureDefaultValue(normalized, 'total_likes', 0);
+    _ensureDefaultValue(normalized, 'total_shares', 0);
     
     // file_url puede venir de diferentes campos
     final fileUrlValue = data['file_url'] ?? data['fileUrl'] ?? '';

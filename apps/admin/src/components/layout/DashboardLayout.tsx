@@ -89,11 +89,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-warm-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl hc-shadow">
-          <div className="flex h-16 items-center justify-between px-4">
+          <div className="flex h-20 items-center justify-between px-4">
             <div className="flex items-center">
-              <div className="h-8 w-8 bg-vintage-600 rounded-lg flex items-center justify-center">
-                <MusicalNoteIcon className="h-5 w-5 text-white" />
-              </div>
+              <img 
+                src="/logo-icon.png" 
+                alt="Logo" 
+                className="h-20 w-20 object-contain"
+              />
               <span className="ml-2 text-lg font-vintage font-bold text-warm-900">
                 Vintage Music
               </span>
@@ -130,10 +132,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-grow bg-white/95 backdrop-blur border-r border-gray-200 shadow-sm hc-shadow">
-          <div className="flex h-16 items-center px-4">
-            <div className="h-8 w-8 bg-vintage-600 rounded-lg flex items-center justify-center">
-              <MusicalNoteIcon className="h-5 w-5 text-white" />
-            </div>
+          <div className="flex h-20 items-center px-4">
+            <img 
+              src="/logo-icon.png" 
+              alt="Logo" 
+              className="h-20 w-20 object-contain"
+              onError={(e) => {
+                console.error('Error cargando logo-icon.png');
+                e.currentTarget.style.display = 'none';
+              }}
+            />
             <span className="ml-2 text-lg font-vintage font-bold text-warm-900">
               Vintage Music
             </span>
@@ -178,8 +186,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 onClick={() => setHighContrast((v) => !v)}
                 className={`hidden sm:inline-flex items-center rounded-lg border px-3 py-1.5 text-sm transition ${
                   highContrast
-                    ? 'bg-vintage-600 text-white border-vintage-600'
-                    : 'bg-white text-warm-700 border-gray-300 hover:border-vintage-500'
+                    ? 'bg-brown-700 text-white border-brown-700'
+                    : 'bg-white text-warm-700 border-gray-300 hover:border-brown-700'
                 }`}
                 title="Alternar alto contraste"
               >
@@ -188,10 +196,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="flex items-center space-x-2 rounded-full bg-white border border-gray-200 px-3 py-1.5 shadow-sm hover:border-vintage-500 transition-colors"
+                  className="flex items-center space-x-2 rounded-full bg-white border border-gray-200 px-3 py-1.5 shadow-sm hover:border-brown-700 transition-colors"
                 >
-                  <div className="h-8 w-8 bg-vintage-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-semibold text-vintage-700">
+                  <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold text-brown-700">
                       {session?.user?.name?.charAt(0) ?? 'A'}
                     </span>
                   </div>
@@ -217,7 +225,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     </div>
                     <button
                       onClick={handleSignOut}
-                      className="w-full px-4 py-2 text-sm text-left text-warm-600 hover:bg-vintage-50 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-sm text-left text-warm-600 hover:bg-brown-50 flex items-center gap-2"
                     >
                       <ArrowRightOnRectangleIcon className="h-4 w-4" />
                       Cerrar sesión

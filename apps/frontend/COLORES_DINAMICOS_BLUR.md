@@ -166,3 +166,19 @@ Las tarjetas ahora son **verdaderamente únicas** para cada canción:
 
 ¡Cada canción ahora tiene su propia **identidad visual** que refleja su contenido artístico! 🎵✨
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

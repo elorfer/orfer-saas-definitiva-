@@ -1,15 +1,21 @@
 import {
   Controller,
   Get,
+  Post,
+  Delete,
   Query,
   Param,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 
 import { ArtistsService } from './artists.service';
 import { FeaturedService } from '../featured/featured.service';
-import { ArtistSerializer } from '@/common/utils/artist-serializer';
+import { ArtistSerializer } from '../../common/utils/artist-serializer';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../../common/entities/user.entity';
 
 @ApiTags('public-artists')
 @Controller('public/artists')
@@ -63,6 +69,78 @@ export class PublicArtistsController {
   async getByIdPublic(@Param('id') id: string) {
     const artist = await this.artistsService.findOne(id);
     return ArtistSerializer.serializeFull(artist);
+  }
+
+  // ========== ENDPOINTS DE SEGUIMIENTO (requieren autenticación) ==========
+
+  @Post(':artistId/follow')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Seguir un artista' })
+  @ApiParam({ name: 'artistId', description: 'ID del artista a seguir' })
+  @ApiResponse({ status: 200, description: 'Artista seguido exitosamente' })
+  @ApiResponse({ status: 404, description: 'Artista no encontrado' })
+  @ApiResponse({ status: 400, description: 'Ya estás siguiendo a este artista o no puedes seguirte a ti mismo' })
+  async followArtist(
+    @Param('artistId') artistId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.artistsService.followArtist(artistId, user.id);
+    const artist = await this.artistsService.findOne(artistId);
+    return {
+      ...result,
+      artist: ArtistSerializer.serializeLite(artist),
+    };
+  }
+
+  @Delete(':artistId/follow')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Dejar de seguir un artista' })
+  @ApiParam({ name: 'artistId', description: 'ID del artista a dejar de seguir' })
+  @ApiResponse({ status: 200, description: 'Dejaste de seguir al artista exitosamente' })
+  @ApiResponse({ status: 404, description: 'Artista no encontrado' })
+  async unfollowArtist(
+    @Param('artistId') artistId: string,
+    @CurrentUser() user: User,
+  ) {
+    const result = await this.artistsService.unfollowArtist(artistId, user.id);
+    const artist = await this.artistsService.findOne(artistId);
+    return {
+      ...result,
+      artist: ArtistSerializer.serializeLite(artist),
+    };
+  }
+
+  @Get(':artistId/is-followed')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verificar si el usuario sigue a un artista' })
+  @ApiParam({ name: 'artistId', description: 'ID del artista' })
+  @ApiQuery({ name: 'userId', required: false, description: 'ID del usuario (opcional, usa el usuario autenticado por defecto)' })
+  @ApiResponse({ status: 200, description: 'Estado de seguimiento' })
+  @ApiResponse({ status: 404, description: 'Artista no encontrado' })
+  async isFollowing(
+    @Param('artistId') artistId: string,
+    @CurrentUser() user: User,
+    @Query('userId') userId?: string,
+  ) {
+    const targetUserId = userId || user.id;
+    const isFollowing = await this.artistsService.isFollowing(artistId, targetUserId);
+    return { isFollowing };
+  }
+
+  @Get('followed/mine')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obtener lista de artistas seguidos por el usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Lista de artistas seguidos' })
+  async getMyFollowedArtists(@CurrentUser() user: User) {
+    const artists = await this.artistsService.getFollowedArtists(user.id);
+    return {
+      artists: artists.map((artist) => ArtistSerializer.serializeLite(artist)),
+      total: artists.length,
+    };
   }
 }
 

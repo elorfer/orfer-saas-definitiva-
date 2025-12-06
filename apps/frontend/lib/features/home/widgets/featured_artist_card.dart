@@ -6,6 +6,7 @@ import '../../../core/models/artist_model.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/image_placeholder.dart';
+import '../../../core/widgets/verified_badge.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
 class FeaturedArtistCard extends StatelessWidget {
@@ -56,10 +57,11 @@ class FeaturedArtistCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nombre del artista
-                  Text(
-                    artist.stageName ?? 'Artista Desconocido',
-                    style: GoogleFonts.inter(
+                  // Nombre del artista con badge de verificación
+                  ArtistNameWithBadge(
+                    artistName: artist.stageName ?? 'Artista Desconocido',
+                    isVerified: artist.isVerifiedValue,
+                    textStyle: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: NeumorphismTheme.textPrimary,
@@ -67,6 +69,7 @@ class FeaturedArtistCard extends StatelessWidget {
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    badgeSize: 14.0,
                   ),
                   
                   const SizedBox(height: 6),
@@ -207,12 +210,12 @@ class FeaturedArtistCard extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: normalizedUrl,
         fit: BoxFit.cover,
-        memCacheWidth: 280, // 2x para pantallas de alta densidad
-        memCacheHeight: 280,
-        maxWidthDiskCache: 560, // Cache en disco más grande
-        maxHeightDiskCache: 560,
-        fadeInDuration: const Duration(milliseconds: 200),
-        fadeOutDuration: const Duration(milliseconds: 100),
+        memCacheWidth: 300, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (300px es suficiente)
+        memCacheHeight: 300,
+        maxWidthDiskCache: 600,
+        maxHeightDiskCache: 600,
+        fadeInDuration: Duration.zero, // 🔥 Cero animaciones innecesarias
+        fadeOutDuration: Duration.zero,
         errorWidget: (context, url, error) {
           // Log del error solo en modo debug (no en producción)
           if (kDebugMode) {
