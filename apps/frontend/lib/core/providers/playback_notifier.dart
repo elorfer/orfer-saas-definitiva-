@@ -844,6 +844,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         return;
       }
 
+      // 🚫 Si no se está reproduciendo o la cola está vacía, detener el monitor
+      if (!service.player.playing || state.currentQueue.isEmpty) {
+        AppLogger.info('[PlaybackNotifier] 🎯 FASE 2: Monitor detenido (pausado o cola vacía)');
+        _stopAlgorithmMonitor();
+        return;
+      }
+
       // 🎯 FASE 2: Obtener canciones restantes usando función centralizada
       final remainingSongs = _getRemainingQueueSize();
       
@@ -1287,6 +1294,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           // Si no hay algoritmo esperando y no está en repeat, detener la reproducción
           AppLogger.info('[PlaybackNotifier] Fin de cola fija. Deteniendo reproducción.');
           await service.pause();
+          _stopAlgorithmMonitor(); // Detener monitor si terminamos la cola fija
           state = state.copyWith(isPlaying: false);
         }
       }
@@ -1343,6 +1351,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   Future<void> togglePlayPause() async {
     if (state.isPlaying) {
       await service.pause();
+      _stopAlgorithmMonitor(); // Detener monitor cuando se pausa
     } else {
       await service.play();
     }

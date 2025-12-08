@@ -3,7 +3,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../services/image_preloader_service.dart';
 import '../utils/url_normalizer.dart';
 
 class StableImageWidget extends StatefulWidget {
@@ -90,8 +89,6 @@ class _StableImageWidgetState extends State<StableImageWidget> {
 
   Widget _buildCachedImage(String imageUrl) {
     // 🚀 Verificar si la imagen ya está precargada para evitar animaciones
-    final isPreloaded = ImagePreloaderService().isImagePreloaded(imageUrl);
-    
     return Builder(
       builder: (context) {
         // Calcular memCache basado en tamaño del widget y devicePixelRatio
@@ -124,8 +121,8 @@ class _StableImageWidgetState extends State<StableImageWidget> {
           memCacheHeight: memCacheHeight,
           maxWidthDiskCache: memCacheWidth,
           maxHeightDiskCache: memCacheHeight,
-          // 🎯 Sin animación si ya está precargada, transición rápida si no
-          fadeInDuration: isPreloaded ? Duration.zero : const Duration(milliseconds: 100),
+          // 🎯 Evitar parpadeo: sin animación y sin reusar imagen anterior
+          fadeInDuration: Duration.zero,
           fadeOutDuration: Duration.zero,
           placeholderFadeInDuration: Duration.zero,
           // Cache optimizado
@@ -134,8 +131,8 @@ class _StableImageWidgetState extends State<StableImageWidget> {
             'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
             'Cache-Control': 'max-age=3600',
           },
-          // Mantener imagen anterior durante cambio
-          useOldImageOnUrlChange: true,
+          // No reutilizar la imagen anterior al cambiar de URL (evita mostrar la carátula previa)
+          useOldImageOnUrlChange: false,
           filterQuality: FilterQuality.medium,
           placeholder: (context, url) => widget.placeholder ?? _buildPlaceholder(),
           errorWidget: (context, url, error) => widget.errorWidget ?? _buildErrorWidget(),
