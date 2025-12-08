@@ -38,7 +38,7 @@ class SongCardExample extends ConsumerWidget {
           color: isCurrentSong 
               ? NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1)
               : NeumorphismTheme.background,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -59,11 +59,11 @@ class SongCardExample extends ConsumerWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
                     color: NeumorphismTheme.coffeeMedium,
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
                     child: song.coverArtUrl != null
                         ? StableImageWidget(
                             imageUrl: song.coverArtUrl,
@@ -155,7 +155,7 @@ class SongCardExample extends ConsumerWidget {
                           AppLogger.error('[SongCardExample] Error: $e');
                         }
                       },
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius: const BorderRadius.all(Radius.circular(22)),
                       child: Center(
                         child: Icon(
                           isCurrentSong && isPlaying 
@@ -179,7 +179,7 @@ class SongCardExample extends ConsumerWidget {
               SizedBox(
                 height: 2,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(1),
+                  borderRadius: const BorderRadius.all(Radius.circular(1)),
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
                     backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),

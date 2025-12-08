@@ -27,43 +27,44 @@ class SocialAuthButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Usar InkWell en lugar de OutlinedButton para evitar problemas con Expanded/Flexible
     return SizedBox(
       height: _defaultHeight,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: backgroundColor ?? Colors.white,
-          foregroundColor: textColor ?? Colors.grey[700],
-          side: BorderSide(
-            color: Colors.grey[300]!,
-            width: 1,
-          ),
-          shape: const RoundedRectangleBorder(
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: _borderRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            color: backgroundColor ?? Colors.white,
             borderRadius: _borderRadius,
+            border: Border.all(
+              color: Colors.grey[300]!,
+              width: 1,
+            ),
           ),
-          elevation: 0,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: _iconSize,
-              color: iconColor ?? Colors.grey[600],
-            ),
-            const SizedBox(width: _spacing),
-            Flexible(
-              child: Text(
-                text,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-                overflow: TextOverflow.ellipsis,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            // ✅ CORRECCIÓN: No usar mainAxisSize.min cuando hay Flexible
+            children: [
+              Icon(
+                icon,
+                size: _iconSize,
+                color: iconColor ?? Colors.grey[600],
               ),
-            ),
-          ],
+              const SizedBox(width: _spacing),
+              Flexible(
+                child: Text(
+                  text,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: textColor ?? Colors.grey[700],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

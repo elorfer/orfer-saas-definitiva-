@@ -187,51 +187,50 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    // 🔥 OPTIMIZACIÓN: RepaintBoundary para evitar repintados innecesarios
-    return RepaintBoundary(
-      child: Expanded(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              // 🔥 OPTIMIZACIÓN: Ejecutar callback inmediatamente sin delay
-              onTap();
-            },
-            borderRadius: BorderRadius.circular(12),
-            splashColor: Colors.transparent, // Sin splash para mejor rendimiento
-            highlightColor: Colors.transparent, // Sin highlight para mejor rendimiento
-            hoverColor: Colors.transparent, // Sin hover para mejor rendimiento
-            child: Container(
-              height: 60,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isSelected ? activeIcon : icon,
-                    size: 30,
+    // 🔥 OPTIMIZACIÓN: RepaintBoundary dentro del Flexible, no envolviéndolo
+    // ✅ CORRECCIÓN: Flexible debe estar directamente en el Row, RepaintBoundary va dentro
+    return Flexible(
+      flex: 1,
+      child: RepaintBoundary(
+        child: InkWell(
+          onTap: () {
+            // 🔥 OPTIMIZACIÓN: Ejecutar callback inmediatamente sin delay
+            onTap();
+          },
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
+          splashColor: Colors.transparent, // Sin splash para mejor rendimiento
+          highlightColor: Colors.transparent, // Sin highlight para mejor rendimiento
+          hoverColor: Colors.transparent, // Sin hover para mejor rendimiento
+          child: Container(
+            height: 60,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isSelected ? activeIcon : icon,
+                  size: 30,
+                  color: isSelected 
+                    ? NeumorphismTheme.coffeeDark
+                    : NeumorphismTheme.textSecondary,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected 
                       ? NeumorphismTheme.coffeeDark
                       : NeumorphismTheme.textSecondary,
+                    height: 1.1,
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    label,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected 
-                        ? NeumorphismTheme.coffeeDark
-                        : NeumorphismTheme.textSecondary,
-                      height: 1.1,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ),

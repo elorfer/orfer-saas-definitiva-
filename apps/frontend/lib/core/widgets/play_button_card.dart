@@ -62,8 +62,40 @@ class PlayButtonCard extends ConsumerWidget {
         }
         
         // ⚡ Reproducción después de precargar portada
-        final notifier = ref.read(unifiedAudioProviderFixed.notifier);
-        notifier.playFromCard(song);
+        // 🚨 ACTIVAR MODO ALGORITMO (Radio Infinita) al tocar la tarjeta
+        
+        // Validar que la canción tenga URL válida
+        if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+          debugPrint('❌ [PlayButtonCard] Canción sin URL: ${song.title} (ID: ${song.id})');
+          return;
+        }
+        
+        try {
+          final notifier = ref.read(unifiedAudioProviderFixed.notifier);
+          await notifier.playFromCard(song, useAlgorithm: true);
+        } catch (e, stackTrace) {
+          debugPrint('❌ [PlayButtonCard] Error al reproducir canción: $e');
+          debugPrint('Stack trace: $stackTrace');
+          
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
       },
       child: Container(
         width: size,

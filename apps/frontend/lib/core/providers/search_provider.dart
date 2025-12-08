@@ -204,6 +204,8 @@ class SearchNotifier extends Notifier<SearchState> {
   }
 }
 
+/// ⚡ OPTIMIZACIÓN: NO usar autoDispose porque SearchScreen es pantalla principal
+/// Necesitamos mantener el estado de búsqueda incluso cuando no está visible
 final searchProvider = NotifierProvider<SearchNotifier, SearchState>(() {
   return SearchNotifier();
 });

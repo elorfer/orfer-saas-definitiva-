@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/neumorphism_theme.dart';
+import '../utils/intersection_observer.dart';
 
-/// Widget optimizado de imagen con carga progresiva
+/// Widget optimizado de imagen con carga progresiva y lazy loading
 /// - Carga thumbnail primero para scroll rápido
 /// - Carga HD cuando es necesario
 /// - Placeholder optimizado
 /// - Error widget personalizado
 /// - Caché inteligente según el contexto
-class OptimizedImage extends StatelessWidget {
+/// - 🔥 Lazy loading: Solo carga cuando está visible en el viewport (IntersectionObserver)
+class OptimizedImage extends StatefulWidget {
   final String? imageUrl;
   final BoxFit fit;
   final double? width;
@@ -22,6 +24,8 @@ class OptimizedImage extends StatelessWidget {
   final int? maxCacheWidth; // Ancho máximo de caché personalizado
   final int? maxCacheHeight; // Alto máximo de caché personalizado
   final bool skipFade; // Si es true, elimina fade cuando la imagen está en cache (evita parpadeo)
+  final bool lazyLoad; // Si es true, solo carga la imagen cuando está visible (IntersectionObserver)
+  final double visibilityThreshold; // Porcentaje de visibilidad necesario para cargar (0.0 - 1.0)
 
   const OptimizedImage({
     super.key,
@@ -38,13 +42,69 @@ class OptimizedImage extends StatelessWidget {
     this.maxCacheWidth,
     this.maxCacheHeight,
     this.skipFade = false, // Por defecto mantener fade para nuevas imágenes
+    this.lazyLoad = true, // Por defecto activar lazy loading
+    this.visibilityThreshold = 0.1, // 10% visible para cargar
   });
 
+  @override
+  State<OptimizedImage> createState() => _OptimizedImageState();
+}
+
+class _OptimizedImageState extends State<OptimizedImage> {
+  final GlobalKey _imageKey = GlobalKey();
+  bool _isVisible = false;
+  bool _hasLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Si lazyLoad está desactivado, cargar inmediatamente
+    if (!widget.lazyLoad) {
+      _isVisible = true;
+      _hasLoaded = true;
+    }
+  }
+
+  void _checkVisibility() {
+    if (!mounted || !widget.lazyLoad) return;
+    
+    final isVisible = IntersectionObserver.isVisibleInViewport(
+      _imageKey,
+      context,
+      threshold: widget.visibilityThreshold,
+      rootMargin: 100.0, // 100px de margen para precargar
+    );
+    
+    if (isVisible && !_isVisible) {
+      // Widget entró en el viewport
+      setState(() {
+        _isVisible = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl == null || imageUrl!.isEmpty) {
+    // Verificar visibilidad después del primer frame
+    if (widget.lazyLoad && !_hasLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkVisibility();
+        _hasLoaded = true;
+      });
+    }
+    
+    if (widget.imageUrl == null || widget.imageUrl!.isEmpty) {
       return _buildDefaultWidget();
+    }
+
+    // 🔥 LAZY LOADING: Si lazyLoad está activado y el widget no es visible, mostrar solo placeholder
+    if (widget.lazyLoad && !_isVisible) {
+      return Container(
+        key: _imageKey,
+        width: widget.width,
+        height: widget.height,
+        child: widget.placeholder ?? _buildPlaceholder(),
+      );
     }
 
     // ✅ OPTIMIZACIÓN: Obtener el tamaño de pantalla para optimizar caché
@@ -55,30 +115,30 @@ class OptimizedImage extends StatelessWidget {
     
     // Para portadas grandes (SliverAppBar), usar tamaño optimizado
     int? getMemCacheWidth() {
-      if (maxCacheWidth != null) return maxCacheWidth;
+      if (widget.maxCacheWidth != null) return widget.maxCacheWidth;
       
-      if (isLargeCover) {
+      if (widget.isLargeCover) {
         // Para portadas grandes, limitar a 2x el ancho de pantalla (suficiente para calidad)
         return (screenSize.width * devicePixelRatio * 2).round();
       }
       
-      if (width == null || !width!.isFinite || width!.isNaN || width!.isInfinite) return null;
-      final result = width! * devicePixelRatio;
+      if (widget.width == null || !widget.width!.isFinite || widget.width!.isNaN || widget.width!.isInfinite) return null;
+      final result = widget.width! * devicePixelRatio;
       if (!result.isFinite || result.isNaN || result.isInfinite) return null;
       // 🔥 OPTIMIZACIÓN: Limitar a 300px máximo (suficiente para calidad)
       return (result > 300) ? 300 : result.round();
     }
 
     int? getMemCacheHeight() {
-      if (maxCacheHeight != null) return maxCacheHeight;
+      if (widget.maxCacheHeight != null) return widget.maxCacheHeight;
       
-      if (isLargeCover) {
+      if (widget.isLargeCover) {
         // Para portadas grandes, limitar a 600px (altura típica de SliverAppBar expandido)
         return (600 * devicePixelRatio).round();
       }
       
-      if (height == null || !height!.isFinite || height!.isNaN || height!.isInfinite) return null;
-      final result = height! * devicePixelRatio;
+      if (widget.height == null || !widget.height!.isFinite || widget.height!.isNaN || widget.height!.isInfinite) return null;
+      final result = widget.height! * devicePixelRatio;
       if (!result.isFinite || result.isNaN || result.isInfinite) return null;
       // 🔥 OPTIMIZACIÓN: Limitar a 300px máximo (suficiente para calidad)
       return (result > 300) ? 300 : result.round();
@@ -88,14 +148,14 @@ class OptimizedImage extends StatelessWidget {
     // CRÍTICO: Cuando skipFade es true, usar placeholder solo si no se proporciona uno personalizado
     // Si skipFade es true pero no hay placeholder personalizado, usar el placeholder por defecto
     // Esto asegura que siempre haya algo visible mientras la imagen carga
-    final Widget effectivePlaceholder = placeholder ?? _buildPlaceholder();
+    final Widget effectivePlaceholder = widget.placeholder ?? _buildPlaceholder();
 
     // CRÍTICO: CachedNetworkImage usa octo_image que NO permite placeholder y progressIndicatorBuilder simultáneamente
     // Solución: Usar Image con CachedNetworkImageProvider y manejar placeholder manualmente con frameBuilder
     // Esto evita el conflicto de assertion de octo_image
     final imageProvider = CachedNetworkImageProvider(
-      imageUrl!,
-      cacheKey: imageUrl,
+      widget.imageUrl!,
+      cacheKey: widget.imageUrl,
       headers: const {
         'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
         'Cache-Control': 'max-age=86400',
@@ -108,10 +168,10 @@ class OptimizedImage extends StatelessWidget {
     
     // ✅ OPTIMIZACIÓN: Para imágenes pequeñas (thumbnails), evitar ResizeImage
     // ResizeImage es costoso y para thumbnails pequeños no es necesario
-    final bool isSmallThumbnail = width != null && width! <= 128 && height != null && height! <= 128;
+    final bool isSmallThumbnail = widget.width != null && widget.width! <= 128 && widget.height != null && widget.height! <= 128;
     
     // Construir el ImageProvider apropiado
-    final ImageProvider effectiveImageProvider = isSmallThumbnail && !isLargeCover
+    final ImageProvider effectiveImageProvider = isSmallThumbnail && !widget.isLargeCover
         ? imageProvider // Usar provider directo para thumbnails pequeños
         : ResizeImage(
             imageProvider,
@@ -120,10 +180,11 @@ class OptimizedImage extends StatelessWidget {
           ) as ImageProvider;
     
     final Widget imageWidget = Image(
+      key: _imageKey,
       image: effectiveImageProvider,
-      fit: fit,
-      width: (width != null && width!.isFinite && !width!.isNaN && !width!.isInfinite) ? width : null,
-      height: (height != null && height!.isFinite && !height!.isNaN && !height!.isInfinite) ? height : null,
+      fit: widget.fit,
+      width: (widget.width != null && widget.width!.isFinite && !widget.width!.isNaN && !widget.width!.isInfinite) ? widget.width : null,
+      height: (widget.height != null && widget.height!.isFinite && !widget.height!.isNaN && !widget.height!.isInfinite) ? widget.height : null,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
         // Si la imagen se cargó sincrónicamente o ya tiene frame, mostrarla
         if (wasSynchronouslyLoaded || frame != null) {
@@ -133,14 +194,14 @@ class OptimizedImage extends StatelessWidget {
         return effectivePlaceholder;
       },
       errorBuilder: (context, error, stackTrace) {
-        return errorWidget ?? _buildErrorWidget();
+        return widget.errorWidget ?? _buildErrorWidget();
       },
       filterQuality: isSmallThumbnail ? FilterQuality.low : FilterQuality.medium, // ✅ OPTIMIZACIÓN: Low quality para thumbnails pequeños
     );
 
-    if (borderRadius != null) {
+    if (widget.borderRadius != null) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius!),
+        borderRadius: BorderRadius.circular(widget.borderRadius!),
         child: imageWidget,
       );
     }
@@ -154,10 +215,10 @@ class OptimizedImage extends StatelessWidget {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: placeholderColor != null
+        colors: widget.placeholderColor != null
             ? [
-                placeholderColor!.withValues(alpha: 0.3),
-                placeholderColor!.withValues(alpha: 0.5),
+                widget.placeholderColor!.withValues(alpha: 0.3),
+                widget.placeholderColor!.withValues(alpha: 0.5),
               ]
             : [
                 NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
@@ -167,10 +228,10 @@ class OptimizedImage extends StatelessWidget {
     );
 
     // Para portadas grandes, usar un placeholder más simple y rápido
-    if (isLargeCover) {
+    if (widget.isLargeCover) {
       return Container(
-        width: width,
-        height: height,
+        width: widget.width,
+        height: widget.height,
         decoration: gradient,
         child: const Center(
           child: Icon(
@@ -184,16 +245,16 @@ class OptimizedImage extends StatelessWidget {
 
     // Placeholder sólido sin indicador de carga para evitar "apariciones" durante scroll
     return Container(
-      width: width,
-      height: height,
+      width: widget.width,
+      height: widget.height,
       decoration: gradient,
     );
   }
 
   Widget _buildErrorWidget() {
     return Container(
-      width: width,
-      height: height,
+      width: widget.width,
+      height: widget.height,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -216,8 +277,8 @@ class OptimizedImage extends StatelessWidget {
 
   Widget _buildDefaultWidget() {
     return Container(
-      width: width,
-      height: height,
+      width: widget.width,
+      height: widget.height,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,

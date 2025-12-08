@@ -18,7 +18,7 @@ class UserProfileCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha:0.1),
@@ -38,10 +38,10 @@ class UserProfileCard extends StatelessWidget {
                 height: 60,
                 decoration: BoxDecoration(
                   color: NeumorphismTheme.coffeeMedium.withValues(alpha:0.1),
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: const BorderRadius.all(Radius.circular(30)),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: const BorderRadius.all(Radius.circular(30)),
                   child: OptimizedImage(
                     imageUrl: user.avatarUrl,
                     fit: BoxFit.cover,
@@ -93,7 +93,7 @@ class UserProfileCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: _getRoleColor(user.role).withValues(alpha:0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: const BorderRadius.all(Radius.circular(12)),
                           ),
                           child: Text(
                             _getRoleText(user.role),
@@ -113,7 +113,7 @@ class UserProfileCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: _getSubscriptionColor(user.subscriptionStatus).withValues(alpha:0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: const BorderRadius.all(Radius.circular(12)),
                           ),
                           child: Text(
                             _getSubscriptionText(user.subscriptionStatus),
@@ -136,7 +136,7 @@ class UserProfileCard extends StatelessWidget {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha:0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: const BorderRadius.all(Radius.circular(20)),
                   ),
                   child: const Icon(
                     Icons.verified,

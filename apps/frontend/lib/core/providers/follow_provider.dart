@@ -47,7 +47,8 @@ class FollowState {
 }
 
 /// Provider para el estado de seguimiento de artistas
-final followProvider = NotifierProvider<FollowNotifier, FollowState>(() {
+/// ⚡ OPTIMIZACIÓN: autoDispose para liberar memoria cuando no hay listeners
+final followProvider = NotifierProvider.autoDispose<FollowNotifier, FollowState>(() {
   return FollowNotifier();
 });
 

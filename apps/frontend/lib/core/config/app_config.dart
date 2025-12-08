@@ -3,7 +3,7 @@ import '../utils/logger.dart';
 
 class AppConfig {
   // Configuración de la aplicación
-  static const String appName = 'Srtuky';
+  static const String appName = 'struky';
   static const String appVersion = '1.0.0';
 
   // URLs de configuración
@@ -151,9 +151,11 @@ class AppConfig {
   };
   
   // Timeouts
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
-  static const Duration sendTimeout = Duration(seconds: 30);
+  // 🚨 REDUCIDO A 10 SEGUNDOS: Evita que la app se congele por más de 10s
+  // Si la API tarda más, es mejor fallar rápido y mostrar un mensaje al usuario
+  static const Duration connectTimeout = Duration(seconds: 10);
+  static const Duration receiveTimeout = Duration(seconds: 10);
+  static const Duration sendTimeout = Duration(seconds: 10);
   
   // Configuración de reintentos
   static const int maxRetries = 3;

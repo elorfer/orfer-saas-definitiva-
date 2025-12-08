@@ -28,7 +28,7 @@ class AlbumSwiper extends StatelessWidget {
         height: coverSize,
         width: coverSize,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.5),
@@ -39,7 +39,7 @@ class AlbumSwiper extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
           child: _AlbumCoverImage(song: currentSong),
         ),
       ),

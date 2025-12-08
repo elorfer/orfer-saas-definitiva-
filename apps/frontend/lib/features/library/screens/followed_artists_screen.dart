@@ -143,7 +143,7 @@ class _FollowedArtistsScreenState extends ConsumerState<FollowedArtistsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: NeumorphismTheme.neumorphismShadow,
       ),
       child: ListTile(

@@ -175,32 +175,47 @@ final homeStateProvider = NotifierProvider<HomeNotifier, HomeState>(() {
 });
 
 /// Providers específicos para cada sección con selectors para evitar rebuilds innecesarios
-/// Usando select() para optimizar: solo se reconstruyen cuando cambia el valor específico
+/// 🔥 OPTIMIZACIÓN: Usando select() + keepAlive para memoization y evitar recálculos
+/// Solo se reconstruyen cuando cambia el valor específico
 final featuredArtistsProvider = Provider<List<FeaturedArtist>>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.featuredArtists));
 });
 
 final featuredSongsProvider = Provider<List<FeaturedSong>>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.featuredSongs));
 });
 
 final featuredPlaylistsProvider = Provider<List<FeaturedPlaylist>>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.featuredPlaylists));
 });
 
 final popularSongsProvider = Provider<List<Song>>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.popularSongs));
 });
 
 final topArtistsProvider = Provider<List<Artist>>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.topArtists));
 });
 
 final isLoadingProvider = Provider<bool>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.isLoading));
 });
 
 final homeErrorProvider = Provider<String?>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.error));
 });
 

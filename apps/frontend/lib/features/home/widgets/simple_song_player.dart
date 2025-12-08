@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/song_model.dart';
-import '../../../core/audio/simple_audio_manager.dart';
+import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/utils/logger.dart';
 
 /// Widget SÚPER SIMPLE para probar recomendaciones por género
@@ -15,7 +15,8 @@ class SimpleSongPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final audioManager = ref.read(simpleAudioManagerProvider);
+    final currentSong = ref.watch(currentSongProviderFixed);
+    final isPlaying = ref.watch(isPlayingProviderFixed);
 
     return Card(
       margin: const EdgeInsets.all(8),
@@ -53,55 +54,43 @@ class SimpleSongPlayer extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () async {
                     AppLogger.info('[SimpleSongPlayer] 🎵 Reproduciendo: ${song.title}');
-                    await audioManager.playSong(song);
+                    await ref.read(unifiedAudioProviderFixed.notifier).playSong(song);
                   },
                   icon: const Icon(Icons.play_arrow),
                   label: const Text('Reproducir'),
                 ),
                 const SizedBox(width: 8),
-                StreamBuilder<bool>(
-                  stream: audioManager.isPlayingStream,
-                  builder: (context, snapshot) {
-                    final isPlaying = snapshot.data ?? false;
-                    return ElevatedButton.icon(
-                      onPressed: () async {
-                        await audioManager.togglePlayPause();
-                      },
-                      icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                      label: Text(isPlaying ? 'Pausar' : 'Reanudar'),
-                    );
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
                   },
+                  icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                  label: Text(isPlaying ? 'Pausar' : 'Reanudar'),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            StreamBuilder<Song?>(
-              stream: audioManager.currentSongStream,
-              builder: (context, snapshot) {
-                final currentSong = snapshot.data;
-                if (currentSong != null) {
-                  return Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+            if (currentSong != null)
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Reproduciendo ahora:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Reproduciendo ahora:',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text('${currentSong.title} - ${currentSong.artist?.stageName}'),
-                        Text('Géneros: ${currentSong.genres?.join(', ') ?? 'Sin géneros'}'),
-                      ],
-                    ),
-                  );
-                }
-                return const Text('No hay canción reproduciéndose');
-              },
-            ),
+                    Text('${currentSong.title} - ${currentSong.artist?.stageName}'),
+                    Text('Géneros: ${currentSong.genres?.join(', ') ?? 'Sin géneros'}'),
+                  ],
+                ),
+              )
+            else
+              const Text('No hay canción reproduciéndose'),
           ],
         ),
       ),

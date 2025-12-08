@@ -41,7 +41,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: const BorderRadius.all(Radius.circular(16)),
               child: OptimizedImage(
                 imageUrl: playlist.coverArtUrl,
                 fit: BoxFit.cover,
@@ -97,7 +97,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min, // ✅ Tamaño mínimo
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.queue_music_rounded,
                           size: 14,
                           color: NeumorphismTheme.textSecondary,
@@ -133,9 +133,9 @@ class FeaturedPlaylistCard extends StatelessWidget {
                   ),
                 ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                  // ✅ CORRECCIÓN: No usar mainAxisSize.min cuando hay Expanded
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.star_rounded,
                       size: 14,
                       color: NeumorphismTheme.accent,

@@ -42,7 +42,8 @@ final favoritesServiceProvider = Provider<FavoritesService>((ref) {
 });
 
 /// Provider del estado de favoritos
-final favoritesProvider = NotifierProvider<FavoritesNotifier, FavoritesState>(() {
+/// ⚡ OPTIMIZACIÓN: autoDispose para liberar memoria cuando no hay listeners
+final favoritesProvider = NotifierProvider.autoDispose<FavoritesNotifier, FavoritesState>(() {
   return FavoritesNotifier();
 });
 
@@ -70,8 +71,20 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
     try {
       state = state.copyWith(isLoading: true, error: null);
       
+      // 🚨 OPERACIÓN ASÍNCRONA: Llamada al servicio
       final favorites = await _service!.getMyFavorites();
+      
+      // 🚨 CRÍTICO: Verificar si el provider sigue montado después del await
+      // Si el usuario navegó fuera de la pantalla durante la espera, salir
+      if (!ref.mounted) {
+        AppLogger.debug('[FavoritesNotifier] Provider disposed, ignorando resultado de _loadFavorites');
+        return;
+      }
+      
       final favoriteIds = favorites.map((song) => song.id).toSet();
+      
+      // 🚨 Verificar nuevamente antes de actualizar el estado
+      if (!ref.mounted) return;
       
       state = state.copyWith(
         favorites: favorites,
@@ -80,6 +93,13 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
       );
     } catch (e, stackTrace) {
       AppLogger.error('[FavoritesNotifier] Error al cargar favoritos: $e', stackTrace);
+      
+      // 🚨 CRÍTICO: Verificar si el provider sigue montado antes de actualizar el estado de error
+      if (!ref.mounted) {
+        AppLogger.debug('[FavoritesNotifier] Provider disposed, ignorando error de _loadFavorites');
+        return;
+      }
+      
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
@@ -115,6 +135,9 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
 
       // Llamar al backend
       final isNowFavorite = await _service!.toggleFavorite(songId);
+      
+      // 🚨 CRÍTICO: Verificar si el provider sigue montado después del await
+      if (!ref.mounted) return;
 
       // Si el backend confirma, actualizar estado final
       if (isNowFavorite != wasFavorite) {
@@ -130,6 +153,9 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
       }
     } catch (e, stackTrace) {
       AppLogger.error('[FavoritesNotifier] Error en toggleFavorite: $e', stackTrace);
+      
+      // 🚨 CRÍTICO: Verificar si el provider sigue montado antes de revertir
+      if (!ref.mounted) return;
       
       // Revertir optimistic update en caso de error
       await _loadFavorites();

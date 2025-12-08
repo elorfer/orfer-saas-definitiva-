@@ -29,7 +29,7 @@ class SplashScreen extends StatelessWidget {
                 height: logoSize,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: const BorderRadius.all(Radius.circular(24)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.4),
@@ -39,7 +39,7 @@ class SplashScreen extends StatelessWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: const BorderRadius.all(Radius.circular(24)),
                   child: Image.asset(
                     'assets/images/logo.png',
                     width: logoSize,
@@ -58,7 +58,7 @@ class SplashScreen extends StatelessWidget {
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
-                'Srtuky',
+                'struky',
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 28 : (isMediumScreen ? 32 : 36),
                   fontWeight: FontWeight.bold,

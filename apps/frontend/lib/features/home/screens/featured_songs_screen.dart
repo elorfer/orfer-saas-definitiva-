@@ -1,3 +1,4 @@
+import 'dart:async'; // ✅ Para Timer
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,8 +8,10 @@ import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/config/performance_config.dart';
 import '../../../core/widgets/optimized_image.dart';
+import '../../../core/widgets/verified_badge.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/utils/url_normalizer.dart';
+import '../../../core/utils/intersection_observer.dart';
 
 /// 🚀 PANTALLA OPTIMIZADA DE CANCIONES DESTACADAS
 /// Implementa múltiples optimizaciones de rendimiento:
@@ -26,18 +29,106 @@ class FeaturedSongsScreen extends ConsumerStatefulWidget {
 class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen> 
     with AutomaticKeepAliveClientMixin {
   
+  late ScrollController _scrollController;
+  
+  // ✅ OPTIMIZACIÓN: Cache de URLs de imágenes para evitar recálculos en _onScroll
+  List<String> _cachedImageUrls = [];
+  int _cachedSongsCount = 0;
+  
+  // ✅ OPTIMIZACIÓN: Timer para debounce en _onScroll
+  Timer? _scrollDebounceTimer;
+  
   @override
   bool get wantKeepAlive => PerformanceConfig.enableKeepAlive;
+  
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    // ✅ OPTIMIZACIÓN: Listener para precachear imágenes visibles al hacer scroll
+    _scrollController.addListener(_onScroll);
+  }
+  
+  @override
+  void dispose() {
+    // ✅ OPTIMIZACIÓN: Cancelar timer de debounce
+    _scrollDebounceTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  /// ✅ OPTIMIZACIÓN: Precachear imágenes visibles al hacer scroll
+  /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    // ✅ OPTIMIZACIÓN: Cancelar timer anterior si existe
+    _scrollDebounceTimer?.cancel();
+    
+    // ✅ OPTIMIZACIÓN: Debounce de 300ms para evitar ejecuciones excesivas
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted || !_scrollController.hasClients) return;
+      
+      try {
+        // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer del provider cada vez
+        if (_cachedImageUrls.isEmpty) {
+          // Si no hay cache, actualizar desde el provider (solo una vez)
+          final featuredSongs = ref.read(intelligentFeaturedProvider).featuredSongs;
+          if (featuredSongs.isEmpty) return;
+          
+          _cachedImageUrls = featuredSongs
+              .map((fs) => UrlNormalizer.normalizeImageUrl(fs.song.coverArtUrl))
+              .where((url) => url != null && url.isNotEmpty)
+              .cast<String>()
+              .toList();
+          _cachedSongsCount = featuredSongs.length;
+        }
+        
+        // Precachear imágenes visibles
+        if (_cachedImageUrls.isNotEmpty) {
+          LazyImageLoader.precacheVisibleVerticalImages(
+            scrollController: _scrollController,
+            itemExtent: 80.0, // Altura aproximada de cada tarjeta (padding + contenido)
+            itemCount: _cachedSongsCount,
+            imageUrls: _cachedImageUrls,
+            context: context,
+            precacheCount: 5, // Precachear 5 items antes y después de los visibles
+          );
+        }
+      } catch (e) {
+        // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
+        debugPrint('[FeaturedSongsScreen] Error en _onScroll: $e');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
-    final intelligentFeaturedState = ref.watch(intelligentFeaturedProvider);
+    // 🔥 OPTIMIZACIÓN: Usar select() específico para evitar rebuilds innecesarios
+    // Solo se reconstruye cuando cambian estos valores específicos
+    final isLoading = ref.watch(intelligentFeaturedProvider.select((state) => state.isLoading));
+    final error = ref.watch(intelligentFeaturedProvider.select((state) => state.error));
+    final featuredSongs = ref.watch(intelligentFeaturedProvider.select((state) => state.featuredSongs));
+    
+    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambien los datos
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _cachedImageUrls = featuredSongs
+            .map((fs) => UrlNormalizer.normalizeImageUrl(fs.song.coverArtUrl))
+            .where((url) => url != null && url.isNotEmpty)
+            .cast<String>()
+            .toList();
+        _cachedSongsCount = featuredSongs.length;
+      }
+    });
 
-    return Scaffold(
-      backgroundColor: NeumorphismTheme.background,
-      appBar: AppBar(
+    return RepaintBoundary( // ✅ OPTIMIZACIÓN: Evitar repintados innecesarios
+      child: Scaffold(
+        backgroundColor: NeumorphismTheme.background,
+        appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -48,35 +139,46 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
           ),
           onPressed: () => context.pop(),
         ),
-        title: Text(
-          'Canciones Destacadas',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: NeumorphismTheme.textPrimary,
-          ),
-        ),
+        title: const SizedBox.shrink(), // ✅ Sin título
         centerTitle: true,
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(intelligentFeaturedProvider.notifier).loadIntelligentFeaturedSongs(forceRefresh: true);
         },
-        child: intelligentFeaturedState.isLoading
+        child: isLoading
             ? _buildLoadingSection()
-            : intelligentFeaturedState.error != null
-                ? _buildErrorSection(intelligentFeaturedState.error!)
-                : intelligentFeaturedState.featuredSongs.isEmpty
+            : error != null
+                ? _buildErrorSection(error)
+                : featuredSongs.isEmpty
                     ? _buildEmptySection()
-                    : _buildSongsList(context, intelligentFeaturedState.featuredSongs),
+                    : _buildSongsList(context, featuredSongs),
+        ),
       ),
     );
   }
 
   Widget _buildSongsList(BuildContext context, List<FeaturedSong> featuredSongs) {
+    // ✅ OPTIMIZACIÓN: Precachear imágenes iniciales
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final imageUrls = featuredSongs
+            .take(5) // Solo las primeras 5
+            .map((fs) => UrlNormalizer.normalizeImageUrl(fs.song.coverArtUrl))
+            .toList();
+        
+        LazyImageLoader.precacheInitialImages(
+          imageUrls: imageUrls,
+          context: context,
+          count: 5,
+        );
+      }
+    });
+    
     return CustomScrollView(
-      physics: const ClampingScrollPhysics(), // Más fluido que FastScrollPhysics
-      cacheExtent: 500.0, // Optimizado: menos caché = scroll más fluido
+      controller: _scrollController, // ✅ OPTIMIZACIÓN: Conectar ScrollController
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
+      cacheExtent: 400.0, // ✅ Optimizado: cache de scroll para mejor rendimiento
       clipBehavior: Clip.none, // Evitar clipping innecesario
       slivers: [
         // Header mejorado con gradiente (similar a favoritos)
@@ -93,7 +195,7 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
                   NeumorphismTheme.coffeeDark.withValues(alpha: 0.1),
                 ],
               ),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: const BorderRadius.all(Radius.circular(24)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -176,8 +278,9 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
           ),
         ),
         
-        // Lista de canciones optimizada para scroll fluido
-        SliverList(
+        // ✅ OPTIMIZACIÓN: Lista de canciones con itemExtent fijo para mejor rendimiento
+        SliverFixedExtentList(
+          itemExtent: 80.0, // ✅ Ajustado: margin vertical 4*2=8 + padding vertical 8*2=16 + imagen 56 = 80
           delegate: SliverChildBuilderDelegate(
             (context, index) {
               final featuredSong = featuredSongs[index];
@@ -289,7 +392,7 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
   }
 }
 
-/// Widget de tarjeta con estilo igual al perfil del artista (sin número, corazón ni play)
+/// Widget de tarjeta con estilo igual al Home (IntelligentFeaturedSongCard) pero más pequeña
 class _BlurSongCard extends ConsumerWidget {
   final FeaturedSong featuredSong;
   final VoidCallback onTap;
@@ -307,120 +410,144 @@ class _BlurSongCard extends ConsumerWidget {
         : null;
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // ✅ Reducir margin vertical para evitar overflow
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          stops: const [0.0, 0.25, 1.0],
           colors: [
+            NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15), // ✅ Igual que Home
             NeumorphismTheme.surface.withValues(alpha: 0.8),
             NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8, // Igual que en perfil de artista
-            offset: const Offset(0, 3), // Igual que en perfil de artista
+            blurRadius: 8, // ✅ Igual que Home
+            offset: const Offset(0, 3), // ✅ Igual que Home
             spreadRadius: 0,
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                // Portada con efecto de elevación
-                Hero(
-                  tag: 'featured_cover_${song.id}',
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    constraints: const BoxConstraints(
-                      minWidth: 64,
-                      maxWidth: 64,
-                      minHeight: 64,
-                      maxHeight: 64,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15), // Igual que perfil de artista
-                          blurRadius: 6, // Igual que perfil de artista
-                          offset: const Offset(0, 2), // Igual que perfil de artista
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      clipBehavior: Clip.antiAlias,
-                      child: OptimizedImage(
-                        imageUrl: coverUrl,
-                        fit: BoxFit.cover,
-                        width: 64,
-                        height: 64,
-                        borderRadius: 16,
-                        useThumbnail: true,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Información de la canción
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        song.title ?? 'Sin título',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: NeumorphismTheme.textPrimary,
-                          letterSpacing: -0.3,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.person_outline,
-                            size: 14,
-                            color: NeumorphismTheme.textSecondary,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              song.artist?.stageName ?? 
-                              song.artist?.displayName ?? 
-                              'Artista Desconocido',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: NeumorphismTheme.textSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+      child: RepaintBoundary(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0), // ✅ Reducir padding vertical para evitar overflow
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center, // ✅ Centrar verticalmente
+                children: [
+                  // ✅ Portada igual que Home pero más pequeña (64 -> 56) - CUADRADA
+                  SizedBox(
+                    width: 56, // ✅ Más pequeño que Home (64 -> 56)
+                    height: 56, // ✅ Más pequeño que Home (64 -> 56)
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: const BorderRadius.all(Radius.circular(12)), // ✅ Más pequeño que Home (16 -> 12)
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15), // ✅ Igual que Home
+                            blurRadius: 6, // ✅ Igual que Home
+                            offset: const Offset(0, 2), // ✅ Igual que Home
+                            spreadRadius: 0,
                           ),
                         ],
                       ),
-                    ],
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.all(Radius.circular(12)), // ✅ Más pequeño que Home (16 -> 12)
+                        clipBehavior: Clip.antiAlias,
+                        child: AspectRatio(
+                          aspectRatio: 1.0, // ✅ FORZAR ASPECTO CUADRADO
+                          child: OptimizedImage(
+                            imageUrl: coverUrl,
+                            fit: BoxFit.cover,
+                            width: 56, // ✅ Más pequeño que Home (64 -> 56)
+                            height: 56, // ✅ Más pequeño que Home (64 -> 56)
+                            borderRadius: 12, // ✅ Más pequeño que Home (16 -> 12)
+                            useThumbnail: true,
+                            lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
+                            visibilityThreshold: 0.1, // Cargar cuando 10% visible
+                            maxCacheWidth: 112, // 2x el tamaño de visualización (56 * 2)
+                            maxCacheHeight: 112,
+                            skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12), // ✅ Más pequeño que Home (16 -> 12)
+                  // Información de la canción (igual estilo que Home pero más pequeña)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min, // ✅ Evitar overflow
+                      children: [
+                        Text(
+                          song.title ?? 'Sin título',
+                          style: const TextStyle(
+                            fontSize: 15, // ✅ Más pequeño que Home (17 -> 15)
+                            fontWeight: FontWeight.w700,
+                            color: NeumorphismTheme.textPrimary,
+                            letterSpacing: -0.3,
+                            height: 1.2, // ✅ Reducir altura de línea para ahorrar espacio
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 3), // ✅ Reducir espaciado (4 -> 3)
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.person_outline,
+                              size: 13, // ✅ Más pequeño que Home (14 -> 13)
+                              color: NeumorphismTheme.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: song.artist != null
+                                  ? ArtistNameWithBadge(
+                                      artistName: song.artist!.stageName ?? 
+                                          (song.artist!.displayName.isNotEmpty 
+                                              ? song.artist!.displayName 
+                                              : 'Artista Desconocido'),
+                                      isVerified: song.artist!.isVerifiedValue,
+                                      textStyle: const TextStyle(
+                                        fontSize: 13, // ✅ Más pequeño que Home (14 -> 13)
+                                        fontWeight: FontWeight.w500,
+                                        color: NeumorphismTheme.textSecondary,
+                                        height: 1.2, // ✅ Reducir altura de línea
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      badgeSize: 12.0, // ✅ Tamaño más pequeño para esta tarjeta
+                                    )
+                                  : const Text(
+                                      'Artista Desconocido',
+                                      style: TextStyle(
+                                        fontSize: 13, // ✅ Más pequeño que Home (14 -> 13)
+                                        fontWeight: FontWeight.w500,
+                                        color: NeumorphismTheme.textSecondary,
+                                        height: 1.2, // ✅ Reducir altura de línea
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

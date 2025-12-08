@@ -1,5 +1,7 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:just_audio/just_audio.dart';
 import 'artist_model.dart';
+import '../utils/url_normalizer.dart';
 
 part 'song_model.g.dart';
 
@@ -101,4 +103,55 @@ class FeaturedSong {
 
   factory FeaturedSong.fromJson(Map<String, dynamic> json) => _$FeaturedSongFromJson(json);
   Map<String, dynamic> toJson() => _$FeaturedSongToJson(this);
+}
+
+/// Extensión para convertir Song a AudioSource de just_audio
+extension SongToAudioSource on Song {
+  /// Convierte una canción a AudioSource para just_audio
+  /// Normaliza la URL automáticamente para emulador Android
+  /// ✅ VALIDAR SI LA CANCIÓN ES VÁLIDA PARA REPRODUCCIÓN
+  /// Verifica que tenga fileUrl válido y no sea una URL de ejemplo
+  bool get isValidForPlayback {
+    if (fileUrl == null || fileUrl!.isEmpty) {
+      return false;
+    }
+    
+    // Excluir URLs de ejemplo o placeholder
+    final url = fileUrl!.toLowerCase();
+    if (url.contains('example.com') || 
+        url.contains('picsum.photos') ||
+        url.contains('placeholder') ||
+        url.contains('test') ||
+        url.startsWith('http://example') ||
+        url.startsWith('https://example')) {
+      return false;
+    }
+    
+    // Verificar que sea una URL válida
+    try {
+      final uri = Uri.parse(fileUrl!);
+      if (!uri.hasScheme || (!uri.scheme.startsWith('http'))) {
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  AudioSource toAudioSource() {
+    if (!isValidForPlayback) {
+      throw Exception('La canción no tiene URL de archivo válida: ${title ?? id} (fileUrl: ${fileUrl ?? "null"})');
+    }
+
+    // Normalizar URL para emulador Android (localhost -> 10.0.2.2)
+    final normalizedUrl = UrlNormalizer.normalizeUrl(fileUrl!);
+    final uri = Uri.parse(normalizedUrl);
+
+    return AudioSource.uri(
+      uri,
+      tag: this, // Permite recuperar el objeto Song del reproductor
+    );
+  }
 }

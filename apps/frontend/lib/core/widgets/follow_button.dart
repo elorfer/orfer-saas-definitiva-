@@ -162,8 +162,8 @@ class _FollowButtonState extends ConsumerState<FollowButton>
                   : NeumorphismTheme.accent,
               width: 1.5,
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(20)),
             ),
             padding: EdgeInsets.symmetric(
               horizontal: buttonHeight <= 32 ? 10 : 12, 
@@ -184,7 +184,7 @@ class _FollowButtonState extends ConsumerState<FollowButton>
                   ),
                 )
               : Row(
-                  mainAxisSize: MainAxisSize.min,
+                  // ✅ CORRECCIÓN: No usar mainAxisSize.min cuando hay Flexible
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
@@ -199,7 +199,7 @@ class _FollowButtonState extends ConsumerState<FollowButton>
                       child: Text(
                         isFollowing ? 'Siguiendo' : 'Seguir',
                         style: GoogleFonts.inter(
-                          fontSize: buttonHeight <= 32 ? 12 : 13, // Más pequeño si height <= 32
+                          fontSize: buttonHeight <= 32 ? 11 : 13, // Reducido de 12 a 11 para evitar overflow
                           fontWeight: FontWeight.w600,
                           color: isFollowing 
                               ? Colors.white 

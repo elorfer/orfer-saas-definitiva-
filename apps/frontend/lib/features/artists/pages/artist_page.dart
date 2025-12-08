@@ -1,14 +1,16 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/models/artist_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/providers/playback_state.dart';
+import '../../../core/providers/secondary_screens_scroll_provider.dart';
 import '../../../core/utils/logger.dart';
 import '../../artists/services/artists_api.dart';
 import '../models/artist.dart';
@@ -20,6 +22,7 @@ import '../../../core/providers/follow_provider.dart';
 import '../../../core/utils/number_formatter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/widgets/verified_badge.dart';
+import '../../../core/utils/intersection_observer.dart';
 
 // Clase helper para resultado del procesamiento en isolate
 class _ProcessedSong {
@@ -145,11 +148,19 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
   Timer? _playAllDebounce;
   static const Duration _debounceDuration = Duration(milliseconds: 300);
   
-  // Keys estables para evitar reconstrucciones innecesarias
-  final _headerKey = GlobalKey();
-  final _biographyKey = GlobalKey();
-  final _contactKey = GlobalKey();
-  final _songsHeaderKey = GlobalKey();
+  // 🔥 OPTIMIZACIÓN: ScrollController para precache dinámico de imágenes (como en Home)
+  late final ScrollController _scrollController;
+  
+  // 🔥 PERSISTENCIA: Guardar posición inicial para restaurar después del primer frame
+  double? _savedInitialScrollPosition;
+  bool _hasRestoredInitialScroll = false;
+  
+  // ✅ OPTIMIZACIÓN: Cache de URLs de imágenes para evitar recálculos en _onScroll
+  List<String> _cachedImageUrls = [];
+  int _cachedSongsCount = 0;
+  
+  // ✅ OPTIMIZACIÓN: Timer para debounce en _onScroll
+  Timer? _scrollDebounceTimer;
 
   @override
   bool get wantKeepAlive => true;
@@ -158,6 +169,37 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
   void initState() {
     super.initState();
     _api = ArtistsApi(ApiConfig.baseUrl);
+    
+    // 🔥 PERSISTENCIA: Restaurar scroll position desde Provider (más robusto)
+    final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+    final savedPosition = scrollNotifier.getScrollPosition('artist_page_${widget.artist.id}');
+    
+    // También intentar desde PageStorage como backup
+    final pageStoragePosition = PageStorage.of(context).readState(
+      context, 
+      identifier: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}')
+    ) as double?;
+    
+    // Usar la posición del provider si existe, sino la de PageStorage
+    final initialPosition = savedPosition ?? pageStoragePosition ?? 0.0;
+    // 🔥 CRÍTICO: Inicializar en 0 y restaurar DESPUÉS de que el contenido esté medido
+    _scrollController = ScrollController(initialScrollOffset: 0.0);
+    
+    // Guardar la posición para restaurarla después
+    _savedInitialScrollPosition = initialPosition;
+    
+    // 🔥 CRÍTICO: Restaurar posición después del primer frame usando SchedulerBinding
+    // Esto garantiza que el contenido ya esté medido y pintado
+    if (initialPosition > 0) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+    }
+    
+    _scrollController.addListener(_onScroll);
+    // 🔥 PERSISTENCIA: Guardar posición del scroll cuando cambia
+    _scrollController.addListener(_saveScrollPosition);
+    
     // Leer estado de admin una sola vez al inicio
     final currentUser = ref.read(currentUserProvider);
     
@@ -183,6 +225,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           cachedData['displayedSongs'] as List,
         );
         _hasMoreSongs = cachedData['hasMoreSongs'] as bool;
+        // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando se cargan desde cache
+        _updateImageUrlsCache();
         _lastLoadTime = lastLoadTime;
         _effectiveName = cachedData['effectiveName'] as String?;
         _coverUrl = cachedData['coverUrl'] as String?;
@@ -242,12 +286,139 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     return now.difference(_lastLoadTime!) > _cacheValidDuration;
   }
 
+  /// 🔥 CRÍTICO: Restaurar posición del scroll después de que el contenido esté medido
+  /// Este método verifica que el ScrollController tenga un maxScrollExtent válido
+  /// antes de hacer jumpTo, evitando que la restauración falle silenciosamente
+  void _restoreScrollPosition() {
+    if (!mounted || _hasRestoredInitialScroll) return;
+    
+    if (!_scrollController.hasClients) {
+      // Si aún no tiene clients, esperar un frame más
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+      return;
+    }
+    
+    // 🔥 CRÍTICO: Verificar que el contenido esté medido
+    // Si maxScrollExtent es 0, el contenido aún no se ha medido
+    if (_scrollController.position.maxScrollExtent <= 0) {
+      // Esperar otro frame para que el contenido se mida
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+      return;
+    }
+    
+    final savedPosition = _savedInitialScrollPosition;
+    if (savedPosition != null && savedPosition > 0) {
+      final currentOffset = _scrollController.offset;
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      
+      // Solo restaurar si:
+      // 1. La posición guardada es válida (menor o igual al máximo)
+      // 2. El scroll está cerca de 0 (no se ha movido manualmente)
+      if (savedPosition <= maxExtent && currentOffset < 10) {
+        _scrollController.jumpTo(savedPosition);
+        _hasRestoredInitialScroll = true;
+      }
+    }
+  }
+
+  /// 🔥 PERSISTENCIA: Guardar posición del scroll en Provider (persistente) y PageStorage (backup)
+  void _saveScrollPosition() {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    final position = _scrollController.offset;
+    if (position < 0) return;
+    
+    final screenKey = 'artist_page_${widget.artist.id}';
+    
+    // 🔥 PERSISTENCIA: Guardar en Provider (persistente incluso si el widget se destruye)
+    final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+    scrollNotifier.saveScrollPosition(screenKey, position);
+    
+    // También guardar en PageStorage como backup
+    try {
+      PageStorage.of(context).writeState(
+        context,
+        position,
+        identifier: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
+      );
+    } catch (e) {
+      // Ignorar errores de PageStorage
+    }
+  }
+
   @override
   void dispose() {
     // Cancelar timers de debounce al destruir el widget
     _playSongDebounce?.cancel();
     _playAllDebounce?.cancel();
+    _scrollDebounceTimer?.cancel();
+    
+    // 🔥 CRÍTICO: Guardar posición final antes de destruir (sin debounce)
+    if (_scrollController.hasClients) {
+      final finalPosition = _scrollController.offset;
+      if (finalPosition >= 0) {
+        final screenKey = 'artist_page_${widget.artist.id}';
+        final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+        scrollNotifier.saveScrollPosition(screenKey, finalPosition);
+      }
+    }
+    
+    // 🔥 OPTIMIZACIÓN: Limpiar ScrollController
+    _scrollController.removeListener(_onScroll);
+    _scrollController.removeListener(_saveScrollPosition);
+    _scrollController.dispose();
     super.dispose();
+  }
+  
+  /// ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+  void _updateImageUrlsCache() {
+    _cachedImageUrls = _displayedSongs
+        .map((ps) => ps.normalizedCoverUrl ?? ps.song.coverArtUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    _cachedSongsCount = _displayedSongs.length;
+  }
+  
+  /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles cuando el usuario hace scroll (como en Home)
+  /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients || _displayedSongs.isEmpty) return;
+    
+    // ✅ OPTIMIZACIÓN: Cancelar timer anterior si existe
+    _scrollDebounceTimer?.cancel();
+    
+    // ✅ OPTIMIZACIÓN: Debounce de 300ms para evitar ejecuciones excesivas
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted || !_scrollController.hasClients || _displayedSongs.isEmpty) return;
+      
+      try {
+        // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer de _displayedSongs cada vez
+        if (_cachedImageUrls.isEmpty) {
+          // Si no hay cache, actualizar desde _displayedSongs (solo una vez)
+          _updateImageUrlsCache();
+        }
+        
+        // Precachear imágenes visibles basado en posición del scroll (IntersectionObserver)
+        if (_cachedImageUrls.isNotEmpty) {
+          LazyImageLoader.precacheVisibleVerticalImages(
+            scrollController: _scrollController,
+            itemExtent: 80.0, // Altura estimada de cada item (ajustar según diseño real)
+            itemCount: _cachedSongsCount,
+            imageUrls: _cachedImageUrls,
+            context: context,
+            precacheCount: 5, // Precachear 5 items antes y después del viewport
+          );
+        }
+      } catch (e) {
+        // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
+        debugPrint('[ArtistPage] Error en _onScroll: $e');
+      }
+    });
   }
 
   // Inicializar valores calculados con datos del widget.artist
@@ -302,48 +473,45 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     // Los widgets se reconstruirán automáticamente cuando cambien los datos
   }
 
-  // Pre-cachear imágenes iniciales (del widget.artist) para evitar tirón al abrir
+  // 🔥 OPTIMIZACIÓN: Pre-cachear imágenes iniciales usando LazyImageLoader (como en Home)
   void _precacheInitialImages() {
-    // Pre-cachear inmediatamente las imágenes que ya tenemos del widget.artist
-    // Esto evita el tirón al abrir la pantalla
+    final imageUrls = <String?>[];
+    
+    // Agregar portada
     if (widget.artist.coverPhotoUrl != null && widget.artist.coverPhotoUrl!.isNotEmpty) {
       final coverUrl = UrlNormalizer.normalizeImageUrl(widget.artist.coverPhotoUrl);
       if (coverUrl != null && coverUrl.isNotEmpty) {
-        // Usar scheduleMicrotask para no bloquear el initState
-        scheduleMicrotask(() {
-          if (mounted) {
-            precacheImage(
-              CachedNetworkImageProvider(coverUrl),
-              context,
-            ).catchError((_) {
-              // Ignorar errores de pre-cache
-            });
-          }
-        });
+        imageUrls.add(coverUrl);
       }
     }
     
+    // Agregar avatar
     if (widget.artist.profilePhotoUrl != null && widget.artist.profilePhotoUrl!.isNotEmpty) {
       final profileUrl = UrlNormalizer.normalizeImageUrl(widget.artist.profilePhotoUrl);
       if (profileUrl != null && profileUrl.isNotEmpty) {
-        scheduleMicrotask(() {
-          if (mounted) {
-            precacheImage(
-              CachedNetworkImageProvider(profileUrl),
-              context,
-            ).catchError((_) {
-              // Ignorar errores de pre-cache
-            });
-          }
-        });
+        imageUrls.add(profileUrl);
       }
+    }
+    
+    // Precachear usando LazyImageLoader
+    if (imageUrls.isNotEmpty) {
+      scheduleMicrotask(() {
+        if (mounted) {
+          LazyImageLoader.precacheInitialImages(
+            imageUrls: imageUrls,
+            context: context,
+            count: imageUrls.length,
+          );
+        }
+      });
     }
   }
 
-  // Pre-cachear imágenes actualizadas (después de cargar detalles)
-  // Solo se ejecuta cuando realmente se cargan nuevos datos
+  // 🔥 OPTIMIZACIÓN: Pre-cachear imágenes actualizadas usando LazyImageLoader (como en Home)
   void _precacheImages() {
     if (!mounted) return;
+    
+    final imageUrls = <String?>[];
     
     // Pre-cachear portada grande (mejora tiempo de apertura)
     // Solo si la URL es diferente a la inicial para evitar recargas innecesarias
@@ -351,17 +519,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       final initialCoverUrl = UrlNormalizer.normalizeImageUrl(widget.artist.coverPhotoUrl);
       // Solo pre-cachear si la URL cambió
       if (_coverUrl != initialCoverUrl) {
-        // Diferir al siguiente frame para no bloquear
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            precacheImage(
-              CachedNetworkImageProvider(_coverUrl!),
-              context,
-            ).catchError((_) {
-              // Ignorar errores de pre-cache
-            });
-          }
-        });
+        imageUrls.add(_coverUrl);
       }
     }
     
@@ -371,17 +529,30 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       final initialProfileUrl = UrlNormalizer.normalizeImageUrl(widget.artist.profilePhotoUrl);
       // Solo pre-cachear si la URL cambió
       if (_profileUrl != initialProfileUrl) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            precacheImage(
-              CachedNetworkImageProvider(_profileUrl!),
-              context,
-            ).catchError((_) {
-              // Ignorar errores de pre-cache
-            });
-          }
-        });
+        imageUrls.add(_profileUrl);
       }
+    }
+    
+    // Precachear primeras canciones visibles
+    final initialSongUrls = _displayedSongs
+        .take(5)
+        .map((ps) => ps.normalizedCoverUrl ?? ps.song.coverArtUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    imageUrls.addAll(initialSongUrls);
+    
+    // Precachear usando LazyImageLoader
+    if (imageUrls.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          LazyImageLoader.precacheInitialImages(
+            imageUrls: imageUrls,
+            context: context,
+            count: imageUrls.length,
+          );
+        }
+      });
     }
   }
 
@@ -457,6 +628,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           _hasLoadedOnce = true; // Marcar que ya se cargó
           _lastLoadTime = now; // Guardar timestamp de carga
         });
+        // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+        _updateImageUrlsCache();
       }
       
       // Guardar en caché estático para futuras navegaciones
@@ -495,6 +668,9 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             _displayedSongs = [];
             _hasMoreSongs = false;
             _initializeCalculatedValues(); // Resetear a valores iniciales
+            // ✅ OPTIMIZACIÓN: Limpiar cache de URLs cuando hay error
+            _cachedImageUrls = [];
+            _cachedSongsCount = 0;
           }
         });
       }
@@ -533,21 +709,28 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     final coverHeight = _cachedCoverHeight ?? (screenWidth / 2.4);
     final devicePixelRatio = _cachedDevicePixelRatio ?? MediaQuery.of(context).devicePixelRatio;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_effectiveName ?? widget.artist.name),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-      ),
-      body: CustomScrollView(
-        // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
-        // Mantiene solo ~5 items fuera de vista (400px / ~80px por item)
-        cacheExtent: 400, // Reducido de 1000 a 400 para mejor rendimiento
-        physics: const ClampingScrollPhysics(), // Android-style scroll
-        // Optimizar scroll con mejor rendimiento
-        clipBehavior: Clip.none, // Evitar clipping innecesario
-        slivers: [
+    // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
+    return RepaintBoundary(
+      child: Scaffold(
+        key: const ValueKey('artist_page_scaffold'),
+        appBar: AppBar(
+          title: Text(_effectiveName ?? widget.artist.name),
+          elevation: 0,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+        ),
+        body: CustomScrollView(
+          key: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
+          controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
+          // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
+          // Mantiene solo ~5 items fuera de vista (400px / ~80px por item)
+          cacheExtent: 400, // Reducido de 1000 a 400 para mejor rendimiento
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ), // ✅ Scroll estilo iPhone (igual que Home)
+          // Optimizar scroll con mejor rendimiento
+          clipBehavior: Clip.none, // Evitar clipping innecesario
+          slivers: [
           // Header fijo con portada y avatar - Optimizado con RepaintBoundary y memoización
           SliverToBoxAdapter(
             child: !_hasLoadedOnce 
@@ -603,7 +786,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             // SliverPadding para agregar padding horizontal como en "recientemente escuchadas"
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
+              sliver: SliverFixedExtentList(
+                itemExtent: 80.0, // ✅ Altura fija conocida (mejora rendimiento significativamente)
                 delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   // Botón "Ver más" al final
@@ -618,13 +802,16 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                   final song = _displayedSongs[index];
                   final artistName = _effectiveName ?? widget.artist.name;
                   
-                  return _SongRowWidget(
+                  return RepaintBoundary(
                     key: ValueKey('song_${song.song.id}'),
-                    index: index,
-                    processedSong: song,
-                    artistName: artistName,
-                    artistId: widget.artist.id, // ✅ Pasar artistId para verificar contexto
-                    onPlaySong: (song, {normalizedCoverUrl}) => _onPlaySong(song, normalizedCoverUrl: normalizedCoverUrl),
+                    child: _SongRowWidget(
+                      key: ValueKey('song_row_${song.song.id}'),
+                      index: index,
+                      processedSong: song,
+                      artistName: artistName,
+                      artistId: widget.artist.id, // ✅ Pasar artistId para verificar contexto
+                      onPlaySong: (song, {normalizedCoverUrl}) => _onPlaySong(song, normalizedCoverUrl: normalizedCoverUrl),
+                    ),
                   );
                 },
                 childCount: _displayedSongs.length + (_hasMoreSongs ? 1 : 0),
@@ -632,7 +819,6 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                 addAutomaticKeepAlives: false, // Ya usamos AutomaticKeepAliveClientMixin (no mantener vivos items fuera de vista)
                 addRepaintBoundaries: false, // Ya agregamos RepaintBoundary manualmente (evita duplicación)
                 addSemanticIndexes: false, // Desactivar índices semánticos (mejor rendimiento)
-                // ⚠️ findChildIndexCallback removido - puede causar problemas con el orden de widgets
               ),
               ),
             ),
@@ -644,15 +830,14 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             padding: EdgeInsets.only(bottom: 120),
           ),
         ],
+          ), // Cierra CustomScrollView
       ),
     );
   }
 
   // Construir header optimizado
   Widget _buildHeader(double screenWidth, double coverHeight, double devicePixelRatio) {
-    return RepaintBoundary(
-      key: _headerKey,
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Portada
@@ -671,6 +856,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                   maxCacheWidth: (screenWidth * devicePixelRatio).toInt(),
                   maxCacheHeight: (coverHeight * devicePixelRatio).toInt(),
                   skipFade: true, // ✅ Evitar fade que puede causar líneas visibles
+                  lazyLoad: false, // Portada principal - cargar inmediatamente
                 ),
                 // Overlay con gradiente para mejor legibilidad
                 IgnorePointer(
@@ -696,10 +882,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar al lado izquierdo - Subido con Transform
-                Transform.translate(
-                  offset: const Offset(0, -6), // Sube solo el avatar 6 píxeles
-                  child: Container(
+                // Avatar al lado izquierdo
+                Container(
                     width: 120, // Aumentado de 100 a 120
                     height: 120, // Aumentado de 100 a 120
                     decoration: BoxDecoration(
@@ -720,67 +904,65 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                         fit: BoxFit.cover,
                         width: 120, // Aumentado de 100 a 120
                         height: 120, // Aumentado de 100 a 120
+                        lazyLoad: false, // Avatar principal - cargar inmediatamente
                       ),
                     ),
                   ),
-                ),
                 const SizedBox(width: 10), // Reducido de 14 a 10
                 // Información a la derecha del avatar
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Fila: Nombre, badge de verificación y bandera - Bajado con Transform
-                      Transform.translate(
-                        offset: const Offset(0, 8), // Baja el nombre/badge/bandera 8 píxeles
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _effectiveName ?? widget.artist.name,
-                                style: const TextStyle(
-                                  fontSize: 24, // Aumentado de 22 a 24
-                                  fontWeight: FontWeight.w600, // Semi-bold
-                                  height: 1.2,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                      // Fila: Nombre, badge de verificación y bandera
+                      const SizedBox(height: 8), // Baja el nombre/badge/bandera 8 píxeles
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              _effectiveName ?? widget.artist.name,
+                              style: const TextStyle(
+                                fontSize: 24, // Aumentado de 22 a 24
+                                fontWeight: FontWeight.w600, // Semi-bold
+                                height: 1.2,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            // Badge de verificación
-                            Builder(
-                              builder: (context) {
-                                final isVerified = (_details?['isVerified'] as bool?) ?? 
-                                                  (_details?['is_verified'] as bool?) ??
-                                                  (_details?['verificationStatus'] as bool?) ??
-                                                  (_details?['verification_status'] as bool?) ??
-                                                  false;
-                                if (isVerified) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(left: 4), // Reducido de 6 a 4
-                                    child: SizedBox(
-                                      width: 20.0, // Tamaño fijo para evitar movimiento
-                                      height: 20.0, // Tamaño fijo para evitar movimiento
-                                      child: VerifiedBadge(
-                                        size: 20,
-                                        showTooltip: true,
-                                      ),
+                          ),
+                          // Badge de verificación
+                          Builder(
+                            builder: (context) {
+                              final isVerified = (_details?['isVerified'] as bool?) ?? 
+                                                (_details?['is_verified'] as bool?) ??
+                                                (_details?['verificationStatus'] as bool?) ??
+                                                (_details?['verification_status'] as bool?) ??
+                                                false;
+                              if (isVerified) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(left: 4), // Reducido de 6 a 4
+                                  child: SizedBox(
+                                    width: 20.0, // Tamaño fijo para evitar movimiento
+                                    height: 20.0, // Tamaño fijo para evitar movimiento
+                                    child: VerifiedBadge(
+                                      size: 20,
+                                      showTooltip: true,
                                     ),
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                          if (_flagEmoji != null) ...[
+                            const SizedBox(width: 8), // Aumentado de 4 a 8 para separar más la bandera
+                            Text(
+                              _flagEmoji!,
+                              style: const TextStyle(fontSize: 16),
                             ),
-                            if (_flagEmoji != null) ...[
-                              const SizedBox(width: 8), // Aumentado de 4 a 8 para separar más la bandera
-                              Text(
-                                _flagEmoji!,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ],
                           ],
-                        ),
+                        ],
                       ),
                       const SizedBox(height: 2), // Mantenido para no mover los seguidores
                       // Número de seguidores
@@ -819,10 +1001,13 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                       ),
                       const SizedBox(height: 0), // Mantenido en 0 para no mover el botón
                       // Botón de seguir - Más pequeño
-                      FollowButton(
-                        artistId: widget.artist.id,
-                        width: 85.0, // Reducido de 95 a 85
-                        height: 28.0, // Reducido de 32 a 28
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FollowButton(
+                          artistId: widget.artist.id,
+                          width: 85.0, // Reducido de 95 a 85
+                          height: 28.0, // Reducido de 32 a 28
+                        ),
                       ),
                     ],
                   ),
@@ -831,15 +1016,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   // Construir biografía optimizada - Más compacta
   Widget _buildBiography() {
-    return RepaintBoundary(
-      key: _biographyKey,
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
@@ -859,14 +1041,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           ),
           const SizedBox(height: 8), // Reducido de 12 a 8
         ],
-      ),
-    );
+      );
   }
 
   // Construir biografía vacía optimizada
   Widget _buildEmptyBiography() {
-    return RepaintBoundary(
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
@@ -886,15 +1066,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           ),
           const SizedBox(height: 12),
         ],
-      ),
-    );
+      );
   }
 
   // Construir contacto optimizado
   Widget _buildContact() {
-    return RepaintBoundary(
-      key: _contactKey,
-      child: Column(
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
@@ -911,7 +1088,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
               children: [
                 const Icon(Icons.phone, size: 16, color: Colors.black54),
                 const SizedBox(width: 8),
-                Expanded(
+                Flexible(
                   child: Text(
                     _phone!,
                     style: const TextStyle(fontSize: 14, color: Colors.black87),
@@ -924,15 +1101,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           ),
           const SizedBox(height: 12),
         ],
-      ),
-    );
+      );
   }
 
   // Construir header de canciones optimizado
   Widget _buildSongsHeader() {
-    return RepaintBoundary(
-      key: _songsHeaderKey,
-      child: Padding(
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -946,26 +1120,6 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
               opacity: _allProcessedSongs.isNotEmpty ? 1.0 : 0.0,
               child: IgnorePointer(
                 ignoring: _allProcessedSongs.isEmpty,
-                child: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      NeumorphismTheme.coffeeMedium,
-                      NeumorphismTheme.coffeeDark,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
                 child: Consumer(
                   builder: (context, ref, child) {
                     // ✅ Solo escuchar las propiedades específicas que necesitamos
@@ -995,48 +1149,67 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                                      isPlaying && 
                                      currentSongBelongsToArtist;
                     
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          // ✅ SOLO activar cuando el usuario toca explícitamente
-                          // No hay lógica automática, solo responde al toque del usuario
-                          _onPlayAll();
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'Reproducir todo',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            NeumorphismTheme.coffeeMedium,
+                            NeumorphismTheme.coffeeDark,
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.all(Radius.circular(20)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            // ✅ SOLO activar cuando el usuario toca explícitamente
+                            // No hay lógica automática, solo responde al toque del usuario
+                            _onPlayAll();
+                          },
+                          borderRadius: const BorderRadius.all(Radius.circular(20)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
                                   color: Colors.white,
+                                  size: 18,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Reproducir todo',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     );
                   },
                 ),
-                ),
               ),
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   // Construir mensaje de canciones vacías
@@ -1091,6 +1264,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         _hasMoreSongs = hasMore;
         _loadingMore = false;
       });
+      // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+      _updateImageUrlsCache();
     }
   }
 
@@ -1234,7 +1409,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         
         // ✅ DESDE TARJETAS: Usar playFromCard para activar modo ALGORITMO (recomendaciones)
         // Esto permite que el algoritmo recomiende otros artistas
-        await audioNotifier.playFromCard(songWithArtist);
+        await audioNotifier.playFromCard(songWithArtist, useAlgorithm: true);
       } catch (error) {
         AppLogger.error('[ArtistPage] Error al reproducir canción: $error');
       }
@@ -1304,19 +1479,16 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Transform.translate(
-                offset: const Offset(0, -24),
-                child: Shimmer.fromColors(
-                  baseColor: Colors.grey[200]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.grey[200],
-                      border: Border.all(color: Colors.white, width: 3),
-                    ),
+              Shimmer.fromColors(
+                baseColor: Colors.grey[200]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey[200],
+                    border: Border.all(color: Colors.white, width: 3),
                   ),
                 ),
               ),
@@ -1334,7 +1506,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                         height: 24,
                         decoration: BoxDecoration(
                           color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
                         ),
                       ),
                     ),
@@ -1363,10 +1535,10 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             child: Container(
               width: 100,
               height: 20,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
-              ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        ),
             ),
           ),
           const SizedBox(height: 6),
@@ -1379,10 +1551,10 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
               child: Container(
                 width: double.infinity,
                 height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        ),
               ),
             ),
           )),
@@ -1398,7 +1570,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: NeumorphismTheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -1420,7 +1592,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                 height: 20,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: const BorderRadius.all(Radius.circular(6)),
                 ),
               ),
             ),
@@ -1434,7 +1606,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                 height: 64,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                 ),
               ),
             ),
@@ -1450,10 +1622,10 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                     child: Container(
                       width: double.infinity,
                       height: 18,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1463,10 +1635,10 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                     child: Container(
                       width: 120,
                       height: 14,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: const BorderRadius.all(Radius.circular(8)),
+                        ),
                     ),
                   ),
                 ],
@@ -1516,47 +1688,36 @@ class _SongRowWidget extends ConsumerWidget {
     
     // ✅ Verificar si la canción está disponible para reproducir
     final isAvailable = song.fileUrl != null && song.fileUrl!.isNotEmpty;
-    
-    // ✅ OPTIMIZACIÓN: Usar selectores separados para escuchar solo cambios relevantes
-    final currentSongId = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.currentSong?.id),
-    );
-    final isPlaying = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.isPlaying),
-    );
-    final isCurrentSong = currentSongId == song.id;
-    final showPause = isCurrentSong && isPlaying && isAvailable;
 
     return Opacity(
       opacity: isAvailable ? 1.0 : 0.5, // Reducir opacidad si no está disponible
-      child: RepaintBoundary(
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8), // Reducido de 12 a 8
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.surface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08), // Opacidad 0.08
-                blurRadius: 8, // Blur 8
-                offset: const Offset(0, 2), // Offset 0, 2
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: isAvailable
-                  ? () {
-                      // Navegar a la página de detalle de la canción si es necesario
-                      // Nota: Navegación pendiente de implementar
-                    }
-                  : null, // Deshabilitar tap si no está disponible
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.all(10), // Reducido de 12 a 10
-                child: Row(
-                  children: [
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8), // Reducido de 12 a 8
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08), // Opacidad 0.08
+              blurRadius: 8, // Blur 8
+              offset: const Offset(0, 2), // Offset 0, 2
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isAvailable
+                ? () {
+                    // Navegar a la página de detalle de la canción si es necesario
+                    // Nota: Navegación pendiente de implementar
+                  }
+                : null, // Deshabilitar tap si no está disponible
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            child: Padding(
+              padding: const EdgeInsets.all(10), // Reducido de 12 a 10
+              child: Row(
+                children: [
                     // Número de posición
                   Container(
                     width: 32,
@@ -1575,7 +1736,7 @@ class _SongRowWidget extends ConsumerWidget {
                   const SizedBox(width: 12),
                   // Portada optimizada
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
                     child: processedSong.normalizedCoverUrl != null
                         ? OptimizedImage(
                             imageUrl: processedSong.normalizedCoverUrl,
@@ -1599,7 +1760,7 @@ class _SongRowWidget extends ConsumerWidget {
                   const SizedBox(width: 12),
                   // ✅ TÍTULO Y ARTISTA - Prioridad máxima con más espacio
                   // ✅ TÍTULO Y ARTISTA - Máxima prioridad con todo el espacio disponible
-                  Expanded(
+                  Flexible(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1629,94 +1790,20 @@ class _SongRowWidget extends ConsumerWidget {
                         ),
                         if (!isAvailable) ...[
                           const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 14,
-                                color: Colors.orange.withValues(alpha: 0.7),
-                              ),
-                            ],
+                          Icon(
+                            Icons.error_outline,
+                            size: 14,
+                            color: Colors.orange.withValues(alpha: 0.7),
                           ),
                         ],
                       ],
                     ),
                   ),
-
-                // ✅ Espacio antes de controles
-                const Spacer(),
-
-                // ✅ Botón play/pause con duración y reproducciones debajo - Legible sin overflow
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Botón play/pause - toggle si es la canción actual, reproducir si es otra
-                    IconButton(
-                      icon: Icon(
-                        showPause ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                        color: isAvailable 
-                            ? NeumorphismTheme.coffeeMedium 
-                            : NeumorphismTheme.textSecondary.withValues(alpha: 0.3),
-                        size: 36, // Reducido ligeramente para evitar overflow
-                      ),
-                      onPressed: isAvailable 
-                          ? () {
-                              if (isCurrentSong && isPlaying) {
-                                // Si es la canción actual y está reproduciéndose, pausar
-                                ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
-                              } else {
-                                // ✅ DESDE TARJETAS: Usar playFromCard para activar modo algoritmo
-                                // Esto permite que el algoritmo recomiende otros artistas
-                                onPlaySong(song, normalizedCoverUrl: processedSong.normalizedCoverUrl);
-                              }
-                            }
-                          : null,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      visualDensity: VisualDensity.compact,
-                      iconSize: 36,
-                    ),
-                    // ✅ Duración y reproducciones debajo del botón - Tamaños legibles sin overflow
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Duración - Tamaño legible
-                        Text(
-                          song.durationFormatted,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: isAvailable 
-                                ? NeumorphismTheme.textSecondary.withValues(alpha: 0.7)
-                                : NeumorphismTheme.textSecondary.withValues(alpha: 0.4),
-                            fontWeight: FontWeight.w500,
-                            height: 0.95, // Reducido ligeramente
-                          ),
-                        ),
-                        // ✅ Reproducciones - Tamaño legible sin padding extra
-                        Text(
-                          '▶ ${NumberFormatter.format(song.totalStreams)}',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: isAvailable 
-                                ? NeumorphismTheme.textSecondary.withValues(alpha: 0.7)
-                                : NeumorphismTheme.textSecondary.withValues(alpha: 0.4),
-                            fontWeight: FontWeight.w500,
-                            height: 0.95, // Reducido ligeramente
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      ),
       ),
     );
   }

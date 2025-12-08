@@ -5,6 +5,7 @@ import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/models/artist_model.dart';
 import '../../../core/widgets/verified_badge.dart';
+import '../../../core/widgets/optimized_image.dart';
 
 class ArtistSearchCard extends StatelessWidget {
   final Artist artist;
@@ -32,7 +33,7 @@ class ArtistSearchCard extends StatelessWidget {
             NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -50,7 +51,7 @@ class ArtistSearchCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
           onTap: () {
             context.push('/artist/${artist.id}');
           },
@@ -82,44 +83,16 @@ class ArtistSearchCard extends StatelessWidget {
                     child: ClipOval(
                       clipBehavior: Clip.antiAlias,
                       child: profileUrl != null
-                          ? Image.network(
-                              profileUrl,
+                          ? OptimizedImage(
+                              imageUrl: profileUrl,
                               fit: BoxFit.cover,
                               width: 64,
                               height: 64,
-                              cacheWidth: 64, // OPTIMIZACIÓN: límite de memoria
-                              cacheHeight: 64, // OPTIMIZACIÓN: límite de memoria
-                              alignment: Alignment.center,
-                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                if (wasSynchronouslyLoaded) return child;
-                                return AnimatedOpacity(
-                                  opacity: frame == null ? 0 : 1,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: child,
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) {
-                                  return child;
-                                }
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
-                                  ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
-                                );
-                              },
+                              maxCacheWidth: 128, // 2x el tamaño de visualización
+                              maxCacheHeight: 128,
+                              lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
+                              visibilityThreshold: 0.1, // Cargar cuando 10% visible
+                              skipFade: true, // Sin fade para mejor rendimiento
                             )
                           : Container(
                               decoration: const BoxDecoration(
@@ -151,7 +124,7 @@ class ArtistSearchCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.people_outline,
                             size: 14,
                             color: NeumorphismTheme.textSecondary,
@@ -168,7 +141,7 @@ class ArtistSearchCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 // Icono de flecha
-                Icon(
+                const Icon(
                   Icons.chevron_right_rounded,
                   color: NeumorphismTheme.textSecondary,
                   size: 24,

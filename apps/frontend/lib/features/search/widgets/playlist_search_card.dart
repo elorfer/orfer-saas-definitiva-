@@ -4,6 +4,7 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/models/playlist_model.dart';
+import '../../../core/widgets/optimized_image.dart';
 
 class PlaylistSearchCard extends StatelessWidget {
   final Playlist playlist;
@@ -31,7 +32,7 @@ class PlaylistSearchCard extends StatelessWidget {
             NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -49,7 +50,7 @@ class PlaylistSearchCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
           onTap: () {
             context.push('/playlist/${playlist.id}');
           },
@@ -68,7 +69,7 @@ class PlaylistSearchCard extends StatelessWidget {
                       maxHeight: 64,
                     ),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: const BorderRadius.all(Radius.circular(16)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.2),
@@ -79,47 +80,19 @@ class PlaylistSearchCard extends StatelessWidget {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: const BorderRadius.all(Radius.circular(16)),
                       clipBehavior: Clip.antiAlias,
                       child: coverUrl != null
-                          ? Image.network(
-                              coverUrl,
+                          ? OptimizedImage(
+                              imageUrl: coverUrl,
                               fit: BoxFit.cover,
                               width: 64,
                               height: 64,
-                              cacheWidth: 64, // OPTIMIZACIÓN: límite de memoria
-                              cacheHeight: 64, // OPTIMIZACIÓN: límite de memoria
-                              alignment: Alignment.center,
-                              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                if (wasSynchronouslyLoaded) return child;
-                                return AnimatedOpacity(
-                                  opacity: frame == null ? 0 : 1,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: child,
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) {
-                                  return child;
-                                }
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: NeumorphismTheme.imagePlaceholderGradient,
-                                  ),
-                                  child: const Icon(
-                                    Icons.playlist_play,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                );
-                              },
+                              maxCacheWidth: 128, // 2x el tamaño de visualización
+                              maxCacheHeight: 128,
+                              lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
+                              visibilityThreshold: 0.1, // Cargar cuando 10% visible
+                              skipFade: true, // Sin fade para mejor rendimiento
                             )
                           : Container(
                               decoration: const BoxDecoration(

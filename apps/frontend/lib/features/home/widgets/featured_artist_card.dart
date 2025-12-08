@@ -53,144 +53,144 @@ class FeaturedArtistCard extends StatelessWidget {
             const SizedBox(height: 12),
             
             // Información del artista mejorada
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Nombre del artista con badge de verificación
-                  ArtistNameWithBadge(
-                    artistName: artist.stageName ?? 'Artista Desconocido',
-                    isVerified: artist.isVerifiedValue,
-                    textStyle: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: NeumorphismTheme.textPrimary,
-                      letterSpacing: -0.3,
+            // ✅ CORRECCIÓN: Eliminado Expanded - no es necesario aquí ya que el Column se ajusta naturalmente
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Nombre del artista con badge de verificación
+                ArtistNameWithBadge(
+                  artistName: artist.stageName ?? 'Artista Desconocido',
+                  isVerified: artist.isVerifiedValue,
+                  textStyle: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: NeumorphismTheme.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  badgeSize: 14.0,
+                ),
+                
+                const SizedBox(height: 6),
+                
+                // Seguidores con icono
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.people_outline,
+                      size: 12,
+                      color: NeumorphismTheme.textSecondary,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    badgeSize: 14.0,
-                  ),
-                  
-                  const SizedBox(height: 6),
-                  
-                  // Seguidores con icono
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.people_outline,
-                        size: 12,
-                        color: NeumorphismTheme.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          '${NumberFormatter.format(artist.totalFollowers)} seguidores',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: NeumorphismTheme.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        '${NumberFormatter.format(artist.totalFollowers)} seguidores',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: NeumorphismTheme.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ),
-                    ],
-                  ),
-                  
-                  // Badge destacado mejorado (si existe)
-                  if (featuredArtist.featuredReason != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            NeumorphismTheme.coffeeMedium,
-                            NeumorphismTheme.coffeeDark,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.star_rounded,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              featuredArtist.featuredReason!,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ] else ...[
-                    // Badge "Destacado" por defecto si no hay razón específica
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            NeumorphismTheme.coffeeMedium,
-                            NeumorphismTheme.coffeeDark,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
+                  ],
+                ),
+                
+                // Badge destacado mejorado (si existe)
+                if (featuredArtist.featuredReason != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          NeumorphismTheme.coffeeMedium,
+                          NeumorphismTheme.coffeeDark,
                         ],
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.star_rounded,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Destacado',
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      // ✅ CORRECCIÓN: No usar mainAxisSize.min cuando hay Flexible
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            featuredArtist.featuredReason!,
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // Badge "Destacado" por defecto si no hay razón específica
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          NeumorphismTheme.coffeeMedium,
+                          NeumorphismTheme.coffeeDark,
                         ],
                       ),
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Destacado',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
-              ),
+              ],
             ),
           ],
         ),

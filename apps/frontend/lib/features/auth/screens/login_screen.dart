@@ -102,7 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           height: logoSize,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: const BorderRadius.all(Radius.circular(24)),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.4),
@@ -112,7 +112,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: const BorderRadius.all(Radius.circular(24)),
                             child: Image.asset(
                               'assets/images/logo.png',
                               width: logoSize,
@@ -131,7 +131,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         SizedBox(height: isSmallScreen ? 12 : 16),
                         Text(
-                          'Srtuky',
+                          'struky',
                           style: AppTextStyles.authTitle.copyWith(
                             fontSize: isSmallScreen ? 28 : (isMediumScreen ? 32 : 36),
                             fontWeight: FontWeight.bold,
@@ -159,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       padding: EdgeInsets.all(formPadding),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: const BorderRadius.all(Radius.circular(20)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.1),
@@ -277,7 +277,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     Flexible(
                                       child: Row(
-                                        mainAxisSize: MainAxisSize.min,
+                                        // ✅ CORRECCIÓN: No usar mainAxisSize.min cuando hay Flexible
                                         children: [
                                           Checkbox(
                                             value: _rememberMe,

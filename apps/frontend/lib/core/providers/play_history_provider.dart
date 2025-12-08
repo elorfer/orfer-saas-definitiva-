@@ -116,9 +116,11 @@ class PlayHistoryNotifier extends Notifier<List<Song>> {
 }
 
 /// Provider del historial de reproducción
-final playHistoryProvider = NotifierProvider<PlayHistoryNotifier, List<Song>>(() {
+/// ⚡ OPTIMIZACIÓN: autoDispose para liberar memoria cuando no hay listeners
+final playHistoryProvider = NotifierProvider.autoDispose<PlayHistoryNotifier, List<Song>>(() {
   return PlayHistoryNotifier();
 });
+
 
 
 

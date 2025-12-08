@@ -63,7 +63,7 @@ class FeaturedSongCard extends ConsumerWidget {
               onTap!();
             }
           },
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -83,7 +83,7 @@ class FeaturedSongCard extends ConsumerWidget {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
                     child: OptimizedImage(
                       imageUrl: song.coverArtUrl,
                       fit: BoxFit.cover,
@@ -156,7 +156,7 @@ class FeaturedSongCard extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.baseline,
                             textBaseline: TextBaseline.alphabetic,
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.play_arrow_rounded,
                                 size: 16,
                                 color: NeumorphismTheme.accent,

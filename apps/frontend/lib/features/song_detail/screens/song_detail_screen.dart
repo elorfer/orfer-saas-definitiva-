@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/providers/secondary_screens_scroll_provider.dart';
 import '../widgets/artist_songs_list.dart';
 import '../providers/song_detail_provider.dart';
 import '../../../core/utils/url_normalizer.dart';
@@ -112,6 +114,10 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
   Song? _loadedSong; // Canción cargada desde el backend
   bool _isLoadingSong = false; // Indicador de carga
   
+  // 🔥 PERSISTENCIA: Guardar posición inicial para restaurar después del primer frame
+  double? _savedInitialScrollPosition;
+  bool _hasRestoredInitialScroll = false;
+  
   @override
   bool get wantKeepAlive => true; // Mantener estado al navegar (evita parpadeo)
   
@@ -137,7 +143,36 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    
+    // 🔥 PERSISTENCIA: Restaurar scroll position desde Provider (más robusto que PageStorage)
+    final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+    final savedPosition = scrollNotifier.getScrollPosition('song_detail_${widget.song.id}');
+    
+    // También intentar desde PageStorage como backup
+    final pageStorage = PageStorage.maybeOf(context);
+    final pageStoragePosition = pageStorage?.readState(
+      context, 
+      identifier: PageStorageKey<String>('song_detail_scroll_${widget.song.id}')
+    ) as double?;
+    
+    // Usar la posición del provider si existe, sino la de PageStorage
+    final initialPosition = savedPosition ?? pageStoragePosition ?? 0.0;
+    // 🔥 CRÍTICO: Inicializar en 0 y restaurar DESPUÉS de que el contenido esté medido
+    _scrollController = ScrollController(initialScrollOffset: 0.0);
+    
+    // Guardar la posición para restaurarla después
+    _savedInitialScrollPosition = initialPosition;
+    
+    // 🔥 CRÍTICO: Restaurar posición después del primer frame usando SchedulerBinding
+    // Esto garantiza que el contenido ya esté medido y pintado
+    if (initialPosition > 0) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+    }
+    
+    // 🔥 PERSISTENCIA: Guardar scroll position cuando cambie
+    _scrollController.addListener(_saveScrollPosition);
     
     // CRÍTICO: Intentar cargar desde cache PRIMERO antes de normalizar URLs
     // Esto evita que _normalizeUrls() sobrescriba el _cachedCoverUrl del cache
@@ -302,8 +337,86 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
     }
   }
 
+  /// 🔥 CRÍTICO: Restaurar posición del scroll después de que el contenido esté medido
+  /// Este método verifica que el ScrollController tenga un maxScrollExtent válido
+  /// antes de hacer jumpTo, evitando que la restauración falle silenciosamente
+  void _restoreScrollPosition() {
+    if (!mounted || _hasRestoredInitialScroll) return;
+    
+    if (!_scrollController.hasClients) {
+      // Si aún no tiene clients, esperar un frame más
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+      return;
+    }
+    
+    // 🔥 CRÍTICO: Verificar que el contenido esté medido
+    // Si maxScrollExtent es 0, el contenido aún no se ha medido
+    if (_scrollController.position.maxScrollExtent <= 0) {
+      // Esperar otro frame para que el contenido se mida
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+      return;
+    }
+    
+    final savedPosition = _savedInitialScrollPosition;
+    if (savedPosition != null && savedPosition > 0) {
+      final currentOffset = _scrollController.offset;
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      
+      // Solo restaurar si:
+      // 1. La posición guardada es válida (menor o igual al máximo)
+      // 2. El scroll está cerca de 0 (no se ha movido manualmente)
+      if (savedPosition <= maxExtent && currentOffset < 10) {
+        _scrollController.jumpTo(savedPosition);
+        _hasRestoredInitialScroll = true;
+      }
+    }
+  }
+
+  /// Guarda la posición del scroll en Provider (persistente) y PageStorage (backup)
+  void _saveScrollPosition() {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    final position = _scrollController.offset;
+    if (position < 0) return;
+    
+    final screenKey = 'song_detail_${widget.song.id}';
+    
+    // 🔥 PERSISTENCIA: Guardar en Provider (persistente incluso si el widget se destruye)
+    final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+    scrollNotifier.saveScrollPosition(screenKey, position);
+    
+    // También guardar en PageStorage como backup
+    try {
+      final pageStorage = PageStorage.maybeOf(context);
+      if (pageStorage != null) {
+        pageStorage.writeState(
+          context,
+          position,
+          identifier: PageStorageKey<String>('song_detail_scroll_${widget.song.id}'),
+        );
+      }
+    } catch (e) {
+      // Ignorar errores de PageStorage
+    }
+  }
+
   @override
   void dispose() {
+    // 🔥 CRÍTICO: Guardar posición final antes de destruir (sin debounce)
+    if (_scrollController.hasClients) {
+      final finalPosition = _scrollController.offset;
+      if (finalPosition >= 0) {
+        final screenKey = 'song_detail_${widget.song.id}';
+        final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+        scrollNotifier.saveScrollPosition(screenKey, finalPosition);
+      }
+    }
+    
+    _scrollController.removeListener(_saveScrollPosition);
     _scrollController.dispose();
     super.dispose();
   }
@@ -493,7 +606,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         // ✅ CANCIÓN DIFERENTE: Reproducir desde el inicio
         // Esto cambia el AudioSource y reinicia la posición a 0
         // ✅ CRÍTICO: useAlgorithm = true desactiva fixed queue automáticamente
-        await audioNotifier.playSong(song, useAlgorithm: true);
+        await audioNotifier.playFromCard(song, useAlgorithm: true);
       }
     } catch (error) {
       if (!mounted) return;
@@ -524,7 +637,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         height: imageSize,
         decoration: BoxDecoration(
           color: _shimmerBaseColor, // Color del tema claro
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: const BorderRadius.all(Radius.circular(32)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -554,7 +667,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
           width: double.infinity,
           decoration: BoxDecoration(
             color: NeumorphismTheme.textPrimary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: const BorderRadius.all(Radius.circular(8)),
           ),
         ),
       ),
@@ -602,7 +715,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
             width: 120,
             decoration: BoxDecoration(
               color: NeumorphismTheme.textSecondary.withValues(alpha: 0.15), // Color del tema claro
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: const BorderRadius.all(Radius.circular(4)),
             ),
           ),
         ),
@@ -634,7 +747,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                 width: 40, // Ancho aproximado del número
                 decoration: BoxDecoration(
                   color: NeumorphismTheme.textSecondary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
               ),
             ),
@@ -652,7 +765,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
             width: 60, // Ancho aproximado del texto "Sencillo"
             decoration: BoxDecoration(
               color: NeumorphismTheme.textLight.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: const BorderRadius.all(Radius.circular(4)),
             ),
           ),
         ),
@@ -668,7 +781,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         width: imageSize,
         height: imageSize,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: const BorderRadius.all(Radius.circular(32)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.2),
@@ -678,7 +791,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: const BorderRadius.all(Radius.circular(32)),
           child: CachedNetworkImage(
             imageUrl: coverUrl,
             fit: BoxFit.cover,
@@ -724,7 +837,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         width: imageSize,
         height: imageSize,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: const BorderRadius.all(Radius.circular(32)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.2),
@@ -734,7 +847,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: const BorderRadius.all(Radius.circular(32)),
           child: CachedNetworkImage(
             imageUrl: coverUrl!,
             fit: BoxFit.cover,
@@ -823,7 +936,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), // Mismo padding que el real
       decoration: BoxDecoration(
         color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15), // Mismo color que el real
-        borderRadius: BorderRadius.circular(16), // Mismo borderRadius que el real
+        borderRadius: const BorderRadius.all(Radius.circular(16)), // Mismo borderRadius que el real
       ),
       child: Shimmer.fromColors(
         baseColor: _shimmerBaseColor,
@@ -835,7 +948,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
           width: 70, // Ancho más realista para un género típico (ej: "pop", "rock", "reggaeton")
           decoration: BoxDecoration(
             color: NeumorphismTheme.textPrimary.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: const BorderRadius.all(Radius.circular(4)),
           ),
         ),
       ),
@@ -876,18 +989,21 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
     final artistAvatarUrl = _cachedArtistAvatarUrl;
     
 
-    return Scaffold(
-      key: ValueKey('song_detail_scaffold_${song.id}'), // Key estable para evitar rebuilds
-      extendBody: false, // No extender el cuerpo detrás del NavigationBar
-      body: Container(
+    return RepaintBoundary( // ✅ OPTIMIZACIÓN: Evitar repintados innecesarios
+      child: Scaffold(
+        key: ValueKey('song_detail_scaffold_${song.id}'), // Key estable para evitar rebuilds
+        extendBody: false, // No extender el cuerpo detrás del NavigationBar
+        body: Container(
         decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
           bottom: false, // No agregar padding inferior, MainNavigation ya lo maneja
           child: CustomScrollView(
+            key: PageStorageKey<String>('song_detail_scroll_${song.id}'),
             controller: _scrollController,
-            cacheExtent: 300, // Optimizado: reducir cache de scroll para mejor rendimiento
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
+            cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
               slivers: [
                 // AppBar con botón de retroceso
                 SliverAppBar(
@@ -1073,7 +1189,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                           decoration: BoxDecoration(
                                             color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(16),
+                                            borderRadius: const BorderRadius.all(Radius.circular(16)),
                                           ),
                                           child: Text(
                                             song.genres!.first.toLowerCase(),
@@ -1152,12 +1268,13 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                   ),
                 ),
               ],
-            ),
-        ),
-      ),
+            ), // Cierra CustomScrollView
+        ), // Cierra SafeArea
+      ), // Cierra Container
       // El reproductor ya está en MainNavigation, no duplicar aquí
       // bottomNavigationBar: const ProfessionalAudioPlayer(),
-    );
+      ), // Cierra Scaffold
+    ); // Cierra RepaintBoundary
   }
 
   /// Construir contenido desde cache (sin skeleton loaders)
@@ -1169,19 +1286,22 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
     final coverUrl = _cachedCoverUrl;
     final artistAvatarUrl = _cachedArtistAvatarUrl;
 
-    return Scaffold(
-      key: ValueKey('song_detail_scaffold_${song.id}'),
-      extendBody: false, // No extender el cuerpo detrás del NavigationBar
-      body: Container(
+    return RepaintBoundary( // ✅ OPTIMIZACIÓN: Evitar repintados innecesarios
+      child: Scaffold(
+        key: ValueKey('song_detail_scaffold_${song.id}'),
+        extendBody: false, // No extender el cuerpo detrás del NavigationBar
+        body: Container(
         decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
           bottom: false, // No agregar padding inferior, MainNavigation ya lo maneja
           child: CustomScrollView(
+            key: PageStorageKey<String>('song_detail_scroll_${song.id}'),
             controller: _scrollController,
-            cacheExtent: 300,
-            slivers: [
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
+            cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
+              slivers: [
               SliverAppBar(
                 expandedHeight: 60,
                 floating: true,
@@ -1214,7 +1334,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                             width: imageSize,
                             height: imageSize,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(32),
+                              borderRadius: const BorderRadius.all(Radius.circular(32)),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(alpha: 0.2),
@@ -1224,7 +1344,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                               ],
                             ),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(32),
+                              borderRadius: const BorderRadius.all(Radius.circular(32)),
                               child: coverUrl != null
                                   ? CachedNetworkImage(
                                       imageUrl: coverUrl,
@@ -1393,7 +1513,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: const BorderRadius.all(Radius.circular(16)),
                                 ),
                                 child: Text(
                                   song.genres!.first.toLowerCase(),
@@ -1457,10 +1577,11 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
+            ), // Cierra CustomScrollView
+          ), // Cierra SafeArea
+        ), // Cierra Container
+      ), // Cierra Scaffold
+    ); // Cierra RepaintBoundary
   }
 }
 
@@ -1589,7 +1710,7 @@ class _PlayPauseButtonLarge extends ConsumerWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: const BorderRadius.all(Radius.circular(26)),
             child: Center(
               child: Icon(
                 icon,

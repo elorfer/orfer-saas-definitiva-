@@ -204,6 +204,17 @@ CREATE INDEX IF NOT EXISTS idx_play_history_song_id ON play_history(song_id);
 CREATE INDEX IF NOT EXISTS idx_streaming_stats_song_id ON streaming_stats(song_id);
 CREATE INDEX IF NOT EXISTS idx_streaming_stats_date ON streaming_stats(date);
 
+-- Índices adicionales para optimización del algoritmo de recomendaciones
+CREATE INDEX IF NOT EXISTS idx_songs_total_streams ON songs(total_streams DESC);
+CREATE INDEX IF NOT EXISTS idx_songs_created_at ON songs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_play_history_user_song ON play_history(user_id, song_id);
+
+-- ⚡️ Índices adicionales para optimizar consultas NOT IN (exclusiones)
+-- Nota: El índice en id (PRIMARY KEY) ya existe automáticamente, pero estos índices compuestos
+-- mejoran el rendimiento de las consultas de recomendación con múltiples filtros
+CREATE INDEX IF NOT EXISTS idx_songs_status_file_url ON songs(status, file_url) WHERE file_url IS NOT NULL AND file_url != '';
+CREATE INDEX IF NOT EXISTS idx_songs_status_streams ON songs(status, total_streams DESC) WHERE status = 'published';
+
 -- Insertar géneros por defecto
 INSERT INTO genres (name, description, color_hex) VALUES
 ('Rock', 'Música rock clásica y moderna', '#FF6B6B'),

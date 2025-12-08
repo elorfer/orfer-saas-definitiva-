@@ -17,20 +17,31 @@ import '../../../core/widgets/verified_badge.dart';
 /// 1. Canciones destacadas estáticas (marcadas por admin)
 /// 2. Recomendaciones dinámicas personalizadas
 /// 3. Actualización automática basada en la canción actual
-class IntelligentFeaturedSongsSection extends ConsumerWidget {
+class IntelligentFeaturedSongsSection extends ConsumerStatefulWidget {
   const IntelligentFeaturedSongsSection({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<IntelligentFeaturedSongsSection> createState() => _IntelligentFeaturedSongsSectionState();
+}
+
+class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFeaturedSongsSection>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // 🔥 OPTIMIZACIÓN: Mantener estado al hacer scroll
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     // Inicializar el sistema inteligente (usar read para evitar rebuilds innecesarios)
     ref.read(intelligentFeaturedInitProvider);
     // Pre-inicializar el reproductor unificado para que el primer play sea más rápido
     ref.read(unifiedAudioProviderFixed.notifier).ensureInitialized();
     
-    // Optimización: usar select para escuchar solo cambios específicos
-    final featuredSongs = ref.watch(intelligentFeaturedSongsProvider.select((state) => state));
-    final isLoading = ref.watch(intelligentFeaturedLoadingProvider.select((state) => state));
-    final error = ref.watch(intelligentFeaturedErrorProvider.select((state) => state));
+    // ✅ OPTIMIZACIÓN: Los providers ya usan select() internamente
+    // Solo se reconstruye cuando cambian estos valores específicos
+    final featuredSongs = ref.watch(intelligentFeaturedSongsProvider);
+    final isLoading = ref.watch(intelligentFeaturedLoadingProvider);
+    final error = ref.watch(intelligentFeaturedErrorProvider);
 
     // CRÍTICO: Solo mostrar skeleton durante carga inicial (cuando no hay datos)
     // Si hay datos pero está cargando (refresh), mostrar contenido existente
@@ -69,7 +80,7 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: const Color(0xFF8B7A6A).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -118,12 +129,12 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: const Color(0xFF8B7A6A),
+                    color: Color(0xFF8B7A6A),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -210,7 +221,7 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                           height: 64,
                           decoration: BoxDecoration(
                             color: NeumorphismTheme.shimmerContentColor,
-                            borderRadius: BorderRadius.circular(16), // Igual que el real
+                            borderRadius: const BorderRadius.all(Radius.circular(16)), // Igual que el real
                           ),
                         ),
                         const SizedBox(width: 16), // Igual que el real
@@ -226,7 +237,7 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                                 width: double.infinity,
                                 decoration: BoxDecoration(
                                   color: NeumorphismTheme.shimmerContentColor,
-                                  borderRadius: BorderRadius.circular(4),
+                                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                                 ),
                               ),
                               const SizedBox(height: 6), // Igual que el real
@@ -238,7 +249,7 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
                                     width: 120, // Ancho aproximado para artista + badge
                                     decoration: BoxDecoration(
                                       color: NeumorphismTheme.shimmerContentColor,
-                                      borderRadius: BorderRadius.circular(4),
+                                      borderRadius: const BorderRadius.all(Radius.circular(4)),
                                     ),
                                   ),
                                 ],
@@ -281,7 +292,7 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
             ),
             child: Center(
               child: Column(
@@ -358,15 +369,15 @@ class IntelligentFeaturedSongsSection extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
             ),
             child: Center(
               child: Column(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.auto_awesome,
                     size: 48,
-                    color: const Color(0xFF8B7A6A),
+                    color: Color(0xFF8B7A6A),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -445,7 +456,7 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
             NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -459,7 +470,7 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -477,7 +488,7 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: const BorderRadius.all(Radius.circular(16)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.15), // Igual que perfil de artista
@@ -488,7 +499,7 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
                         ],
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: const BorderRadius.all(Radius.circular(16)),
                         clipBehavior: Clip.antiAlias,
                         child: OptimizedImage(
                           imageUrl: coverUrl,

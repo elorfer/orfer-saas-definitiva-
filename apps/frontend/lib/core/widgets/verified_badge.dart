@@ -18,7 +18,7 @@ class VerifiedBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     // Tamaño fijo para evitar movimiento durante la carga
     const fixedSize = 20.0;
-    final badge = SizedBox(
+    final badge = const SizedBox(
       width: fixedSize,
       height: fixedSize,
       child: Icon(
@@ -81,13 +81,11 @@ class ArtistNameWithBadge extends StatelessWidget {
       mainAxisAlignment: alignment,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Flexible(
-          child: Text(
-            artistName,
-            style: textStyle,
-            maxLines: maxLines,
-            overflow: overflow,
-          ),
+        Text(
+          artistName,
+          style: textStyle,
+          maxLines: maxLines,
+          overflow: overflow,
         ),
         const SizedBox(width: 4),
         // Badge con tamaño fijo para evitar movimiento durante la carga

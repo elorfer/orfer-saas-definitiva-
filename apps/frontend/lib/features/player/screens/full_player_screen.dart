@@ -16,34 +16,33 @@ class FullPlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
-  // ✅ OPTIMIZACIÓN: Guardar notifier para usar en dispose() de forma segura
-  UnifiedAudioNotifier? _audioNotifier;
-
   @override
   void initState() {
     super.initState();
-    // ✅ OPTIMIZACIÓN: Guardar notifier inmediatamente, sin addPostFrameCallback
-    // No hay necesidad de esperar al siguiente frame
-    _audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
   }
 
   @override
   void dispose() {
-    // ✅ CORRECCIÓN: Usar Future.microtask para evitar modificar provider durante dispose
-    if (_audioNotifier != null) {
-      Future.microtask(() {
-        try {
-          _audioNotifier!.closeFullPlayer();
-        } catch (e) {
-          // Ignorar errores si el provider ya fue disposed
-        }
-      });
-    }
+    // Cerrar el reproductor completo cuando se desmonta
+    Future.microtask(() {
+      try {
+        ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
+      } catch (e) {
+        // Ignorar errores si el provider ya fue disposed
+      }
+    });
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Abrir el reproductor completo cuando se construye
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+      }
+    });
+    
     // ✅ OPTIMIZACIÓN: Solo escuchar currentSong, no todo el estado
     final currentSong = ref.watch(
       unifiedAudioProviderFixed.select((state) => state.currentSong),
@@ -92,11 +91,12 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
           }
         }
       },
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBody: true, // ✅ Extender el body debajo del sistema
-        extendBodyBehindAppBar: true, // ✅ Extender detrás de la app bar
-        body: RepaintBoundary(
+      child: RepaintBoundary(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          extendBody: true, // ✅ Extender el body debajo del sistema
+          extendBodyBehindAppBar: true, // ✅ Extender detrás de la app bar
+          body: RepaintBoundary(
           child: Stack(
             children: [
               // ✅ Reproductor profesional completo (con fondo lazy)
@@ -127,6 +127,7 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -145,7 +146,7 @@ class _CloseButton extends StatelessWidget {
       height: 40,
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
       ),
       child: IconButton(
         onPressed: onPressed,

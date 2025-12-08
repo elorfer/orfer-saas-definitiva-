@@ -13,9 +13,10 @@ class FeaturedSongsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Optimización: usar select para escuchar solo cambios específicos
-    final featuredSongs = ref.watch(featuredSongsProvider.select((state) => state));
-    final isLoading = ref.watch(isLoadingProvider.select((state) => state));
+    // ✅ OPTIMIZACIÓN: Los providers ya usan select() internamente
+    // Solo se reconstruye cuando cambian estos valores específicos
+    final featuredSongs = ref.watch(featuredSongsProvider);
+    final isLoading = ref.watch(isLoadingProvider);
 
     if (isLoading) {
       return _buildLoadingSection();
@@ -163,7 +164,7 @@ class FeaturedSongsSection extends ConsumerWidget {
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: const BorderRadius.all(Radius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -172,7 +173,7 @@ class FeaturedSongsSection extends ConsumerWidget {
                           width: 120,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: const BorderRadius.all(Radius.circular(6)),
                           ),
                         ),
                       ],
@@ -183,7 +184,7 @@ class FeaturedSongsSection extends ConsumerWidget {
                     height: 40,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: const BorderRadius.all(Radius.circular(20)),
                     ),
                   ),
                 ],
@@ -221,7 +222,7 @@ class FeaturedSongsSection extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
             ),
             child: Center(
               child: Column(

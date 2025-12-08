@@ -155,25 +155,36 @@ final intelligentFeaturedProvider = NotifierProvider<IntelligentFeaturedNotifier
 });
 
 /// 🚀 PROVIDER OPTIMIZADO PARA SOLO LAS CANCIONES
-/// Usa selector para evitar rebuilds innecesarios
+/// 🔥 OPTIMIZACIÓN: Usa selector + keepAlive para memoization y evitar rebuilds innecesarios
 final intelligentFeaturedSongsProvider = Provider<List<FeaturedSong>>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(intelligentFeaturedProvider.select((state) => state.featuredSongs));
 });
 
 /// 🚀 PROVIDER CON CACHÉ PARA CANCIONES PAGINADAS
 /// Implementa paginación virtual para listas grandes
+/// 🔥 OPTIMIZACIÓN: keepAlive para memoization
 final intelligentFeaturedSongsPaginatedProvider = Provider.family<List<FeaturedSong>, int>((ref, pageSize) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   final allSongs = ref.watch(intelligentFeaturedSongsProvider);
   return allSongs.take(pageSize).toList();
 });
 
 /// Provider selector para el estado de carga
+/// 🔥 OPTIMIZACIÓN: keepAlive para memoization
 final intelligentFeaturedLoadingProvider = Provider<bool>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(intelligentFeaturedProvider.select((state) => state.isLoading));
 });
 
 /// Provider selector para errores
+/// 🔥 OPTIMIZACIÓN: keepAlive para memoization
 final intelligentFeaturedErrorProvider = Provider<String?>((ref) {
+  // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
+  ref.keepAlive();
   return ref.watch(intelligentFeaturedProvider.select((state) => state.error));
 });
 

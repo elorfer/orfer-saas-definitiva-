@@ -4,7 +4,6 @@ import 'package:shimmer/shimmer.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/providers/intelligent_featured_provider.dart';
-import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/widgets/premium_profile_drawer.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -26,7 +25,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   bool get wantKeepAlive => true; // Mantener estado al cambiar de pestaña
 
-  // ScrollController para mejor control del scroll estilo Spotify
+  // ScrollController simple
   late final ScrollController _scrollController;
 
   @override
@@ -71,7 +70,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             notificationPredicate: (_) => true,
             child: SingleChildScrollView(
               controller: _scrollController,
-              physics: const FastScrollPhysics(), // Scroll optimizado sin lag
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ), // ✅ Scroll estilo iPhone
               padding: const EdgeInsets.only(top: 24.0, bottom: 40.0),
               clipBehavior: Clip.none, // 🚀 Mejor rendimiento - sin clipping costoso
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -125,17 +126,11 @@ class _HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Optimización: usar select para escuchar solo cambios en user
-    final user = ref.watch(authStateProvider.select((state) => state.user));
-    
-    // Inicializar provider si no está inicializado (optimización: solo leer isInitialized)
-    final isInitialized = ref.watch(homeStateProvider.select((state) => state.isInitialized));
+    // ✅ VISTA TONTA: Solo leer datos de providers, sin inicialización manual
+    // Los providers ya usan select() internamente para evitar rebuilds innecesarios
+    final user = ref.watch(currentUserProvider);
+    // Usar select() directamente para evitar conflicto de nombres con auth_provider
     final isLoading = ref.watch(homeStateProvider.select((state) => state.isLoading));
-    
-    if (!isInitialized) {
-      // Solo leer el provider para inicializarlo si no está inicializado
-      ref.read(homeStateProvider);
-    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -151,7 +146,7 @@ class _HomeHeader extends ConsumerWidget {
                       // Abrir drawer lateral desde la izquierda
                       Scaffold.of(context).openDrawer();
                     },
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: const BorderRadius.all(Radius.circular(28)),
                     child: Container(
                       width: 56,
                       height: 56,
@@ -264,7 +259,7 @@ class _HomeHeader extends ConsumerWidget {
                   width: 100,
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.shimmerContentColor,
-                    borderRadius: BorderRadius.circular(4),
+                        borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                 ),
               ),
@@ -279,7 +274,7 @@ class _HomeHeader extends ConsumerWidget {
                   width: 150,
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.shimmerContentColor,
-                    borderRadius: BorderRadius.circular(4),
+                        borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                 ),
               ),

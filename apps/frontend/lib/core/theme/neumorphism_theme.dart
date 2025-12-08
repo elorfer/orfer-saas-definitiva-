@@ -100,7 +100,7 @@ class NeumorphismTheme {
   static BoxDecoration get cardDecoration {
     return BoxDecoration(
       color: surface,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: const BorderRadius.all(Radius.circular(20)),
       boxShadow: softShadow,
     );
   }
@@ -197,7 +197,7 @@ class NeumorphismTheme {
         elevation: 0,
         shadowColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -210,7 +210,7 @@ class NeumorphismTheme {
           elevation: 0,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: const BorderRadius.all(Radius.circular(30)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           textStyle: GoogleFonts.inter(

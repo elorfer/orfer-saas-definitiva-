@@ -25,7 +25,7 @@ import '../../features/player/screens/full_player_screen.dart';
 import '../../features/song_detail/screens/song_detail_screen.dart';
 import '../../core/models/song_model.dart';
 import '../providers/auth_provider.dart';
-import 'main_navigation.dart';
+import 'persistent_navigation.dart';
 import 'page_transitions.dart' show SpotifyPageTransitions, createCustomTransitionPage, createNoTransitionPage;
 
 final goRouterProvider = Provider<GoRouter>((ref) {
@@ -141,187 +141,350 @@ class GoRouterNotifier extends ChangeNotifier {
             );
           },
         ),
-        // ShellRoute envuelve todas las rutas autenticadas para mantener la barra de navegación
-        ShellRoute(
-          builder: (context, state, child) {
-            // Si estamos en rutas de autenticación o splash, no mostrar MainNavigation
+        // 🔥 REFACTORIZADO: StatefulShellRoute.indexedStack para persistencia real
+        // Cada rama mantiene su propio stack de navegación independiente
+        StatefulShellRoute.indexedStack(
+          builder: (context, state, navigationShell) {
+            // Si estamos en rutas de autenticación o splash, no mostrar navegación
             final path = state.matchedLocation;
             if (path == '/splash' || 
                 path == '/login' || 
                 path == '/register' || 
                 path.startsWith('/forgot-password') || 
                 path.startsWith('/reset-password')) {
-              return child;
+              return navigationShell;
             }
-            // Para todas las demás rutas autenticadas, mostrar MainNavigation con la barra
-            return MainNavigation(child: child);
+            
+            // Usar PersistentNavigation con StatefulNavigationShell
+            return PersistentNavigation(navigationShell: navigationShell);
           },
-          routes: [
-            // 🔥 OPTIMIZACIÓN: Home - sin transición para tabs (mejor rendimiento)
-            GoRoute(
-              path: '/home',
-              pageBuilder: (context, state) => createNoTransitionPage<void>(
-                key: const PageStorageKey('home_screen'), // 🔥 PageStorageKey para mantener scroll
-                child: const HomeScreen(),
-              ),
+          branches: [
+            // Rama 0: Home
+            StatefulShellBranch(
+              navigatorKey: GlobalKey<NavigatorState>(debugLabel: 'home_branch'),
+              routes: [
+                GoRoute(
+                  path: '/home',
+                  pageBuilder: (context, state) => createNoTransitionPage<void>(
+                    key: const PageStorageKey('home_screen'),
+                    child: const HomeScreen(),
+                  ),
+                ),
+                // Featured Songs - subruta de Home
+                GoRoute(
+                  path: '/featured-songs',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const FeaturedSongsScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                  ),
+                ),
+                // Song Detail - accesible desde Home
+                GoRoute(
+                  path: '/song/:id',
+                  pageBuilder: (context, state) {
+                    final songId = state.pathParameters['id'] ?? '';
+                    final extra = state.extra;
+                    Song? song;
+                    
+                    if (extra is Song) {
+                      song = extra;
+                    } else {
+                      song = Song(
+                        id: songId,
+                        status: SongStatus.published,
+                        isExplicit: false,
+                        totalStreams: 0,
+                        totalLikes: 0,
+                        totalShares: 0,
+                        featured: false,
+                      );
+                    }
+                    
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('song_detail_${song.id}'),
+                      child: SongDetailScreen(song: song),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+                // Playlist Detail - accesible desde Home
+                GoRoute(
+                  path: '/playlist/:id',
+                  pageBuilder: (context, state) {
+                    final playlistId = state.pathParameters['id'] ?? '';
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('playlist_detail_$playlistId'),
+                      child: PlaylistDetailScreen(playlistId: playlistId),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+                // Artist Detail - accesible desde Home
+                GoRoute(
+                  path: '/artist/:id',
+                  pageBuilder: (context, state) {
+                    final artistId = state.pathParameters['id'] ?? '';
+                    final extra = state.extra;
+                    ArtistLite? artistLite;
+                    if (extra is ArtistLite) {
+                      artistLite = extra;
+                    } else {
+                      artistLite = ArtistLite(
+                        id: artistId,
+                        name: 'Artista',
+                        profilePhotoUrl: null,
+                        coverPhotoUrl: null,
+                        nationalityCode: null,
+                        featured: false,
+                      );
+                    }
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('artist_page_${artistLite.id}'),
+                      child: ArtistPage(artist: artistLite),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+              ],
             ),
-            // 🔥 OPTIMIZACIÓN: Search - sin transición para tabs (mejor rendimiento)
-            GoRoute(
-              path: '/search',
-              pageBuilder: (context, state) => createNoTransitionPage<void>(
-                key: const PageStorageKey('search_screen'), // 🔥 PageStorageKey para mantener estado
-                child: const SearchScreen(),
-              ),
+            // Rama 1: Search
+            StatefulShellBranch(
+              navigatorKey: GlobalKey<NavigatorState>(debugLabel: 'search_branch'),
+              routes: [
+                GoRoute(
+                  path: '/search',
+                  pageBuilder: (context, state) => createNoTransitionPage<void>(
+                    key: const PageStorageKey('search_screen'),
+                    child: const SearchScreen(),
+                  ),
+                ),
+                // Song Detail - accesible desde Search
+                GoRoute(
+                  path: '/song/:id',
+                  pageBuilder: (context, state) {
+                    final songId = state.pathParameters['id'] ?? '';
+                    final extra = state.extra;
+                    Song? song;
+                    
+                    if (extra is Song) {
+                      song = extra;
+                    } else {
+                      song = Song(
+                        id: songId,
+                        status: SongStatus.published,
+                        isExplicit: false,
+                        totalStreams: 0,
+                        totalLikes: 0,
+                        totalShares: 0,
+                        featured: false,
+                      );
+                    }
+                    
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('song_detail_${song.id}'),
+                      child: SongDetailScreen(song: song),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+                // Playlist Detail - accesible desde Search
+                GoRoute(
+                  path: '/playlist/:id',
+                  pageBuilder: (context, state) {
+                    final playlistId = state.pathParameters['id'] ?? '';
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('playlist_detail_$playlistId'),
+                      child: PlaylistDetailScreen(playlistId: playlistId),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+                // Artist Detail - accesible desde Search (muy común)
+                GoRoute(
+                  path: '/artist/:id',
+                  pageBuilder: (context, state) {
+                    final artistId = state.pathParameters['id'] ?? '';
+                    final extra = state.extra;
+                    ArtistLite? artistLite;
+                    if (extra is ArtistLite) {
+                      artistLite = extra;
+                    } else {
+                      artistLite = ArtistLite(
+                        id: artistId,
+                        name: 'Artista',
+                        profilePhotoUrl: null,
+                        coverPhotoUrl: null,
+                        nationalityCode: null,
+                        featured: false,
+                      );
+                    }
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('artist_page_${artistLite.id}'),
+                      child: ArtistPage(artist: artistLite),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+              ],
             ),
-            // 🔥 OPTIMIZACIÓN: Library - sin transición para tabs (mejor rendimiento)
-            GoRoute(
-              path: '/library',
-              pageBuilder: (context, state) => createNoTransitionPage<void>(
-                key: const PageStorageKey('library_screen'), // 🔥 PageStorageKey para mantener scroll
-                child: const LibraryScreen(),
-              ),
+            // Rama 2: Library
+            StatefulShellBranch(
+              navigatorKey: GlobalKey<NavigatorState>(debugLabel: 'library_branch'),
+              routes: [
+                GoRoute(
+                  path: '/library',
+                  pageBuilder: (context, state) => createNoTransitionPage<void>(
+                    key: const PageStorageKey('library_screen'),
+                    child: const LibraryScreen(),
+                  ),
+                ),
+                // Playlists - subruta de Library
+                GoRoute(
+                  path: '/playlists',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const PlaylistsScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                  ),
+                ),
+                // Favorites - subruta de Library
+                GoRoute(
+                  path: '/favorites',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const FavoritesScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                  ),
+                ),
+                // Recently Played - subruta de Library
+                GoRoute(
+                  path: '/recently-played',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const RecentlyPlayedScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                  ),
+                ),
+                // Followed Artists - subruta de Library
+                GoRoute(
+                  path: '/followed-artists',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const FollowedArtistsScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                  ),
+                ),
+                // Song Detail - accesible desde Library
+                GoRoute(
+                  path: '/song/:id',
+                  pageBuilder: (context, state) {
+                    final songId = state.pathParameters['id'] ?? '';
+                    final extra = state.extra;
+                    Song? song;
+                    
+                    if (extra is Song) {
+                      song = extra;
+                    } else {
+                      song = Song(
+                        id: songId,
+                        status: SongStatus.published,
+                        isExplicit: false,
+                        totalStreams: 0,
+                        totalLikes: 0,
+                        totalShares: 0,
+                        featured: false,
+                      );
+                    }
+                    
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('song_detail_${song.id}'),
+                      child: SongDetailScreen(song: song),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+                // Playlist Detail - accesible desde Library (muy común)
+                GoRoute(
+                  path: '/playlist/:id',
+                  pageBuilder: (context, state) {
+                    final playlistId = state.pathParameters['id'] ?? '';
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('playlist_detail_$playlistId'),
+                      child: PlaylistDetailScreen(playlistId: playlistId),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+                // Artist Detail - accesible desde Library
+                GoRoute(
+                  path: '/artist/:id',
+                  pageBuilder: (context, state) {
+                    final artistId = state.pathParameters['id'] ?? '';
+                    final extra = state.extra;
+                    ArtistLite? artistLite;
+                    if (extra is ArtistLite) {
+                      artistLite = extra;
+                    } else {
+                      artistLite = ArtistLite(
+                        id: artistId,
+                        name: 'Artista',
+                        profilePhotoUrl: null,
+                        coverPhotoUrl: null,
+                        nationalityCode: null,
+                        featured: false,
+                      );
+                    }
+                    return createCustomTransitionPage<void>(
+                      key: PageStorageKey<String>('artist_page_${artistLite.id}'),
+                      child: ArtistPage(artist: artistLite),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+              ],
             ),
-            // 🔥 OPTIMIZACIÓN: Premium - sin transición para tabs (mejor rendimiento)
-            GoRoute(
-              path: '/premium',
-              name: 'premium',
-              pageBuilder: (context, state) => createNoTransitionPage<void>(
-                key: const PageStorageKey('premium_screen'), // 🔥 PageStorageKey para mantener estado
-                child: const PremiumScreen(),
-              ),
-            ),
-            // Playlists - IDÉNTICO a song details (sin parpadeo)
-            GoRoute(
-              path: '/playlists',
-              pageBuilder: (context, state) => createCustomTransitionPage<void>(
-                key: state.pageKey,
-                child: const PlaylistsScreen(),
-                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                transitionDuration: const Duration(milliseconds: 200),
-                reverseTransitionDuration: const Duration(milliseconds: 150),
-              ),
-            ),
-            // Featured Songs - transición optimizada sin parpadeo
-            GoRoute(
-              path: '/featured-songs',
-              pageBuilder: (context, state) => createCustomTransitionPage<void>(
-                key: state.pageKey,
-                child: const FeaturedSongsScreen(),
-                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                transitionDuration: const Duration(milliseconds: 200),
-                reverseTransitionDuration: const Duration(milliseconds: 150),
-              ),
-            ),
-            // Favorites - transición optimizada sin parpadeo
-            GoRoute(
-              path: '/favorites',
-              pageBuilder: (context, state) => createCustomTransitionPage<void>(
-                key: state.pageKey,
-                child: const FavoritesScreen(),
-                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                transitionDuration: const Duration(milliseconds: 200),
-                reverseTransitionDuration: const Duration(milliseconds: 150),
-              ),
-            ),
-            GoRoute(
-              path: '/recently-played',
-              pageBuilder: (context, state) => createCustomTransitionPage<void>(
-                key: state.pageKey,
-                child: const RecentlyPlayedScreen(),
-                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                transitionDuration: const Duration(milliseconds: 200),
-                reverseTransitionDuration: const Duration(milliseconds: 150),
-              ),
-            ),
-            GoRoute(
-              path: '/followed-artists',
-              pageBuilder: (context, state) => createCustomTransitionPage<void>(
-                key: state.pageKey,
-                child: const FollowedArtistsScreen(),
-                transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                transitionDuration: const Duration(milliseconds: 200),
-                reverseTransitionDuration: const Duration(milliseconds: 150),
-              ),
-            ),
-            // Artist Detail - transición optimizada sin parpadeo (igual que song details)
-            GoRoute(
-              path: '/artist/:id',
-              pageBuilder: (context, state) {
-                final artistId = state.pathParameters['id'] ?? '';
-                final extra = state.extra;
-                ArtistLite? artistLite;
-                if (extra is ArtistLite) {
-                  artistLite = extra;
-                } else {
-                  // Si no llega extra, mostrar un placeholder mínimo
-                  artistLite = ArtistLite(
-                    id: artistId,
-                    name: 'Artista',
-                    profilePhotoUrl: null,
-                    coverPhotoUrl: null,
-                    nationalityCode: null,
-                    featured: false,
-                  );
-                }
-                // Key estable basada en artistId para preservar estado
-                return createCustomTransitionPage<void>(
-                  key: ValueKey('artist_page_${artistLite.id}'),
-                  child: ArtistPage(artist: artistLite),
-                  transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                  transitionDuration: const Duration(milliseconds: 200),
-                  reverseTransitionDuration: Duration.zero, // CRÍTICO: Sin duración al retroceder (evita parpadeo)
-                );
-              },
-            ),
-            // Playlist Detail - transición optimizada sin parpadeo (igual que song details)
-            GoRoute(
-              path: '/playlist/:id',
-              pageBuilder: (context, state) {
-                final playlistId = state.pathParameters['id'] ?? '';
-                // Key estable basada en playlistId para preservar estado
-                return createCustomTransitionPage<void>(
-                  key: ValueKey('playlist_detail_$playlistId'),
-                  child: PlaylistDetailScreen(playlistId: playlistId),
-                  transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                  transitionDuration: const Duration(milliseconds: 200),
-                  reverseTransitionDuration: Duration.zero, // CRÍTICO: Sin duración al retroceder (evita parpadeo)
-                );
-              },
-            ),
-            // Song Detail - DENTRO del ShellRoute para que respete el NavigationBar
-            GoRoute(
-              path: '/song/:id',
-              pageBuilder: (context, state) {
-                final songId = state.pathParameters['id'] ?? '';
-                final extra = state.extra;
-                Song? song;
-                
-                if (extra is Song) {
-                  song = extra;
-                } else {
-                  // Si no hay canción en extra, crear una básica con el ID
-                  // La pantalla cargará los datos completos desde el backend
-                  song = Song(
-                    id: songId,
-                    status: SongStatus.published,
-                    isExplicit: false,
-                    totalStreams: 0,
-                    totalLikes: 0,
-                    totalShares: 0,
-                    featured: false,
-                  );
-                }
-                
-                // Usar transición optimizada para SongDetail: Sin transición al retroceder
-                // Key estable basada en songId para preservar estado
-                return createCustomTransitionPage<void>(
-                  key: ValueKey('song_detail_${song.id}'),
-                  child: SongDetailScreen(song: song),
-                  transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-                  transitionDuration: const Duration(milliseconds: 200),
-                  reverseTransitionDuration: Duration.zero, // CRÍTICO: Sin duración al retroceder (evita parpadeo)
-                );
-              },
+            // Rama 3: Premium
+            StatefulShellBranch(
+              navigatorKey: GlobalKey<NavigatorState>(debugLabel: 'premium_branch'),
+              routes: [
+                GoRoute(
+                  path: '/premium',
+                  name: 'premium',
+                  pageBuilder: (context, state) => createNoTransitionPage<void>(
+                    key: const PageStorageKey('premium_screen'),
+                    child: const PremiumScreen(),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

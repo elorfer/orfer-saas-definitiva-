@@ -82,7 +82,7 @@ class _RoleOption extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected ? NeumorphismTheme.coffeeMedium.withValues(alpha:0.1) : Colors.grey[50],
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
           border: Border.all(
             color: isSelected ? NeumorphismTheme.coffeeMedium : Colors.grey[300]!,
             width: isSelected ? 2 : 1,

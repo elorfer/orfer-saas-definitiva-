@@ -88,7 +88,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                           NeumorphismTheme.coffeeDark,
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: const BorderRadius.all(Radius.circular(20)),
                       boxShadow: [
                         BoxShadow(
                           color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
@@ -130,7 +130,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                           height: 40, // 🔥 Altura reducida
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: const BorderRadius.all(Radius.circular(12)),
                           ),
                           child: Material(
                             color: Colors.transparent,
@@ -138,7 +138,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                               onTap: () {
                                 // TODO: Navegar a pantalla de suscripción premium
                               },
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: const BorderRadius.all(Radius.circular(12)),
                               child: Center(
                                 child: Text(
                                   'Actualizar a Premium',
@@ -171,7 +171,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                           NeumorphismTheme.coffeeDark.withValues(alpha: 0.06),
                         ],
                       ),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: const BorderRadius.all(Radius.circular(20)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.08),
@@ -249,7 +249,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                           ),
                           decoration: BoxDecoration(
                             color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: const BorderRadius.all(Radius.circular(20)),
                             border: Border.all(
                               color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
                               width: 1,
@@ -320,7 +320,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                     height: 48, // 🔥 Altura reducida
                     decoration: BoxDecoration(
                       color: Colors.red.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
+                            borderRadius: const BorderRadius.all(Radius.circular(14)),
                       border: Border.all(
                         color: Colors.red.withValues(alpha: 0.3),
                         width: 1.5,
@@ -336,7 +336,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                             context.go('/login');
                           }
                         },
-                        borderRadius: BorderRadius.circular(14),
+                            borderRadius: const BorderRadius.all(Radius.circular(14)),
                         child: Center(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -381,7 +381,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
     return Container(
       decoration: BoxDecoration(
         color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -394,7 +394,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // 🔥 Padding reducido
             child: Row(
@@ -405,7 +405,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                   height: 36,
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: const BorderRadius.all(Radius.circular(10)),
                   ),
                   child: Icon(
                     icon,

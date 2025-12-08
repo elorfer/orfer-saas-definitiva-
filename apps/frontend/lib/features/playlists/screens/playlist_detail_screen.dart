@@ -1,21 +1,23 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/providers/playlist_provider.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/providers/playback_state.dart';
+import '../../../core/providers/secondary_screens_scroll_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/models/playlist_model.dart';
 import '../../../core/widgets/optimized_image.dart';
-import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/utils/data_normalizer.dart';
 import '../../../core/utils/retry_handler.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/utils/intersection_observer.dart';
 
 // Función top-level para procesar playlist en isolate
 Playlist? _parsePlaylist(Map<String, dynamic> jsonData) {
@@ -70,6 +72,20 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   // Timer para debounce solo en "Reproducir todo" (mantuvo para evitar múltiples toques)
   Timer? _playAllDebounce;
   
+  // 🔥 OPTIMIZACIÓN: ScrollController para precache dinámico de imágenes (como en Home)
+  late final ScrollController _scrollController;
+  
+  // ✅ OPTIMIZACIÓN: Cache de URLs de imágenes para evitar recálculos en _onScroll
+  List<String> _cachedImageUrls = [];
+  int _cachedSongsCount = 0;
+  
+  // ✅ OPTIMIZACIÓN: Timer para debounce en _onScroll
+  Timer? _scrollDebounceTimer;
+  
+  // 🔥 PERSISTENCIA: Guardar posición inicial para restaurar después de cargar datos
+  double? _savedInitialScrollPosition;
+  bool _hasRestoredInitialScroll = false;
+  
   static const int _initialSongsLimit = 20;
   static const int _loadMoreSongsLimit = 20;
   static const Duration _debounceDuration = Duration(milliseconds: 300);
@@ -85,29 +101,253 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   @override
   void initState() {
     super.initState();
-    // ✅ Cargar desde caché inmediatamente en el siguiente microtask (más rápido)
-    scheduleMicrotask(() {
-      if (mounted) {
-        _loadFromCache();
+    
+    // 🔥 PERSISTENCIA: Restaurar scroll position desde Provider (más robusto)
+    final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+    final savedPosition = scrollNotifier.getScrollPosition('playlist_detail_${widget.playlistId}');
+    
+    // También intentar desde PageStorage como backup
+    final pageStoragePosition = PageStorage.of(context).readState(
+      context, 
+      identifier: PageStorageKey<String>('playlist_detail_scroll_${widget.playlistId}'),
+    ) as double?;
+    
+    // Usar la posición del provider si existe, sino la de PageStorage
+    final initialPosition = savedPosition ?? pageStoragePosition ?? 0.0;
+    
+    // 🔥 OPTIMIZACIÓN: Cargar desde cache SÍNCRONAMENTE primero para saber si hay datos
+    final cachedData = _playlistCache[widget.playlistId];
+    bool hasValidCache = false;
+    if (cachedData != null) {
+      final lastLoad = cachedData['lastLoad'] as DateTime?;
+      if (lastLoad != null && DateTime.now().difference(lastLoad) < _cacheExpiration) {
+        final cachedPlaylist = cachedData['playlist'] as Playlist?;
+        final cachedSongs = cachedData['displayedSongs'] as List<Song>?;
+        final cachedHasMore = cachedData['hasMoreSongs'] as bool? ?? false;
+        
+        if (cachedPlaylist != null && cachedSongs != null) {
+          hasValidCache = true;
+          // ✅ Si hay cache válido, establecer datos ANTES de crear el ScrollController
+          _playlist = cachedPlaylist;
+          _displayedSongs = List<Song>.from(cachedSongs);
+          _hasMoreSongs = cachedHasMore;
+          _hasLoadedOnce = true;
+          
+          // 🔥 CRÍTICO: Inicializar ScrollController en 0 y restaurar después
+          // Aunque hay cache, mejor restaurar después del frame para garantizar que funcione
+          _scrollController = ScrollController(initialScrollOffset: 0.0);
+          _savedInitialScrollPosition = initialPosition;
+          // Marcar que tenemos cache para no restaurar múltiples veces
+          _hasRestoredInitialScroll = false;
+        }
       }
-    });
+    }
+    
+    // Si no hay cache válido, inicializar en 0 y restaurar después de cargar
+    if (!hasValidCache) {
+      _scrollController = ScrollController(initialScrollOffset: 0.0);
+      _savedInitialScrollPosition = initialPosition;
+    }
+    
+    _scrollController.addListener(_onScroll);
+    // 🔥 PERSISTENCIA: Guardar posición del scroll cuando cambia
+    _scrollController.addListener(_saveScrollPosition);
+    
+    // ✅ Si ya cargamos desde cache síncronamente, restaurar scroll y actualizar URLs
+    if (hasValidCache && _playlist != null) {
+      // 🔥 CRÍTICO: Restaurar scroll después del primer frame usando SchedulerBinding
+      if (_savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _restoreScrollPosition();
+        });
+      }
+      
+      scheduleMicrotask(() {
+        if (mounted) {
+          _updateImageUrlsCache();
+        }
+      });
+    } else {
+      // ✅ Cargar desde caché en el siguiente microtask (si no se cargó síncronamente)
+      scheduleMicrotask(() {
+        if (mounted) {
+          _loadFromCache();
+        }
+      });
+      
+      // 🔥 CRÍTICO: Restaurar scroll después del primer frame si hay posición guardada
+      if (_savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          _restoreScrollPosition();
+        });
+      }
+    }
+    
     // Cargar datos en el siguiente frame para permitir que el primer frame se renderice
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && !_hasLoadedOnce) {
         _loadPlaylist();
       }
     });
+  }
+  
+  /// 🔥 CRÍTICO: Restaurar posición del scroll después de que el contenido esté medido
+  /// Este método verifica que el ScrollController tenga un maxScrollExtent válido
+  /// antes de hacer jumpTo, evitando que la restauración falle silenciosamente
+  void _restoreScrollPosition() {
+    if (!mounted || _hasRestoredInitialScroll) return;
+    
+    if (!_scrollController.hasClients) {
+      // Si aún no tiene clients, esperar un frame más
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+      return;
+    }
+    
+    // 🔥 CRÍTICO: Verificar que el contenido esté medido
+    // Si maxScrollExtent es 0, el contenido aún no se ha medido
+    if (_scrollController.position.maxScrollExtent <= 0) {
+      // Esperar otro frame para que el contenido se mida
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _restoreScrollPosition();
+      });
+      return;
+    }
+    
+    final savedPosition = _savedInitialScrollPosition;
+    if (savedPosition != null && savedPosition > 0) {
+      final currentOffset = _scrollController.offset;
+      final maxExtent = _scrollController.position.maxScrollExtent;
+      
+      // Solo restaurar si:
+      // 1. La posición guardada es válida (menor o igual al máximo)
+      // 2. El scroll está cerca de 0 (no se ha movido manualmente)
+      if (savedPosition <= maxExtent && currentOffset < 10) {
+        _scrollController.jumpTo(savedPosition);
+        _hasRestoredInitialScroll = true;
+      }
+    }
+  }
+
+  /// 🔥 PERSISTENCIA: Guardar posición del scroll en Provider (persistente) y PageStorage (backup)
+  void _saveScrollPosition() {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    final position = _scrollController.offset;
+    if (position < 0) return;
+    
+    final screenKey = 'playlist_detail_${widget.playlistId}';
+    
+    // 🔥 PERSISTENCIA: Guardar en Provider (persistente incluso si el widget se destruye)
+    final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+    scrollNotifier.saveScrollPosition(screenKey, position);
+    
+    // También guardar en PageStorage como backup
+    try {
+      PageStorage.of(context).writeState(
+        context,
+        position,
+        identifier: PageStorageKey<String>('playlist_detail_scroll_${widget.playlistId}'),
+      );
+    } catch (e) {
+      // Ignorar errores de PageStorage
+    }
   }
 
   @override
   void dispose() {
     // Cancelar timers de debounce al destruir el widget
     _playAllDebounce?.cancel();
+    _scrollDebounceTimer?.cancel();
+    
+    // 🔥 CRÍTICO: Guardar posición final antes de destruir (sin debounce)
+    if (_scrollController.hasClients) {
+      final finalPosition = _scrollController.offset;
+      if (finalPosition >= 0) {
+        final screenKey = 'playlist_detail_${widget.playlistId}';
+        final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+        scrollNotifier.saveScrollPosition(screenKey, finalPosition);
+      }
+    }
+    
+    // 🔥 OPTIMIZACIÓN: Limpiar ScrollController
+    _scrollController.removeListener(_onScroll);
+    _scrollController.removeListener(_saveScrollPosition);
+    _scrollController.dispose();
     super.dispose();
+  }
+  
+  /// ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+  void _updateImageUrlsCache() {
+    _cachedImageUrls = _displayedSongs
+        .map((song) => song.coverArtUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    _cachedSongsCount = _displayedSongs.length;
+  }
+  
+  /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles y detectar fin de scroll para paginación automática
+  /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients || _displayedSongs.isEmpty) return;
+    
+    // ⚡ PAGINACIÓN AUTOMÁTICA: Detectar si el usuario está cerca del final del scroll
+    final position = _scrollController.position;
+    final maxScrollExtent = position.maxScrollExtent;
+    final currentOffset = position.pixels;
+    
+    // Cargar más cuando el usuario está a 200px del final
+    if (maxScrollExtent > 0 && 
+        currentOffset >= maxScrollExtent - 200 && 
+        _hasMoreSongs && 
+        !_loadingMore) {
+      _loadMoreSongs();
+    }
+    
+    // ✅ OPTIMIZACIÓN: Cancelar timer anterior si existe
+    _scrollDebounceTimer?.cancel();
+    
+    // ✅ OPTIMIZACIÓN: Debounce de 300ms para evitar ejecuciones excesivas
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted || !_scrollController.hasClients || _displayedSongs.isEmpty) return;
+      
+      try {
+        // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer de _displayedSongs cada vez
+        if (_cachedImageUrls.isEmpty) {
+          // Si no hay cache, actualizar desde _displayedSongs (solo una vez)
+          _cachedImageUrls = _displayedSongs
+              .map((song) => song.coverArtUrl)
+              .where((url) => url != null && url.isNotEmpty)
+              .cast<String>()
+              .toList();
+          _cachedSongsCount = _displayedSongs.length;
+        }
+        
+        // Precachear imágenes visibles basado en posición del scroll (IntersectionObserver)
+        if (_cachedImageUrls.isNotEmpty) {
+          LazyImageLoader.precacheVisibleVerticalImages(
+            scrollController: _scrollController,
+            itemExtent: 80.0, // Altura fija de cada item (igual que itemExtent del SliverFixedExtentList)
+            itemCount: _cachedSongsCount,
+            imageUrls: _cachedImageUrls,
+            context: context,
+            precacheCount: 5, // Precachear 5 items antes y después del viewport
+          );
+        }
+      } catch (e) {
+        // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
+        debugPrint('[PlaylistDetailScreen] Error en _onScroll: $e');
+      }
+    });
   }
 
   // ✅ Cargar datos desde caché si están disponibles
   void _loadFromCache() {
+    // Si ya se cargó desde cache en initState, no hacer nada
+    if (_hasLoadedOnce && _playlist != null) return;
+    
     final cachedData = _playlistCache[widget.playlistId];
     if (cachedData != null) {
       final lastLoad = cachedData['lastLoad'] as DateTime?;
@@ -118,12 +358,43 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         final cachedHasMore = cachedData['hasMoreSongs'] as bool? ?? false;
         
         if (cachedPlaylist != null && cachedSongs != null) {
+          // 🔥 CRÍTICO: Guardar posición actual del scroll antes del setState
+          final savedScrollPosition = _scrollController.hasClients 
+              ? _scrollController.offset 
+              : 0.0;
+          
           setState(() {
             _playlist = cachedPlaylist;
             _displayedSongs = List<Song>.from(cachedSongs);
             _hasMoreSongs = cachedHasMore;
             _hasLoadedOnce = true; // NO mostrar loading si tenemos datos en caché
           });
+          
+          // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+          _updateImageUrlsCache();
+          
+          // 🔥 CRÍTICO: Restaurar posición del scroll después del setState (solo si no se restauró antes)
+          if (!_hasRestoredInitialScroll && _savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _scrollController.hasClients && _displayedSongs.isNotEmpty) {
+                  final currentOffset = _scrollController.offset;
+                  // Solo restaurar si está en 0 o muy cerca de 0 (no se ha restaurado aún)
+                  if (currentOffset < 10) {
+                    _scrollController.jumpTo(_savedInitialScrollPosition!);
+                    _hasRestoredInitialScroll = true;
+                  }
+                }
+              });
+            });
+          } else if (savedScrollPosition > 0 && _scrollController.hasClients) {
+            // Si ya había una posición guardada durante la recarga, restaurarla
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && _scrollController.hasClients) {
+                _scrollController.jumpTo(savedScrollPosition);
+              }
+            });
+          }
         }
       } else {
         // Cache expirado, limpiar
@@ -232,6 +503,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     final initialSongs = allSongs.take(_initialSongsLimit).toList();
     final hasMore = allSongs.length > _initialSongsLimit;
 
+    // 🔥 CRÍTICO: Guardar posición actual del scroll antes del setState
+    // Solo si ya había datos cargados (no en la primera carga)
+    final savedScrollPosition = _hasLoadedOnce && _scrollController.hasClients
+        ? _scrollController.offset
+        : null;
+
     final now = DateTime.now();
     setState(() {
       _playlist = playlist;
@@ -239,6 +516,32 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       _hasMoreSongs = hasMore;
       _hasLoadedOnce = true;
     });
+    
+    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+    _updateImageUrlsCache();
+    
+    // 🔥 CRÍTICO: Restaurar posición inicial del scroll después del setState (solo si no se ha restaurado aún)
+    if (!_hasRestoredInitialScroll && _savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _scrollController.hasClients && _displayedSongs.isNotEmpty) {
+            final currentOffset = _scrollController.offset;
+            // Solo restaurar si está en 0 o muy cerca de 0 (no se ha restaurado aún)
+            if (currentOffset < 10) {
+              _scrollController.jumpTo(_savedInitialScrollPosition!);
+              _hasRestoredInitialScroll = true;
+            }
+          }
+        });
+      });
+    } else if (savedScrollPosition != null && savedScrollPosition > 0 && _scrollController.hasClients) {
+      // Si ya se restauró la inicial pero había una posición guardada durante la recarga, restaurarla
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.jumpTo(savedScrollPosition);
+        }
+      });
+    }
     
     // ✅ Guardar en caché estático para futuras navegaciones
     _playlistCache[widget.playlistId] = {
@@ -248,17 +551,21 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       'lastLoad': now,
     };
 
-    // Pre-cachear imagen de portada para mejor UX
+    // 🔥 OPTIMIZACIÓN: Pre-cachear imágenes iniciales (portada + primeras canciones)
     final coverUrl = playlist.coverArtUrl;
-    if (mounted && coverUrl != null && coverUrl.isNotEmpty) {
+    final initialImageUrls = <String?>[
+      coverUrl,
+      ...initialSongs.take(5).map((song) => song.coverArtUrl),
+    ].where((url) => url != null && url.isNotEmpty).toList();
+    
+    if (mounted && initialImageUrls.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          precacheImage(
-            CachedNetworkImageProvider(coverUrl),
-            context,
-          ).catchError((_) {
-            // Ignorar errores de pre-cache (imagen no disponible, etc.)
-          });
+          LazyImageLoader.precacheInitialImages(
+            imageUrls: initialImageUrls,
+            context: context,
+            count: initialImageUrls.length,
+          );
         }
       });
     }
@@ -284,6 +591,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       _hasMoreSongs = hasMore;
       _loadingMore = false;
     });
+    
+    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+    _updateImageUrlsCache();
   }
 
   @override
@@ -309,9 +619,13 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         body: SafeArea(
           bottom: true,
           child: CustomScrollView(
+            key: PageStorageKey<String>('playlist_detail_scroll_${widget.playlistId}'),
+            controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
             // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
             cacheExtent: 400, // Reducido de 800 a 400 para mejor rendimiento
-            physics: const FastScrollPhysics(), // Física optimizada para scroll rápido
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
+            ), // ✅ Scroll estilo iPhone (igual que Home)
             slivers: [
               _buildAppBarSkeleton(),
               _buildContentSkeleton(),
@@ -320,7 +634,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 padding: EdgeInsets.only(bottom: 120),
               ),
             ],
-          ),
+          ), // Cierra CustomScrollView
         ),
       );
     }
@@ -332,16 +646,20 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       body: SafeArea(
         bottom: true,
         child: CustomScrollView(
+          key: PageStorageKey<String>('playlist_detail_scroll_${widget.playlistId}'),
+          controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
           // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
           // Mantiene solo ~10 items fuera de vista (800px / 80px por item)
           cacheExtent: 400, // Reducido de 800 a 400 para mejor rendimiento
-          physics: const FastScrollPhysics(), // Física optimizada para scroll rápido
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ), // ✅ Scroll estilo iPhone (igual que Home)
           slivers: [
             // App Bar con imagen de fondo
             SliverAppBar(
               expandedHeight: 300,
               pinned: true,
-              backgroundColor: Colors.white,
+              backgroundColor: NeumorphismTheme.coffeeDark, // ✅ Fondo marrón oscuro cuando está colapsado
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => context.pop(),
@@ -407,7 +725,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     Row(
                       children: [
                         if (playlist.user != null) ...[
-                          Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
+                          const Icon(Icons.person_outline, size: 16, color: Colors.grey),
                           const SizedBox(width: 4),
                           Text(
                             playlist.user?.firstName ?? 'Usuario',
@@ -418,7 +736,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                           ),
                           const SizedBox(width: 16),
                         ],
-                        Icon(Icons.queue_music, size: 16, color: Colors.grey[600]),
+                        const Icon(Icons.queue_music, size: 16, color: Colors.grey),
                         const SizedBox(width: 4),
                         Text(
                           '${playlist.totalSongs} canciones',
@@ -428,7 +746,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                           ),
                         ),
                         const SizedBox(width: 16),
-                        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                        const Icon(Icons.access_time, size: 16, color: Colors.grey),
                         const SizedBox(width: 4),
                         Text(
                           playlist.durationFormatted,
@@ -443,12 +761,21 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     const SizedBox(height: 24),
 
                     // Botón de reproducir todo - con verificación de contextId
+                    // ✅ OPTIMIZACIÓN: Usar select() para evitar rebuilds innecesarios
                     Consumer(
                       builder: (context, ref, child) {
-                        final audioState = ref.watch(unifiedAudioProviderFixed);
-                        final isSameContext = audioState.contextId == widget.playlistId &&
-                                             audioState.playbackMode == PlaybackMode.fixedQueue;
-                        final isPlaying = isSameContext && audioState.isPlaying;
+                        final contextId = ref.watch(
+                          unifiedAudioProviderFixed.select((state) => state.contextId),
+                        );
+                        final playbackMode = ref.watch(
+                          unifiedAudioProviderFixed.select((state) => state.playbackMode),
+                        );
+                        final isPlaying = ref.watch(
+                          unifiedAudioProviderFixed.select((state) => state.isPlaying),
+                        );
+                        final isSameContext = contextId == widget.playlistId &&
+                                             playbackMode == PlaybackMode.fixedQueue;
+                        final showPause = isSameContext && isPlaying;
                         
                         return SizedBox(
                           width: double.infinity,
@@ -459,9 +786,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                               }
                             },
                             icon: Icon(
-                              isPlaying ? Icons.pause : Icons.play_arrow,
+                              showPause ? Icons.pause : Icons.play_arrow,
                               color: Colors.white,
-                            ),
+                            ), // No puede ser const porque depende de showPause
                             label: Text(
                               'Reproducir todo',
                               style: GoogleFonts.inter(
@@ -474,7 +801,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                               backgroundColor: NeumorphismTheme.coffeeMedium,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: const BorderRadius.all(Radius.circular(12)),
                               ),
                               elevation: 2,
                             ),
@@ -534,7 +861,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
               )
             else
               SliverFixedExtentList(
-                itemExtent: 80.0, // Altura fija conocida (mejora rendimiento significativamente)
+                itemExtent: 80.0, // ✅ Altura fija conocida (mejora rendimiento significativamente)
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     if (index >= _displayedSongs.length) {
@@ -562,7 +889,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                   addAutomaticKeepAlives: false, // No mantener estado de items fuera de vista (ahorra memoria)
                   addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual (evita duplicación)
                   addSemanticIndexes: false, // Desactivar índices semánticos (mejor rendimiento)
-                  // ⚠️ findChildIndexCallback removido - puede causar problemas con el orden de widgets
                 ),
               ),
             
@@ -571,9 +897,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
               padding: const EdgeInsets.only(bottom: 120),
             ),
           ],
-        ),
-      ),
-    );
+        ), // Cierra CustomScrollView
+      ), // Cierra SafeArea
+    ); // Cierra Scaffold
   }
 
   Widget _buildLoadMoreButton() {
@@ -687,7 +1013,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     height: 24,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
                     ),
                   ),
                 ),
@@ -716,7 +1042,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 height: 16,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
             ),
@@ -729,7 +1055,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 height: 16,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
             ),
@@ -745,7 +1071,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     height: 14,
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: const BorderRadius.all(Radius.circular(6)),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -754,7 +1080,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     height: 14,
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: const BorderRadius.all(Radius.circular(6)),
                     ),
                   ),
                 ],
@@ -770,7 +1096,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 height: 56,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                 ),
               ),
             ),
@@ -784,7 +1110,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 height: 24,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
             ),
@@ -806,7 +1132,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: NeumorphismTheme.surface,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -826,7 +1152,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     height: 20,
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: const BorderRadius.all(Radius.circular(6)),
                     ),
                   ),
                 ),
@@ -840,7 +1166,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     height: 64,
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
                     ),
                   ),
                 ),
@@ -858,7 +1184,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                           height: 18,
                           decoration: BoxDecoration(
                             color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: const BorderRadius.all(Radius.circular(8)),
                           ),
                         ),
                       ),
@@ -871,7 +1197,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                           height: 14,
                           decoration: BoxDecoration(
                             color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: const BorderRadius.all(Radius.circular(8)),
                           ),
                         ),
                       ),
@@ -945,7 +1271,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 backgroundColor: NeumorphismTheme.coffeeMedium,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
               child: Text(
@@ -967,18 +1293,46 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     _onPlaySong(context, song);
   }
 
-  void _onPlaySong(BuildContext context, Song song) {
+  Future<void> _onPlaySong(BuildContext context, Song song) async {
     // ✅ Reproducir en modo PLAYLIST (fixedQueue) para mantener la cola
-    final container = ProviderScope.containerOf(context);
-    final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
-    
-    // Usar onPressPlayAll para reproducir en modo playlist, empezando desde la canción seleccionada
-    // Esto activa el modo fixedQueue y permite navegar por la playlist
-    unawaited(audioNotifier.onPressPlayAll(
-      song,
-      widget.playlistId,
-      allSongs: _displayedSongs,
-    ));
+    try {
+      // Validar que la canción tenga URL válida
+      if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      
+      final container = ProviderScope.containerOf(context);
+      final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
+      
+      // Usar onPressPlayAll para reproducir en modo playlist, empezando desde la canción seleccionada
+      // Esto activa el modo fixedQueue y permite navegar por la playlist
+      await audioNotifier.onPressPlayAll(
+        song,
+        widget.playlistId,
+        allSongs: _displayedSongs,
+      );
+    } catch (e, stackTrace) {
+      debugPrint('❌ [PlaylistDetailScreen] Error al reproducir canción: $e');
+      debugPrint('Stack trace: $stackTrace');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   void _onPlayAll(BuildContext context, List<Song> songs) {
@@ -1020,7 +1374,7 @@ class _SongListItem extends ConsumerWidget {
   final Song song;
   final int index;
   final VoidCallback onTap;
-  final VoidCallback onPlay;
+  final Future<void> Function()? onPlay;
 
   const _SongListItem({
     super.key,
@@ -1069,7 +1423,7 @@ class _SongListItem extends ConsumerWidget {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -1079,7 +1433,7 @@ class _SongListItem extends ConsumerWidget {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
                 child: OptimizedImage(
                   imageUrl: song.coverArtUrl,
                   fit: BoxFit.cover,
@@ -1092,6 +1446,8 @@ class _SongListItem extends ConsumerWidget {
                   maxCacheHeight: 112,
                   useThumbnail: true, // Usar thumbnails cuando estén disponibles
                   skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
+                  lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
+                  visibilityThreshold: 0.1, // Cargar cuando 10% visible
                 ),
               ),
             ),
@@ -1139,14 +1495,41 @@ class _SongListItem extends ConsumerWidget {
                 // Botón de play/pause - toggle si es la canción actual, reproducir si es otra
                 // ✅ CORREGIDO: Usar playFromCard para activar modo algoritmo (no playlist)
                 IconButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (isCurrentSong && isPlaying) {
                       // Si es la canción actual y está reproduciéndose, pausar
                       ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
                     } else {
                       // ✅ Si es otra canción o está pausada, usar playFromCard para modo algoritmo
                       // Esto cancela el modo playlist si está activo y activa el algoritmo
-                      ref.read(unifiedAudioProviderFixed.notifier).playFromCard(song);
+                      try {
+                        // Validar que la canción tenga URL válida
+                        if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(song, useAlgorithm: true);
+                      } catch (e, stackTrace) {
+                        debugPrint('❌ [PlaylistDetailScreen] Error al reproducir canción: $e');
+                        debugPrint('Stack trace: $stackTrace');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 4),
+                            ),
+                          );
+                        }
+                      }
                     }
                   },
                   icon: Icon(

@@ -280,7 +280,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
         ),
       ),
     );
@@ -327,7 +327,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
               backgroundColor: NeumorphismTheme.coffeeMedium,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
             ),
             child: Text(
@@ -366,7 +366,7 @@ class _PlaylistCard extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.1),
@@ -376,7 +376,7 @@ class _PlaylistCard extends StatelessWidget {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
                 child: OptimizedImage(
                   imageUrl: playlist.coverArtUrl,
                   fit: BoxFit.cover,
@@ -388,6 +388,8 @@ class _PlaylistCard extends StatelessWidget {
                   maxCacheHeight: 300,
                   useThumbnail: true, // Usar thumbnails cuando estén disponibles
                   skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
+                  lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
+                  visibilityThreshold: 0.1, // Cargar cuando 10% visible
                 ),
               ),
             ),

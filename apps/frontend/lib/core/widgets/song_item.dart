@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../audio/audio_manager.dart';
+import '../providers/unified_audio_provider_fixed.dart';
 import '../models/song_model.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/url_normalizer.dart';
@@ -43,10 +43,10 @@ class _SongItemState extends ConsumerState<SongItem> {
   }
 
   /// Precarga la canción si no se ha hecho antes
+  /// TODO: Implementar precarga con el nuevo AudioService
   void _preloadSongIfNeeded() async {
     if (!_hasPreloaded && mounted) {
-      final audioManager = ref.read(audioManagerProvider);
-      await audioManager.preloadSong(widget.song);
+      // TODO: Implementar precarga con el nuevo sistema
       if (mounted) {
         _hasPreloaded = true;
       }
@@ -56,7 +56,9 @@ class _SongItemState extends ConsumerState<SongItem> {
 
   @override
   Widget build(BuildContext context) {
-    final audioManager = ref.read(audioManagerProvider);
+    // TODO: Usar el nuevo provider unificado
+    final currentSong = ref.watch(currentSongProviderFixed);
+    final isPlaying = ref.watch(isPlayingProviderFixed);
     
     final coverUrl = widget.song.coverArtUrl != null && widget.song.coverArtUrl!.isNotEmpty
         ? UrlNormalizer.normalizeImageUrl(widget.song.coverArtUrl)
@@ -64,46 +66,19 @@ class _SongItemState extends ConsumerState<SongItem> {
     
     final artistName = widget.song.artist?.displayName ?? 'Artista desconocido';
     
-    return StreamBuilder<Song?>(
-      stream: audioManager.currentSongStream,
-      initialData: audioManager.currentSong,
-      builder: (context, currentSongSnapshot) {
-        final currentSong = currentSongSnapshot.data;
-        final isCurrentSong = currentSong?.id == widget.song.id;
-        
-        if (!isCurrentSong) {
-          return _buildSongItemContent(
-            context: context,
-            audioManager: audioManager,
-            coverUrl: coverUrl,
-            artistName: artistName,
-            isCurrentSong: false,
-            isPlaying: false,
-          );
-        }
-        
-        return StreamBuilder<bool>(
-          stream: audioManager.isPlayingStream,
-          initialData: audioManager.isPlaying,
-          builder: (context, isPlayingSnapshot) {
-            final isPlaying = isPlayingSnapshot.data ?? false;
-            return _buildSongItemContent(
-              context: context,
-              audioManager: audioManager,
-              coverUrl: coverUrl,
-              artistName: artistName,
-              isCurrentSong: true,
-              isPlaying: isPlaying,
-            );
-          },
-        );
-      },
+    final isCurrentSong = currentSong?.id == widget.song.id;
+    
+    return _buildSongItemContent(
+      context: context,
+      coverUrl: coverUrl,
+      artistName: artistName,
+      isCurrentSong: isCurrentSong,
+      isPlaying: isCurrentSong && isPlaying,
     );
   }
   
   Widget _buildSongItemContent({
     required BuildContext context,
-    required AudioManager audioManager,
     required String? coverUrl,
     required String artistName,
     required bool isCurrentSong,
@@ -113,13 +88,13 @@ class _SongItemState extends ConsumerState<SongItem> {
       color: Colors.transparent,
       child: InkWell(
         onTap: widget.onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
         child: Container(
           padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: isCurrentSong 
             ? BoxDecoration(
                 color: NeumorphismTheme.accent.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: const BorderRadius.all(Radius.circular(16)),
               )
             : null,
           child: Row(
@@ -129,7 +104,7 @@ class _SongItemState extends ConsumerState<SongItem> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.08),
@@ -139,7 +114,7 @@ class _SongItemState extends ConsumerState<SongItem> {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
                   child: coverUrl != null
                       ? OptimizedImage(
                           imageUrl: coverUrl,

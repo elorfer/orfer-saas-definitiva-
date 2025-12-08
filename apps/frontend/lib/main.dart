@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'core/navigation/app_router.dart';
 import 'core/theme/neumorphism_theme.dart';
 import 'core/utils/logger.dart';
 import 'core/widgets/optimized_scroll_behavior.dart';
+import 'core/providers/page_storage_provider.dart';
 
 /// Builder personalizado para manejar errores no capturados
 /// Ignora errores no críticos y reporta adecuadamente los errores críticos
@@ -33,6 +35,17 @@ Widget _errorWidgetBuilder(FlutterErrorDetails details) {
       errorStr.contains('connection') ||
       errorStr.contains('timeout');
   
+  // 🔥 OPTIMIZACIÓN: Errores de precache de imágenes cuando no hay conexión
+  // Estos son errores esperados y no deberían mostrarse como errores críticos
+  final isImagePrecacheError = (errorStr.contains('clientexception') || 
+      errorStr.contains('socketexception')) &&
+      (errorStr.contains('connection refused') || 
+       errorStr.contains('failed to connect') ||
+       errorStr.contains('connection timed out')) &&
+      (stackStr.contains('precache') || 
+       stackStr.contains('image resource service') ||
+       library.contains('image resource service'));
+  
   final isRenderingError = errorStr.contains('rendering') ||
       errorStr.contains('layout') ||
       errorStr.contains('overflow') ||
@@ -56,86 +69,122 @@ Widget _errorWidgetBuilder(FlutterErrorDetails details) {
       stackStr.contains('_debugAssertNotificationAllowed');
   
   final isParentDataError = errorStr.contains('incorrect use of parentdatawidget') ||
-      errorStr.contains('expanded') && (errorStr.contains('repaintboundary') || stackStr.contains('repaintboundary')) ||
-      errorStr.contains('parentdata') && (errorStr.contains('incompatible') || errorStr.contains('flexparentdata'));
+      (errorStr.contains('expanded') && (errorStr.contains('repaintboundary') || stackStr.contains('repaintboundary'))) ||
+      (errorStr.contains('parentdata') && (errorStr.contains('incompatible') || errorStr.contains('flexparentdata')));
   
-  // Ignorar errores no críticos (mantener UI funcionando)
+  // ✅ MOSTRAR TODOS LOS ERRORES - Ya no se silencian
   if (isParentDataError) {
-    // Errores de ParentDataWidget (Expanded dentro de RepaintBoundary) son comunes
-    // durante hot reload, animaciones o optimizaciones de Flutter
-    // No son críticos si la UI funciona correctamente
+    // Errores de ParentDataWidget (Expanded dentro de RepaintBoundary)
+    AppLogger.error(
+      '[ErrorHandler] ⚠️ ERROR DE PARENTDATAWIDGET DETECTADO',
+      details.exception,
+      details.stack,
+    );
     if (kDebugMode) {
-      AppLogger.debug('[ErrorHandler] Error de ParentDataWidget ignorado (log fantasma común): ${details.exception}');
+      debugPrint('📍 [ParentDataError] Library: ${details.library ?? 'N/A'}');
+      debugPrint('📍 [ParentDataError] Context: ${details.context?.toString() ?? 'N/A'}');
     }
     return const SizedBox.shrink();
   }
   
   if (isProviderModificationError) {
-    // Errores de modificación de provider durante build son comunes en navegación rápida
-    // No son críticos si se manejan correctamente con Future.microtask
+    // Errores de modificación de provider durante build
+    AppLogger.warning(
+      '[ErrorHandler] ⚠️ Error de modificación de provider durante build: ${details.exception}',
+    );
     if (kDebugMode) {
-      AppLogger.debug('[ErrorHandler] Error de modificación de provider durante build ignorado (no crítico): ${details.exception}');
+      debugPrint('📍 [ProviderModification] Stack: ${details.stack}');
     }
     return const SizedBox.shrink();
   }
   
   if (isLifecycleError) {
-    // Errores de lifecycle son comunes cuando Riverpod notifica a widgets desmontados
-    // No son críticos y no afectan la funcionalidad
+    // Errores de lifecycle cuando Riverpod notifica a widgets desmontados
+    AppLogger.warning(
+      '[ErrorHandler] ⚠️ Error de lifecycle: ${details.exception}',
+    );
     if (kDebugMode) {
-      AppLogger.debug('[ErrorHandler] Error de lifecycle ignorado (no crítico): ${details.exception}');
+      debugPrint('📍 [Lifecycle] Stack: ${details.stack}');
     }
     return const SizedBox.shrink();
   }
   
   if (isHeroError) {
-    // Errores de Hero widgets son comunes durante navegación rápida
-    // y no son críticos para la funcionalidad
+    // Errores de Hero widgets durante navegación rápida
+    AppLogger.warning(
+      '[ErrorHandler] ⚠️ Error de Hero widget: ${details.exception}',
+    );
     if (kDebugMode) {
-      AppLogger.debug('[ErrorHandler] Error de Hero widget ignorado (no crítico): ${details.exception}');
+      debugPrint('📍 [Hero] Stack: ${details.stack}');
     }
     return const SizedBox.shrink();
   }
   
   if (isAudioError) {
-    // Errores de audio son comunes y no críticos para la UI
+    // Errores de audio
+    AppLogger.warning(
+      '[ErrorHandler] ⚠️ Error de audio: ${details.exception}',
+    );
     if (kDebugMode) {
-      AppLogger.debug('[ErrorHandler] Error de audio ignorado (no crítico): ${details.exception}');
+      debugPrint('📍 [Audio] Stack: ${details.stack}');
     }
     return const SizedBox.shrink();
   }
   
   if (isProviderDisposedError) {
-    // Errores de provider disposed son comunes durante navegación
+    // Errores de provider disposed durante navegación
+    AppLogger.warning(
+      '[ErrorHandler] ⚠️ Error de Provider disposed: ${details.exception}',
+    );
     if (kDebugMode) {
-      AppLogger.debug('[ErrorHandler] Error de Provider disposed ignorado (no crítico): ${details.exception}');
+      debugPrint('📍 [ProviderDisposed] Stack: ${details.stack}');
     }
     return const SizedBox.shrink();
   }
   
   if (isAsyncValueError) {
-    // Errores de AsyncValue son comunes y se manejan internamente
+    // Errores de AsyncValue
+    AppLogger.warning(
+      '[ErrorHandler] ⚠️ Error de AsyncValue: ${details.exception}',
+    );
     if (kDebugMode) {
-      AppLogger.debug('[ErrorHandler] Error de AsyncValue ignorado (no crítico): ${details.exception}');
+      debugPrint('📍 [AsyncValue] Stack: ${details.stack}');
     }
     return const SizedBox.shrink();
   }
   
-  // Errores de red: reportar pero no bloquear UI (el usuario puede reintentar)
-  if (isNetworkError) {
-    AppLogger.warning('[ErrorHandler] Error de red detectado: ${details.exception}');
-    // En producción, podrías reportar a un servicio de monitoreo
+  // 🔥 OPTIMIZACIÓN: Errores de precache de imágenes cuando no hay conexión
+  // Estos son errores esperados y no deberían mostrarse como errores críticos
+  if (isImagePrecacheError) {
+    // Silenciar errores de precache cuando no hay conexión (son esperados)
+    // No loggear para mantener la consola limpia
     return const SizedBox.shrink();
   }
   
-  // Errores de renderizado: reportar con más detalle pero no bloquear UI
-  if (isRenderingError) {
+  // Errores de red: reportar con detalle (pero no los de precache de imágenes)
+  if (isNetworkError) {
     AppLogger.error(
-      '[ErrorHandler] Error de renderizado detectado',
+      '[ErrorHandler] ⚠️ ERROR DE RED DETECTADO',
       details.exception,
       details.stack,
     );
-    // En producción, podrías reportar a un servicio de monitoreo
+    if (kDebugMode) {
+      debugPrint('📍 [Network] Library: ${details.library ?? 'N/A'}');
+    }
+    return const SizedBox.shrink();
+  }
+  
+  // Errores de renderizado: reportar con más detalle
+  if (isRenderingError) {
+    AppLogger.error(
+      '[ErrorHandler] ⚠️ ERROR DE RENDERIZADO DETECTADO',
+      details.exception,
+      details.stack,
+    );
+    if (kDebugMode) {
+      debugPrint('📍 [Rendering] Library: ${details.library ?? 'N/A'}');
+      debugPrint('📍 [Rendering] Context: ${details.context?.toString() ?? 'N/A'}');
+    }
     return const SizedBox.shrink();
   }
   
@@ -168,13 +217,41 @@ Widget _errorWidgetBuilder(FlutterErrorDetails details) {
 }
 
 /// Manejar errores de Flutter framework (errores no capturados)
+/// 
+/// NOTA: Los warnings "WindowOnBackDispatcher" que aparecen en los logs
+/// son mensajes informativos del sistema Android sobre el manejo del botón
+/// de retroceso. No son errores y no afectan la funcionalidad de la app.
+/// Estos warnings vienen directamente del sistema Android y no pueden ser
+/// silenciados desde Flutter, pero son completamente normales y seguros.
 void _setupErrorHandlers() {
   // Manejar errores de Flutter (widgets, rendering, etc.)
   FlutterError.onError = (FlutterErrorDetails details) {
+    // Verificar si es un error de precache de imágenes antes de procesar
+    final errorStr = details.exception.toString().toLowerCase();
+    final stackStr = details.stack?.toString().toLowerCase() ?? '';
+    final library = details.library ?? '';
+    
+    final isImagePrecacheError = (errorStr.contains('clientexception') || 
+        errorStr.contains('socketexception')) &&
+        (errorStr.contains('connection refused') || 
+         errorStr.contains('failed to connect') ||
+         errorStr.contains('connection timed out')) &&
+        (stackStr.contains('precache') || 
+         stackStr.contains('image resource service') ||
+         stackStr.contains('cached_network_image') ||
+         library.contains('image resource service'));
+    
+    // Si es error de precache, usar el builder pero no mostrar en debug
+    if (isImagePrecacheError) {
+      _errorWidgetBuilder(details);
+      // NO llamar a FlutterError.presentError para estos errores
+      return;
+    }
+    
     // Usar nuestro builder personalizado
     _errorWidgetBuilder(details);
     
-    // En modo debug, también usar el handler por defecto de Flutter
+    // En modo debug, también usar el handler por defecto de Flutter (solo para errores no silenciados)
     if (kDebugMode) {
       FlutterError.presentError(details);
     }
@@ -185,6 +262,23 @@ void _setupErrorHandlers() {
     final errorStr = error.toString().toLowerCase();
     final stackStr = stack.toString().toLowerCase();
     
+    // 🔥 OPTIMIZACIÓN: Detectar errores de precache de imágenes cuando no hay conexión
+    // Estos son errores esperados y no deberían mostrarse
+    final isImagePrecacheError = (errorStr.contains('clientexception') || 
+        errorStr.contains('socketexception')) &&
+        (errorStr.contains('connection refused') || 
+         errorStr.contains('failed to connect') ||
+         errorStr.contains('connection timed out')) &&
+        (stackStr.contains('precache') || 
+         stackStr.contains('image resource service') ||
+         stackStr.contains('cached_network_image'));
+    
+    if (isImagePrecacheError) {
+      // Silenciar errores de precache cuando no hay conexión (son esperados)
+      // No loggear para mantener la consola limpia
+      return true; // Error manejado silenciosamente
+    }
+    
     // Detectar errores de lifecycle (no críticos)
     final isLifecycleError = errorStr.contains('_lifecyclestate') ||
         errorStr.contains('_elementlifecycle') ||
@@ -194,16 +288,19 @@ void _setupErrorHandlers() {
         stackStr.contains('element.markneedsbuild');
     
     if (isLifecycleError) {
-      // Errores de lifecycle son comunes y no críticos
+      // Errores de lifecycle - ahora se muestran
+      AppLogger.warning(
+        '[ErrorHandler] ⚠️ Error de zona (lifecycle): $error',
+      );
       if (kDebugMode) {
-        AppLogger.debug('[ErrorHandler] Error de zona (lifecycle) ignorado (no crítico): $error');
+        debugPrint('📍 [ZoneLifecycle] Stack: $stack');
       }
       return true; // Error manejado
     }
     
     // Reportar errores críticos de zona
     AppLogger.error(
-      '[ErrorHandler] Error de zona no capturado',
+      '[ErrorHandler] ⚠️ ERROR DE ZONA NO CAPTURADO',
       error,
       stack,
     );
@@ -213,11 +310,55 @@ void _setupErrorHandlers() {
   };
 }
 
+/// ⚡ 120 FPS: Configurar el modo de visualización óptimo para alcanzar 120 FPS
+/// Solo funciona en dispositivos con pantallas de 120Hz (iPhone Pro, Android flagships)
+Future<void> _setOptimalDisplayMode() async {
+  try {
+    // Verificar si el paquete está disponible (solo Android)
+    final supported = await FlutterDisplayMode.supported;
+    if (supported.isEmpty) {
+      debugPrint('⚡ [DisplayMode] Dispositivo no soporta múltiples refresh rates');
+      return;
+    }
+    
+    final active = await FlutterDisplayMode.active;
+    debugPrint('⚡ [DisplayMode] Modo activo actual: ${active.width}x${active.height}@${active.refreshRate}Hz');
+    
+    // Filtrar modos con la misma resolución
+    final sameResolution = supported
+        .where((mode) => mode.width == active.width && mode.height == active.height)
+        .toList()
+      ..sort((a, b) => b.refreshRate.compareTo(a.refreshRate));
+    
+    if (sameResolution.isEmpty) {
+      debugPrint('⚡ [DisplayMode] No se encontraron modos con la misma resolución');
+      return;
+    }
+    
+    // Seleccionar el modo con mayor refresh rate (idealmente 120Hz)
+    final optimalMode = sameResolution.first;
+    debugPrint('⚡ [DisplayMode] Modo óptimo encontrado: ${optimalMode.width}x${optimalMode.height}@${optimalMode.refreshRate}Hz');
+    
+    if (optimalMode.refreshRate > active.refreshRate) {
+      await FlutterDisplayMode.setPreferredMode(optimalMode);
+      debugPrint('⚡ [DisplayMode] ✅ Configurado a ${optimalMode.refreshRate}Hz para 120 FPS');
+    } else {
+      debugPrint('⚡ [DisplayMode] Ya está en el modo óptimo (${active.refreshRate}Hz)');
+    }
+  } catch (e) {
+    // Si falla (ej. en iOS o dispositivos sin soporte), continuar normalmente
+    debugPrint('⚡ [DisplayMode] No se pudo configurar (normal en iOS o dispositivos sin soporte): $e');
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Configurar manejo de errores ANTES de cualquier otra inicialización
   _setupErrorHandlers();
+  
+  // ⚡ 120 FPS: Configurar refresh rate óptimo para dispositivos con pantallas de 120Hz
+  await _setOptimalDisplayMode();
   
   // ✅ OPTIMIZACIÓN: Lazy initialization de servicios HTTP
   // Los servicios se inicializarán automáticamente cuando se necesiten
@@ -266,35 +407,40 @@ class VintageMusicApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
+    // 🔥 PERSISTENCIA: Obtener PageStorageBucket compartido
+    final pageStorageBucket = ref.watch(sharedPageStorageBucketProvider);
 
     final neumorphismTheme = NeumorphismTheme();
     
-    return MaterialApp.router(
-      title: 'Srtuky',
-      debugShowCheckedModeBanner: false,
-      // 🔥 ScrollBehavior optimizado global
-      scrollBehavior: const OptimizedScrollBehavior(),
-      // Configurar error builder personalizado para evitar el overlay rojo de Flutter
-      builder: (context, child) {
-        // Configurar ErrorWidget.builder una sola vez (no en cada build)
-        if (ErrorWidget.builder != _errorWidgetBuilder) {
-          ErrorWidget.builder = _errorWidgetBuilder;
-        }
-        return child ?? const SizedBox.shrink();
-      },
-      theme: neumorphismTheme.theme.copyWith(
-        // Configurar transiciones de página estilo Spotify
-        pageTransitionsTheme: const PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
-            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
-          },
+    return PageStorage(
+      bucket: pageStorageBucket,
+      child: MaterialApp.router(
+        title: 'struky',
+        debugShowCheckedModeBanner: false,
+        // 🔥 ScrollBehavior optimizado global
+        scrollBehavior: const OptimizedScrollBehavior(),
+        // Configurar error builder personalizado para evitar el overlay rojo de Flutter
+        builder: (context, child) {
+          // Configurar ErrorWidget.builder una sola vez (no en cada build)
+          if (ErrorWidget.builder != _errorWidgetBuilder) {
+            ErrorWidget.builder = _errorWidgetBuilder;
+          }
+          return child ?? const SizedBox.shrink();
+        },
+        theme: neumorphismTheme.theme.copyWith(
+          // Configurar transiciones de página estilo Spotify
+          pageTransitionsTheme: const PageTransitionsTheme(
+            builders: {
+              TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+              TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+              TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+              TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+            },
+          ),
         ),
+        routerConfig: router,
       ),
-      routerConfig: router,
     );
   }
 }

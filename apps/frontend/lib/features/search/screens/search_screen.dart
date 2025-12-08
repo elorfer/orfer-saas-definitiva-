@@ -6,6 +6,7 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/providers/search_provider.dart';
 import '../../../core/services/search_service.dart';
+import '../../../core/utils/intersection_observer.dart';
 import '../widgets/artist_search_card.dart';
 import '../widgets/song_search_card.dart';
 import '../widgets/playlist_search_card.dart';
@@ -25,12 +26,99 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   Timer? _searchDebounce; // Debounce para búsquedas
+  
+  // ScrollController simple
+  late final ScrollController _scrollController;
+  
+  // ✅ OPTIMIZACIÓN: Cache de URLs de imágenes para evitar recálculos en _onScroll
+  List<String> _cachedImageUrls = [];
+  int _cachedResultsCount = 0;
+  
+  // ✅ OPTIMIZACIÓN: Timer para debounce en _onScroll
+  Timer? _scrollDebounceTimer;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    
+    // 🔥 OPTIMIZACIÓN: Listener para precache dinámico de imágenes
+    _scrollController.addListener(_onScroll);
+    
     // Optimizar listener: solo actualizar si el texto realmente cambió
     _searchController.addListener(_onSearchTextChanged);
+  }
+  
+  /// ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+  void _updateImageUrlsCache() {
+    final results = ref.read(searchProvider).results;
+    if (results == null) {
+      _cachedImageUrls = [];
+      _cachedResultsCount = 0;
+      return;
+    }
+    
+    // Precachear imágenes de artistas visibles
+    final artistImageUrls = results.artists
+        .map((artist) => artist.profilePhotoUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    
+    // Precachear imágenes de canciones visibles
+    final songImageUrls = results.songs
+        .map((song) => song.coverArtUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    
+    // Precachear imágenes de playlists visibles
+    final playlistImageUrls = results.playlists
+        .map((playlist) => playlist.coverArtUrl)
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    
+    // Combinar todas las URLs
+    _cachedImageUrls = [...artistImageUrls, ...songImageUrls, ...playlistImageUrls];
+    _cachedResultsCount = results.artists.length + results.songs.length + results.playlists.length;
+  }
+  
+  /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles cuando el usuario hace scroll (como en Home)
+  /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    // ✅ OPTIMIZACIÓN: Cancelar timer anterior si existe
+    _scrollDebounceTimer?.cancel();
+    
+    // ✅ OPTIMIZACIÓN: Debounce de 300ms para evitar ejecuciones excesivas
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted || !_scrollController.hasClients) return;
+      
+      try {
+        // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer del provider cada vez
+        if (_cachedImageUrls.isEmpty) {
+          // Si no hay cache, actualizar desde el provider (solo una vez)
+          _updateImageUrlsCache();
+        }
+        
+        // Precachear imágenes visibles basado en posición del scroll (IntersectionObserver)
+        if (_cachedImageUrls.isNotEmpty) {
+          LazyImageLoader.precacheVisibleVerticalImages(
+            scrollController: _scrollController,
+            itemExtent: 80.0, // Altura estimada de cada item
+            itemCount: _cachedResultsCount,
+            imageUrls: _cachedImageUrls,
+            context: context,
+            precacheCount: 5, // Precachear 5 items antes y después del viewport
+          );
+        }
+      } catch (e) {
+        // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
+        debugPrint('[SearchScreen] Error en _onScroll: $e');
+      }
+    });
   }
 
   void _onSearchTextChanged() {
@@ -54,10 +142,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   void dispose() {
     // ✅ Cancelar debounce timer antes de dispose
     _searchDebounce?.cancel();
+    _scrollDebounceTimer?.cancel();
+    
     // ✅ Remover listener antes de dispose para evitar memory leaks
     _searchController.removeListener(_onSearchTextChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
+    
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -72,13 +165,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     final query = ref.watch(searchProvider.select((state) => state.query));
     final results = ref.watch(searchProvider.select((state) => state.results));
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false, // ✅ Evitar que el teclado empuje el contenido
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: NeumorphismTheme.backgroundGradient,
-        ),
-        child: SafeArea(
+    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _updateImageUrlsCache();
+      }
+    });
+
+    // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
+    return RepaintBoundary(
+      child: Scaffold(
+        key: const ValueKey('search_screen_scaffold'),
+        resizeToAvoidBottomInset: false, // ✅ Evitar que el teclado empuje el contenido
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: NeumorphismTheme.backgroundGradient,
+          ),
+          child: SafeArea(
           child: Column(
             children: [
               // ⚡ Header simplificado (sin gradientes ni sombras pesadas)
@@ -106,7 +209,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(20), // ⚡ Reducido de 26
+                    borderRadius: const BorderRadius.all(Radius.circular(20)), // ⚡ Reducido de 26
                   ),
                   child: TextField(
                     controller: _searchController,
@@ -174,6 +277,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -240,7 +344,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
 
     return RepaintBoundary(
       child: CustomScrollView(
-        physics: const ClampingScrollPhysics(),
+        key: const PageStorageKey<String>('search_screen_scroll'),
+        controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ), // ✅ Scroll estilo iPhone (igual que Home)
         cacheExtent: 400, // OPTIMIZACIÓN: reducido de 500 a 400 (≈5 items de altura ~80px)
         clipBehavior: Clip.none,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, // ✅ Ocultar teclado al hacer scroll
@@ -259,9 +367,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                return ArtistSearchCard(
+                return RepaintBoundary(
                   key: ValueKey('artist_${searchResults.artists[index].id}'),
-                  artist: searchResults.artists[index],
+                  child: ArtistSearchCard(
+                    key: ValueKey('artist_card_${searchResults.artists[index].id}'),
+                    artist: searchResults.artists[index],
+                  ),
                 );
               },
               childCount: searchResults.artists.length,
@@ -285,9 +396,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                return SongSearchCard(
+                return RepaintBoundary(
                   key: ValueKey('song_${searchResults.songs[index].id}'),
-                  song: searchResults.songs[index],
+                  child: SongSearchCard(
+                    key: ValueKey('song_card_${searchResults.songs[index].id}'),
+                    song: searchResults.songs[index],
+                  ),
                 );
               },
               childCount: searchResults.songs.length,
@@ -311,9 +425,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                return PlaylistSearchCard(
+                return RepaintBoundary(
                   key: ValueKey('playlist_${searchResults.playlists[index].id}'),
-                  playlist: searchResults.playlists[index],
+                  child: PlaylistSearchCard(
+                    key: ValueKey('playlist_card_${searchResults.playlists[index].id}'),
+                    playlist: searchResults.playlists[index],
+                  ),
                 );
               },
               childCount: searchResults.playlists.length,
@@ -335,7 +452,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   /// Skeleton loaders para mostrar mientras se cargan los resultados
   Widget _buildLoadingSkeletons() {
     return CustomScrollView(
-      physics: const ClampingScrollPhysics(),
+      key: const PageStorageKey<String>('search_screen_scroll'),
+      controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ), // ✅ Scroll estilo iPhone (igual que Home)
       cacheExtent: 400,
       clipBehavior: Clip.none,
       slivers: [
@@ -405,7 +526,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         width: 100,
         decoration: BoxDecoration(
           color: NeumorphismTheme.shimmerContentColor,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: const BorderRadius.all(Radius.circular(4)),
         ),
       ),
     );
@@ -421,7 +542,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: NeumorphismTheme.shimmerContentColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
         ),
         child: Row(
           children: [
@@ -445,7 +566,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: const BorderRadius.all(Radius.circular(4)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -454,7 +575,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     width: 120,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: const BorderRadius.all(Radius.circular(4)),
                     ),
                   ),
                 ],
@@ -476,7 +597,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: NeumorphismTheme.shimmerContentColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
         ),
         child: Row(
           children: [
@@ -486,7 +607,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               height: 64,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
               ),
             ),
             const SizedBox(width: 16),
@@ -500,7 +621,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: const BorderRadius.all(Radius.circular(4)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -509,7 +630,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     width: 150,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: const BorderRadius.all(Radius.circular(4)),
                     ),
                   ),
                 ],
@@ -540,7 +661,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: NeumorphismTheme.shimmerContentColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
         ),
         child: Row(
           children: [
@@ -550,7 +671,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               height: 64,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
               ),
             ),
             const SizedBox(width: 16),
@@ -564,7 +685,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: const BorderRadius.all(Radius.circular(4)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -573,7 +694,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     width: 180,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: const BorderRadius.all(Radius.circular(4)),
                     ),
                   ),
                 ],

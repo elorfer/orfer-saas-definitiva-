@@ -52,7 +52,7 @@ class Artist {
     final result = isVerified ?? verificationStatus;
     // Debug: Verificar valores de verificación
     if (kDebugMode && (stageName?.contains('ORFER') ?? false)) {
-      debugPrint('🔍 [Artist] ${stageName}: isVerified=$isVerified, verificationStatus=$verificationStatus, isVerifiedValue=$result');
+      debugPrint('🔍 [Artist] $stageName: isVerified=$isVerified, verificationStatus=$verificationStatus, isVerifiedValue=$result');
     }
     return result;
   }

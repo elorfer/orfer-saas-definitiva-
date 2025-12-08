@@ -127,6 +127,78 @@ export class PublicSongsController {
   }
 
   /**
+   * 🚀 GENERAR PLAYLIST BATCH (NUEVO ENDPOINT OPTIMIZADO)
+   * Reemplaza múltiples llamadas frontend por una sola llamada backend
+   * El backend maneja internamente el batching y la variedad
+   * IMPORTANTE: Debe estar ANTES de 'recommended/:songId' para que la ruta no sea interpretada como un ID
+   */
+  @Get('playlist/generate')
+  @ApiOperation({
+    summary: '🚀 Generar batch de recomendaciones (optimizado)',
+    description: 'Genera múltiples recomendaciones en una sola llamada. El backend maneja internamente el batching y garantiza variedad. Reemplaza múltiples llamadas frontend con offset.',
+  })
+  @ApiQuery({ name: 'seed', required: true, type: String, description: 'ID de la canción semilla' })
+  @ApiQuery({ name: 'count', required: false, type: Number, description: 'Número de recomendaciones (default: 4, max: 20)' })
+  @ApiQuery({ name: 'userId', required: false, type: String, description: 'ID del usuario para personalización' })
+  @ApiQuery({ name: 'genres', required: false, type: [String], description: 'Géneros de la canción semilla' })
+  @ApiQuery({ name: 'excludeIds', required: false, type: String, description: 'IDs separados por coma para excluir' })
+  @ApiResponse({ status: 200, description: 'Lista de canciones recomendadas generadas en batch' })
+  @ApiResponse({ status: 400, description: 'Parámetros inválidos' })
+  async generatePlaylistBatch(
+    @Query('seed') seed: string,
+    @Query('count', new DefaultValuePipe(4), ParseIntPipe) count: number = 4,
+    @Query('userId') userId?: string,
+    @Query('genres') genres?: string | string[],
+    @Query('excludeIds') excludeIds?: string,
+  ) {
+    const startTime = Date.now();
+    this.logger.log(`🚀 [BATCH API] Generando ${count} recomendaciones para semilla: ${seed}`);
+    
+    // Validar count
+    const validCount = Math.min(Math.max(1, count), 20); // Entre 1 y 20
+    
+    // Convertir genres a array si viene como string
+    const genresArray = genres 
+      ? (Array.isArray(genres) ? genres : [genres])
+      : undefined;
+    
+    // Parsear excludeIds
+    const excludeIdsArray = excludeIds 
+      ? excludeIds.split(',').map(id => id.trim()).filter(id => id.length > 0)
+      : [];
+    
+    this.logger.log(`🚫 [BATCH API] ExcludeIds recibidos: ${excludeIdsArray.length} IDs - ${excludeIdsArray.slice(0, 5).map(id => id.substring(0, 8)).join(', ')}${excludeIdsArray.length > 5 ? '...' : ''}`);
+    
+    // Llamar al servicio de recomendaciones
+    const recommendations = await this.recommendationService.generatePlaylistBatch(
+      seed,
+      validCount,
+      userId,
+      genresArray,
+      excludeIdsArray
+    );
+    
+    // ✅ NOTA: El Service ya valida correctamente usando effectiveExcludeIds (reducidos por exclusión adaptativa)
+    // No necesitamos validar nuevamente aquí con excludeIds originales, ya que sería incorrecto para catálogos pequeños
+    // El Service garantiza que las recomendaciones no estén en los effectiveExcludeIds que realmente se usaron
+    
+    // Convertir a DTOs
+    const songsDto = recommendations.map(song => SongMapper.toDto(song));
+    
+    const processingTime = Date.now() - startTime;
+    this.logger.log(`✅ [BATCH API] Completado en ${processingTime}ms: ${songsDto.length}/${validCount} recomendaciones válidas`);
+    
+    return {
+      songs: songsDto,
+      count: songsDto.length,
+      requested: validCount,
+      seed: seed,
+      processingTime,
+      algorithm: 'spotify-style-batch-v1',
+    };
+  }
+
+  /**
    * 🎵 RECOMENDACIONES ESTILO SPOTIFY (PÚBLICO - sin autenticación)
    * Algoritmo avanzado con ML básico, scoring inteligente y múltiples estrategias
    * IMPORTANTE: Debe estar ANTES de @Get(':id') para que la ruta 'recommended' no sea interpretada como un ID
@@ -139,12 +211,14 @@ export class PublicSongsController {
   @ApiParam({ name: 'songId', description: 'ID de la canción actual' })
   @ApiQuery({ name: 'genres', required: false, type: [String], description: 'Géneros de la canción actual (opcional)' })
   @ApiQuery({ name: 'userId', required: false, type: String, description: 'ID del usuario para personalización (opcional)' })
+  @ApiQuery({ name: 'offset', required: false, type: Number, description: 'Offset para variar cache (no afecta lógica de recomendación)' })
   @ApiResponse({ status: 200, description: 'Canción recomendada con algoritmo avanzado' })
   @ApiResponse({ status: 404, description: 'Canción actual no encontrada' })
   async getRecommendedSong(
     @Param('songId') songId: string,
     @Query('genres') genres?: string | string[],
     @Query('userId') userId?: string,
+    @Query('offset', new ParseIntPipe({ optional: true })) offset?: number,
   ) {
     const startTime = Date.now();
     this.logger.log(`🎵 [SPOTIFY-STYLE] Recomendación solicitada para: ${songId}`);
@@ -157,10 +231,12 @@ export class PublicSongsController {
       : undefined;
     
     // Usar el nuevo servicio de recomendaciones estilo Spotify
+    // 🚨 OFFSET: Pasar el offset al servicio para variar el cache (no afecta la lógica)
     const recommended = await this.recommendationService.getRecommendedSong(
       songId, 
       userId, 
-      genresArray
+      genresArray,
+      offset // 🚨 Pasar offset para romper cache en llamadas paralelas
     );
     
     if (!recommended) {

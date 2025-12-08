@@ -1,12 +1,13 @@
+import 'dart:async'; // ✅ Para Timer
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/providers/play_history_provider.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/utils/url_normalizer.dart';
+import '../../../core/utils/intersection_observer.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/widgets/optimized_image.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,49 +21,142 @@ class RecentlyPlayedScreen extends ConsumerStatefulWidget {
   ConsumerState<RecentlyPlayedScreen> createState() => _RecentlyPlayedScreenState();
 }
 
-class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen> {
-  // Cache de URLs normalizadas para evitar recálculos
-  final Map<String, String?> _cachedCoverUrls = {};
+class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // 🔥 OPTIMIZACIÓN: Mantener estado al cambiar de pestañas
+  
+  // 🔥 OPTIMIZACIÓN: ScrollController para precache dinámico de imágenes (como en Home)
+  late final ScrollController _scrollController;
+  
+  // ✅ OPTIMIZACIÓN: Cache de URLs de imágenes para evitar recálculos en _onScroll
+  List<String> _cachedImageUrls = [];
+  int _cachedSongsCount = 0;
+  
+  // ✅ OPTIMIZACIÓN: Timer para debounce en _onScroll
+  Timer? _scrollDebounceTimer;
   
   @override
   void initState() {
     super.initState();
+    // 🔥 OPTIMIZACIÓN: ScrollController para precache dinámico
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+    
     // Precargar imágenes después del primer frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _precacheImages();
+      _precacheInitialImages();
     });
   }
   
-  /// Precargar imágenes de las primeras canciones visibles
-  /// ✅ MEJORA: Precarga más agresiva (15 imágenes iniciales)
-  void _precacheImages() {
+  @override
+  void dispose() {
+    // ✅ OPTIMIZACIÓN: Cancelar timer de debounce
+    _scrollDebounceTimer?.cancel();
+    // 🔥 OPTIMIZACIÓN: Limpiar ScrollController
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+  
+  /// 🔥 OPTIMIZACIÓN: Precargar imágenes iniciales usando LazyImageLoader (como en Home)
+  void _precacheInitialImages() {
     if (!mounted) return;
     
-    final recentSongs = ref.read(playHistoryProvider.notifier).getRecentHistory(limit: 50);
-    
-    // ✅ MEJORA: Precargar primeras 15 imágenes (aumentado de 10 a 15)
-    // Esto asegura que las imágenes estén listas antes de que el usuario haga scroll
-    for (var i = 0; i < recentSongs.length && i < 15; i++) {
-      final song = recentSongs[i];
-      final coverUrl = UrlNormalizer.normalizeImageUrl(song.coverArtUrl);
-      if (coverUrl != null && coverUrl.isNotEmpty && !_cachedCoverUrls.containsKey(song.id)) {
-        _cachedCoverUrls[song.id] = coverUrl;
-        // Precargar en background sin bloquear
-        precacheImage(CachedNetworkImageProvider(coverUrl), context).catchError((_) {
-          // Ignorar errores de precarga
-        });
+    try {
+      final recentSongs = ref.read(playHistoryProvider.notifier).getRecentHistory(limit: 50);
+      
+      // ✅ OPTIMIZACIÓN: Cachear URLs para evitar recálculos en _onScroll
+      _cachedImageUrls = recentSongs
+          .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
+          .where((url) => url != null && url.isNotEmpty)
+          .cast<String>()
+          .toList();
+      
+      _cachedSongsCount = recentSongs.length;
+      
+      // Precachear primeras 10 imágenes visibles
+      if (_cachedImageUrls.isNotEmpty) {
+        LazyImageLoader.precacheInitialImages(
+          imageUrls: _cachedImageUrls,
+          context: context,
+          count: 10,
+        );
       }
+    } catch (e) {
+      // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
+      debugPrint('[RecentlyPlayedScreen] Error en _precacheInitialImages: $e');
     }
+  }
+  
+  /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles cuando el usuario hace scroll (como en Home)
+  /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
+  void _onScroll() {
+    if (!mounted || !_scrollController.hasClients) return;
+    
+    // ✅ OPTIMIZACIÓN: Cancelar timer anterior si existe
+    _scrollDebounceTimer?.cancel();
+    
+    // ✅ OPTIMIZACIÓN: Debounce de 300ms para evitar ejecuciones excesivas
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted || !_scrollController.hasClients) return;
+      
+      try {
+        // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer del provider cada vez
+        if (_cachedImageUrls.isEmpty) {
+          // Si no hay cache, actualizar desde el provider (solo una vez)
+          final recentSongs = ref.read(playHistoryProvider.notifier).getRecentHistory(limit: 50);
+          _cachedImageUrls = recentSongs
+              .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
+              .where((url) => url != null && url.isNotEmpty)
+              .cast<String>()
+              .toList();
+          _cachedSongsCount = recentSongs.length;
+        }
+        
+        // Precachear imágenes visibles basado en posición del scroll (IntersectionObserver)
+        if (_cachedImageUrls.isNotEmpty) {
+          LazyImageLoader.precacheVisibleVerticalImages(
+            scrollController: _scrollController,
+            itemExtent: 72.0, // ✅ Corregido: usar el mismo itemExtent que en SliverFixedExtentList
+            itemCount: _cachedSongsCount,
+            imageUrls: _cachedImageUrls,
+            context: context,
+            precacheCount: 5, // Precachear 5 items antes y después del viewport
+          );
+        }
+      } catch (e) {
+        // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
+        debugPrint('[RecentlyPlayedScreen] Error en _onScroll: $e');
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
+    
     final recentSongs = ref.watch(playHistoryProvider.notifier).getRecentHistory(limit: 50);
+    
+    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambien los datos
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _cachedImageUrls = recentSongs
+            .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
+            .where((url) => url != null && url.isNotEmpty)
+            .cast<String>()
+            .toList();
+        _cachedSongsCount = recentSongs.length;
+      }
+    });
 
-    return Scaffold(
-      backgroundColor: NeumorphismTheme.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
+    // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
+    return RepaintBoundary(
+      child: Scaffold(
+        key: const ValueKey('recently_played_screen_scaffold'),
+        backgroundColor: NeumorphismTheme.surface,
+        appBar: AppBar(
+        backgroundColor: NeumorphismTheme.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
@@ -99,47 +193,61 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen> {
               ),
             )
           : CustomScrollView(
+              controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
               // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
               cacheExtent: 400, // Reducido de 500 a 400 para mejor rendimiento
-              physics: const BouncingScrollPhysics(), // Física más suave
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ), // ✅ Scroll estilo iPhone (igual que Home)
+              clipBehavior: Clip.none, // Evitar clipping innecesario
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
-                  sliver: SliverList(
+                  sliver: SliverFixedExtentList(
+                    itemExtent: 72.0, // ✅ Reducido de 80 a 72 (tarjetas más pequeñas)
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final song = recentSongs[index];
                         
-                        // ✅ MEJORA: Precarga progresiva más agresiva mientras se hace scroll
-                        // Precargar imágenes de las siguientes 8 canciones (aumentado de 5 a 8)
-                        // Esto asegura que siempre haya imágenes listas cuando el usuario hace scroll rápido
-                        if (index < recentSongs.length - 8 && mounted) {
-                          for (var i = index + 1; i <= index + 8 && i < recentSongs.length; i++) {
-                            final nextSong = recentSongs[i];
-                            if (!_cachedCoverUrls.containsKey(nextSong.id)) {
-                              final nextCoverUrl = UrlNormalizer.normalizeImageUrl(nextSong.coverArtUrl);
-                              if (nextCoverUrl != null && nextCoverUrl.isNotEmpty) {
-                                _cachedCoverUrls[nextSong.id] = nextCoverUrl;
-                                // Precargar en background sin bloquear
-                                precacheImage(CachedNetworkImageProvider(nextCoverUrl), context).catchError((_) {
-                                  // Ignorar errores de precarga
-                                });
-                              }
-                            }
-                          }
-                        }
-                        
                         return RepaintBoundary(
                           key: ValueKey('recent_song_${song.id}'),
                           child: _SongHistoryItem(
+                            key: ValueKey('recent_item_${song.id}'),
                             song: song,
                             index: index,
                             onTap: () {
                               SongDetailScreen.navigateToSong(context, song);
                             },
-                            onPlay: () {
+                            onPlay: () async {
                               // ✅ CRÍTICO: useAlgorithm = true desactiva fixed queue automáticamente
-                              ref.read(unifiedAudioProviderFixed.notifier).playSong(song, useAlgorithm: true);
+                              try {
+                                // Validar que la canción tenga URL válida
+                                if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
+                                        backgroundColor: Colors.red,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(song, useAlgorithm: true);
+                              } catch (e, stackTrace) {
+                                debugPrint('❌ [RecentlyPlayedScreen] Error al reproducir canción: $e');
+                                debugPrint('Stack trace: $stackTrace');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
+                              }
                             },
                           ),
                         );
@@ -149,7 +257,6 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen> {
                       addAutomaticKeepAlives: false, // No mantener vivos items fuera de vista (ahorra memoria)
                       addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual (evita duplicación)
                       addSemanticIndexes: false, // Desactivar índices semánticos (mejor rendimiento)
-                      // ⚠️ findChildIndexCallback removido - puede causar problemas con el orden de widgets
                     ),
                   ),
                 ),
@@ -159,6 +266,7 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen> {
                 ),
               ],
             ),
+      ),
     );
   }
 }
@@ -167,9 +275,10 @@ class _SongHistoryItem extends ConsumerWidget {
   final Song song;
   final int index;
   final VoidCallback onTap;
-  final VoidCallback onPlay;
+  final Future<void> Function()? onPlay;
 
   const _SongHistoryItem({
+    super.key,
     required this.song,
     required this.index,
     required this.onTap,
@@ -197,24 +306,24 @@ class _SongHistoryItem extends ConsumerWidget {
     return Opacity(
       opacity: isAvailable ? 1.0 : 0.5, // Reducir opacidad si no está disponible
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 8), // ✅ Reducido de 12 a 8
         decoration: BoxDecoration(
           color: NeumorphismTheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
           boxShadow: NeumorphismTheme.floatingCardShadow,
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: isAvailable ? onTap : null, // Deshabilitar tap si no está disponible
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // ✅ Reducido de all(12) a symmetric(12, 10)
               child: Row(
                 children: [
                   // Número de posición
                   Container(
-                    width: 32,
+                    width: 28, // ✅ Reducido de 32 a 28
                     alignment: Alignment.center,
                     child: Text(
                       '${index + 1}',
@@ -222,40 +331,54 @@ class _SongHistoryItem extends ConsumerWidget {
                         color: isAvailable 
                             ? NeumorphismTheme.textSecondary 
                             : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                        fontSize: 16,
+                        fontSize: 14, // ✅ Reducido de 16 a 14
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Portada optimizada con precarga
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: coverUrl != null
-                        ? OptimizedImage(
-                            imageUrl: coverUrl,
-                            width: 64,
-                            height: 64,
-                            fit: BoxFit.cover,
-                            isLargeCover: false,
-                            // 🔥 OPTIMIZADO: Tamaños de cache reducidos para mejor rendimiento con muchas imágenes
-                            maxCacheWidth: 128, // 2x el tamaño de visualización (64 * 2)
-                            maxCacheHeight: 128,
-                            useThumbnail: true, // Usar thumbnails cuando estén disponibles
-                            skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
-                          )
-                        : Container(
-                            width: 64,
-                            height: 64,
-                            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                            child: const Icon(Icons.music_note, color: Colors.white30),
-                          ),
+                  const SizedBox(width: 10), // ✅ Reducido de 12 a 10
+                  // Portada optimizada con precarga - Más pequeña y CUADRADA
+                  Container(
+                    width: 56, // ✅ Reducido de 64 a 56
+                    height: 56, // ✅ Reducido de 64 a 56
+                    constraints: const BoxConstraints(
+                      minWidth: 56,
+                      maxWidth: 56,
+                      minHeight: 56,
+                      maxHeight: 56,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(8)), // ✅ Más cuadrado (reducido de 12 a 8)
+                      clipBehavior: Clip.antiAlias,
+                      child: coverUrl != null
+                          ? OptimizedImage(
+                              imageUrl: coverUrl,
+                              width: 56, // ✅ CRÍTICO: Especificar width explícitamente para asegurar forma cuadrada
+                              height: 56, // ✅ CRÍTICO: Especificar height explícitamente para asegurar forma cuadrada
+                              fit: BoxFit.cover,
+                              isLargeCover: false,
+                              // 🔥 OPTIMIZADO: Tamaños de cache reducidos para mejor rendimiento con muchas imágenes
+                              maxCacheWidth: 112, // 2x el tamaño de visualización (56 * 2)
+                              maxCacheHeight: 112,
+                              useThumbnail: true, // Usar thumbnails cuando estén disponibles
+                              skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
+                              lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
+                              visibilityThreshold: 0.1, // Cargar cuando 10% visible
+                            )
+                          : Container(
+                              width: 56, // ✅ Reducido de 64 a 56
+                              height: 56, // ✅ Reducido de 64 a 56
+                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                              child: const Icon(Icons.music_note, color: Colors.white30, size: 24), // ✅ Reducido de tamaño por defecto
+                            ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // Información
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min, // ✅ Evitar overflow
                       children: [
                         Text(
                           song.title ?? 'Sin título',
@@ -263,23 +386,23 @@ class _SongHistoryItem extends ConsumerWidget {
                             color: isAvailable 
                                 ? NeumorphismTheme.textPrimary 
                                 : NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
-                            fontSize: 16,
+                            fontSize: 15, // ✅ Reducido de 16 a 15
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 3), // ✅ Reducido de 4 a 3
                         Row(
                           children: [
-                            Expanded(
+                            Flexible( // ✅ Cambiado de Expanded a Flexible para evitar overflow
                               child: Text(
                                 song.artist?.displayName ?? 'Artista desconocido',
                                 style: GoogleFonts.inter(
                                   color: isAvailable 
                                       ? NeumorphismTheme.textSecondary 
                                       : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                                  fontSize: 14,
+                                  fontSize: 13, // ✅ Reducido de 14 a 13
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -289,7 +412,7 @@ class _SongHistoryItem extends ConsumerWidget {
                               const SizedBox(width: 4),
                               Icon(
                                 Icons.error_outline,
-                                size: 14,
+                                size: 12, // ✅ Reducido de 14 a 12
                                 color: Colors.orange.withValues(alpha: 0.7),
                               ),
                             ],
@@ -298,6 +421,7 @@ class _SongHistoryItem extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 6), // ✅ Agregado espacio antes del botón
                   // Botón play - deshabilitado si no está disponible
                   IconButton(
                     icon: Icon(
@@ -305,8 +429,10 @@ class _SongHistoryItem extends ConsumerWidget {
                       color: isAvailable 
                           ? NeumorphismTheme.coffeeMedium 
                           : NeumorphismTheme.textSecondary.withValues(alpha: 0.3),
-                      size: 40,
+                      size: 36, // ✅ Reducido de 40 a 36
                     ),
+                    padding: EdgeInsets.zero, // ✅ Reducir padding del botón
+                    constraints: const BoxConstraints(), // ✅ Sin constraints para que sea más pequeño
                     onPressed: isAvailable ? onPlay : null,
                   ),
                 ],

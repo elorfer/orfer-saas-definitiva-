@@ -73,7 +73,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                         NeumorphismTheme.coffeeDark.withValues(alpha: 0.08),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: const BorderRadius.all(Radius.circular(24)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
@@ -117,7 +117,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: const BorderRadius.all(Radius.circular(24)),
                     border: Border.all(
                       color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
                       width: 2,
@@ -245,7 +245,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                         NeumorphismTheme.coffeeDark,
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: const BorderRadius.all(Radius.circular(28)),
                     boxShadow: [
                       BoxShadow(
                         color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
@@ -296,7 +296,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                         height: 56,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: const BorderRadius.all(Radius.circular(16)),
                         ),
                         child: Material(
                           color: Colors.transparent,
@@ -304,7 +304,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                             onTap: () {
                               // TODO: Implementar suscripción premium
                             },
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: const BorderRadius.all(Radius.circular(16)),
                             child: Center(
                               child: Text(
                                 'Suscribirse a Premium',
@@ -331,7 +331,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: const BorderRadius.all(Radius.circular(20)),
                     ),
                     child: Column(
                       children: [
@@ -390,7 +390,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: const BorderRadius.all(Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -444,7 +444,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
             height: 44,
             decoration: BoxDecoration(
               color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
             ),
             child: Icon(
               icon,

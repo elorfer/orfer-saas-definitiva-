@@ -1,48 +1,40 @@
 import 'package:flutter/material.dart';
 
-/// Física de scroll ultra rápida y sensible
-/// Scroll extremadamente rápido y responsivo con máxima sensibilidad
-class FastScrollPhysics extends ClampingScrollPhysics {
+/// Física de scroll premium y suave
+/// Desaceleración estilo iOS con movimientos más naturales
+/// Ideal para apps profesionales - ZERO lags
+class SmoothScrollPhysics extends ClampingScrollPhysics {
+  const SmoothScrollPhysics({super.parent});
+
+  @override
+  SmoothScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return SmoothScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
+    // ✅ TOLERANCIA ESTRICTA: Para detenerse suavemente sin rebotes
+    final tolerance = Tolerance(
+      velocity: 0.0001, // ✅ Muy estricto para detenerse rápido y evitar rebotes
+      distance: 0.0001, // ✅ Muy estricto para detenerse rápido y evitar rebotes
+    );
+    
+    // Si la velocidad es muy baja, no crear simulación (evita rebotes)
+    if (velocity.abs() < 50) return null;
+    
+    // ✅ Simulación con tolerancia estricta para detenerse sin rebotes
+    return ClampingScrollSimulation(
+      position: position.pixels,
+      velocity: velocity,
+      tolerance: tolerance,
+      friction: 0.15, // ✅ Fricción aumentada para detenerse más rápido y suave
+    );
+  }
+}
+
+/// Alias para compatibilidad con código existente
+@Deprecated('Usar SmoothScrollPhysics en su lugar')
+class FastScrollPhysics extends SmoothScrollPhysics {
   const FastScrollPhysics({super.parent});
-
-  @override
-  FastScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return FastScrollPhysics(parent: buildParent(ancestor));
-  }
-
-  @override
-  double applyPhysicsToUserOffset(ScrollMetrics position, double offset) {
-    // 🔥 MÁXIMA SENSIBILIDAD: Multiplicador alto para scroll muy rápido
-    return super.applyPhysicsToUserOffset(position, offset * 1.8);
-  }
-
-  @override
-  double applyBoundaryConditions(ScrollMetrics position, double value) {
-    // Sin rebote, solo clamp suave en los límites
-    return super.applyBoundaryConditions(position, value);
-  }
-
-  @override
-  Simulation? createBallisticSimulation(
-    ScrollMetrics position,
-    double velocity,
-  ) {
-    // 🔥 FRICCIÓN MUY BAJA: Scroll más largo y rápido
-    final tolerance = toleranceFor(position);
-    if (velocity.abs() >= tolerance.velocity || position.outOfRange) {
-      return ClampingScrollSimulation(
-        position: position.pixels,
-        velocity: velocity * 1.2, // 🔥 Aumentar velocidad de fling
-        tolerance: tolerance,
-      );
-    }
-    return null;
-  }
-
-  @override
-  double get minFlingVelocity => 25.0; // 🔥 Velocidad mínima muy baja para respuesta inmediata
-
-  @override
-  double get maxFlingVelocity => 15000.0; // 🔥 Velocidad máxima muy alta para scroll rápido
 }
 

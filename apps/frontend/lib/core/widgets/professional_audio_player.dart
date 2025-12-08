@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
+import '../providers/playback_state.dart';
 import '../models/song_model.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
@@ -350,7 +351,8 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                 // ✅ OPTIMIZACIÓN: CustomScrollView con Slivers para mejor rendimiento
                 // Usa lazy loading y mejor gestión de memoria que SingleChildScrollView
                 return CustomScrollView(
-                  physics: const ClampingScrollPhysics(), // Scroll más suave en Android
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone (consistente con Home)
+                  cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
                   slivers: [
                     SliverToBoxAdapter(
                       child: Column(

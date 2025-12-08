@@ -106,7 +106,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                         NeumorphismTheme.coffeeDark.withValues(alpha: 0.1),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: const BorderRadius.all(Radius.circular(24)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
@@ -226,7 +226,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         boxShadow: NeumorphismTheme.neumorphismShadow,
       ),
       child: ListTile(
@@ -234,7 +234,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: const BorderRadius.all(Radius.circular(12)),
           ),
           child: Icon(
             icon,

@@ -178,7 +178,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: const BorderRadius.all(Radius.circular(20)),
                         ),
                         child: TextButton(
                           onPressed: _skipOnboarding,
@@ -265,7 +265,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         color: isActive
             ? Colors.white
             : Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: const BorderRadius.all(Radius.circular(4)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
@@ -282,7 +282,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
@@ -300,7 +300,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             backgroundColor: NeumorphismTheme.coffeeMedium,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: const BorderRadius.all(Radius.circular(16)),
             ),
             elevation: 0,
           ),

@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import '../models/song_model.dart';
 import '../models/user_model.dart';
 import 'http_client_service.dart';
+import 'retry_service.dart';
+import 'http_request_pool.dart';
 import '../utils/data_normalizer.dart';
 import '../utils/url_normalizer.dart';
 
@@ -32,11 +34,15 @@ class SpotifyRecommendationService {
 
   /// 🎯 OBTENER RECOMENDACIÓN INTELIGENTE
   /// Utiliza el algoritmo avanzado del backend
+  /// 
+  /// [offset]: Parámetro opcional para romper el cache (no afecta la lógica del backend)
+  /// Útil para obtener múltiples recomendaciones diferentes con el mismo currentSongId
   Future<Song?> getSmartRecommendation({
     required String currentSongId,
     List<String>? genres,
     User? user,
     bool useCache = true,
+    int? offset, // 🚨 NUEVO: Offset para romper cache en llamadas paralelas
   }) async {
     _totalRequests++;
     
@@ -61,22 +67,43 @@ class SpotifyRecommendationService {
       if (user != null) {
         queryParams['userId'] = user.id;
       }
+      
+      // 🚨 OFFSET PARA ROMPER CACHE: Agregar offset si se proporciona
+      // El backend usará esto para crear claves de cache únicas sin afectar la lógica
+      if (offset != null) {
+        queryParams['offset'] = offset.toString();
+      }
 
-      // 3. Realizar petición al algoritmo avanzado con timeout reducido
-      final response = await _httpClient.dio.get(
-        '/public/songs/recommended/$currentSongId',
-        queryParameters: queryParams,
-        options: Options(
-          receiveTimeout: const Duration(milliseconds: 2000), // Timeout reducido para más velocidad
-          sendTimeout: const Duration(milliseconds: 2000),
+      // 🚀 SPOTIFY-LEVEL: Usar request pool y retry automático
+      final requestKey = '/public/songs/recommended/$currentSongId?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      
+      final response = await HttpRequestPool().executeRequest(
+        key: requestKey,
+        useCache: useCache,
+        requestFn: () => RetryService().executeWithRetry(
+          maxRetries: 3,
+          initialDelayMs: 500,
+          shouldRetry: RetryService.isRetryableError,
+          fn: () => _httpClient.dio.get(
+            '/public/songs/recommended/$currentSongId',
+            queryParameters: queryParams,
+            options: Options(
+              receiveTimeout: const Duration(milliseconds: 2000),
+              sendTimeout: const Duration(milliseconds: 2000),
+            ),
+          ),
         ),
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
         
+        // 🚨 LOG DE DEPURACIÓN: Ver qué está devolviendo el backend
+        debugPrint('🔍 [SpotifyRecommendation] Respuesta del backend (offset: ${offset ?? 'none'}): ${data.toString().substring(0, data.toString().length > 200 ? 200 : data.toString().length)}...');
+        
         if (data['song'] != null) {
           final songData = Map<String, dynamic>.from(data['song']);
+          debugPrint('✅ [SpotifyRecommendation] Canción encontrada en respuesta: ${songData['title'] ?? 'sin título'} (ID: ${songData['id']?.toString().substring(0, 8) ?? 'sin ID'}...)');
           
           // CORRECCIÓN: Asegurar que fileUrl se mapee correctamente
           if (songData['fileUrl'] != null && songData['file_url'] == null) {
@@ -117,7 +144,10 @@ class SpotifyRecommendationService {
           }
           
           _successfulRecommendations++;
+          debugPrint('✅ [SpotifyRecommendation] Canción parseada exitosamente: ${song.title}');
           return song;
+        } else {
+          debugPrint('⚠️ [SpotifyRecommendation] Respuesta del backend no contiene campo "song". Estructura: ${data.keys.toList()}');
         }
         return null;
       }
@@ -197,6 +227,130 @@ class SpotifyRecommendationService {
     _cacheHits = 0;
     _successfulRecommendations = 0;
     debugPrint('🔄 [SpotifyRec] Métricas reiniciadas');
+  }
+
+  /// 🚀 GENERAR BATCH DE RECOMENDACIONES (NUEVO ENDPOINT OPTIMIZADO)
+  /// Reemplaza múltiples llamadas individuales por una sola llamada al backend
+  /// El backend maneja internamente el batching y garantiza variedad
+  Future<List<Song>> generatePlaylistBatch({
+    required String seedSongId,
+    required int count,
+    User? user,
+    List<String>? genres,
+    List<String> excludeIds = const [],
+    bool useCache = true,
+  }) async {
+    _totalRequests++;
+    
+    try {
+      // Construir parámetros de la consulta
+      final queryParams = <String, String>{
+        'seed': seedSongId,
+        'count': count.toString(),
+      };
+      
+      if (genres != null && genres.isNotEmpty) {
+        queryParams['genres'] = genres.join(',');
+      }
+      
+      if (user != null) {
+        queryParams['userId'] = user.id;
+      }
+      
+      if (excludeIds.isNotEmpty) {
+        queryParams['excludeIds'] = excludeIds.join(',');
+      }
+
+      // 🚀 NUEVO ENDPOINT: /public/songs/playlist/generate
+      debugPrint('🚀 [SpotifyRec Batch] ⚠️ NUEVO ENDPOINT: Llamando a /public/songs/playlist/generate');
+      debugPrint('🚀 [SpotifyRec Batch] Parámetros: seed=$seedSongId, count=$count, excludeIds=${excludeIds.length}');
+      
+      final requestKey = '/public/songs/playlist/generate?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      
+      debugPrint('🚀 [SpotifyRec Batch] Request key: $requestKey');
+      
+      final response = await HttpRequestPool().executeRequest(
+        key: requestKey,
+        useCache: useCache,
+        requestFn: () => RetryService().executeWithRetry(
+          maxRetries: 3,
+          initialDelayMs: 500,
+          shouldRetry: RetryService.isRetryableError,
+          fn: () => _httpClient.dio.get(
+            '/public/songs/playlist/generate',
+            queryParameters: queryParams,
+            options: Options(
+              receiveTimeout: const Duration(seconds: 10), // Más tiempo para batch
+              sendTimeout: const Duration(seconds: 10),
+            ),
+          ),
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        
+        debugPrint('🚀 [SpotifyRec Batch] Respuesta recibida: ${data['count'] ?? 0}/${data['requested'] ?? count} canciones');
+        
+        if (data['songs'] != null && data['songs'] is List) {
+          final songsList = data['songs'] as List;
+          final songs = <Song>[];
+          
+          for (final songData in songsList) {
+            try {
+              final songMap = Map<String, dynamic>.from(songData);
+              
+              // Normalizar canción
+              if (songMap['fileUrl'] != null && songMap['file_url'] == null) {
+                songMap['file_url'] = songMap['fileUrl'];
+              }
+              
+              final normalizedSong = DataNormalizer.normalizeSong(songMap);
+              
+              if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') && 
+                  songMap['fileUrl'] != null) {
+                normalizedSong['file_url'] = songMap['fileUrl'];
+                normalizedSong['fileUrl'] = songMap['fileUrl'];
+              }
+              
+              // Normalizar URLs
+              final rawCoverUrl = normalizedSong['cover_art_url'] as String?;
+              final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
+              if (normalizedCoverUrl != null) {
+                normalizedSong['cover_art_url'] = normalizedCoverUrl;
+              }
+              
+              final rawFileUrl = normalizedSong['file_url'] as String?;
+              if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
+                final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
+                normalizedSong['file_url'] = normalizedFileUrl;
+                normalizedSong['fileUrl'] = normalizedFileUrl;
+              }
+              
+              final song = Song.fromJson(normalizedSong);
+              if (song.isValidForPlayback) {
+                songs.add(song);
+              }
+            } catch (e) {
+              debugPrint('⚠️ [SpotifyRec Batch] Error parseando canción: $e');
+            }
+          }
+          
+          _successfulRecommendations += songs.length;
+          debugPrint('✅ [SpotifyRec Batch] ${songs.length} canciones parseadas exitosamente');
+          
+          return songs;
+        }
+        
+        debugPrint('⚠️ [SpotifyRec Batch] Respuesta no contiene campo "songs" o no es una lista');
+        return [];
+      }
+      
+      return [];
+    } catch (error) {
+      debugPrint('❌ [SpotifyRec Batch] Error: $error');
+      return [];
+    }
   }
 }
 

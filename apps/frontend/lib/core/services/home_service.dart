@@ -5,7 +5,6 @@ import '../models/artist_model.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
 import 'http_client_service.dart';
-import '../utils/logger.dart';
 import '../utils/url_normalizer.dart';
 import '../utils/retry_handler.dart';
 import '../utils/error_handler.dart';
@@ -445,7 +444,7 @@ class HomeService {
     } on DioException catch (e) {
       ErrorHandler.handleDioError(e, context: 'HomeService.getFeaturedPlaylists', logError: true);
       return [];
-    } catch (e, stackTrace) {
+    } catch (e) {
       ErrorHandler.handleGenericError(e, context: 'HomeService.getFeaturedPlaylists', logError: false);
       return [];
     }
