@@ -43,8 +43,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   bool _isRestartingAlgorithm = false; // 🎯 PROTECCIÓN: Flag para evitar reinicios múltiples del algoritmo
   bool _isReplacingQueue = false; // 🎯 PROTECCIÓN: Flag cuando se reemplaza toda la cola (loadNewQueue)
   Song? _lastConfirmedSong; // 🔒 Conserva la última canción confirmada para evitar flashes de portada
-  Song? _pendingSong; // Canción candidata pendiente de confirmar
-  DateTime? _pendingSince; // Timestamp de la canción candidata
   bool _isDeduplicating = false; // 🛡️ PROTECCIÓN: Flag para evitar deduplicación múltiple simultánea
   DateTime? _lastDeduplicationTime; // 🛡️ PROTECCIÓN: Timestamp de última deduplicación
   static const Duration _deduplicationCooldown = Duration(seconds: 2); // Cooldown entre deduplicaciones
@@ -103,9 +101,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   int _consecutiveFailures = 0; // Contador de fallos consecutivos en precarga
   DateTime? _lastEmergencyCall; // Timestamp de última llamada de emergencia
   static const Duration _emergencyCooldown = Duration(seconds: 10); // Cooldown entre emergencias
-  DateTime? _lastCoverSetTime; // Controla frecuencia de actualización de portada
-  static const Duration _coverSetDebounce = Duration(milliseconds: 300);
-  static const Duration _coverPendingThreshold = Duration(milliseconds: 400);
 
   // 🔍 FILTRO: Validar canciones antes de cargar a la cola (evita carátulas de tracks corruptos)
   List<Song> _filterPlayableSongs(Iterable<Song> songs) {
@@ -2426,7 +2421,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // Actualizar currentSong desde la cola real, conservando la actual hasta que el índice cambie
       final currentIdx = sequenceState.currentIndex;
       final currentSongId = state.currentSong?.id;
-      final now = DateTime.now();
 
       // 🔒 Bloqueo crítico: mientras inicia algoritmo, ignorar índices distintos de 0
       if (_isAwaitingInitialAlgorithmPlay) {
@@ -2455,49 +2449,17 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         if (!processingActive) {
           return;
         }
-        final isReady = processingState == ProcessingState.ready;
-        final isActuallyPlaying = service.player.playing || currentPos > Duration.zero;
-        // Requerimos que haya al menos avance real para confirmar portada (evita flash en saltos instantáneos)
-        final hasStartedPlayback = currentPos > const Duration(milliseconds: 500);
-        final isDebounced = _lastCoverSetTime != null &&
-            now.difference(_lastCoverSetTime!) < _coverSetDebounce;
-        final isSamePending = _pendingSong?.id == songAtIdx.id;
-        final pendingElapsed = _pendingSince != null ? now.difference(_pendingSince!) : Duration.zero;
-
-        // No adelantar portada si el player aún no está listo, está en ventana de gracia al reemplazar cola,
-        // o todavía no reproduce (evita flash).
-        if (!isReady || !isActuallyPlaying || !hasStartedPlayback || isDebounced) {
-          state = state.copyWith(
-            currentPosition: currentPos,
-            totalDuration: currentDuration ?? state.totalDuration,
-            lastConfirmedSong: songAtIdx,
-          );
-          // Registrar candidato pendiente si es distinto al actual
-          if (state.currentSong?.id != songAtIdx.id && _pendingSong?.id != songAtIdx.id) {
-            _pendingSong = songAtIdx;
-            _pendingSince = now;
-          }
-          return;
-        }
+        // No adelantar portada si el player no está activo
+        state = state.copyWith(
+          currentPosition: currentPos,
+          totalDuration: currentDuration ?? state.totalDuration,
+          lastConfirmedSong: songAtIdx,
+        );
 
         // Si aún no cambia la canción, no sobrescribir la portada; solo actualizar barra
         if (currentSongId != null && currentSongId == songAtIdx.id) {
-          state = state.copyWith(
-            currentPosition: currentPos,
-            totalDuration: currentDuration ?? state.totalDuration,
-            lastConfirmedSong: songAtIdx,
-          );
+          return;
         } else {
-          // Confirmar cambio de portada solo si el candidato estuvo estable el tiempo mínimo
-          if (isSamePending && pendingElapsed < _coverPendingThreshold) {
-            state = state.copyWith(
-              currentPosition: currentPos,
-              totalDuration: currentDuration ?? state.totalDuration,
-              lastConfirmedSong: songAtIdx,
-            );
-            return;
-          }
-
           // Solo cambiar currentSong cuando el índice cambia o estaba vacío
           state = state.copyWith(
             currentSong: songAtIdx,
@@ -2505,9 +2467,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             totalDuration: currentDuration ?? Duration.zero,
             lastConfirmedSong: songAtIdx,
           );
-          _lastCoverSetTime = now;
-        _pendingSong = null;
-        _pendingSince = null;
           AppLogger.info('[PlaybackNotifier] ✅ Canción sincronizada: ${songAtIdx.title}');
         }
       } else {
