@@ -169,33 +169,11 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
             ),
             child: Row(
               children: [
-                // Icono de artista destacado
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        NeumorphismTheme.coffeeMedium,
-                        NeumorphismTheme.coffeeDark,
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.star_rounded,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                // Icono de artista destacado (sin círculo)
+                const Icon(
+                  Icons.star_rounded,
+                  color: NeumorphismTheme.coffeeDark,
+                  size: 24,
                 ),
                 const SizedBox(width: 12),
                 // Título
@@ -239,7 +217,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
         
         // Lista horizontal de artistas optimizada con Pull to Refresh
         SizedBox(
-          height: 235, // Aumentado para evitar overflow cuando hay razón destacada
+          height: 215, // Reducido para ajustar al nuevo tamaño de imagen
           child: RefreshIndicator(
             onRefresh: () async {
               await ref.read(homeStateProvider.notifier).loadFeaturedArtists();
@@ -250,7 +228,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
               padding: const EdgeInsets.only(left: 24, right: 8),
               cacheExtent: 1200, // 🔥 OPTIMIZACIÓN MÁXIMA: Precarga 4-6 items extra
               physics: const BouncingScrollPhysics(), // 🔥 Configuración perfecta
-              itemExtent: 156.0, // 🔥 OPTIMIZACIÓN: Ancho fijo (140 + 16 margin) para mejor cálculo de scroll
+              itemExtent: 136.0, // 🔥 OPTIMIZACIÓN: Ancho fijo (120 + 16 margin) para mejor cálculo de scroll
               addAutomaticKeepAlives: false, // Menos reconstrucciones
               addRepaintBoundaries: true, // 🔥 GPU trabaja menos
               addSemanticIndexes: false, // 🔥 Más rápido
@@ -343,19 +321,19 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
             itemCount: 2, // Solo 2 items para reducir carga
             itemBuilder: (context, index) {
               return Container(
-                width: 140, // Igual que FeaturedArtistCard
+                width: 120, // Igual que FeaturedArtistCard
                 margin: const EdgeInsets.only(right: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Imagen skeleton - 140x140 circular (igual que el real)
+                    // Imagen skeleton - 120x120 circular (igual que el real)
                     Shimmer.fromColors(
                       baseColor: NeumorphismTheme.shimmerBaseColor,
                       highlightColor: NeumorphismTheme.shimmerHighlightColor,
                       period: const Duration(milliseconds: 1200),
                       child: Container(
-                        width: 140, // Igual que el real
-                        height: 140, // Igual que el real
+                        width: 120, // Igual que el real
+                        height: 120, // Igual que el real
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
                           color: NeumorphismTheme.shimmerContentColor,

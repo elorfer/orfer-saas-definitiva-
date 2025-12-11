@@ -157,12 +157,34 @@ export class ArtistsController {
   ) {
     const profileFile = files?.profile?.[0];
     const coverFile = files?.cover?.[0];
+    
+    // Procesar géneros desde el body (puede venir como array o string separado por comas)
+    let genres: string[] = [];
+    if (body?.genres) {
+      if (Array.isArray(body.genres)) {
+        genres = body.genres;
+      } else if (typeof body.genres === 'string') {
+        // Si viene como string separado por comas o como array en formato "genres[]"
+        genres = body.genres.split(',').map((g: string) => g.trim()).filter(Boolean);
+      }
+    }
+    // También verificar si viene como genres[] (formato de formulario)
+    if (body?.['genres[]']) {
+      if (Array.isArray(body['genres[]'])) {
+        genres = body['genres[]'];
+      } else {
+        genres = [body['genres[]']];
+      }
+    }
+    
     return this.artistsService.createArtist({
       name: body?.name,
       nationalityCode: body?.nationalityCode,
       biography: body?.biography,
       featured: body?.featured === 'true' || body?.featured === true,
       userId: body?.userId,
+      phone: body?.phone,
+      genres: genres.length > 0 ? genres : undefined,
       profileFile,
       coverFile,
     });
@@ -202,11 +224,31 @@ export class ArtistsController {
   ) {
     const profileFile = files?.profile?.[0];
     const coverFile = files?.cover?.[0];
+    
+    // Procesar géneros desde el body (puede venir como array o string separado por comas)
+    let genres: string[] | undefined = undefined;
+    if (body?.genres !== undefined) {
+      if (Array.isArray(body.genres)) {
+        genres = body.genres.length > 0 ? body.genres : [];
+      } else if (typeof body.genres === 'string') {
+        genres = body.genres.split(',').map((g: string) => g.trim()).filter(Boolean);
+      }
+    }
+    // También verificar si viene como genres[] (formato de formulario)
+    if (body?.['genres[]']) {
+      if (Array.isArray(body['genres[]'])) {
+        genres = body['genres[]'];
+      } else {
+        genres = [body['genres[]']];
+      }
+    }
+    
     return this.artistsService.updateArtist(id, {
       name: body?.name,
       nationalityCode: body?.nationalityCode,
       biography: body?.biography,
       featured: body?.featured === 'true' || body?.featured === true,
+      genres,
       profileFile,
       coverFile,
     });

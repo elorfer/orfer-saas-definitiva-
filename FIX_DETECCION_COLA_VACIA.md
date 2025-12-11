@@ -198,3 +198,9 @@ El sistema ahora tiene:
 **El problema de detección falsa de cola vacía está completamente resuelto.** 🔧
 
 
+
+
+
+
+
+

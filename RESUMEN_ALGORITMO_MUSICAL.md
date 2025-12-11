@@ -342,3 +342,9 @@ El sistema está **optimizado para rendimiento** y **diversidad**, evitando repe
 **Versión del sistema:** Jugador Único (Single Player Architecture)
 
 
+
+
+
+
+
+

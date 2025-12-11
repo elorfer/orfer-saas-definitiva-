@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../providers/playback_state.dart';
 import '../models/song_model.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
 import '../utils/url_normalizer.dart';
+import '../services/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:animate_do/animate_do.dart';
 import 'favorite_button.dart';
@@ -242,7 +244,7 @@ class _ProfessionalAudioPlayerState
       // 🚀 USAR EL PROVIDER UNIFICADO CORREGIDO - ÚNICA FUENTE DE VERDAD
       // Optimización: usar select para escuchar solo los campos necesarios
       final currentSong = ref.watch(
-        unifiedAudioProviderFixed.select((state) => state.currentSong),
+        unifiedAudioProviderFixed.select((state) => state.lastConfirmedSong ?? state.currentSong),
       );
       final isPlaying = ref.watch(
         unifiedAudioProviderFixed.select((state) => state.isPlaying),
@@ -284,7 +286,6 @@ class _StaticPlayerUI extends ConsumerStatefulWidget {
 
 class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
   Song? _lastSongId; // ✅ Guardar ID de la última canción para detectar cambios
-  Song? _previousSong; // ✅ Guardar canción anterior para transición
   SwipeDirection? _lastSwipeDirection; // ✅ Dirección del último swipe para animaciones
   bool _isInitialLoad = true; // ✅ Flag para detectar carga inicial
 
@@ -307,8 +308,6 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
     super.didUpdateWidget(oldWidget);
     // ✅ DETECTAR CAMBIO DE CANCIÓN: Si cambió la canción, resetear estado
     if (oldWidget.song.id != widget.song.id || _lastSongId?.id != widget.song.id) {
-      // ✅ Guardar canción anterior para transición suave
-      _previousSong = _lastSongId;
       _lastSongId = widget.song;
       // Resetear dirección del swipe para nueva canción
       setState(() {
@@ -331,7 +330,6 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
           SizedBox.expand(
             child: PersistentArtworkBackground(
               currentSong: widget.song,
-              previousSong: _previousSong,
             ),
           ),
 
@@ -556,23 +554,21 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                 );
                               },
                             ),
-                            RepaintBoundary(
-                              child: IconButton(
-                                icon: const Icon(Icons.skip_previous_rounded, color: Colors.white, size: 42),
-                                onPressed: () async {
-                                  await ref.read(unifiedAudioProviderFixed.notifier).previous();
-                                },
-                              ),
+                            _AsyncIconButton(
+                              icon: Icons.skip_previous_rounded,
+                              size: 42,
+                              onTap: () async {
+                                await ref.read(unifiedAudioProviderFixed.notifier).previous();
+                              },
                             ),
                             // Solo el botón play/pause se actualiza - observa el estado directamente
                             _PlayPauseButton(ref: ref),
-                            RepaintBoundary(
-                              child: IconButton(
-                                icon: const Icon(Icons.skip_next_rounded, color: Colors.white, size: 42),
-                                onPressed: () async {
-                                  await ref.read(unifiedAudioProviderFixed.notifier).next();
-                                },
-                              ),
+                            _AsyncIconButton(
+                              icon: Icons.skip_next_rounded,
+                              size: 42,
+                              onTap: () async {
+                                await ref.read(unifiedAudioProviderFixed.notifier).next();
+                              },
                             ),
                             // Botón Repeat - con estado visual y diferentes iconos
                             Consumer(
@@ -637,7 +633,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
 }
 
 /// Widget separado para el botón play/pause que se actualiza independientemente
-/// Observa el estado directamente del provider para sincronización perfecta
+/// ✅ SIMPLIFICADO: Usa solo el estado del provider (ya sincronizado con el stream)
 class _PlayPauseButton extends ConsumerWidget {
   final WidgetRef ref;
 
@@ -647,31 +643,97 @@ class _PlayPauseButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Observar isPlaying directamente del provider para actualización inmediata
-    final isPlaying = ref.watch(isPlayingProviderFixed);
-    
-    return GestureDetector(
-      onTap: () async {
-        try {
-          await ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
-        } catch (e) {
-          AppLogger.error('[PlayPauseButton] Error: $e');
-        }
+    // 🛡️ FUENTE ÚNICA DE VERDAD: StreamBuilder con isPlayingStream directamente
+    // Esto elimina toda dependencia del estado de PlaybackNotifier
+    final audioService = ref.watch(audioServiceProvider);
+    final isPlayingStream = audioService.isPlayingStream;
+    return StreamBuilder<bool>(
+      stream: isPlayingStream,
+      builder: (context, isPlayingSnapshot) {
+        final bool isPlaying = isPlayingSnapshot.data ?? false;
+
+        return GestureDetector(
+          onTap: () {
+            ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
+          },
+          child: RepaintBoundary(
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: Colors.black,
+                size: 36,
+              ),
+            ),
+          ),
+        );
       },
-      child: RepaintBoundary(
-        child: Container(
-          width: 72,
-          height: 72,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
+    );
+  }
+}
+
+/// Botón async con estado de “procesando” para next/prev (feedback inmediato)
+class _AsyncIconButton extends StatefulWidget {
+  final IconData icon;
+  final double size;
+  final Future<void> Function() onTap;
+
+  const _AsyncIconButton({
+    required this.icon,
+    required this.onTap,
+    this.size = 36,
+  });
+
+  @override
+  State<_AsyncIconButton> createState() => _AsyncIconButtonState();
+}
+
+class _AsyncIconButtonState extends State<_AsyncIconButton> {
+  bool _pending = false;
+  DateTime _unlockAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final isUnlocked = now.isAfter(_unlockAt);
+
+    return RepaintBoundary(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          IconButton(
+            icon: Icon(widget.icon, color: Colors.white, size: widget.size),
+            onPressed: _pending || !isUnlocked
+                ? null
+                : () async {
+                    setState(() {
+                      _pending = true;
+                      _unlockAt = DateTime.now().add(const Duration(milliseconds: 200));
+                    });
+                    try {
+                      await widget.onTap();
+                    } catch (e) {
+                      AppLogger.error('[AsyncIconButton] Error: $e');
+                    } finally {
+                      if (mounted) setState(() => _pending = false);
+                    }
+                  },
           ),
-          child: Icon(
-            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-            color: Colors.black,
-            size: 36,
-          ),
-        ),
+          if (_pending)
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+        ],
       ),
     );
   }

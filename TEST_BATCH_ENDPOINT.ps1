@@ -70,3 +70,9 @@ if ($response5.algorithm) {
 Write-Host ""
 Write-Host "✅ Pruebas completadas" -ForegroundColor Yellow
 
+
+
+
+
+
+

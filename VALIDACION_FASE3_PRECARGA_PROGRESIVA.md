@@ -305,3 +305,9 @@ Future<void> _waitForCurrentSongReady() async {
 
 *Última actualización: Diciembre 2025*
 
+
+
+
+
+
+

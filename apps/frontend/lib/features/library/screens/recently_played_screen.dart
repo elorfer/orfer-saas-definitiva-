@@ -8,7 +8,6 @@ import '../../../core/models/song_model.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/utils/intersection_observer.dart';
-import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/widgets/optimized_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -215,8 +214,36 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
                             key: ValueKey('recent_item_${song.id}'),
                             song: song,
                             index: index,
-                            onTap: () {
-                              SongDetailScreen.navigateToSong(context, song);
+                            onTap: () async {
+                              // ✅ Tocar la tarjeta = reproducir (igual que el botón play)
+                              try {
+                                // Validar que la canción tenga URL válida
+                                if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
+                                        backgroundColor: Colors.red,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(song, useAlgorithm: true);
+                              } catch (e, stackTrace) {
+                                debugPrint('❌ [RecentlyPlayedScreen] Error al reproducir canción: $e');
+                                debugPrint('Stack trace: $stackTrace');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
+                                      backgroundColor: Colors.red,
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
+                                }
+                              }
                             },
                             onPlay: () async {
                               // ✅ CRÍTICO: useAlgorithm = true desactiva fixed queue automáticamente
@@ -290,15 +317,8 @@ class _SongHistoryItem extends ConsumerWidget {
     // ✅ Verificar si la canción está disponible para reproducir
     final isAvailable = song.fileUrl != null && song.fileUrl!.isNotEmpty;
     
-    // ✅ OPTIMIZACIÓN: Usar selectores separados para escuchar solo cambios relevantes
-    final currentSongId = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.currentSong?.id),
-    );
-    final isPlaying = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.isPlaying),
-    );
-    final isCurrentSong = currentSongId == song.id;
-    final showPause = isCurrentSong && isPlaying && isAvailable;
+    // ✅ OPTIMIZACIÓN: Variables eliminadas ya que el botón play siempre inicia nueva reproducción
+    // (no necesita verificar si es la canción actual o si está reproduciéndose)
 
     // ✅ OPTIMIZACIÓN: Usar URL normalizada (ya está en cache si se precargó)
     final coverUrl = UrlNormalizer.normalizeImageUrl(song.coverArtUrl);
@@ -422,10 +442,11 @@ class _SongHistoryItem extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 6), // ✅ Agregado espacio antes del botón
-                  // Botón play - deshabilitado si no está disponible
+                  // Botón play - SIEMPRE muestra play ya que siempre inicia nueva reproducción (como tocar la tarjeta)
                   IconButton(
                     icon: Icon(
-                      showPause ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                      // ✅ SIEMPRE mostrar play ya que siempre inicia nueva reproducción con algoritmo
+                      Icons.play_circle_filled,
                       color: isAvailable 
                           ? NeumorphismTheme.coffeeMedium 
                           : NeumorphismTheme.textSecondary.withValues(alpha: 0.3),

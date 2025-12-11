@@ -11,6 +11,7 @@ export interface GenreModel {
   name: string;
   description?: string;
   colorHex?: string;
+  imageUrl?: string;
   createdAt: string;
   songCount?: number;
   albumCount?: number;

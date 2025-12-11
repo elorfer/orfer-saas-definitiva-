@@ -82,7 +82,7 @@ class IntelligentFeaturedService {
           ...excludeIds, // Solo IDs de cola/historial, NO estáticas
         };
         
-        // Obtener recomendaciones dinámicas para llenar TODO el límite
+        // Obtener recomendaciones dinámicas para completar el límite solicitado
         // 🚨 LIMITAR A 15 recomendaciones máximo para evitar demasiadas llamadas HTTP simultáneas
         final dynamicCount = limit > 15 ? 15 : limit;
         debugPrint('🎯 [IntelligentFeatured] Solicitando $dynamicCount recomendaciones dinámicas (límite solicitado: $limit)');
@@ -331,7 +331,7 @@ class IntelligentFeaturedService {
           _cacheService.cacheSeeds(currentSongId, initialResults);
         }
         
-        debugPrint('✅ [IntelligentFeatured] Fase 1: ${initialResults.length}/${seedsToFetch} recomendaciones recibidas del batch');
+        debugPrint('✅ [IntelligentFeatured] Fase 1: ${initialResults.length}/$seedsToFetch recomendaciones recibidas del batch');
       } catch (error, stackTrace) {
         debugPrint('❌ [IntelligentFeatured] Error en Fase 1 batch: $error');
         debugPrint('   Tipo de error: ${error.runtimeType}');
@@ -421,22 +421,36 @@ class IntelligentFeaturedService {
       debugPrint('   Faltan $remainingCount canciones para completar el límite de $limit');
       
       // 🚀 FASE 2 OPTIMIZADA: Usar endpoint de batch para obtener múltiples recomendaciones
-      // En lugar de hacer llamadas individuales, usamos el endpoint de batch que maneja la variedad internamente
+      // El backend ahora maneja la detección de loops y ajuste dinámico del scoring
+      // El frontend mantiene límites suaves como respaldo de seguridad
       int seedIndex = 0;
       int totalAttempts = 0;
-      final maxAttempts = (remainingCount / 4).ceil() + 1; // Reducir intentos ya que batch es más eficiente
+      int consecutiveFailures = 0; // Contador de fallos consecutivos (respaldo)
+      const int maxConsecutiveFailures = 1; // Cortar en el primer fallo
+      const int absoluteMaxAttempts = 2; // Más bajo aún para máxima velocidad
+      final calculatedMaxAttempts = remainingCount; // pedir lo que falta
+      final maxAttempts = calculatedMaxAttempts > absoluteMaxAttempts ? absoluteMaxAttempts : calculatedMaxAttempts;
+      final Map<String, int> seedAttempts = {}; // Limitar intentos por semilla
       
-      while (recommendations.length < count && totalAttempts < maxAttempts) {
+      while (recommendations.length < count && totalAttempts < maxAttempts && consecutiveFailures < maxConsecutiveFailures) {
         // 🚨 CRÍTICO: Seleccionar semilla de forma circular de la lista de semillas
         final seedId = seeds[seedIndex % seeds.length];
         final seedIndexInList = seedIndex % seeds.length;
         
-        // Calcular cuántas recomendaciones necesitamos
-        final needed = (count - recommendations.length).clamp(1, 4); // Solicitar hasta 4 a la vez
+        // Limitar intentos por semilla a 1 (cortar rápido)
+        seedAttempts[seedId] = (seedAttempts[seedId] ?? 0);
+        if (seedAttempts[seedId]! >= 1) {
+          seedIndex++;
+          continue;
+        }
         
-        debugPrint('🚀 [IntelligentFeatured] Fase 2: solicitando $needed recomendaciones usando batch endpoint con semilla ${seedId.substring(0, 8)}... (índice $seedIndexInList de ${seeds.length})');
+        // Calcular cuántas recomendaciones necesitamos (pedir de a 1 para minimizar duplicados)
+        final needed = 1;
+        
+        debugPrint('🚀 [IntelligentFeatured] Fase 2: solicitando $needed recomendaciones usando batch endpoint con semilla ${seedId.substring(0, 8)}... (índice $seedIndexInList de ${seeds.length}, intento ${totalAttempts + 1}/$maxAttempts)');
         
         try {
+          seedAttempts[seedId] = seedAttempts[seedId]! + 1;
           // 🚀 NUEVO: Usar endpoint de batch en lugar de múltiples llamadas individuales
           final batchSongs = await _recommendationService.generatePlaylistBatch(
             seedSongId: seedId, // ✅ USAR SEMILLA VARIADA (no currentSongId original)
@@ -479,22 +493,47 @@ class IntelligentFeaturedService {
           
           debugPrint('📊 [IntelligentFeatured] Fase 2 batch procesado: $addedInBatch agregadas, $duplicatesInBatch duplicadas/inválidas');
           
-          // Si no obtuvimos ninguna recomendación nueva, avanzar a la siguiente semilla
+          // Si no obtuvimos ninguna recomendación nueva, fallback inmediato y cortar Fase 2
           if (addedInBatch == 0) {
+            consecutiveFailures++;
             seedIndex++;
-            debugPrint('⚠️ [IntelligentFeatured] Fase 2: No se obtuvieron nuevas recomendaciones con esta semilla, probando siguiente...');
+            debugPrint('⚠️ [IntelligentFeatured] Fase 2: Sin nuevas con esta semilla. Corte inmediato a populares.');
+            final fallbackNeeded = (count - recommendations.length).clamp(2, 4);
+            final fallback = await _getPopularDiverseSongs(
+              count: fallbackNeeded,
+              excludeIds: usedIds,
+            );
+            if (fallback.isNotEmpty) {
+              int addedFallback = 0;
+              for (final fs in fallback) {
+                if (recommendations.length >= count) break;
+                final song = fs.song;
+                if (usedIds.contains(song.id) || !song.isValidForPlayback) continue;
+                recommendations.add(FeaturedSong(
+                  song: song,
+                  featuredReason: fs.featuredReason ?? 'Trending • ${song.totalStreams} reproducciones',
+                  rank: recommendations.length + 1,
+                ));
+                usedIds.add(song.id);
+                addedFallback++;
+              }
+              debugPrint('✅ [IntelligentFeatured] Fallback populares agregó $addedFallback canciones (fallback inmediato).');
+            } else {
+              debugPrint('⚠️ [IntelligentFeatured] Fallback populares no devolvió canciones (fallback inmediato).');
+            }
+            break;
           } else {
-            // Si obtuvimos recomendaciones, podemos reusar la misma semilla pero avanzar también para variedad
+            // Si obtuvimos recomendaciones, resetear contador de fallos
+            consecutiveFailures = 0;
             seedIndex++;
           }
           
           totalAttempts++;
           
           // Si ya tenemos suficientes recomendaciones, salir
-          if (recommendations.length >= count) {
-            break;
-          }
+            if (recommendations.length >= count) break;
         } catch (error, stackTrace) {
+          consecutiveFailures++;
           debugPrint('❌ [IntelligentFeatured] Error en Fase 2 batch (semilla: ${seedId.substring(0, 8)}...): $error');
           debugPrint('   Stack: ${stackTrace.toString().split('\n').take(3).join('\n')}');
           // Avanzar a la siguiente semilla en caso de error
@@ -504,13 +543,17 @@ class IntelligentFeaturedService {
       }
       
       if (totalAttempts >= maxAttempts) {
-        debugPrint('⚠️ [IntelligentFeatured] Máximo de intentos alcanzado en Fase 2');
+        debugPrint('⚠️ [IntelligentFeatured] Máximo de intentos alcanzado en Fase 2 ($maxAttempts intentos) - Límite de seguridad del frontend');
+      }
+      
+      if (consecutiveFailures >= maxConsecutiveFailures) {
+        debugPrint('⚠️ [IntelligentFeatured] Fase 2: Demasiados fallos consecutivos ($consecutiveFailures/$maxConsecutiveFailures) - Límite de seguridad del frontend. El backend debería haber manejado esto automáticamente.');
       }
       
       debugPrint('✅ [IntelligentFeatured] Fase 2 completada: ${recommendations.length} recomendaciones totales (${recommendations.length - initialCount} de la Fase 2)');
     }
     
-    debugPrint('✅ [IntelligentFeatured] Total recomendaciones obtenidas: ${recommendations.length} de $count solicitadas (híbrido: ${initialCount} paralelo + cadena)');
+    debugPrint('✅ [IntelligentFeatured] Total recomendaciones obtenidas: ${recommendations.length} de $count solicitadas (híbrido: $initialCount paralelo + cadena)');
     return recommendations;
   }
 

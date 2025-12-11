@@ -220,3 +220,9 @@ if (shouldPreloadByCount && shouldPreloadByTime) {
 **Versión:** Algoritmo Avanzado v2.0
 
 
+
+
+
+
+
+

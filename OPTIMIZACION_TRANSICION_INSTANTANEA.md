@@ -188,3 +188,9 @@ Las optimizaciones implementadas logran:
 **El sistema ahora tiene transiciones entre canciones al nivel de Spotify.** 🚀
 
 
+
+
+
+
+
+

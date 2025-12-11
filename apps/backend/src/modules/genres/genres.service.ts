@@ -100,6 +100,7 @@ export class GenresService {
         name: createGenreDto.name.trim(),
         description: createGenreDto.description?.trim(),
         colorHex: createGenreDto.colorHex?.trim(),
+        imageUrl: createGenreDto.imageUrl?.trim(),
       });
 
       const savedGenre = await this.genreRepository.save(genre);
@@ -147,6 +148,9 @@ export class GenresService {
     }
     if (updateGenreDto.colorHex !== undefined) {
       genre.colorHex = updateGenreDto.colorHex?.trim() || null;
+    }
+    if (updateGenreDto.imageUrl !== undefined) {
+      genre.imageUrl = updateGenreDto.imageUrl?.trim() || null;
     }
 
     try {
@@ -207,14 +211,23 @@ export class GenresService {
    * @returns Lista de géneros que coinciden con la búsqueda
    */
   async search(query: string, limit: number = 20): Promise<Genre[]> {
-    return this.genreRepository
+    const genres = await this.genreRepository
       .createQueryBuilder('genre')
       .where('genre.name ILIKE :query', { query: `%${query}%` })
       .orderBy('genre.name', 'ASC')
       .limit(limit)
       .getMany();
+    
+    // Log para debug - verificar que imageUrl se esté devolviendo
+    if (genres.length > 0) {
+      this.logger.debug(`[GenresService.search] Encontrados ${genres.length} géneros. Primer género: ${JSON.stringify({ id: genres[0].id, name: genres[0].name, imageUrl: genres[0].imageUrl })}`);
+    }
+    
+    return genres;
   }
 }
+
+
 
 
 

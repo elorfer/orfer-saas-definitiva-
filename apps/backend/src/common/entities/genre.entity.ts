@@ -22,6 +22,9 @@ export class Genre {
   @Column({ name: 'color_hex', length: 7, nullable: true })
   colorHex?: string;
 
+  @Column({ name: 'image_url', type: 'text', nullable: true })
+  imageUrl?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

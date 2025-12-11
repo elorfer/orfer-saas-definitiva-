@@ -6,6 +6,7 @@ import '../config/api_config.dart';
 import '../config/app_config.dart';
 import 'http_cache_service.dart';
 import '../utils/logger.dart';
+import '../utils/url_normalizer.dart';
 
 /// Servicio centralizado para manejar todas las peticiones HTTP
 /// Proporciona una instancia única de Dio con interceptores configurados
@@ -76,6 +77,9 @@ class HttpClientService {
     }
 
     try {
+      // Limpiar cache de URLs al iniciar para asegurar URLs frescas
+      UrlNormalizer.clearCache();
+      AppLogger.config('🌐 [HttpClientService] Inicializando con baseUrl: ${ApiConfig.baseUrl}');
       
       // Crear instancia de Dio con configuración base
       _dio = Dio(

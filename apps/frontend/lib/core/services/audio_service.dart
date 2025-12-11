@@ -24,6 +24,18 @@ class AudioService {
   /// Stream del estado del reproductor (para buffering, etc.)
   Stream<PlayerState> get playerStateStream => player.playerStateStream;
 
+  /// 🛡️ GUARD ANTI-LOOP: Verificar si hay error en el reproductor
+  /// En just_audio, los errores se detectan cuando processingState es idle inesperadamente
+  bool get hasError {
+    try {
+      final playerState = player.playerState;
+      // Si está idle pero debería estar reproduciendo, puede haber un error
+      return playerState.processingState == ProcessingState.idle;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Cargar una nueva cola de canciones
   /// 
   /// [sources]: Lista de AudioSource a reproducir
@@ -52,7 +64,18 @@ class AudioService {
         AppLogger.info('[AudioService] Error al detener (puede ser normal): $e');
       }
       
-      // Usar setAudioSources en lugar de ConcatenatingAudioSource (deprecado)
+      // ⚠️ DEUDA TÉCNICA: ConcatenatingAudioSource está deprecado en just_audio 0.10.5
+      // 
+      // Razón: just_audio 0.10.5 aún requiere ConcatenatingAudioSource para crear colas.
+      // La nueva API (setAudioSources) no está disponible en esta versión.
+      //
+      // Plan de migración:
+      // 1. Actualizar just_audio a versión que soporte setAudioSources (plural)
+      // 2. Migrar loadNewQueue() y appendToQueue() a la nueva API
+      // 3. Verificar que sequenceState.sequence se maneje correctamente
+      //
+      // Estado: Funcional y estable. Las advertencias son informativas.
+      // Prioridad: Baja (se abordará en próxima actualización mayor del paquete)
       await player.setAudioSource(
         ConcatenatingAudioSource(children: sources),
         initialIndex: initialIndex,
@@ -60,10 +83,53 @@ class AudioService {
       
       AppLogger.info('[AudioService] Cola cargada exitosamente');
     } catch (e, stackTrace) {
+      // 🚨 MEJOR MANEJO DE ERRORES: Detectar errores de conexión específicos
+      final errorString = e.toString().toLowerCase();
+      final isConnectionError = errorString.contains('connectexception') ||
+          errorString.contains('failed to connect') ||
+          errorString.contains('network') ||
+          errorString.contains('connection refused') ||
+          errorString.contains('connection timed out') ||
+          errorString.contains('socketexception');
+      
+      if (isConnectionError) {
+        AppLogger.error('[AudioService] ❌ ERROR DE CONEXIÓN: No se puede conectar al servidor de audio');
+        AppLogger.error('[AudioService] Verifica que el backend esté corriendo y accesible');
+        AppLogger.error('[AudioService] Error: $e');
+        // Lanzar un error más descriptivo
+        throw Exception('Error de conexión: No se puede conectar al servidor de audio. Verifica tu conexión a internet y que el backend esté corriendo.');
+      }
+      
+      // Manejar específicamente el error "Connection aborted" (puede ocurrir al cambiar de modo rápidamente)
+      if (errorString.contains('connection aborted') || 
+          errorString.contains('aborted')) {
+        AppLogger.warning('[AudioService] ⚠️ Conexión abortada, reintentando...');
+        
+        // Esperar más tiempo antes de reintentar (dar tiempo a que se complete la operación anterior)
+        await Future.delayed(const Duration(milliseconds: 800));
+        
+        try {
+          // Detener completamente y limpiar estado
+          await player.pause();
+          await player.stop();
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+          // Reintentar carga
+          await player.setAudioSource(
+            ConcatenatingAudioSource(children: sources),
+            initialIndex: initialIndex,
+          );
+          
+          AppLogger.info('[AudioService] ✅ Cola cargada exitosamente después de reintento (connection aborted)');
+        } catch (retryError, retryStackTrace) {
+          AppLogger.error('[AudioService] ❌ Error al reintentar carga después de connection aborted: $retryError', retryStackTrace);
+          rethrow;
+        }
+      }
       // Manejar específicamente el error "Loading interrupted"
-      if (e.toString().contains('Loading interrupted') || 
-          e.toString().contains('interrupted') ||
-          e.toString().contains('PluginLoadRequest')) {
+      else if (errorString.contains('loading interrupted') || 
+          errorString.contains('interrupted') ||
+          errorString.contains('pluginloadrequest')) {
         AppLogger.warning('[AudioService] Carga interrumpida, reintentando con más tiempo...');
         
         // Esperar más tiempo antes de reintentar
@@ -75,7 +141,7 @@ class AudioService {
           await player.stop();
           await Future.delayed(const Duration(milliseconds: 300));
           
-          // Reintentar carga
+          // Reintentar carga (usando ConcatenatingAudioSource como se requiere en just_audio 0.10.5)
           await player.setAudioSource(
             ConcatenatingAudioSource(children: sources),
             initialIndex: initialIndex,
@@ -196,6 +262,9 @@ class AudioService {
   }
 
   /// Agregar más canciones a la cola actual (útil para modo algorithm)
+  /// 
+  /// ⚠️ DEUDA TÉCNICA: Usa ConcatenatingAudioSource.addAll() que está deprecado.
+  /// Ver comentario en loadNewQueue() para detalles de la migración planificada.
   Future<void> appendToQueue(List<AudioSource> sources) async {
     try {
       final currentSource = player.audioSource;

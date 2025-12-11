@@ -94,13 +94,17 @@ export class SongsService {
   }
 
   async searchSongs(query: string, page: number = 1, limit: number = 10): Promise<{ songs: Song[]; total: number }> {
+    const searchQuery = `%${query}%`;
     const [songs, total] = await this.songRepository
       .createQueryBuilder('song')
       .leftJoinAndSelect('song.artist', 'artist')
       .leftJoinAndSelect('song.album', 'album')
       .leftJoinAndSelect('song.genre', 'genre')
       .where('song.status = :status', { status: SongStatus.PUBLISHED })
-      .andWhere('(song.title ILIKE :query OR artist.stageName ILIKE :query)', { query: `%${query}%` })
+      .andWhere(
+        '(song.title ILIKE :query OR artist.stageName ILIKE :query OR COALESCE(song.genres, \'\')::text ILIKE :query)',
+        { query: searchQuery }
+      )
       .skip((page - 1) * limit)
       .take(limit)
       .orderBy('song.createdAt', 'DESC')

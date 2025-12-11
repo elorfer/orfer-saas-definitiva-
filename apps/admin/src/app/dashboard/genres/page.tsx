@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import { useGenres, useDeleteGenre, useCreateGenre, useUpdateGenre, GenreModel } from '@/hooks/useGenres';
+import { apiClient } from '@/lib/api';
 
 const PAGE_SIZE = 20;
 
@@ -32,14 +33,37 @@ function GenreRow({
     <tr className="hover:bg-gray-50 transition">
       <td className="py-4 px-4">
         <div className="flex items-center gap-3">
-          <div
-            className="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-white font-semibold shadow-sm"
-            style={{
-              backgroundColor: genre.colorHex || '#6B7280',
-            }}
-          >
-            {genre.name.charAt(0).toUpperCase()}
-          </div>
+          {genre.imageUrl ? (
+            <div className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden shadow-sm">
+              <img
+                src={genre.imageUrl}
+                alt={genre.name}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  // Si la imagen falla, mostrar el fallback
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = `
+                      <div class="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-white font-semibold shadow-sm" style="background-color: ${genre.colorHex || '#6B7280'}">
+                        ${genre.name.charAt(0).toUpperCase()}
+                      </div>
+                    `;
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <div
+              className="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-white font-semibold shadow-sm"
+              style={{
+                backgroundColor: genre.colorHex || '#6B7280',
+              }}
+            >
+              {genre.name.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-gray-900">{genre.name}</p>
             {genre.description && (
@@ -103,6 +127,8 @@ export default function GenresPage() {
     description: '',
     colorHex: '#6B7280',
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const { data, isLoading, isFetching, refetch, error } = useGenres({ page, limit: PAGE_SIZE, all: false, enabled: true });
   const genres = data?.genres ?? [];
@@ -147,6 +173,8 @@ export default function GenresPage() {
       description: '',
       colorHex: '#6B7280',
     });
+    setImageFile(null);
+    setImagePreview(null);
     setShowCreateModal(true);
   };
 
@@ -157,6 +185,8 @@ export default function GenresPage() {
       description: genre.description || '',
       colorHex: genre.colorHex || '#6B7280',
     });
+    setImageFile(null);
+    setImagePreview(genre.imageUrl || null);
     setShowEditModal(true);
   };
 
@@ -169,6 +199,20 @@ export default function GenresPage() {
       description: '',
       colorHex: '#6B7280',
     });
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -179,11 +223,17 @@ export default function GenresPage() {
     }
 
     try {
-      await createGenre({
+      const genre = await createGenre({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         colorHex: formData.colorHex || undefined,
       });
+      
+      // Si hay una imagen, subirla después de crear el género
+      if (imageFile && genre?.id) {
+        await apiClient.uploadGenreImage(genre.id, imageFile);
+      }
+      
       closeModals();
     } catch (error) {
       // Error manejado por el hook
@@ -207,6 +257,12 @@ export default function GenresPage() {
           colorHex: formData.colorHex || undefined,
         },
       });
+      
+      // Si hay una nueva imagen, subirla
+      if (imageFile) {
+        await apiClient.uploadGenreImage(editingGenre.id, imageFile);
+      }
+      
       closeModals();
     } catch (error) {
       // Error manejado por el hook
@@ -433,6 +489,30 @@ export default function GenresPage() {
                 <p className="mt-1 text-xs text-gray-400">Formato: #RRGGBB (ej: #FF5733)</p>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  Imagen del género (opcional)
+                </label>
+                <div className="space-y-3">
+                  {imagePreview && (
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={imagePreview}
+                        alt="Vista previa"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brown-50 file:text-brown-700 hover:file:bg-brown-100"
+                  />
+                  <p className="text-xs text-gray-400">Formatos permitidos: JPG, PNG, WEBP (máx. 10MB)</p>
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -527,6 +607,30 @@ export default function GenresPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-gray-400">Formato: #RRGGBB (ej: #FF5733)</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  Imagen del género (opcional)
+                </label>
+                <div className="space-y-3">
+                  {imagePreview && (
+                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={imagePreview}
+                        alt="Vista previa"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brown-50 file:text-brown-700 hover:file:bg-brown-100"
+                  />
+                  <p className="text-xs text-gray-400">Formatos permitidos: JPG, PNG, WEBP (máx. 10MB)</p>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">

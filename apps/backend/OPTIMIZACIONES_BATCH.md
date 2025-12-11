@@ -145,3 +145,9 @@ WHERE status = 'published';
    - Pre-carga de recomendaciones en background
    - Uso de Redis para cache distribuido
 
+
+
+
+
+
+

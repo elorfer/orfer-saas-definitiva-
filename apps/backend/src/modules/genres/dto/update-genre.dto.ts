@@ -38,7 +38,18 @@ export class UpdateGenreDto {
     message: 'El color debe ser un código hexadecimal válido (ej: #FF5733)',
   })
   colorHex?: string;
+
+  @ApiProperty({
+    description: 'URL de la imagen del género',
+    example: 'https://example.com/genre-image.jpg',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
 }
+
+
 
 
 

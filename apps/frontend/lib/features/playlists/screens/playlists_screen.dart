@@ -137,7 +137,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
                   child: CustomScrollView(
                     controller: _scrollController,
                     cacheExtent: 500, // Optimizado: grid de playlists, reducir de 800 a 500 para mejor uso de memoria
-                    physics: const FastScrollPhysics(), // Scroll más rápido y fluido
+                    physics: const SmoothScrollPhysics(), // Scroll más rápido y fluido
                     slivers: [
                   // Grid de playlists
                   SliverPadding(
@@ -242,7 +242,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
   Widget _buildLoadingState() {
     return CustomScrollView(
       cacheExtent: 500, // Optimizado: reducir de 800 a 500 para consistencia
-      physics: const FastScrollPhysics(), // Scroll más rápido y fluido
+      physics: const SmoothScrollPhysics(), // Scroll más rápido y fluido
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.all(16),

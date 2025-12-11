@@ -8,7 +8,12 @@ final unifiedAudioProviderFixed = playbackNotifierProviderFactory;
 
 /// Provider para obtener solo la canción actual (optimización)
 final currentSongProviderFixed = Provider<Song?>((ref) {
-  return ref.watch(unifiedAudioProviderFixed).currentSong;
+  final state = ref.watch(unifiedAudioProviderFixed);
+  // Congelar la portada mientras se reemplaza la cola para evitar flash
+  if (state.isReplacingQueue) {
+    return state.lastConfirmedSong ?? state.currentSong;
+  }
+  return state.lastConfirmedSong ?? state.currentSong;
 });
 
 /// Provider para obtener solo el estado de reproducción (optimización)

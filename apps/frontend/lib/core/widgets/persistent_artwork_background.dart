@@ -6,132 +6,29 @@ import '../models/song_model.dart';
 /// Widget de fondo persistente estilo Spotify
 /// Mantiene la carátula anterior visible mientras aparece la nueva
 /// Con blur global y transición suave
-class PersistentArtworkBackground extends StatefulWidget {
+class PersistentArtworkBackground extends StatelessWidget {
   final Song? currentSong;
-  final Song? previousSong;
 
   const PersistentArtworkBackground({
     super.key,
     required this.currentSong,
-    this.previousSong,
   });
 
   @override
-  State<PersistentArtworkBackground> createState() =>
-      _PersistentArtworkBackgroundState();
-}
-
-class _PersistentArtworkBackgroundState
-    extends State<PersistentArtworkBackground>
-    with SingleTickerProviderStateMixin {
-  Song? _currentArtwork;
-  late AnimationController _transitionController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  bool _isTransitioning = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentArtwork = widget.currentSong;
-
-    _transitionController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300), // Más rápido para transiciones fluidas
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _transitionController,
-      curve: Curves.easeOutCubic, // Curva más suave
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(-1.2, 0), // Deslizar hacia la izquierda (salir)
-    ).animate(
-      CurvedAnimation(
-        parent: _transitionController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-  }
-
-  @override
-  void didUpdateWidget(PersistentArtworkBackground oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // ✅ Detectar cambio de canción
-    if (oldWidget.currentSong?.id != widget.currentSong?.id &&
-        widget.currentSong != null) {
-      _handleArtworkChange();
-    }
-  }
-
-  /// Manejar cambio de carátula sin mostrar la anterior
-  void _handleArtworkChange() {
-    if (_isTransitioning) return;
-
-    setState(() {
-      _isTransitioning = true;
-      // ✅ NO guardar carátula anterior para evitar parpadeo
-      // Solo actualizar la carátula actual directamente
-      _currentArtwork = widget.currentSong;
-      // ✅ Resetear animación para nueva transición
-      _transitionController.reset();
-      
-      // ✅ Configurar animación de entrada desde la derecha
-      _slideAnimation = Tween<Offset>(
-        begin: const Offset(1.2, 0),
-        end: Offset.zero,
-      ).animate(
-        CurvedAnimation(
-          parent: _transitionController,
-          curve: Curves.easeOutCubic,
-        ),
-      );
-    });
-
-    // ✅ Iniciar transición inmediatamente
-    Future.microtask(() {
-      if (mounted) {
-        _transitionController.forward().then((_) {
-          if (mounted) {
-            setState(() {
-              _isTransitioning = false;
-            });
-          }
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _transitionController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final song = currentSong;
+    if (song == null) {
+      return const SizedBox.shrink();
+    }
+
     return Stack(
       children: [
-        // ✅ Solo mostrar la carátula actual (sin mostrar la anterior)
-        if (_currentArtwork != null)
-          Positioned.fill(
-            child: _isTransitioning
-                ? SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: RepaintBoundary(
-                        child: _ArtworkImage(song: _currentArtwork!),
-                      ),
-                    ),
-                  )
-                : RepaintBoundary(
-                    child: _ArtworkImage(song: _currentArtwork!),
-                  ),
+        Positioned.fill(
+          child: RepaintBoundary(
+            child: _ArtworkImage(song: song),
           ),
-
-        // ✅ Blur global (encima de la carátula)
+        ),
+        // Blur global (encima de la carátula)
         Positioned.fill(
           child: RepaintBoundary(
             child: BackdropFilter(

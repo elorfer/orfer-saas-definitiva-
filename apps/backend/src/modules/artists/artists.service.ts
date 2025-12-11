@@ -124,15 +124,22 @@ export class ArtistsService {
     featured?: boolean;
     userId?: string;
     phone?: string;
+    genres?: string[];
     profileFile?: Express.Multer.File;
     coverFile?: Express.Multer.File;
   }): Promise<Artist> {
+    // Validar que se proporcionen géneros (obligatorio)
+    if (!data.genres || data.genres.length === 0) {
+      throw new BadRequestException('Debe proporcionar al menos un género para el artista');
+    }
+
     const artist = new Artist();
     artist.name = data.name?.trim();
     artist.stageName = data.name?.trim(); // compatibilidad
     artist.nationalityCode = data.nationalityCode?.toUpperCase();
     artist.biography = data.biography;
     artist.isFeatured = !!data.featured;
+    artist.genres = data.genres; // Asignar géneros
     if (data.userId) {
       artist.userId = data.userId;
     }
@@ -166,6 +173,7 @@ export class ArtistsService {
       biography?: string;
       featured?: boolean;
       phone?: string;
+      genres?: string[];
       profileFile?: Express.Multer.File;
       coverFile?: Express.Multer.File;
     },
@@ -183,6 +191,10 @@ export class ArtistsService {
     }
     if (data.biography !== undefined) {
       artist.biography = data.biography;
+    }
+    if (data.genres !== undefined) {
+      // Si se proporcionan géneros, actualizarlos (puede ser array vacío para limpiar)
+      artist.genres = data.genres.length > 0 ? data.genres : null;
     }
     if (data.phone !== undefined) {
       artist.socialLinks = artist.socialLinks || {};
@@ -304,10 +316,14 @@ export class ArtistsService {
   }
 
   async searchArtists(query: string, page: number = 1, limit: number = 10): Promise<{ artists: Artist[]; total: number }> {
+    const searchQuery = `%${query}%`;
     const [artists, total] = await this.artistRepository
       .createQueryBuilder('artist')
       .leftJoinAndSelect('artist.user', 'user')
-      .where('(artist.stageName ILIKE :query OR artist.name ILIKE :query)', { query: `%${query}%` })
+      .where(
+        '(artist.stageName ILIKE :query OR artist.name ILIKE :query OR COALESCE(artist.genres, \'\')::text ILIKE :query)',
+        { query: searchQuery }
+      )
       .skip((page - 1) * limit)
       .take(limit)
       .orderBy('artist.createdAt', 'DESC')

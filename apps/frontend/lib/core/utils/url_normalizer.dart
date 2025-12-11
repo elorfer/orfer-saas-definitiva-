@@ -49,7 +49,8 @@ class UrlNormalizer {
     final baseUrl = ApiConfig.baseUrl;
     String cleanBaseUrl = baseUrl.replaceAll('/api/v1', '').replaceAll(RegExp(r'/$'), '');
     
-    // Asegurar que use 10.0.2.2 en lugar de localhost para emulador
+    // Solo convertir localhost a 10.0.2.2 si la URL base también es localhost
+    // Si la URL base ya tiene una IP de red, mantenerla
     if (cleanBaseUrl.contains('localhost') || cleanBaseUrl.contains('127.0.0.1')) {
       cleanBaseUrl = cleanBaseUrl.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
     }
@@ -125,7 +126,8 @@ class UrlNormalizer {
     final baseUrl = ApiConfig.baseUrl;
     String cleanBaseUrl = baseUrl.replaceAll('/api/v1', '').replaceAll(RegExp(r'/$'), '');
     
-    // Asegurar que use 10.0.2.2 en lugar de localhost para emulador
+    // Solo convertir localhost a 10.0.2.2 si la URL base también es localhost
+    // Si la URL base ya tiene una IP de red, mantenerla
     if (cleanBaseUrl.contains('localhost') || cleanBaseUrl.contains('127.0.0.1')) {
       cleanBaseUrl = cleanBaseUrl.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
     }
@@ -160,10 +162,23 @@ class UrlNormalizer {
   /// Evita duplicación de código entre normalizeUrl y normalizeImageUrl
   static String _applyBaseNormalization(String url) {
     String normalized = url;
+    final baseUrl = ApiConfig.baseUrl;
+    final cleanBaseUrl = baseUrl.replaceAll('/api/v1', '').replaceAll(RegExp(r'/$'), '');
     
-    // Reemplazar localhost/127.0.0.1 por 10.0.2.2 para emulador Android
-    if (normalized.contains('localhost') || normalized.contains('127.0.0.1')) {
-      normalized = normalized.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
+    // Solo convertir localhost a 10.0.2.2 si la URL base también es localhost
+    // Si la URL base ya tiene una IP de red, mantenerla
+    if (cleanBaseUrl.contains('localhost') || cleanBaseUrl.contains('127.0.0.1')) {
+      // Solo convertir si la URL también contiene localhost
+      if (normalized.contains('localhost') || normalized.contains('127.0.0.1')) {
+        normalized = normalized.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
+      }
+    } else if (cleanBaseUrl.contains('192.168.')) {
+      // Si la baseUrl tiene una IP de red local, reemplazar localhost con esa IP
+      final ipMatch = RegExp(r'192\.168\.\d+\.\d+').firstMatch(cleanBaseUrl);
+      if (ipMatch != null && (normalized.contains('localhost') || normalized.contains('127.0.0.1'))) {
+        final ip = ipMatch.group(0);
+        normalized = normalized.replaceAll('localhost', ip!).replaceAll('127.0.0.1', ip);
+      }
     }
     
     // Corregir puerto si viene con 3000 (debe ser 3001)

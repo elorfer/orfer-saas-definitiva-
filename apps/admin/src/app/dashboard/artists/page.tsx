@@ -16,6 +16,7 @@ type ArtistLite = {
   profilePhotoUrl?: string | null;
   nationalityCode?: string | null;
   featured: boolean;
+  genres?: string[] | null;
 };
 
 const flagEmoji = (code?: string | null) => {
@@ -80,6 +81,7 @@ export default function ArtistsPage() {
         profilePhotoUrl: a.profilePhotoUrl ?? a.user?.avatarUrl ?? null,
         nationalityCode: a.nationalityCode ?? null,
         featured: !!a.featured || !!a.isFeatured,
+        genres: Array.isArray(a.genres) ? a.genres : (a.genres ? [a.genres] : null),
       }));
       setItems(mapped);
     } catch (error: any) {
@@ -299,6 +301,7 @@ export default function ArtistsPage() {
               <th className="text-left p-3 font-semibold text-gray-700">Perfil</th>
               <th className="text-left p-3 font-semibold text-gray-700">Nombre</th>
               <th className="text-left p-3 font-semibold text-gray-700">País</th>
+              <th className="text-left p-3 font-semibold text-gray-700">Género</th>
               <th className="text-left p-3 font-semibold text-gray-700">Destacado</th>
               <th className="text-left p-3 font-semibold text-gray-700">Acciones</th>
             </tr>
@@ -330,6 +333,22 @@ export default function ArtistsPage() {
                 </td>
                 <td className="p-3">{a.name}</td>
                 <td className="p-3">{flagEmoji(a.nationalityCode)}</td>
+                <td className="p-3">
+                  {a.genres && a.genres.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {a.genres.map((genre: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 rounded-md bg-brown-100 text-brown-800 text-xs font-medium"
+                        >
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-sm">Sin género</span>
+                  )}
+                </td>
                 <td className="p-3">
                   <button
                     onClick={() => toggleFeatured(a)}
@@ -371,7 +390,7 @@ export default function ArtistsPage() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-gray-500">
+                <td colSpan={7} className="p-6 text-center text-gray-500">
                   Sin resultados
                 </td>
               </tr>

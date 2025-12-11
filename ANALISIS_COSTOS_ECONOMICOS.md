@@ -228,3 +228,9 @@ El sistema está diseñado para escalar de forma **lineal y económica**:
 **El sistema es ECONÓMICO y está optimizado para minimizar costos mientras maximiza rendimiento.** 💪
 
 
+
+
+
+
+
+

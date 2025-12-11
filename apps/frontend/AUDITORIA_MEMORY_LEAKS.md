@@ -286,3 +286,9 @@ void _cleanup() {
 **Acción Requerida**: Verificación final de archivos pendientes
 
 
+
+
+
+
+
+

@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'http_client_service.dart';
 import '../utils/error_handler.dart';
+import '../utils/logger.dart';
 import '../models/artist_model.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
+import '../models/genre_model.dart';
 import '../utils/data_normalizer.dart';
 
 /// Cache entry para resultados de búsqueda
@@ -72,7 +75,7 @@ class SearchService {
         }
       }
 
-      // Realizar búsqueda en el servidor
+      // Realizar búsqueda principal en el servidor
       final response = await _httpClient.dio.get(
         '/search',
         queryParameters: {
@@ -102,14 +105,109 @@ class SearchService {
               .toList() ??
           [];
 
+      // Buscar géneros por nombre (endpoint dedicado)
+      List<Genre> genres = [];
+      Genre? matchedGenre;
+      try {
+        genres = await _searchGenres(query.trim(), limit: limit, cancelToken: cancelToken);
+        // Si encontramos géneros, usar el primero que coincida (puede ser parcial o exacto)
+        if (genres.isNotEmpty) {
+          final normalizedQuery = query.trim().toLowerCase();
+          // Buscar coincidencia exacta primero
+          try {
+            matchedGenre = genres.firstWhere(
+              (g) => g.name.toLowerCase() == normalizedQuery,
+            );
+          } catch (_) {
+            // Si no hay coincidencia exacta, usar el primer género encontrado
+            // (el backend ya filtró por nombre)
+            matchedGenre = genres.first;
+          }
+        }
+      } catch (e) {
+        // Log del error para debug pero no bloquear resultados
+        AppLogger.error('[SearchService] Error buscando géneros: $e');
+      }
+
+      final normalizedQuery = query.trim().toLowerCase();
+
+      final artistsList = artistsData.map((json) => Artist.fromJson(json)).toList();
+
+      // Filtrar canciones por coincidencia en título o géneros
+      final songsList = songsData.map((json) => Song.fromJson(json)).toList();
+      
+      // Si encontramos un género, también buscar canciones que tengan ese género en el array genres
+      final genreNameToMatch = matchedGenre?.name.toLowerCase();
+      
+      final filteredSongs = songsList.where((song) {
+        final titleMatch = (song.title ?? '').toLowerCase().contains(normalizedQuery);
+        final genreMatch = (song.genres ?? []).any(
+          (g) => g.toLowerCase().contains(normalizedQuery),
+        );
+        // Si tenemos un género coincidente, también buscar por su nombre exacto en el array genres
+        final genreNameMatch = genreNameToMatch != null && 
+            (song.genres ?? []).any(
+              (g) {
+                final gLower = g.toLowerCase();
+                return gLower == genreNameToMatch || 
+                       gLower.contains(genreNameToMatch) ||
+                       genreNameToMatch.contains(gLower);
+              },
+            );
+        return titleMatch || genreMatch || genreNameMatch;
+      }).toList();
+
+      // Si encontramos un género que coincide, obtener canciones y artistas de ese género
+      List<Song> genreSongs = [];
+      List<Artist> genreArtists = [];
+      if (matchedGenre != null && matchedGenre.id.isNotEmpty) {
+        try {
+          AppLogger.info('[SearchService] Obteniendo canciones del género: ${matchedGenre.name} (ID: ${matchedGenre.id})');
+          final genreResults = await _getSongsByGenre(matchedGenre.id, limit: limit, cancelToken: cancelToken);
+          genreSongs = genreResults['songs'] as List<Song>;
+          genreArtists = genreResults['artists'] as List<Artist>;
+          AppLogger.info('[SearchService] Encontradas ${genreSongs.length} canciones y ${genreArtists.length} artistas del género');
+        } catch (e) {
+          // Log del error para debug pero continuar con resultados normales
+          AppLogger.error('[SearchService] Error obteniendo canciones del género: $e');
+        }
+      } else {
+        AppLogger.info('[SearchService] No se encontró género coincidente para: ${query.trim()}');
+      }
+
+      // Combinar resultados: agregar canciones y artistas del género si no están ya en los resultados
+      final combinedSongs = <Song>[];
+      final songIds = filteredSongs.map((s) => s.id).toSet();
+      combinedSongs.addAll(filteredSongs);
+      for (final song in genreSongs) {
+        if (!songIds.contains(song.id)) {
+          combinedSongs.add(song);
+          songIds.add(song.id);
+        }
+      }
+
+      final combinedArtists = <Artist>[];
+      final artistIds = artistsList.map((a) => a.id).toSet();
+      combinedArtists.addAll(artistsList);
+      for (final artist in genreArtists) {
+        if (!artistIds.contains(artist.id)) {
+          combinedArtists.add(artist);
+          artistIds.add(artist.id);
+        }
+      }
+
+      final playlistsList = playlistsData.map((json) => Playlist.fromJson(json)).toList();
+
       final results = SearchResults(
-        artists: artistsData.map((json) => Artist.fromJson(json)).toList(),
-        songs: songsData.map((json) => Song.fromJson(json)).toList(),
-        playlists: playlistsData.map((json) => Playlist.fromJson(json)).toList(),
+        artists: combinedArtists,
+        songs: combinedSongs,
+        playlists: playlistsList,
+        genres: genres,
         totals: SearchTotals(
-          artists: (data['totals']?['artists'] as num?)?.toInt() ?? 0,
-          songs: (data['totals']?['songs'] as num?)?.toInt() ?? 0,
-          playlists: (data['totals']?['playlists'] as num?)?.toInt() ?? 0,
+          artists: combinedArtists.length,
+          songs: combinedSongs.length,
+          playlists: (data['totals']?['playlists'] as num?)?.toInt() ?? playlistsList.length,
+          genres: genres.length,
         ),
       );
       
@@ -135,6 +233,39 @@ class SearchService {
       rethrow;
     }
   }
+
+  /// Obtener géneros destacados/listado para explorar
+  Future<List<Genre>> getGenres({int limit = 20}) async {
+    try {
+      await initialize();
+      final response = await _httpClient.dio.get(
+        '/genres',
+        queryParameters: {
+          'limit': limit,
+          'page': 1,
+          'all': true,
+        },
+      );
+
+      if (response.statusCode != 200 || response.data == null) {
+        throw Exception('Error en la respuesta del servidor: ${response.statusCode}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      final genresData = (data['genres'] as List<dynamic>?)
+              ?.map((item) => DataNormalizer.normalizeGenre(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      return genresData.map((json) => Genre.fromJson(json)).toList();
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'SearchService.getGenres');
+      throw Exception('Error de conexión: ${e.message}');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'SearchService.getGenres');
+      rethrow;
+    }
+  }
   
   /// Limpiar todo el cache de búsquedas
   void clearCache() {
@@ -150,42 +281,271 @@ class SearchService {
       'entries': _searchCache.keys.toList(),
     };
   }
+
+  /// Buscar géneros por nombre
+  Future<List<Genre>> _searchGenres(String query, {int limit = 10, CancelToken? cancelToken}) async {
+    if (query.isEmpty) return [];
+    try {
+      await initialize();
+      final response = await _httpClient.dio.get(
+        '/genres/search',
+        queryParameters: {
+          'q': query,
+          'limit': limit,
+        },
+        cancelToken: cancelToken,
+      );
+
+      if (response.statusCode != 200 || response.data == null) {
+        throw Exception('Error en la respuesta del servidor: ${response.statusCode}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      final genresData = (data['genres'] as List<dynamic>?)
+              ?.map((item) => DataNormalizer.normalizeGenre(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      final genres = genresData.map((json) => Genre.fromJson(json)).toList();
+      
+      // Log para debug
+      if (genres.isNotEmpty && kDebugMode) {
+        AppLogger.info('[SearchService._searchGenres] Géneros encontrados: ${genres.length}');
+        for (final genre in genres.take(3)) {
+          AppLogger.info('[SearchService._searchGenres] Género: ${genre.name}, imageUrl: ${genre.imageUrl}');
+        }
+      }
+      
+      return genres;
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'SearchService._searchGenres');
+      throw Exception('Error de conexión: ${e.message}');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'SearchService._searchGenres');
+      rethrow;
+    }
+  }
+
+  /// Obtener canciones y artistas por ID de género
+  Future<Map<String, dynamic>> _getSongsByGenre(String genreId, {int limit = 20, CancelToken? cancelToken}) async {
+    try {
+      await initialize();
+      AppLogger.info('[SearchService._getSongsByGenre] Llamando a /songs/genre/$genreId con limit=$limit');
+      final response = await _httpClient.dio.get(
+        '/songs/genre/$genreId',
+        queryParameters: {
+          'page': 1,
+          'limit': limit,
+        },
+        cancelToken: cancelToken,
+      );
+
+      AppLogger.info('[SearchService._getSongsByGenre] Respuesta status: ${response.statusCode}');
+      if (kDebugMode) {
+        AppLogger.info('[SearchService._getSongsByGenre] Respuesta data: ${response.data}');
+      }
+
+      if (response.statusCode != 200 || response.data == null) {
+        throw Exception('Error en la respuesta del servidor: ${response.statusCode}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      
+      // El backend devuelve { songs: Song[], total: number }
+      List<dynamic> songsList = [];
+      if (data.containsKey('songs')) {
+        final songsValue = data['songs'];
+        if (songsValue is List) {
+          songsList = songsValue;
+        }
+      }
+
+      AppLogger.info('[SearchService._getSongsByGenre] Canciones encontradas: ${songsList.length}');
+
+      final songsData = songsList
+          .map((item) => DataNormalizer.normalizeSong(item as Map<String, dynamic>))
+          .toList();
+
+      final songs = songsData.map((json) => Song.fromJson(json)).toList();
+      
+      // Extraer artistas únicos de las canciones
+      final artistsMap = <String, Artist>{};
+      for (final song in songs) {
+        if (song.artist != null && !artistsMap.containsKey(song.artist!.id)) {
+          artistsMap[song.artist!.id] = song.artist!;
+        }
+      }
+
+      AppLogger.info('[SearchService._getSongsByGenre] Artistas extraídos: ${artistsMap.length}');
+
+      return {
+        'songs': songs,
+        'artists': artistsMap.values.toList(),
+      };
+    } on DioException catch (e) {
+      AppLogger.error('[SearchService._getSongsByGenre] Error DioException: ${e.message}');
+      AppLogger.error('[SearchService._getSongsByGenre] Response: ${e.response?.data}');
+      ErrorHandler.handleDioError(e, context: 'SearchService._getSongsByGenre');
+      throw Exception('Error de conexión: ${e.message}');
+    } catch (e, stackTrace) {
+      AppLogger.error('[SearchService._getSongsByGenre] Error: $e');
+      AppLogger.error('[SearchService._getSongsByGenre] StackTrace: $stackTrace');
+      ErrorHandler.handleGenericError(e, context: 'SearchService._getSongsByGenre');
+      rethrow;
+    }
+  }
+
+  /// Obtener artistas destacados/trending
+  Future<List<Artist>> getTrendingArtists({int limit = 10, CancelToken? cancelToken}) async {
+    try {
+      await initialize();
+      
+      final response = await _httpClient.dio.get(
+        '/public/artists/featured',
+        queryParameters: {'limit': limit},
+        cancelToken: cancelToken,
+      );
+
+      if (response.statusCode != 200 || response.data == null) {
+        throw Exception('Error en la respuesta del servidor: ${response.statusCode}');
+      }
+
+      // El endpoint público devuelve directamente un array
+      final data = response.data;
+      List<dynamic> artistsList;
+      if (data is List) {
+        artistsList = data;
+      } else if (data is Map<String, dynamic> && data.containsKey('artists')) {
+        artistsList = data['artists'] as List<dynamic>? ?? [];
+      } else {
+        artistsList = [];
+      }
+
+      final artistsData = artistsList
+          .map((item) => DataNormalizer.normalizeArtist(item as Map<String, dynamic>))
+          .toList();
+
+      return artistsData.map((json) => Artist.fromJson(json)).toList();
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'SearchService.getTrendingArtists');
+      throw Exception('Error de conexión: ${e.message}');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'SearchService.getTrendingArtists');
+      rethrow;
+    }
+  }
+
+  /// Obtener canciones top/populares
+  Future<List<Song>> getTopSongs({int limit = 10, CancelToken? cancelToken}) async {
+    try {
+      await initialize();
+      
+      final response = await _httpClient.dio.get(
+        '/public/songs/top',
+        queryParameters: {'limit': limit},
+        cancelToken: cancelToken,
+      );
+
+      if (response.statusCode != 200 || response.data == null) {
+        throw Exception('Error en la respuesta del servidor: ${response.statusCode}');
+      }
+
+      // El endpoint público devuelve directamente un array
+      final data = response.data;
+      List<dynamic> songsList;
+      if (data is List) {
+        songsList = data;
+      } else if (data is Map<String, dynamic> && data.containsKey('songs')) {
+        songsList = data['songs'] as List<dynamic>? ?? [];
+      } else {
+        songsList = [];
+      }
+
+      final songsData = songsList
+          .map((item) => DataNormalizer.normalizeSong(item as Map<String, dynamic>))
+          .toList();
+
+      return songsData.map((json) => Song.fromJson(json)).toList();
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'SearchService.getTopSongs');
+      throw Exception('Error de conexión: ${e.message}');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'SearchService.getTopSongs');
+      rethrow;
+    }
+  }
+
+  /// Obtener todos los géneros disponibles
+  Future<List<Genre>> getAllGenres({CancelToken? cancelToken}) async {
+    try {
+      await initialize();
+      
+      final response = await _httpClient.dio.get(
+        '/genres',
+        queryParameters: {'page': 1, 'limit': 50},
+        cancelToken: cancelToken,
+      );
+
+      if (response.statusCode != 200 || response.data == null) {
+        throw Exception('Error en la respuesta del servidor: ${response.statusCode}');
+      }
+
+      final data = response.data as Map<String, dynamic>;
+      final genresData = (data['genres'] as List<dynamic>?)
+              ?.map((item) => DataNormalizer.normalizeGenre(item as Map<String, dynamic>))
+              .toList() ??
+          [];
+
+      return genresData.map((json) => Genre.fromJson(json)).toList();
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'SearchService.getAllGenres');
+      throw Exception('Error de conexión: ${e.message}');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'SearchService.getAllGenres');
+      rethrow;
+    }
+  }
 }
 
 class SearchResults {
   final List<Artist> artists;
   final List<Song> songs;
   final List<Playlist> playlists;
+  final List<Genre> genres;
   final SearchTotals totals;
 
   SearchResults({
     required this.artists,
     required this.songs,
     required this.playlists,
+    required this.genres,
     required this.totals,
   });
 
   factory SearchResults.empty() {
     return SearchResults(
-      artists: [],
-      songs: [],
-      playlists: [],
-      totals: SearchTotals(artists: 0, songs: 0, playlists: 0),
+      artists: const [],
+      songs: const [],
+      playlists: const [],
+      genres: const [],
+      totals: SearchTotals(artists: 0, songs: 0, playlists: 0, genres: 0),
     );
   }
 
-  bool get isEmpty => artists.isEmpty && songs.isEmpty && playlists.isEmpty;
+  bool get isEmpty => artists.isEmpty && songs.isEmpty && playlists.isEmpty && genres.isEmpty;
 }
 
 class SearchTotals {
   final int artists;
   final int songs;
   final int playlists;
+  final int genres;
 
   SearchTotals({
     required this.artists,
     required this.songs,
     required this.playlists,
+    required this.genres,
   });
 }
 

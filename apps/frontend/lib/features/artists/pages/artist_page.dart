@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/scheduler.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../core/config/api_config.dart';
@@ -1688,6 +1689,23 @@ class _SongRowWidget extends ConsumerWidget {
     
     // ✅ Verificar si la canción está disponible para reproducir
     final isAvailable = song.fileUrl != null && song.fileUrl!.isNotEmpty;
+    final playbackState = ref.watch(unifiedAudioProviderFixed);
+    final isCurrent = playbackState.currentSong?.id == song.id;
+    final isPlaying = playbackState.isPlaying;
+    final playingIcon = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: (isCurrent && isPlaying)
+          ? MiniEqualizer(
+              key: ValueKey('eq_${song.id}'),
+              size: 22,
+              color: NeumorphismTheme.coffeeMedium,
+              active: true,
+            )
+          : Icon(Icons.play_circle_filled,
+              key: ValueKey('play_${song.id}'),
+              color: NeumorphismTheme.coffeeMedium,
+              size: 28),
+    );
 
     return Opacity(
       opacity: isAvailable ? 1.0 : 0.5, // Reducir opacidad si no está disponible
@@ -1709,8 +1727,8 @@ class _SongRowWidget extends ConsumerWidget {
           child: InkWell(
             onTap: isAvailable
                 ? () {
-                    // Navegar a la página de detalle de la canción si es necesario
-                    // Nota: Navegación pendiente de implementar
+                    // ✅ Tocar la tarjeta = reproducir (igual que el botón play)
+                    onPlaySong(song);
                   }
                 : null, // Deshabilitar tap si no está disponible
             borderRadius: const BorderRadius.all(Radius.circular(16)),
@@ -1799,11 +1817,100 @@ class _SongRowWidget extends ConsumerWidget {
                       ],
                     ),
                   ),
+                const Spacer(),
+                playingIcon,
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Mini ecualizador ligero (3 barras) para indicar canción en reproducción.
+class MiniEqualizer extends StatefulWidget {
+  final bool active;
+  final double size;
+  final Color color;
+
+  const MiniEqualizer({
+    super.key,
+    required this.active,
+    this.size = 16,
+    this.color = Colors.greenAccent,
+  });
+
+  @override
+  State<MiniEqualizer> createState() => _MiniEqualizerState();
+}
+
+class _MiniEqualizerState extends State<MiniEqualizer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    if (widget.active) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant MiniEqualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !_c.isAnimating) {
+      _c.repeat();
+    } else if (!widget.active && _c.isAnimating) {
+      _c.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bars = List.generate(3, (i) => i * 0.25); // desfases
+    return SizedBox(
+      height: widget.size,
+      width: widget.size,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: bars.map((phase) {
+          return Expanded(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, __) {
+                final t = (_c.value + phase) % 1;
+                final h = lerpDouble(
+                  widget.size * 0.25,
+                  widget.size,
+                  Curves.easeInOut.transform(t),
+                )!;
+                final height = widget.active ? h : widget.size * 0.35;
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: widget.color,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }).toList(),
       ),
     );
   }

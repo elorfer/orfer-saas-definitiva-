@@ -144,3 +144,9 @@ Si hay muchos fallos:
 3. **Verificar logs:** Deberías ver `📊 [BATCH] Catálogo disponible: X canciones` y `🎯 Exclusión adaptativa: Y/Z IDs`
 4. **Confirmar resultados:** Deberías obtener recomendaciones incluso con catálogo pequeño
 
+
+
+
+
+
+

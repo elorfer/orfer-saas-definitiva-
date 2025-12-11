@@ -11,7 +11,13 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -20,6 +26,7 @@ import {
   ApiQuery,
   ApiParam,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 
 import { GenresService } from './genres.service';
@@ -29,6 +36,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../../common/entities/user.entity';
+import { CoversStorageService } from '../covers/covers-storage.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../../common/entities/user.entity';
 
 /**
  * Controlador para gestionar géneros musicales
@@ -40,7 +50,10 @@ import { UserRole } from '../../common/entities/user.entity';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class GenresController {
-  constructor(private readonly genresService: GenresService) {}
+  constructor(
+    private readonly genresService: GenresService,
+    private readonly coversStorageService: CoversStorageService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Obtener todos los géneros musicales' })
@@ -75,6 +88,16 @@ export class GenresController {
       return { genres: [] };
     }
     const genres = await this.genresService.search(query.trim(), limit);
+    
+    // Log para debug - verificar que imageUrl se esté devolviendo
+    if (genres.length > 0) {
+      console.log('[GenresController.search] Primer género:', {
+        id: genres[0].id,
+        name: genres[0].name,
+        imageUrl: genres[0].imageUrl,
+      });
+    }
+    
     return { genres, total: genres.length };
   }
 
@@ -118,6 +141,50 @@ export class GenresController {
     return this.genresService.update(id, updateGenreDto);
   }
 
+  @Post(':id/image')
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Subir imagen de género (Solo administradores)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiParam({ name: 'id', description: 'ID del género' })
+  @ApiResponse({ status: 200, description: 'Imagen subida exitosamente' })
+  @ApiResponse({ status: 404, description: 'Género no encontrado' })
+  @ApiResponse({ status: 403, description: 'No tienes permisos para subir imágenes' })
+  async uploadImage(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB
+          new FileTypeValidator({ fileType: /^image\/(jpeg|jpg|png|webp)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    // Verificar que el género existe
+    await this.genresService.findOne(id);
+
+    // Subir la imagen
+    const { url } = await this.coversStorageService.uploadCoverImage(file, user.id);
+
+    // Actualizar el género con la nueva URL de la imagen
+    return this.genresService.update(id, { imageUrl: url });
+  }
+
   @Delete(':id')
   @Roles(UserRole.ADMIN)
   @UseGuards(RolesGuard)
@@ -132,6 +199,8 @@ export class GenresController {
     return this.genresService.remove(id);
   }
 }
+
+
 
 
 

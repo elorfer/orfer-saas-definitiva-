@@ -232,3 +232,9 @@ Pantalla ya está viva (scroll preservado) ✅
 El sistema actual implementa una persistencia **robusta y profesional** para las pantallas principales, manteniendo el estado completo (incluido scroll) mientras el usuario navega entre ellas. La única limitación es cuando se navega a pantallas secundarias, pero esto es una consecuencia esperada del diseño de navegación actual.
 
 
+
+
+
+
+
+

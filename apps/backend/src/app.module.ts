@@ -144,6 +144,17 @@ import { dataSourceOptions } from './database/data-source';
         let redisConfig: any = {
           maxRetriesPerRequest: null,
           enableReadyCheck: false,
+          // ✅ NO BLOQUEAR: Configuración para que no bloquee la inicialización
+          retryStrategy: (times: number) => {
+            // Intentar reconectar hasta 3 veces, luego desistir
+            if (times > 3) {
+              return null; // Dejar de intentar
+            }
+            return Math.min(times * 200, 2000); // Delay exponencial
+          },
+          // ✅ TIMEOUT: Evitar que se quede esperando indefinidamente
+          connectTimeout: 5000, // 5 segundos máximo para conectar
+          lazyConnect: true, // Conectar bajo demanda, no al inicializar
         };
         
         if (redisUrl) {

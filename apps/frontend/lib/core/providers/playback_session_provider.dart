@@ -13,7 +13,7 @@ import '../utils/logger.dart';
 /// - Solo persiste durante la sesión (no se guarda en disco)
 /// - Thread-safe mediante Riverpod
 class PlaybackSessionNotifier extends Notifier<List<String>> {
-  static const int _maxPlayedSongIds = 30; // 🎯 Límite estricto de 30 IDs
+  static const int _maxPlayedSongIds = 40; // 🎯 Límite estricto de 40 IDs (historial corto)
 
   @override
   List<String> build() {
@@ -51,7 +51,7 @@ class PlaybackSessionNotifier extends Notifier<List<String>> {
     current.add(songId);
     state = current;
     
-    AppLogger.debug('[PlaybackSession] ➕ Registrada: ${songId.substring(0, 8)}... (Total: ${state.length}/${_maxPlayedSongIds})');
+    AppLogger.debug('[PlaybackSession] ➕ Registrada: ${songId.substring(0, 8)}... (Total: ${state.length}/$_maxPlayedSongIds)');
   }
 
   /// Registrar múltiples canciones (útil cuando se carga una cola completa)
@@ -63,24 +63,27 @@ class PlaybackSessionNotifier extends Notifier<List<String>> {
 
   /// Obtener todos los IDs reproducidos (para usar como excludeIds)
   /// 
-  /// Retorna un Set con máximo 30 IDs, ordenados por recencia (más reciente último).
-  Set<String> getPlayedSongIds() {
-    return Set<String>.from(state);
+  /// Retorna un Set con máximo [limit] IDs recientes (default 40), ordenados por recencia.
+  Set<String> getPlayedSongIds({int limit = _maxPlayedSongIds}) {
+    if (state.isEmpty) return {};
+    final start = state.length > limit ? state.length - limit : 0;
+    return Set<String>.from(state.sublist(start));
   }
 
   /// Obtener los IDs reproducidos como lista separada por comas (para API)
   /// 
   /// Útil para pasar a endpoints que esperan una cadena separada por comas.
-  String getPlayedSongIdsAsString() {
+  String getPlayedSongIdsAsString({int limit = _maxPlayedSongIds}) {
     if (state.isEmpty) return '';
-    return state.join(',');
+    final start = state.length > limit ? state.length - limit : 0;
+    return state.sublist(start).join(',');
   }
 
   /// Limpiar el buffer (útil para resetear la sesión)
   void clear() {
     final count = state.length;
     state = [];
-    AppLogger.info('[PlaybackSession] 🗑️ Buffer limpiado (${count} IDs eliminados)');
+    AppLogger.info('[PlaybackSession] 🗑️ Buffer limpiado ($count IDs eliminados)');
   }
 
   /// Obtener el número de IDs actuales
@@ -89,6 +92,16 @@ class PlaybackSessionNotifier extends Notifier<List<String>> {
   /// Verificar si un ID está en el buffer
   bool contains(String songId) {
     return state.contains(songId);
+  }
+
+  /// Recortar agresivamente el historial (para nueva sesión de algoritmo)
+  /// Mantiene solo los últimos [keep] IDs (default 5).
+  void trimForNewSession({int keep = 5}) {
+    if (state.length <= keep) return;
+    final removed = state.length - keep;
+    final trimmed = state.sublist(state.length - keep);
+    state = trimmed;
+    AppLogger.info('[PlaybackSession] ✂️ Historial recortado: $removed IDs eliminados, quedan $keep');
   }
 }
 

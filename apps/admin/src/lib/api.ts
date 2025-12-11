@@ -118,6 +118,7 @@ export const apiClient = {
     featured?: boolean;
     userId?: string;
     phone?: string;
+    genres?: string[];
     profileFile?: File | null;
     coverFile?: File | null;
   }) => {
@@ -128,6 +129,12 @@ export const apiClient = {
     if (typeof data.featured === 'boolean') form.append('featured', String(data.featured));
     if (data.userId) form.append('userId', data.userId);
     if (data.phone) form.append('phone', data.phone);
+    if (data.genres && data.genres.length > 0) {
+      // Enviar cada género como un campo separado (el backend los recibirá como array)
+      data.genres.forEach((genre) => {
+        form.append('genres[]', genre);
+      });
+    }
     if (data.profileFile) form.append('profile', data.profileFile);
     if (data.coverFile) form.append('cover', data.coverFile);
     return api.post('/artists', form);
@@ -139,6 +146,7 @@ export const apiClient = {
     nationalityCode?: string;
     biography?: string;
     featured?: boolean;
+    genres?: string[];
     profileFile?: File | null;
     coverFile?: File | null;
   }) => {
@@ -147,6 +155,17 @@ export const apiClient = {
     if (data.nationalityCode) form.append('nationalityCode', data.nationalityCode);
     if (data.biography !== undefined) form.append('biography', data.biography);
     if (typeof data.featured === 'boolean') form.append('featured', String(data.featured));
+    if (data.genres !== undefined) {
+      if (data.genres.length > 0) {
+        // Enviar cada género como un campo separado
+        data.genres.forEach((genre) => {
+          form.append('genres[]', genre);
+        });
+      } else {
+        // Si es array vacío, enviar un campo vacío para limpiar géneros
+        form.append('genres[]', '');
+      }
+    }
     if (data.profileFile) form.append('profile', data.profileFile);
     if (data.coverFile) form.append('cover', data.coverFile);
     return api.put(`/artists/${id}`, form);
@@ -159,8 +178,6 @@ export const apiClient = {
   deleteArtist: (id: string) => api.delete(`/artists/${id}`),
   
   getArtistStats: (id: string) => api.get(`/artists/${id}/stats`),
-  
-  verifyArtist: (id: string) => api.patch(`/artists/${id}/verify`),
 
   // Songs
   getSongs: (page = 1, limit = 10, all = true) =>
@@ -240,13 +257,25 @@ export const apiClient = {
     name: string;
     description?: string;
     colorHex?: string;
+    imageUrl?: string;
   }) => api.post('/genres', data),
   
   updateGenre: (id: string, data: {
     name?: string;
     description?: string;
     colorHex?: string;
+    imageUrl?: string;
   }) => api.patch(`/genres/${id}`, data),
+  
+  uploadGenreImage: (id: string, imageFile: File) => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return api.post(`/genres/${id}/image`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
   
   deleteGenre: (id: string) => api.delete(`/genres/${id}`),
   

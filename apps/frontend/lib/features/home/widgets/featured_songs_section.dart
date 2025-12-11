@@ -18,7 +18,7 @@ class FeaturedSongsSection extends ConsumerWidget {
     final featuredSongs = ref.watch(featuredSongsProvider);
     final isLoading = ref.watch(isLoadingProvider);
 
-    if (isLoading) {
+    if (isLoading && featuredSongs.isEmpty) {
       return _buildLoadingSection();
     }
 

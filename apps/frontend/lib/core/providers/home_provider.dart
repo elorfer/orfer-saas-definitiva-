@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/home_service.dart';
 import '../models/artist_model.dart';
 import '../models/song_model.dart';
@@ -31,6 +33,62 @@ class HomeState {
     this.isInitialized = false,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'featuredArtists':
+          featuredArtists.map((a) => a.toJson()).toList(growable: false),
+      'featuredSongs':
+          featuredSongs.map((s) => s.toJson()).toList(growable: false),
+      'featuredPlaylists':
+          featuredPlaylists.map((p) => p.toJson()).toList(growable: false),
+      'popularSongs':
+          popularSongs.map((s) => s.toJson()).toList(growable: false),
+      'topArtists': topArtists.map((a) => a.toJson()).toList(growable: false),
+      'isLoading': isLoading,
+      'error': error,
+      'isInitialized': isInitialized,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+  }
+
+  static HomeState? fromJson(Map<String, dynamic>? json) {
+    if (json == null) return null;
+    try {
+      return HomeState(
+        featuredArtists: (json['featuredArtists'] as List<dynamic>?)
+                ?.map((e) => FeaturedArtist.fromJson(
+                    Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        featuredSongs: (json['featuredSongs'] as List<dynamic>?)
+                ?.map((e) => FeaturedSong.fromJson(
+                    Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        featuredPlaylists: (json['featuredPlaylists'] as List<dynamic>?)
+                ?.map((e) => FeaturedPlaylist.fromJson(
+                    Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        popularSongs: (json['popularSongs'] as List<dynamic>?)
+                ?.map((e) =>
+                    Song.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        topArtists: (json['topArtists'] as List<dynamic>?)
+                ?.map((e) =>
+                    Artist.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        isLoading: json['isLoading'] as bool? ?? false,
+        error: json['error'] as String?,
+        isInitialized: json['isInitialized'] as bool? ?? false,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   HomeState copyWith({
     List<FeaturedArtist>? featuredArtists,
     List<FeaturedSong>? featuredSongs,
@@ -60,12 +118,19 @@ class HomeState {
 /// Notifier para manejar el estado de la pantalla de inicio
 class HomeNotifier extends Notifier<HomeState> {
   late final HomeService _homeService;
+  static const String _cacheKey = 'home_state_cache_v1';
+  // TTL del cache local para hidratar el home en arranque frío
+  static const Duration _cacheTtl = Duration(minutes: 4);
+  bool _hasLoadedCache = false;
 
   @override
   HomeState build() {
     _homeService = ref.read(homeServiceProvider);
-    // Inicializar de forma asíncrona
-    Future.microtask(() => _initialize());
+    // Inicializar de forma asíncrona y rehidratar desde disco antes de ir a red
+    Future.microtask(() async {
+      await _loadFromCacheIfNeeded();
+      await _initialize();
+    });
     return const HomeState(isLoading: true);
   }
 
@@ -86,6 +151,7 @@ class HomeNotifier extends Notifier<HomeState> {
   /// Cargar todos los datos de la pantalla de inicio
   Future<void> loadHomeData({bool forceRefresh = false}) async {
     try {
+      // Mantener datos actuales para evitar parpadeos; solo marcar loading
       state = state.copyWith(isLoading: true, error: null);
 
       // Cargar datos individualmente para manejar errores por separado
@@ -119,6 +185,8 @@ class HomeNotifier extends Notifier<HomeState> {
         error: null,
         isInitialized: true,
       );
+      // Guardar en cache para arranque en frío
+      await _saveToCache(state);
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -138,6 +206,7 @@ class HomeNotifier extends Notifier<HomeState> {
     try {
       final artists = await _homeService.getFeaturedArtists(limit: 6);
       state = state.copyWith(featuredArtists: artists);
+      await _saveToCache(state);
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar artistas: $e');
     }
@@ -148,6 +217,7 @@ class HomeNotifier extends Notifier<HomeState> {
     try {
       final songs = await _homeService.getFeaturedSongs(limit: 20, forceRefresh: forceRefresh);
       state = state.copyWith(featuredSongs: songs);
+      await _saveToCache(state);
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar canciones: $e');
     }
@@ -158,6 +228,7 @@ class HomeNotifier extends Notifier<HomeState> {
     try {
       final playlists = await _homeService.getFeaturedPlaylists(limit: 6);
       state = state.copyWith(featuredPlaylists: playlists);
+      await _saveToCache(state);
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar playlists: $e');
     }
@@ -166,6 +237,47 @@ class HomeNotifier extends Notifier<HomeState> {
   /// Limpiar error
   void clearError() {
     state = state.copyWith(error: null);
+  }
+
+  Future<void> _loadFromCacheIfNeeded() async {
+    if (_hasLoadedCache) return;
+    _hasLoadedCache = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString(_cacheKey);
+      if (cachedJson == null || cachedJson.isEmpty) return;
+
+      final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
+      final timestampStr = decoded['timestamp'] as String?;
+      if (timestampStr == null) return;
+
+      final timestamp = DateTime.tryParse(timestampStr);
+      if (timestamp == null) return;
+
+      final isExpired = DateTime.now().difference(timestamp) > _cacheTtl;
+      if (isExpired) return;
+
+      final cachedState =
+          HomeState.fromJson(Map<String, dynamic>.from(decoded));
+      if (cachedState != null && (cachedState.isEmpty == false)) {
+        state = cachedState.copyWith(
+          isLoading: false,
+          error: null,
+          isInitialized: true,
+        );
+      }
+    } catch (_) {
+      // Si falla la lectura, continuamos sin cache
+    }
+  }
+
+  Future<void> _saveToCache(HomeState newState) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cacheKey, jsonEncode(newState.toJson()));
+    } catch (_) {
+      // Ignorar errores de escritura de cache
+    }
   }
 }
 

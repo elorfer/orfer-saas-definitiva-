@@ -107,3 +107,9 @@ El código está correcto. Verifica estos archivos:
 
 Los errores del linter sobre "Target of URI doesn't exist" son **NORMALES** después de `flutter clean`. Se resolverán cuando ejecutes `flutter pub get` y luego `flutter run`.
 
+
+
+
+
+
+

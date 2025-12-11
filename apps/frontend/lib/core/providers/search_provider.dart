@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../services/search_service.dart';
 import '../utils/logger.dart';
+import '../models/artist_model.dart';
+import '../models/song_model.dart';
+import '../models/genre_model.dart';
 
 final searchServiceProvider = Provider<SearchService>((ref) {
   return SearchService();
@@ -208,5 +211,23 @@ class SearchNotifier extends Notifier<SearchState> {
 /// Necesitamos mantener el estado de búsqueda incluso cuando no está visible
 final searchProvider = NotifierProvider<SearchNotifier, SearchState>(() {
   return SearchNotifier();
+});
+
+/// Provider para artistas trending/destacados
+final trendingArtistsProvider = FutureProvider<List<Artist>>((ref) async {
+  final searchService = ref.read(searchServiceProvider);
+  return await searchService.getTrendingArtists(limit: 10);
+});
+
+/// Provider para canciones top/populares
+final topSongsProvider = FutureProvider<List<Song>>((ref) async {
+  final searchService = ref.read(searchServiceProvider);
+  return await searchService.getTopSongs(limit: 10);
+});
+
+/// Provider para todos los géneros
+final allGenresProvider = FutureProvider<List<Genre>>((ref) async {
+  final searchService = ref.read(searchServiceProvider);
+  return await searchService.getAllGenres();
 });
 

@@ -99,7 +99,7 @@ class _OptimizedImageState extends State<OptimizedImage> {
 
     // 🔥 LAZY LOADING: Si lazyLoad está activado y el widget no es visible, mostrar solo placeholder
     if (widget.lazyLoad && !_isVisible) {
-      return Container(
+      return SizedBox(
         key: _imageKey,
         width: widget.width,
         height: widget.height,

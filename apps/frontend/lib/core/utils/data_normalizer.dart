@@ -319,6 +319,48 @@ class DataNormalizer {
     return normalized;
   }
 
+  /// Normalizar datos de género
+  static Map<String, dynamic> normalizeGenre(Map<String, dynamic> data) {
+    final normalized = <String, dynamic>{};
+
+    const fieldMapping = {
+      'id': 'id',
+      'name': 'name',
+      'description': 'description',
+      'colorHex': 'color_hex',
+      'color_hex': 'color_hex',
+      'imageUrl': 'image_url',
+      'image_url': 'image_url',
+      'coverUrl': 'image_url',
+      'cover_url': 'image_url',
+      'songCount': 'song_count',
+      'song_count': 'song_count',
+      'albumCount': 'album_count',
+      'album_count': 'album_count',
+    };
+
+    data.forEach((key, value) {
+      final mappedKey = fieldMapping[key] ?? camelToSnake(key);
+      normalized[mappedKey] = value;
+    });
+
+    // Asegurar que image_url se normalice correctamente desde cualquier variante
+    // Buscar en todas las variantes posibles del campo
+    final imageUrl = _getFieldValue(
+      data,
+      ['imageUrl', 'image_url', 'coverUrl', 'cover_url', 'image'],
+    );
+    if (imageUrl != null && imageUrl is String && imageUrl.trim().isNotEmpty) {
+      normalized['image_url'] = imageUrl.trim();
+    } else if (normalized.containsKey('image_url') && 
+               (normalized['image_url'] == null || normalized['image_url'].toString().trim().isEmpty)) {
+      // Si el campo existe pero está vacío, mantenerlo como null
+      normalized['image_url'] = null;
+    }
+
+    return normalized;
+  }
+
   /// Normalizar datos de usuario
   /// Convierte campos comunes de camelCase a snake_case
   static Map<String, dynamic> normalizeUser(Map<String, dynamic> data) {

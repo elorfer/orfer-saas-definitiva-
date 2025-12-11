@@ -43,10 +43,13 @@ class _SongItemState extends ConsumerState<SongItem> {
   }
 
   /// Precarga la canción si no se ha hecho antes
-  /// TODO: Implementar precarga con el nuevo AudioService
+  /// Nota: La precarga de audio se maneja automáticamente por PlaybackNotifier
+  /// cuando las canciones se agregan a la cola. Esta precarga local es opcional
+  /// y puede usarse para optimizaciones futuras (ej: precarga de metadatos).
   void _preloadSongIfNeeded() async {
     if (!_hasPreloaded && mounted) {
-      // TODO: Implementar precarga con el nuevo sistema
+      // La precarga de audio real se maneja en PlaybackNotifier._preloadNextSongAudio()
+      // Aquí solo marcamos como precargado para evitar llamadas repetidas
       if (mounted) {
         _hasPreloaded = true;
       }
@@ -56,7 +59,7 @@ class _SongItemState extends ConsumerState<SongItem> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Usar el nuevo provider unificado
+    // Usando los providers unificados para estado de reproducción
     final currentSong = ref.watch(currentSongProviderFixed);
     final isPlaying = ref.watch(isPlayingProviderFixed);
     

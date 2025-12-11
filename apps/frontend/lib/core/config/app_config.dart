@@ -18,9 +18,9 @@ class AppConfig {
   static const String _developmentUrlAndroidPhysical = 'http://localhost:3001';
   
   // URL alternativa para dispositivos físicos por WiFi (IP local de tu computadora)
-  // IMPORTANTE: Reemplaza 192.168.1.100 con la IP local de tu computadora
+  // IMPORTANTE: Esta es la IP de tu computadora en la red local
   // Para encontrar tu IP: Windows: ipconfig | Linux/Mac: ifconfig o ip addr
-  static const String _developmentUrlAndroidWiFi = 'http://192.168.1.100:3001';
+  static const String _developmentUrlAndroidWiFi = 'http://192.168.1.6:3001';
   
   static const String _developmentUrlWeb = 'http://localhost:3001'; // Flutter Web
 
@@ -80,19 +80,11 @@ class AppConfig {
           return _developmentUrlAndroidWiFi;
         }
         
-        // Verificar si se especifica usar dispositivo físico explícitamente
-        final usePhysical = String.fromEnvironment('USE_PHYSICAL', defaultValue: 'false') == 'true';
-        if (usePhysical) {
-          AppLogger.config('Usando URL para dispositivo físico: $_developmentUrlAndroidPhysical');
-          AppLogger.config('NOTA: Requiere ejecutar: adb reverse tcp:3001 tcp:3001');
-          return _developmentUrlAndroidPhysical;
-        }
-        
-        // Por defecto, asumir que es emulador (más común en desarrollo)
-        // Para emulador Android, usar 10.0.2.2 que es el alias de localhost del host
-        AppLogger.config('Usando URL para emulador: $_developmentUrlAndroidEmulator');
-        AppLogger.config('Si es dispositivo físico, usa: flutter run --dart-define=USE_PHYSICAL=true');
-        return _developmentUrlAndroidEmulator;
+        // Por defecto, si no se especifica nada, usar la IP de red local para dispositivos físicos
+        // o 10.0.2.2 para emuladores si se usa adb reverse
+        // Si la IP de red local es 192.168.1.6, usarla por defecto
+        AppLogger.config('Usando URL de red local: $_developmentUrlAndroidWiFi');
+        return _developmentUrlAndroidWiFi;
       } catch (e) {
         AppLogger.warning('Error detectando plataforma: $e');
         // Fallback: usar emulador por defecto

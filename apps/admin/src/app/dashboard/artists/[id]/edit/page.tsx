@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { CheckBadgeIcon, XMarkIcon } from '@heroicons/react/24/solid';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '@/lib/api';
+import { useGenres } from '@/hooks/useGenres';
 
 const countries: { code: string; name: string; flag: string }[] = [
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
@@ -31,6 +32,11 @@ export default function EditArtistPage() {
   const [verifying, setVerifying] = useState(false);
   const [profile, setProfile] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  
+  // Obtener géneros disponibles
+  const { data: genresData, isLoading: genresLoading } = useGenres({ all: true, limit: 100 });
+  const availableGenres = genresData?.genres || [];
 
   useEffect(() => {
     const run = async () => {
@@ -42,6 +48,12 @@ export default function EditArtistPage() {
         setBiography(a.biography ?? a.bio ?? '');
         setFeatured(!!a.featured || !!a.isFeatured);
         setIsVerified(!!a.isVerified || !!a.verificationStatus);
+        // Cargar géneros del artista si existen
+        if (a.genres && Array.isArray(a.genres)) {
+          setSelectedGenres(a.genres);
+        } else {
+          setSelectedGenres([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -58,6 +70,7 @@ export default function EditArtistPage() {
         nationalityCode: nationality,
         biography,
         featured,
+        genres: selectedGenres,
         profileFile: profile,
         coverFile: cover,
       });
@@ -168,6 +181,45 @@ export default function EditArtistPage() {
               </button>
             )}
           </div>
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium">Géneros</label>
+          {genresLoading ? (
+            <div className="mt-1 text-sm text-gray-500">Cargando géneros...</div>
+          ) : (
+            <div className="mt-1 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {availableGenres.map((genre) => (
+                  <label
+                    key={genre.id}
+                    className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition ${
+                      selectedGenres.includes(genre.name)
+                        ? 'bg-brown-100 border-brown-500 text-brown-700'
+                        : 'bg-white border-gray-200 text-gray-700 hover:border-brown-300'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={selectedGenres.includes(genre.name)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedGenres([...selectedGenres, genre.name]);
+                        } else {
+                          setSelectedGenres(selectedGenres.filter((g) => g !== genre.name));
+                        }
+                      }}
+                    />
+                    <span>{genre.name}</span>
+                  </label>
+                ))}
+              </div>
+              {selectedGenres.length === 0 && (
+                <p className="text-xs text-gray-500">No hay géneros seleccionados. Puedes agregar géneros para mejorar la búsqueda.</p>
+              )}
+            </div>
+          )}
         </div>
         
         <div>

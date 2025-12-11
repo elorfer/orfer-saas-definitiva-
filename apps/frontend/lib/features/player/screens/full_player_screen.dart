@@ -45,7 +45,7 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
     
     // ✅ OPTIMIZACIÓN: Solo escuchar currentSong, no todo el estado
     final currentSong = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.currentSong),
+      unifiedAudioProviderFixed.select((state) => state.lastConfirmedSong ?? state.currentSong),
     );
 
     // Si no hay canción, regresar de forma segura

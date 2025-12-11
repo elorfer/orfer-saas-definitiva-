@@ -27,15 +27,21 @@ class IntelligentFeaturedSongsSection extends ConsumerStatefulWidget {
 class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFeaturedSongsSection>
     with AutomaticKeepAliveClientMixin {
   @override
+  void initState() {
+    super.initState();
+    // Inicializar una vez para evitar trabajo extra en cada rebuild
+    Future.microtask(() {
+      ref.read(intelligentFeaturedInitProvider);
+      ref.read(unifiedAudioProviderFixed.notifier).ensureInitialized();
+    });
+  }
+
+  @override
   bool get wantKeepAlive => true; // 🔥 OPTIMIZACIÓN: Mantener estado al hacer scroll
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
-    // Inicializar el sistema inteligente (usar read para evitar rebuilds innecesarios)
-    ref.read(intelligentFeaturedInitProvider);
-    // Pre-inicializar el reproductor unificado para que el primer play sea más rápido
-    ref.read(unifiedAudioProviderFixed.notifier).ensureInitialized();
     
     // ✅ OPTIMIZACIÓN: Los providers ya usan select() internamente
     // Solo se reconstruye cuando cambian estos valores específicos

@@ -28,7 +28,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            physics: const FastScrollPhysics(),
+            physics: const SmoothScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,7 +302,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                           color: Colors.transparent,
                           child: InkWell(
                             onTap: () {
-                              // TODO: Implementar suscripción premium
+                              // Nota: Funcionalidad de suscripción premium pendiente de implementar
                             },
                             borderRadius: const BorderRadius.all(Radius.circular(16)),
                             child: Center(

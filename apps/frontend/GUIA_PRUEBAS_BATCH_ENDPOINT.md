@@ -229,3 +229,9 @@ curl "http://localhost:3001/public/songs/playlist/generate?count=4"
 
 Si todos los checks están ✅, entonces la implementación está funcionando correctamente y has migrado exitosamente a la arquitectura moderna de batching en el backend.
 
+
+
+
+
+
+

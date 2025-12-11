@@ -16,15 +16,14 @@ class VerifiedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Tamaño fijo para evitar movimiento durante la carga
-    const fixedSize = 20.0;
-    final badge = const SizedBox(
-      width: fixedSize,
-      height: fixedSize,
+    // Usar el tamaño pasado como parámetro
+    final badge = SizedBox(
+      width: size,
+      height: size,
       child: Icon(
         Icons.verified_rounded,
-        color: Colors.blueAccent,
-        size: fixedSize,
+        color: color ?? Colors.blueAccent,
+        size: size,
       ),
     );
     
@@ -88,10 +87,10 @@ class ArtistNameWithBadge extends StatelessWidget {
           overflow: overflow,
         ),
         const SizedBox(width: 4),
-        // Badge con tamaño fijo para evitar movimiento durante la carga
+        // Badge con tamaño dinámico basado en badgeSize
         SizedBox(
-          width: 20.0, // Tamaño fijo
-          height: 20.0, // Tamaño fijo
+          width: badgeSize + 2, // Tamaño del badge + pequeño margen
+          height: badgeSize + 2,
           child: VerifiedBadge(
             size: badgeSize,
             showTooltip: true,

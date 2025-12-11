@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '@/lib/api';
+import { useGenres } from '@/hooks/useGenres';
 
 const countries: { code: string; name: string; flag: string }[] = [
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
@@ -39,8 +40,13 @@ export default function CreateArtistPage() {
   const [profile, setProfile] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string; genres?: string }>({});
   const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  
+  // Obtener géneros disponibles
+  const { data: genresData, isLoading: genresLoading } = useGenres({ all: true, limit: 100 });
+  const availableGenres = genresData?.genres || [];
 
   const selectedCountry = useMemo(
     () => countries.find((c) => c.code === nationality),
@@ -100,8 +106,9 @@ export default function CreateArtistPage() {
       const emailErr = validateEmailFormat(email);
       const passErr = validatePassword(password);
       const phoneErr = validatePhone(phone);
-      setErrors({ name: nameErr, email: emailErr, password: passErr, phone: phoneErr });
-      if (nameErr || emailErr || passErr || phoneErr) {
+      const genresErr = selectedGenres.length === 0 ? 'Debe seleccionar al menos un género' : undefined;
+      setErrors({ name: nameErr, email: emailErr, password: passErr, phone: phoneErr, genres: genresErr });
+      if (nameErr || emailErr || passErr || phoneErr || genresErr) {
         toast.error('Corrige los errores del formulario');
         return;
       }
@@ -135,6 +142,7 @@ export default function CreateArtistPage() {
         nationalityCode: nationality || undefined,
         biography: [biography || '', phone ? `Tel: ${phone}` : ''].filter(Boolean).join('\n'),
         featured: false,
+        genres: selectedGenres,
         profileFile: profile,
         coverFile: cover,
         userId: linkedUserId || undefined,
@@ -256,6 +264,49 @@ export default function CreateArtistPage() {
                 </select>
                 <span className="text-xl">{selectedCountry?.flag ?? '🏳️'}</span>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Géneros <span className="text-red-500">*</span>
+              </label>
+              {genresLoading ? (
+                <div className="mt-1 text-sm text-gray-500">Cargando géneros...</div>
+              ) : (
+                <div className="mt-1 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {availableGenres.map((genre) => (
+                      <label
+                        key={genre.id}
+                        className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition ${
+                          selectedGenres.includes(genre.name)
+                            ? 'bg-brown-100 border-brown-500 text-brown-700'
+                            : 'bg-white border-gray-200 text-gray-700 hover:border-brown-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={selectedGenres.includes(genre.name)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedGenres([...selectedGenres, genre.name]);
+                            } else {
+                              setSelectedGenres(selectedGenres.filter((g) => g !== genre.name));
+                            }
+                            setErrors((prev) => ({ ...prev, genres: undefined }));
+                          }}
+                        />
+                        <span>{genre.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.genres && <p className="text-xs text-red-600">{errors.genres}</p>}
+                  {selectedGenres.length === 0 && (
+                    <p className="text-xs text-gray-500">Selecciona al menos un género</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>

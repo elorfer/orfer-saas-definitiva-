@@ -41,6 +41,8 @@ services:
     container_name: vintage-music-backend
     environment:
       NODE_ENV: production
+      PORT: "3001"
+      HOST: "0.0.0.0"
       DATABASE_URL: postgresql://vintage_user:vintage_password_2024@postgres:5432/vintage_music
       DB_SSL: "false"
       REDIS_URL: redis://redis:6379
@@ -53,7 +55,7 @@ services:
       # PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}  # Deshabilitado - Pagos no implementados aún
       # PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}  # Deshabilitado - Pagos no implementados aún
     ports:
-      - "3000:3000"
+      - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy

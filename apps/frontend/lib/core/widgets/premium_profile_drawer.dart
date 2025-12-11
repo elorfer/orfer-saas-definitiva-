@@ -136,7 +136,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () {
-                                // TODO: Navegar a pantalla de suscripción premium
+                                // Nota: Navegación a pantalla de suscripción premium pendiente de implementar
                               },
                               borderRadius: const BorderRadius.all(Radius.circular(12)),
                               child: Center(

@@ -171,11 +171,15 @@ class LazyImageLoader {
     if (!context.mounted || imageUrls.isEmpty || itemCount == 0) return;
 
     // ✅ OPTIMIZACIÓN: Verificar conectividad antes de precachear
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
+    final connectivityResults = await Connectivity().checkConnectivity();
+    if (connectivityResults.contains(ConnectivityResult.none) || connectivityResults.isEmpty) {
       AppLogger.debug('[LazyImageLoader] No hay conexión, omitiendo precache de imágenes.');
       return;
     }
+
+    // Guardar contexto antes de async gap
+    if (!context.mounted) return;
+    final mountedContext = context;
 
     // Calcular índices visibles basado en la posición del scroll
     final scrollPosition = scrollController.position.pixels;
@@ -198,7 +202,7 @@ class LazyImageLoader {
         futures.add(
           precacheImage(
             CachedNetworkImageProvider(imageUrl),
-            context,
+            mountedContext,
           ).catchError((error, stackTrace) {
             // Ignorar errores de pre-cache (ej: sin conexión, imagen no encontrada)
             AppLogger.debug('[LazyImageLoader] Error al precachear imagen (silenciado): $error');
@@ -236,11 +240,15 @@ class LazyImageLoader {
     if (!context.mounted || imageUrls.isEmpty || itemCount == 0) return;
 
     // ✅ OPTIMIZACIÓN: Verificar conectividad antes de precachear
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
+    final connectivityResults = await Connectivity().checkConnectivity();
+    if (connectivityResults.contains(ConnectivityResult.none) || connectivityResults.isEmpty) {
       AppLogger.debug('[LazyImageLoader] No hay conexión, omitiendo precache de imágenes.');
       return;
     }
+
+    // Guardar contexto antes de async gap
+    if (!context.mounted) return;
+    final mountedContext = context;
 
     // Calcular índices visibles basado en la posición del scroll
     final scrollPosition = scrollController.position.pixels;
@@ -272,7 +280,7 @@ class LazyImageLoader {
         futures.add(
           precacheImage(
             CachedNetworkImageProvider(imageUrl),
-            context,
+            mountedContext,
           ).catchError((error, stackTrace) {
             // Ignorar errores de pre-cache
             AppLogger.debug('[LazyImageLoader] Error al precachear imagen (silenciado): $error');
@@ -307,11 +315,15 @@ class LazyImageLoader {
     if (!context.mounted || imageUrls.isEmpty) return;
 
     // ✅ OPTIMIZACIÓN: Verificar conectividad antes de precachear
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
+    final connectivityResults = await Connectivity().checkConnectivity();
+    if (connectivityResults.contains(ConnectivityResult.none) || connectivityResults.isEmpty) {
       AppLogger.debug('[LazyImageLoader] No hay conexión, omitiendo precache de imágenes.');
       return;
     }
+
+    // Guardar contexto antes de async gap
+    if (!context.mounted) return;
+    final mountedContext = context;
 
     // Precachear solo las primeras N imágenes (las que están visibles inicialmente)
     final imagesToPrecache = imageUrls.take(count).where((url) => url != null && url.isNotEmpty).toList();
@@ -322,7 +334,7 @@ class LazyImageLoader {
         futures.add(
           precacheImage(
             CachedNetworkImageProvider(imageUrl),
-            context,
+            mountedContext,
           ).catchError((error, stackTrace) {
             // Ignorar errores de pre-cache
             AppLogger.debug('[LazyImageLoader] Error al precachear imagen (silenciado): $error');

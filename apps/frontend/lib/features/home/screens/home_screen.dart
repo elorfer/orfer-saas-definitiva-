@@ -57,63 +57,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
           child: SafeArea(
             child: RefreshIndicator(
-            onRefresh: () async {
-              // Refrescar todo el home (artistas, canciones, playlists, etc.)
-              final homeNotifier = ref.read(homeStateProvider.notifier);
-              await homeNotifier.refresh();
-              // También refrescar las recomendaciones inteligentes
-              await ref.read(intelligentFeaturedProvider.notifier)
-                  .refreshIntelligentRecommendations();
-            },
-            color: Colors.white,
-            backgroundColor: NeumorphismTheme.coffeeMedium,
-            notificationPredicate: (_) => true,
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ), // ✅ Scroll estilo iPhone
-              padding: const EdgeInsets.only(top: 24.0, bottom: 40.0),
-              clipBehavior: Clip.none, // 🚀 Mejor rendimiento - sin clipping costoso
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min, // 🚀 Optimización: tamaño mínimo
-                children: [
-                  // Header optimizado con RepaintBoundary
-                  RepaintBoundary(
-                    child: _HomeHeader(
-                      key: const ValueKey('home_header'),
+              onRefresh: () async {
+                // Refrescar todo el home (artistas, canciones, playlists, etc.)
+                final homeNotifier = ref.read(homeStateProvider.notifier);
+                // Ejecutar en paralelo para reducir latencia visible
+                await Future.wait([
+                  homeNotifier.refresh(),
+                  ref
+                      .read(intelligentFeaturedProvider.notifier)
+                      .refreshIntelligentRecommendations(),
+                ]);
+              },
+              color: Colors.white,
+              backgroundColor: NeumorphismTheme.coffeeMedium,
+              notificationPredicate: (_) => true,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ), // ✅ Scroll estilo iPhone
+                padding: const EdgeInsets.only(top: 24.0, bottom: 40.0),
+                clipBehavior: Clip.none, // 🚀 Mejor rendimiento - sin clipping costoso
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min, // 🚀 Optimización: tamaño mínimo
+                  children: [
+                    // Header optimizado con RepaintBoundary
+                    RepaintBoundary(
+                      child: _HomeHeader(
+                        key: const ValueKey('home_header'),
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  // Artistas destacados - Optimizado con RepaintBoundary
-                  RepaintBoundary(
-                    child: FeaturedArtistsSection(key: const ValueKey('artists')),
-                  ),
+                    // Artistas destacados - Optimizado con RepaintBoundary
+                    RepaintBoundary(
+                      child: FeaturedArtistsSection(key: const ValueKey('artists')),
+                    ),
 
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  // Canciones destacadas inteligentes - Optimizado con RepaintBoundary
-                  RepaintBoundary(
-                    child: IntelligentFeaturedSongsSection(key: const ValueKey('intelligent_songs')),
-                  ),
+                    // Canciones destacadas inteligentes - Optimizado con RepaintBoundary
+                    RepaintBoundary(
+                      child: IntelligentFeaturedSongsSection(key: const ValueKey('intelligent_songs')),
+                    ),
 
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  // Playlists destacadas - Optimizado con RepaintBoundary
-                  RepaintBoundary(
-                    child: FeaturedPlaylistsSection(key: const ValueKey('playlists')),
-                  ),
+                    // Playlists destacadas - Optimizado con RepaintBoundary
+                    RepaintBoundary(
+                      child: FeaturedPlaylistsSection(key: const ValueKey('playlists')),
+                    ),
 
-                  const SizedBox(height: 80),
-                ],
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         ),
       ),
     );
@@ -156,13 +159,13 @@ class _HomeHeader extends ConsumerWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Colors.white.withValues(alpha: 0.9),
-                            Colors.white.withValues(alpha: 0.7),
+                            NeumorphismTheme.coffeeMedium,
+                            NeumorphismTheme.coffeeDark,
                           ],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
+                            color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -171,7 +174,9 @@ class _HomeHeader extends ConsumerWidget {
                       child: Center(
                         child: Text(
                           _getInitials(user?.firstName, user?.lastName),
-                          style: AppTextStyles.titleMedium,
+                          style: AppTextStyles.titleMedium.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -197,6 +202,40 @@ class _HomeHeader extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
+                // Logo alineado a la derecha dentro del header (se desplaza con el scroll)
+                Image.asset(
+                  'assets/images/logo.webp',
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Fallback: intentar con diferentes rutas posibles
+                    try {
+                      return Image.asset(
+                        'assets/images/onboarding/logo.png',
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.contain,
+                      );
+                    } catch (e) {
+                      // Si tampoco existe, mostrar un placeholder
+                      return Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.music_note,
+                          color: NeumorphismTheme.coffeeDark,
+                          size: 32,
+                        ),
+                      );
+                    }
+                  },
+                ),
               ],
             ),
     );
@@ -217,13 +256,13 @@ class _HomeHeader extends ConsumerWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withValues(alpha: 0.9),
-                Colors.white.withValues(alpha: 0.7),
+                NeumorphismTheme.coffeeMedium,
+                NeumorphismTheme.coffeeDark,
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

@@ -142,7 +142,9 @@ async function bootstrap() {
   });
 
   const port = configService.get('PORT', 3001);
-  const host = configService.get('HOST', '0.0.0.0'); // Escuchar en todas las interfaces para permitir acceso desde emulador Android
+  // Escuchar en todas las interfaces para permitir acceso desde emulador Android
+  // El emulador usa 10.0.2.2 para acceder al localhost del host
+  const host = configService.get('HOST', '0.0.0.0');
   
   try {
     await app.listen(port, host);

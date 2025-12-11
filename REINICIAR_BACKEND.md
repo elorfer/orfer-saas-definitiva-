@@ -94,3 +94,9 @@ En la terminal del backend deberías ver:
 4. **Verifica el orden de las rutas:**
    - El endpoint `playlist/generate` debe estar **ANTES** de `recommended/:songId` en el controlador
 
+
+
+
+
+
+

@@ -14,6 +14,11 @@ import { Not } from 'typeorm';
  * 2. Collaborative Filtering básico (historial de usuarios)
  * 3. Popularity-Based (trending songs)
  * 4. Hybrid Approach (combinación de múltiples algoritmos)
+ *
+ * TODO Backend: cuando generatePlaylistBatch devuelva 0 nuevas (todas duplicadas),
+ * activar modo diversidad en el backend:
+ *  - Relajar filtros y mezclar populares/novelty para retornar al menos 3-5 nuevas.
+ *  - No devolver la semilla ni seeds previas si ya vienen en excludeIds.
  */
 @Injectable()
 export class RecommendationService {
@@ -49,7 +54,8 @@ export class RecommendationService {
     userId?: string,
     genres?: string[],
     offset?: number, // 🚨 OFFSET: Para variar cache en llamadas paralelas (no afecta lógica)
-    excludeIds: string[] = [] // 🚨 EXCLUDEIDS: IDs a excluir para evitar duplicados en batch
+    excludeIds: string[] = [], // 🚨 EXCLUDEIDS: IDs a excluir para evitar duplicados en batch
+    loopDetected: boolean = false // 🚨 LOOP DETECTION: Flag para ajustar scoring cuando detecta loops
   ): Promise<Song | null> {
     const startTime = Date.now();
     this.logger.log(`🎵 [ADVANCED] Iniciando recomendación avanzada para canción: ${currentSongId}${userId ? ` (usuario: ${userId})` : ''}${offset !== undefined ? ` [offset: ${offset}]` : ''}${excludeIds.length > 0 ? ` [excluyendo ${excludeIds.length} IDs]` : ''}`);
@@ -99,12 +105,14 @@ export class RecommendationService {
       const shouldChangeGenre = await this.shouldChangeToDifferentGenre(currentSongId, songGenres, userId);
       
       // 5. Obtener candidatos usando múltiples estrategias
+      // 🚨 LOOP DETECTION: Pasar flag para aumentar límite de candidatos
       const candidates = await this.getCandidateSongs(
         currentSong,
         userId,
         shouldChangeGenre ? [] : songGenres, // Si cambiamos género, no filtrar por género
         shouldChangeGenre,
-        excludeIds // 🚨 EXCLUDEIDS: Pasar excludeIds para filtrar candidatos
+        excludeIds, // 🚨 EXCLUDEIDS: Pasar excludeIds para filtrar candidatos
+        loopDetected // 🚨 LOOP DETECTION: Pasar flag para aumentar límite
       );
 
       // 🚨 EXCLUDEIDS: Filtrar candidatos que están en excludeIds (VALIDACIÓN CRÍTICA)
@@ -153,7 +161,8 @@ export class RecommendationService {
       }
 
       // 6. Aplicar scoring multi-factor (solo en candidatos filtrados)
-      const scoredSongs = await this.applySimilarityScoring(currentSong, filteredCandidates, userId);
+      // 🚨 LOOP DETECTION: Pasar flag para ajustar pesos dinámicamente
+      const scoredSongs = await this.applySimilarityScoring(currentSong, filteredCandidates, userId, loopDetected);
 
       // 7. Seleccionar mejor recomendación con diversidad
       const recommendation = this.selectBestRecommendation(scoredSongs, userId);
@@ -664,7 +673,8 @@ export class RecommendationService {
     userId?: string, 
     genres?: string[],
     shouldChangeGenre: boolean = false,
-    excludeIds: string[] = [] // 🚨 EXCLUDEIDS: IDs adicionales a excluir
+    excludeIds: string[] = [], // 🚨 EXCLUDEIDS: IDs adicionales a excluir
+    loopDetected: boolean = false // 🚨 LOOP DETECTION: Flag para aumentar límite de candidatos
   ): Promise<Song[]> {
     const strategies = [];
     
@@ -690,7 +700,8 @@ export class RecommendationService {
       // Estrategia normal: mismo género
       strategies.push(
         // Estrategia 1: Mismo género (peso alto)
-        this.getSameGenreSongs(currentSong, genres, excludeIds),
+        // 🚨 LOOP DETECTION: Aumentar límite cuando detecta loops
+        this.getSameGenreSongs(currentSong, genres, excludeIds, loopDetected),
         
         // Estrategia 2: Mismo artista (peso medio)
         this.getSameArtistSongs(currentSong, excludeIds),
@@ -757,8 +768,9 @@ export class RecommendationService {
 
   /**
    * 🎵 ESTRATEGIA 1: CANCIONES DEL MISMO GÉNERO
+   * 🚨 LOOP DETECTION: Aumenta límite de candidatos cuando detecta loops
    */
-  private async getSameGenreSongs(currentSong: Song, genres?: string[], excludeIds: string[] = []): Promise<Song[]> {
+  private async getSameGenreSongs(currentSong: Song, genres?: string[], excludeIds: string[] = [], loopDetected: boolean = false): Promise<Song[]> {
     const targetGenres = genres || currentSong.genres || [];
     
     if (targetGenres.length === 0) return [];
@@ -791,9 +803,14 @@ export class RecommendationService {
     }
 
     // 🚨 FLEXIBILIZAR: Aumentar límite para más candidatos
+    // 🚨 LOOP DETECTION: Aumentar límite cuando detecta loops (de 20 a 50)
+    const candidateLimit = loopDetected ? 50 : 20; // Aumentar de 20 a 50 cuando detecta loops
+    if (loopDetected) {
+      this.logger.log(`🔄 [CANDIDATOS] Aumentando límite a ${candidateLimit} debido a detección de loop`);
+    }
     let songs = await query
       .orderBy('song.totalStreams', 'DESC')
-      .limit(20) // Aumentado de 15 a 20 para más opciones
+      .limit(candidateLimit)
       .getMany();
 
     this.logger.log(`🎵 Mismo género: ${songs.length} canciones`);
@@ -953,7 +970,7 @@ export class RecommendationService {
     if (topGenres.length === 0) return [];
 
     // Buscar canciones de los géneros favoritos del usuario
-    const songs = await this.getSameGenreSongs(currentSong, topGenres, excludeIds);
+    const songs = await this.getSameGenreSongs(currentSong, topGenres, excludeIds, false); // No detectar loop en fallback
     
     this.logger.log(`📊 Basado en usuario: ${songs.length} canciones (géneros: ${topGenres.join(', ')})`);
     return songs;
@@ -1004,42 +1021,59 @@ export class RecommendationService {
   /**
    * 🧮 SCORING INTELIGENTE - EL CORAZÓN DEL ALGORITMO
    * Similar al algoritmo de Spotify que combina múltiples factores
+   * 🚨 LOOP DETECTION: Ajusta pesos dinámicamente cuando detecta loops
    */
   private async applySimilarityScoring(
     currentSong: Song, 
     candidates: Song[], 
-    userId?: string
+    userId?: string,
+    loopDetected: boolean = false // 🚨 LOOP DETECTION: Flag para ajustar pesos
   ): Promise<ScoredSong[]> {
     const scoredSongs: ScoredSong[] = [];
+
+    // 🚨 LOOP DETECTION: Ajustar pesos cuando detecta loops
+    // Reducir peso de semilla (género/artista) y aumentar peso de diversidad (novedad/diferentes géneros)
+    const genreWeight = loopDetected ? 0.15 : 0.30; // Reducir de 30% a 15%
+    const popularityWeight = loopDetected ? 0.10 : 0.20; // Reducir de 20% a 10%
+    const artistWeight = loopDetected ? 0.05 : 0.10; // Reducir de 10% a 5%
+    const noveltyWeight = loopDetected ? 0.40 : 0.20; // Aumentar de 20% a 40%
+    const diversityWeight = loopDetected ? 0.30 : 0.20; // Aumentar de 20% a 30% (afinidad + diversidad)
+    
+    if (loopDetected) {
+      this.logger.warn(`🔄 [SCORING] Modo diversidad activado: Género=${genreWeight}, Popularidad=${popularityWeight}, Artista=${artistWeight}, Novedad=${noveltyWeight}, Diversidad=${diversityWeight}`);
+    }
 
     for (const candidate of candidates) {
       let score = 0;
       const factors: ScoreFactor[] = [];
 
-      // Factor 1: Similitud de género (peso: 30% - reducido para evitar encasillamiento)
+      // Factor 1: Similitud de género (peso ajustado dinámicamente)
       const genreScore = this.calculateGenreSimilarity(currentSong, candidate);
-      score += genreScore * 0.30;
-      factors.push({ name: 'género', score: genreScore, weight: 0.30 });
+      score += genreScore * genreWeight;
+      factors.push({ name: 'género', score: genreScore, weight: genreWeight });
 
-      // Factor 2: Popularidad relativa (peso: 20% - reducido para más variedad)
+      // Factor 2: Popularidad relativa (peso ajustado dinámicamente)
       const popularityScore = this.calculatePopularityScore(currentSong, candidate);
-      score += popularityScore * 0.20;
-      factors.push({ name: 'popularidad', score: popularityScore, weight: 0.20 });
+      score += popularityScore * popularityWeight;
+      factors.push({ name: 'popularidad', score: popularityScore, weight: popularityWeight });
 
-      // Factor 3: Mismo artista (peso: 10% - reducido para evitar repetición del mismo artista)
+      // Factor 3: Mismo artista (peso ajustado dinámicamente)
       const artistScore = currentSong.artistId === candidate.artistId ? 1 : 0;
-      score += artistScore * 0.10;
-      factors.push({ name: 'artista', score: artistScore, weight: 0.10 });
+      score += artistScore * artistWeight;
+      factors.push({ name: 'artista', score: artistScore, weight: artistWeight });
 
-      // Factor 4: Novedad (peso: 20% - aumentado para fomentar descubrimiento)
+      // Factor 4: Novedad (peso aumentado cuando detecta loops)
       const noveltyScore = this.calculateNoveltyScore(candidate);
-      score += noveltyScore * 0.20;
-      factors.push({ name: 'novedad', score: noveltyScore, weight: 0.20 });
+      score += noveltyScore * noveltyWeight;
+      factors.push({ name: 'novedad', score: noveltyScore, weight: noveltyWeight });
 
-      // Factor 5: Afinidad de usuario (peso: 20% - aumentado para mejor personalización)
+      // Factor 5: Afinidad de usuario + Diversidad (peso aumentado cuando detecta loops)
       const userScore = userId ? await this.calculateUserAffinityScore(userId, candidate) : 0.5;
-      score += userScore * 0.20;
-      factors.push({ name: 'afinidad', score: userScore, weight: 0.20 });
+      // 🚨 DIVERSIDAD: Penalizar canciones del mismo género cuando detecta loops
+      const diversityBonus = loopDetected && genreScore > 0.5 ? -0.2 : 0; // Penalizar alta similitud de género
+      const finalUserScore = Math.max(0, userScore + diversityBonus);
+      score += finalUserScore * diversityWeight;
+      factors.push({ name: 'afinidad', score: finalUserScore, weight: diversityWeight });
 
       scoredSongs.push({
         song: candidate,
@@ -1335,6 +1369,10 @@ export class RecommendationService {
       const usedIds = new Set<string>([seedSongId, ...effectiveExcludeIds]);
       let failedAttempts = 0;
       const maxFailedAttempts = 3; // Intentar 3 veces antes de reducir exclusiones
+      
+      // 🚨 DETECCIÓN DE LOOPS: Rastrear canciones devueltas repetidamente
+      const returnedSongsCount = new Map<string, number>(); // ID -> número de veces devuelto
+      let loopDetected = false;
 
       // ⚡️ OPTIMIZACIÓN: Estrategia Híbrida de Paralelización
       // Para catálogos grandes: paralelización TOTAL (máxima velocidad - estilo Gemini)
@@ -1384,14 +1422,37 @@ export class RecommendationService {
             failedAttempts = 0; // Reset contador
           }
           
+          // 🚨 DETECCIÓN DE LOOPS: Verificar si estamos devolviendo las mismas canciones
+          // Si una canción se devuelve 2+ veces, activar modo diversidad
+          const recentReturned = Array.from(returnedSongsCount.entries())
+            .filter(([_, count]) => count >= 2)
+            .map(([id, _]) => id);
+          
+          if (recentReturned.length >= 2) {
+            loopDetected = true;
+            this.logger.warn(`🔄 [BATCH] LOOP DETECTADO: ${recentReturned.length} canciones devueltas repetidamente. Activando modo diversidad...`);
+          }
+          
           // Obtener una recomendación usando la semilla actual con excludeIds
+          // Pasar información de loop para ajustar scoring dinámicamente
           const recommended = await this.getRecommendedSong(
             currentSeedId,
             userId,
             genres,
             i, // Usar índice como offset para variar cache (solo afecta cache, no lógica)
-            currentExcludeIds // 🚨 EXCLUDEIDS: Pasar IDs ya usados (ajustados para catálogo pequeño)
+            currentExcludeIds, // 🚨 EXCLUDEIDS: Pasar IDs ya usados (ajustados para catálogo pequeño)
+            loopDetected // 🚨 LOOP DETECTION: Pasar flag para ajustar scoring
           );
+          
+          // 🚨 DETECCIÓN DE LOOPS: Rastrear canciones devueltas
+          if (recommended) {
+            const currentCount = returnedSongsCount.get(recommended.id) || 0;
+            returnedSongsCount.set(recommended.id, currentCount + 1);
+            
+            if (currentCount >= 1) {
+              this.logger.warn(`🔄 [BATCH] Canción devuelta ${currentCount + 1} veces: ${recommended.title} (ID: ${recommended.id.substring(0, 8)}...)`);
+            }
+          }
 
           if (!recommended) {
             failedAttempts++;
@@ -1405,7 +1466,8 @@ export class RecommendationService {
                 userId,
                 genres,
                 i + 100, // Offset diferente para evitar cache
-                currentExcludeIds // 🚨 EXCLUDEIDS: Mantener excludeIds en fallback
+                currentExcludeIds, // 🚨 EXCLUDEIDS: Mantener excludeIds en fallback
+                loopDetected // 🚨 LOOP DETECTION: Pasar flag
               );
               
               if (fallback && !usedIds.has(fallback.id)) {
@@ -1427,7 +1489,8 @@ export class RecommendationService {
                 userId,
                 genres,
                 i + 200,
-                minimalExclude
+                minimalExclude,
+                loopDetected // 🚨 LOOP DETECTION: Pasar flag
               );
               
               if (minimalFallback) {
@@ -1461,7 +1524,8 @@ export class RecommendationService {
               userId,
               genres,
               i + 300, // Offset muy alto para evitar cache
-              strictExcludeIds
+              strictExcludeIds,
+              loopDetected // 🚨 LOOP DETECTION: Pasar flag
             );
             
             if (alternative && !usedIds.has(alternative.id)) {

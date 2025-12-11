@@ -26,15 +26,15 @@ class FeaturedArtistCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 140,
+        width: 120,
         margin: const EdgeInsets.only(right: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Imagen del artista (redonda)
             Container(
-              width: 140,
-              height: 140,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle, // ✅ Forma circular completa
                 boxShadow: [
@@ -70,7 +70,7 @@ class FeaturedArtistCard extends StatelessWidget {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  badgeSize: 14.0,
+                  badgeSize: 12.0,
                 ),
                 
                 const SizedBox(height: 6),
@@ -210,8 +210,8 @@ class FeaturedArtistCard extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: normalizedUrl,
         fit: BoxFit.cover,
-        memCacheWidth: 300, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (300px es suficiente)
-        memCacheHeight: 300,
+        memCacheWidth: 240, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (240px para imagen de 120px)
+        memCacheHeight: 240,
         maxWidthDiskCache: 600,
         maxHeightDiskCache: 600,
         fadeInDuration: Duration.zero, // 🔥 Cero animaciones innecesarias

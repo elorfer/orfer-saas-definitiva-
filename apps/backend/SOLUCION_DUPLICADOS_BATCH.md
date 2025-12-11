@@ -131,3 +131,9 @@ Loop i=0 to 3:
 2. **Verificar logs:** No deberían aparecer warnings de "Recomendación X duplicada"
 3. **Confirmar resultados:** Deberías obtener 4/4 recomendaciones (o al menos 3/4 si el catálogo es muy pequeño)
 
+
+
+
+
+
+

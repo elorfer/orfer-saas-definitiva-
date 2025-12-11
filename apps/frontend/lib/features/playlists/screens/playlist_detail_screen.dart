@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/scheduler.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,10 +75,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   
   // 🔥 OPTIMIZACIÓN: ScrollController para precache dinámico de imágenes (como en Home)
   late final ScrollController _scrollController;
-  
-  // ✅ OPTIMIZACIÓN: Cache de URLs de imágenes para evitar recálculos en _onScroll
-  List<String> _cachedImageUrls = [];
-  int _cachedSongsCount = 0;
   
   // ✅ OPTIMIZACIÓN: Timer para debounce en _onScroll
   Timer? _scrollDebounceTimer;
@@ -280,12 +277,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   
   /// ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
   void _updateImageUrlsCache() {
-    _cachedImageUrls = _displayedSongs
-        .map((song) => song.coverArtUrl)
-        .where((url) => url != null && url.isNotEmpty)
-        .cast<String>()
-        .toList();
-    _cachedSongsCount = _displayedSongs.length;
+    // Mantener método para compatibilidad; actualmente no se usa precache intensivo.
   }
   
   /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles y detectar fin de scroll para paginación automática
@@ -314,28 +306,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       if (!mounted || !_scrollController.hasClients || _displayedSongs.isEmpty) return;
       
       try {
-        // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer de _displayedSongs cada vez
-        if (_cachedImageUrls.isEmpty) {
-          // Si no hay cache, actualizar desde _displayedSongs (solo una vez)
-          _cachedImageUrls = _displayedSongs
-              .map((song) => song.coverArtUrl)
-              .where((url) => url != null && url.isNotEmpty)
-              .cast<String>()
-              .toList();
-          _cachedSongsCount = _displayedSongs.length;
-        }
-        
-        // Precachear imágenes visibles basado en posición del scroll (IntersectionObserver)
-        if (_cachedImageUrls.isNotEmpty) {
-          LazyImageLoader.precacheVisibleVerticalImages(
-            scrollController: _scrollController,
-            itemExtent: 80.0, // Altura fija de cada item (igual que itemExtent del SliverFixedExtentList)
-            itemCount: _cachedSongsCount,
-            imageUrls: _cachedImageUrls,
-            context: context,
-            precacheCount: 5, // Precachear 5 items antes y después del viewport
-          );
-        }
+        // ⚡️ Rendimiento: para scroll fluido en listas grandes, omitimos precache intensivo aquí.
+        // (Las imágenes ya se cachean vía OptimizedImage / cached_network_image.)
       } catch (e) {
         // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
         debugPrint('[PlaylistDetailScreen] Error en _onScroll: $e');
@@ -880,7 +852,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                         song: song,
                         index: index + 1,
                         onTap: () => _onSongTap(context, song),
-                        onPlay: () => _onPlaySong(context, song),
+                        onPlay: () => _playFromCardAlgorithm(context, song),
                       ),
                     );
                   },
@@ -1290,11 +1262,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   }
 
   void _onSongTap(BuildContext context, Song song) {
-    _onPlaySong(context, song);
+    _playFromCardAlgorithm(context, song);
   }
 
-  Future<void> _onPlaySong(BuildContext context, Song song) async {
-    // ✅ Reproducir en modo PLAYLIST (fixedQueue) para mantener la cola
+  /// Reproduce una canción individual en modo algoritmo (igual que tocar la tarjeta).
+  Future<void> _playFromCardAlgorithm(BuildContext context, Song song) async {
     try {
       // Validar que la canción tenga URL válida
       if (song.fileUrl == null || song.fileUrl!.isEmpty) {
@@ -1309,17 +1281,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         }
         return;
       }
-      
-      final container = ProviderScope.containerOf(context);
-      final audioNotifier = container.read(unifiedAudioProviderFixed.notifier);
-      
-      // Usar onPressPlayAll para reproducir en modo playlist, empezando desde la canción seleccionada
-      // Esto activa el modo fixedQueue y permite navegar por la playlist
-      await audioNotifier.onPressPlayAll(
-        song,
-        widget.playlistId,
-        allSongs: _displayedSongs,
-      );
+
+      await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(
+            song,
+            useAlgorithm: true,
+          );
     } catch (e, stackTrace) {
       debugPrint('❌ [PlaylistDetailScreen] Error al reproducir canción: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -1386,15 +1352,25 @@ class _SongListItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ OPTIMIZACIÓN: Usar selectores separados para escuchar solo cambios relevantes
-    final currentSongId = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.currentSong?.id),
+    final playbackState = ref.watch(unifiedAudioProviderFixed);
+    final isCurrent = playbackState.currentSong?.id == song.id;
+    final isPlaying = playbackState.isPlaying;
+    final playIcon = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: (isCurrent && isPlaying)
+          ? MiniEqualizer(
+              key: ValueKey('eq_${song.id}'),
+              size: 24,
+              color: NeumorphismTheme.coffeeMedium,
+              active: true,
+            )
+          : Icon(
+              Icons.play_circle_filled,
+              key: ValueKey('play_${song.id}'),
+              color: NeumorphismTheme.coffeeMedium,
+              size: 36,
+            ),
     );
-    final isPlaying = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.isPlaying),
-    );
-    final isCurrentSong = currentSongId == song.id;
-    final showPause = isCurrentSong && isPlaying;
     
     return InkWell(
       onTap: onTap,
@@ -1492,51 +1468,10 @@ class _SongListItem extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Botón de play/pause - toggle si es la canción actual, reproducir si es otra
-                // ✅ CORREGIDO: Usar playFromCard para activar modo algoritmo (no playlist)
+                // ✅ Botón de play - SIEMPRE se comporta como tocar la tarjeta (usa onPressPlayAll para modo playlist)
                 IconButton(
-                  onPressed: () async {
-                    if (isCurrentSong && isPlaying) {
-                      // Si es la canción actual y está reproduciéndose, pausar
-                      ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
-                    } else {
-                      // ✅ Si es otra canción o está pausada, usar playFromCard para modo algoritmo
-                      // Esto cancela el modo playlist si está activo y activa el algoritmo
-                      try {
-                        // Validar que la canción tenga URL válida
-                        if (song.fileUrl == null || song.fileUrl!.isEmpty) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
-                                backgroundColor: Colors.red,
-                                duration: const Duration(seconds: 3),
-                              ),
-                            );
-                          }
-                          return;
-                        }
-                        await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(song, useAlgorithm: true);
-                      } catch (e, stackTrace) {
-                        debugPrint('❌ [PlaylistDetailScreen] Error al reproducir canción: $e');
-                        debugPrint('Stack trace: $stackTrace');
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
-                              backgroundColor: Colors.red,
-                              duration: const Duration(seconds: 4),
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  icon: Icon(
-                    showPause ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                    color: NeumorphismTheme.coffeeMedium,
-                    size: 36, // Reducido ligeramente para evitar overflow
-                  ),
+                  onPressed: onPlay,
+                  icon: playIcon,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                   visualDensity: VisualDensity.compact,
@@ -1589,5 +1524,92 @@ class _SongListItem extends ConsumerWidget {
       }
     }
     return 'Artista desconocido';
+  }
+}
+
+/// Mini ecualizador ligero (3 barras) para indicar canción en reproducción.
+class MiniEqualizer extends StatefulWidget {
+  final bool active;
+  final double size;
+  final Color color;
+
+  const MiniEqualizer({
+    super.key,
+    required this.active,
+    this.size = 16,
+    this.color = Colors.greenAccent,
+  });
+
+  @override
+  State<MiniEqualizer> createState() => _MiniEqualizerState();
+}
+
+class _MiniEqualizerState extends State<MiniEqualizer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    );
+    if (widget.active) _c.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant MiniEqualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !_c.isAnimating) {
+      _c.repeat();
+    } else if (!widget.active && _c.isAnimating) {
+      _c.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bars = List.generate(3, (i) => i * 0.25); // desfases
+    return SizedBox(
+      height: widget.size,
+      width: widget.size,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: bars.map((phase) {
+          return Expanded(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, __) {
+                final t = (_c.value + phase) % 1;
+                final h = lerpDouble(
+                  widget.size * 0.25,
+                  widget.size,
+                  Curves.easeInOut.transform(t),
+                )!;
+                final height = widget.active ? h : widget.size * 0.35;
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: widget.color,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
   }
 }

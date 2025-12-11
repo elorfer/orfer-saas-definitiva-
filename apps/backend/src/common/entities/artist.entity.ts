@@ -72,6 +72,9 @@ export class Artist {
   @Column({ name: 'is_featured', default: false })
   isFeatured: boolean;
 
+  @Column({ type: 'simple-array', nullable: true, name: 'genres' })
+  genres?: string[]; // Array de géneros musicales (ej: ["Reggaeton", "Trap Latino"])
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

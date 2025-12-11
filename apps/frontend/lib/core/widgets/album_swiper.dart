@@ -65,7 +65,9 @@ class _AlbumCoverImage extends StatelessWidget {
     }
 
     return CachedNetworkImage(
-      key: ValueKey(song.id), // Key única para forzar actualización cuando cambia la canción
+      // El key por ID puede adelantar el build de la siguiente carátula y causar flash.
+      // Usamos un key fijo para que solo cambie cuando el widget padre cambie el child.
+      key: const ValueKey('album_cover_image'),
       imageUrl: song.coverArtUrl!,
       fit: BoxFit.cover,
       fadeInDuration: Duration.zero,
