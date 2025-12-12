@@ -65,7 +65,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             physics: const SmoothScrollPhysics(),
             slivers: [
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 72),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate(
                     [
@@ -95,6 +95,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                         favoritesCount: favoritesCount,
                         followedArtistsCount: followedArtistsCount,
                       ),
+                      // Espacio extra al final para permitir scroll cómodo
+                      const SizedBox(height: 120),
                     ],
                   ),
                 ),

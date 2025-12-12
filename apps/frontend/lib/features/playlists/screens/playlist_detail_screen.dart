@@ -84,7 +84,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   bool _hasRestoredInitialScroll = false;
   
   static const int _initialSongsLimit = 20;
-  static const int _loadMoreSongsLimit = 20;
+  static const int _loadMoreSongsLimit = 10;
   static const Duration _debounceDuration = Duration(milliseconds: 180);
   
   // ✅ Cache estático para mantener datos entre navegaciones (evita parpadeo)
@@ -620,9 +620,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         child: CustomScrollView(
           key: PageStorageKey<String>('playlist_detail_scroll_${widget.playlistId}'),
           controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
-          // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
-          // Mantiene solo ~10 items fuera de vista (800px / 80px por item)
-          cacheExtent: 400, // Reducido de 800 a 400 para mejor rendimiento
+          // 🔥 OPTIMIZADO: cacheExtent ajustado para fluidez en gama media/baja
+          // Mantiene ~4-5 ítems fuera de vista
+          cacheExtent: 250,
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ), // ✅ Scroll estilo iPhone (igual que Home)
@@ -646,6 +646,17 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                       width: double.infinity,
                       height: double.infinity,
                       isLargeCover: true,
+                      // Limitar decodificación para evitar imágenes enormes en SliverAppBar
+                      maxCacheWidth: 1000,
+                      maxCacheHeight: 750,
+                      skipFade: true,
+                      placeholderColor: NeumorphismTheme.beigeMedium.withValues(alpha: 0.2),
+                      errorWidget: Container(
+                        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.25),
+                        child: const Center(
+                          child: Icon(Icons.image_not_supported, color: Colors.white70, size: 48),
+                        ),
+                      ),
                     ),
                     Container(
                       decoration: BoxDecoration(
@@ -1352,6 +1363,34 @@ class _SongListItem extends ConsumerWidget {
   final VoidCallback onTap;
   final Future<void> Function()? onPlay;
 
+  // Estilos cacheados para evitar recreación por ítem
+  static final TextStyle _indexStyle = GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: Colors.grey[600],
+  );
+  static final TextStyle _titleStyle = GoogleFonts.inter(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: Colors.black87,
+  );
+  static final TextStyle _artistStyle = GoogleFonts.inter(
+    fontSize: 14,
+    color: Colors.grey[600],
+  );
+  static final TextStyle _durationStyle = GoogleFonts.inter(
+    fontSize: 11,
+    color: Colors.grey[500],
+    fontWeight: FontWeight.w500,
+    height: 0.95,
+  );
+  static final TextStyle _streamsStyle = GoogleFonts.inter(
+    fontSize: 10,
+    color: Colors.grey[500],
+    fontWeight: FontWeight.w500,
+    height: 0.95,
+  );
+
   const _SongListItem({
     super.key,
     required this.song,
@@ -1362,24 +1401,17 @@ class _SongListItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playbackState = ref.watch(unifiedAudioProviderFixed);
-    final isCurrent = playbackState.currentSong?.id == song.id;
-    final isPlaying = playbackState.isPlaying;
-    final playIcon = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 180),
-      child: (isCurrent && isPlaying)
-          ? MiniEqualizer(
-              key: ValueKey('eq_${song.id}'),
-              size: 24,
-              color: NeumorphismTheme.coffeeMedium,
-              active: true,
-            )
-          : Icon(
-              Icons.play_circle_filled,
-              key: ValueKey('play_${song.id}'),
-              color: NeumorphismTheme.coffeeMedium,
-              size: 36,
-            ),
+    // 🔥 Reducir rebuilds: solo observar cambios relevantes
+    final isCurrent = ref.watch(
+      unifiedAudioProviderFixed.select((s) => s.currentSong?.id == song.id),
+    );
+    final isPlaying = ref.watch(
+      unifiedAudioProviderFixed.select((s) => s.isPlaying),
+    );
+    final playIcon = Icon(
+      isCurrent && isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+      color: NeumorphismTheme.coffeeMedium,
+      size: 36,
     );
     
     return InkWell(
@@ -1393,11 +1425,7 @@ class _SongListItem extends ConsumerWidget {
               width: 32,
               child: Text(
                 '$index',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[600],
-                ),
+                style: _indexStyle,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -1433,7 +1461,7 @@ class _SongListItem extends ConsumerWidget {
                   useThumbnail: true, // Usar thumbnails cuando estén disponibles
                   skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
                   lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
-                  visibilityThreshold: 0.1, // Cargar cuando 10% visible
+                  visibilityThreshold: 0.25, // Cargar más cerca del viewport para menos descargas anticipadas
                 ),
               ),
             ),
@@ -1447,21 +1475,14 @@ class _SongListItem extends ConsumerWidget {
                 children: [
                   Text(
                     song.title ?? 'Canción sin título',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
+                  style: _titleStyle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _getArtistName(song),
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                  style: _artistStyle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1495,22 +1516,12 @@ class _SongListItem extends ConsumerWidget {
                     // Duración - Tamaño legible
                     Text(
                       song.durationFormatted,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w500,
-                        height: 0.95, // Reducido ligeramente
-                      ),
+                      style: _durationStyle,
                     ),
                     // ✅ Reproducciones - Tamaño legible sin padding extra
                     Text(
                       '▶ ${NumberFormatter.format(song.totalStreams)}',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w500,
-                        height: 0.95, // Reducido ligeramente
-                      ),
+                      style: _streamsStyle,
                     ),
                   ],
                 ),

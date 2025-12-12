@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -72,7 +73,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            'Artistas',
+            'Compositores',
             style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -232,7 +233,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Artistas Destacados',
+          'Compositores Destacados',
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -258,7 +259,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'No hay artistas destacados',
+                  'No hay compositores destacados',
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     color: Colors.white.withValues(alpha: 0.7),
@@ -286,7 +287,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
   void _onArtistTap(BuildContext context, Artist artist) {
     final lite = ArtistLite(
       id: artist.id,
-      name: artist.stageName ?? 'Artista',
+      name: artist.stageName ?? 'Compositor',
       profilePhotoUrl: artist.profilePhotoUrl,
       coverPhotoUrl: artist.coverPhotoUrl,
       nationalityCode: null,
@@ -297,6 +298,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
   
   // #region agent log
   void _writeDebugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
+    if (!kDebugMode) return;
     final logEntry = {
       'location': location,
       'message': message,
@@ -307,17 +309,20 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
       'hypothesisId': hypothesisId,
     };
     debugPrint('[DEBUG] ${jsonEncode(logEntry)}');
-    try {
-      final logPath = r'c:\app definitiva\.cursor\debug.log';
-      final logFile = File(logPath);
-      final logDir = logFile.parent;
-      if (!logDir.existsSync()) {
-        logDir.createSync(recursive: true);
+    // Escribir en disco solo en debug y fuera del hilo principal
+    Future.microtask(() async {
+      try {
+        final logPath = r'c:\app definitiva\.cursor\debug.log';
+        final logFile = File(logPath);
+        final logDir = logFile.parent;
+        if (!await logDir.exists()) {
+          await logDir.create(recursive: true);
+        }
+        await logFile.writeAsString('${jsonEncode(logEntry)}\n', mode: FileMode.append);
+      } catch (_) {
+        // Ignorar errores de escritura en debug
       }
-      logFile.writeAsStringSync('${jsonEncode(logEntry)}\n', mode: FileMode.append, flush: true);
-    } catch (e) {
-      debugPrint('[DEBUG LOG FILE ERROR] $e');
-    }
+    });
   }
   // #endregion
 }

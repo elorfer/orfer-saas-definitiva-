@@ -397,6 +397,21 @@ class _BlurSongCard extends ConsumerWidget {
   final FeaturedSong featuredSong;
   final VoidCallback onTap;
 
+  // Estilos cacheados
+  static final TextStyle _titleStyle = GoogleFonts.inter(
+    fontSize: 15,
+    fontWeight: FontWeight.w700,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.3,
+    height: 1.2,
+  );
+  static final TextStyle _artistStyle = GoogleFonts.inter(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: NeumorphismTheme.textSecondary,
+    height: 1.2,
+  );
+
   const _BlurSongCard({
     required this.featuredSong,
     required this.onTap,
@@ -474,9 +489,14 @@ class _BlurSongCard extends ConsumerWidget {
                             useThumbnail: true,
                             lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
                             visibilityThreshold: 0.1, // Cargar cuando 10% visible
-                            maxCacheWidth: 112, // 2x el tamaño de visualización (56 * 2)
-                            maxCacheHeight: 112,
+                            maxCacheWidth: 140, // 2.5x para nitidez sin exceso
+                            maxCacheHeight: 140,
                             skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
+                            placeholderColor: NeumorphismTheme.accentLight,
+                            errorWidget: Container(
+                              color: NeumorphismTheme.accentLight.withValues(alpha: 0.4),
+                              child: const Icon(Icons.music_note, color: NeumorphismTheme.textSecondary),
+                            ),
                           ),
                         ),
                       ),
@@ -492,13 +512,7 @@ class _BlurSongCard extends ConsumerWidget {
                       children: [
                         Text(
                           song.title ?? 'Sin título',
-                          style: const TextStyle(
-                            fontSize: 15, // ✅ Más pequeño que Home (17 -> 15)
-                            fontWeight: FontWeight.w700,
-                            color: NeumorphismTheme.textPrimary,
-                            letterSpacing: -0.3,
-                            height: 1.2, // ✅ Reducir altura de línea para ahorrar espacio
-                          ),
+                          style: _titleStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -519,24 +533,14 @@ class _BlurSongCard extends ConsumerWidget {
                                               ? song.artist!.displayName 
                                               : 'Artista Desconocido'),
                                       isVerified: song.artist!.isVerifiedValue,
-                                      textStyle: const TextStyle(
-                                        fontSize: 13, // ✅ Más pequeño que Home (14 -> 13)
-                                        fontWeight: FontWeight.w500,
-                                        color: NeumorphismTheme.textSecondary,
-                                        height: 1.2, // ✅ Reducir altura de línea
-                                      ),
+                                      textStyle: _artistStyle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       badgeSize: 12.0, // ✅ Tamaño más pequeño para esta tarjeta
                                     )
-                                  : const Text(
+                                  : Text(
                                       'Artista Desconocido',
-                                      style: TextStyle(
-                                        fontSize: 13, // ✅ Más pequeño que Home (14 -> 13)
-                                        fontWeight: FontWeight.w500,
-                                        color: NeumorphismTheme.textSecondary,
-                                        height: 1.2, // ✅ Reducir altura de línea
-                                      ),
+                                      style: _artistStyle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),

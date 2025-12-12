@@ -10,25 +10,10 @@ import '../utils/logger.dart';
 import '../utils/url_normalizer.dart';
 import '../services/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:animate_do/animate_do.dart';
 import 'favorite_button.dart';
 import 'album_swiper.dart';
 import 'persistent_artwork_background.dart';
 import 'verified_badge.dart';
-
-/// Widget separado para el fondo premium (evita rebuilds)
-/// ✅ INDEPENDIENTE: El fondo no depende de la portada de la canción actual
-class _BackgroundImageWidget extends StatelessWidget {
-  const _BackgroundImageWidget();
-
-  @override
-  Widget build(BuildContext context) {
-    // ✅ Fondo independiente: color fijo que no cambia con la portada
-    return Container(
-      color: const Color(0xFF2B1E13), // Color fijo independiente de la portada
-    );
-  }
-}
 
 /// ✅ CACHE EN MEMORIA: URLs de imágenes precargadas (evita precargas duplicadas)
 class _ImagePreloadCache {
@@ -286,21 +271,25 @@ class _StaticPlayerUI extends ConsumerStatefulWidget {
 
 class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
   Song? _lastSongId; // ✅ Guardar ID de la última canción para detectar cambios
-  SwipeDirection? _lastSwipeDirection; // ✅ Dirección del último swipe para animaciones
-  bool _isInitialLoad = true; // ✅ Flag para detectar carga inicial
+
+  // Estilos cacheados para evitar recreación
+  static final TextStyle _TitleStyle = GoogleFonts.inter(
+    fontSize: 24,
+    fontWeight: FontWeight.w800,
+    color: Colors.white,
+    letterSpacing: -0.5,
+  );
+  static final TextStyle _ArtistStyle = GoogleFonts.inter(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: Colors.white.withValues(alpha: 0.9),
+    letterSpacing: -0.3,
+  );
 
   @override
   void initState() {
     super.initState();
     _lastSongId = widget.song;
-    // ✅ Marcar que es la carga inicial para mostrar todo sin animación
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {
-          _isInitialLoad = false; // Después del primer frame, ya no es carga inicial
-        });
-      }
-    });
   }
 
   @override
@@ -309,10 +298,6 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
     // ✅ DETECTAR CAMBIO DE CANCIÓN: Si cambió la canción, resetear estado
     if (oldWidget.song.id != widget.song.id || _lastSongId?.id != widget.song.id) {
       _lastSongId = widget.song;
-      // Resetear dirección del swipe para nueva canción
-      setState(() {
-        _lastSwipeDirection = null; // Resetear dirección del swipe
-      });
     }
   }
 
@@ -333,14 +318,6 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
             ),
           ),
 
-          // ✅ 2. Fondo independiente (no depende de la portada)
-          // Color fijo que no cambia con la canción
-          SizedBox.expand(
-            child: RepaintBoundary(
-              child: _BackgroundImageWidget(),
-            ),
-          ),
-
           // 2. Contenido seguro - OPTIMIZADO con CustomScrollView
           SafeArea(
             bottom: true, // ✅ Mantener padding inferior del SafeArea
@@ -350,7 +327,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                 // Usa lazy loading y mejor gestión de memoria que SingleChildScrollView
                 return CustomScrollView(
                   physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone (consistente con Home)
-                  cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
+                  cacheExtent: 300, // ✅ Ajustado: menos trabajo fuera de viewport
                   slivers: [
                     SliverToBoxAdapter(
                       child: Column(
@@ -382,20 +359,11 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                   child: AlbumSwiper(
                     currentSong: widget.song,
                     onSwipe: (direction) {
-                      // Cambiar canción según dirección del swipe
                       final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
                       if (direction == SwipeDirection.left) {
-                        // Swipe izquierda = siguiente canción
                         audioNotifier.next();
-                        setState(() {
-                          _lastSwipeDirection = SwipeDirection.left;
-                        });
                       } else {
-                        // Swipe derecha = canción anterior
                         audioNotifier.previous();
-                        setState(() {
-                          _lastSwipeDirection = SwipeDirection.right;
-                        });
                       }
                     },
                   ),
@@ -420,90 +388,20 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // ✅ Título animado con entrada lateral (sin animación en carga inicial)
-                                  _isInitialLoad 
-                                    ? Text(
-                                        widget.song.title ?? 'Sin título',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                          letterSpacing: -0.5,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      )
-                                    : (_lastSwipeDirection == SwipeDirection.left
-                                        ? SlideInLeft(
-                                            duration: const Duration(milliseconds: 300),
-                                            child: Text(
-                                              widget.song.title ?? 'Sin título',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 24,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.white,
-                                                letterSpacing: -0.5,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          )
-                                        : SlideInRight(
-                                            duration: const Duration(milliseconds: 300),
-                                            child: Text(
-                                              widget.song.title ?? 'Sin título',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 24,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.white,
-                                                letterSpacing: -0.5,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          )),
+                                  Text(
+                                    widget.song.title ?? 'Sin título',
+                                    style: _TitleStyle,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                   const SizedBox(height: 4),
-                                  // ✅ Artista animado con badge de verificación
-                                  _isInitialLoad
-                                    ? ArtistNameWithBadge(
-                                        artistName: widget.song.artist?.displayName ?? 'Artista desconocido',
-                                        isVerified: widget.song.artist?.isVerifiedValue ?? false,
-                                        textStyle: GoogleFonts.inter(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white.withValues(alpha: 0.9),
-                                          letterSpacing: -0.3,
-                                        ),
-                                        badgeSize: 16.0,
-                                      )
-                                    : (_lastSwipeDirection == SwipeDirection.left
-                                        ? SlideInLeft(
-                                            duration: const Duration(milliseconds: 300),
-                                            child: ArtistNameWithBadge(
-                                              artistName: widget.song.artist?.displayName ?? 'Artista desconocido',
-                                              isVerified: widget.song.artist?.isVerifiedValue ?? false,
-                                              textStyle: GoogleFonts.inter(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white.withValues(alpha: 0.9),
-                                                letterSpacing: -0.3,
-                                              ),
-                                              badgeSize: 16.0,
-                                            ),
-                                          )
-                                        : SlideInRight(
-                                            duration: const Duration(milliseconds: 300),
-                                            child: ArtistNameWithBadge(
-                                              artistName: widget.song.artist?.displayName ?? 'Artista desconocido',
-                                              isVerified: widget.song.artist?.isVerifiedValue ?? false,
-                                              textStyle: GoogleFonts.inter(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white.withValues(alpha: 0.9),
-                                                letterSpacing: -0.3,
-                                              ),
-                                              badgeSize: 16.0,
-                                            ),
-                                          )),
+                                  // Artista con badge
+                                  ArtistNameWithBadge(
+                                    artistName: widget.song.artist?.displayName ?? 'Artista desconocido',
+                                    isVerified: widget.song.artist?.isVerifiedValue ?? false,
+                                    textStyle: _ArtistStyle,
+                                    badgeSize: 16.0,
+                                  ),
                                 ],
                               ),
                             ),

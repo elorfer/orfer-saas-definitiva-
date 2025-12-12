@@ -489,15 +489,12 @@ class GoRouterNotifier extends ChangeNotifier {
           ],
         ),
         // Full Player - FUERA del ShellRoute para que no muestre el mini player
-        // Animación de expansión desde abajo
+        // Sin transición para apertura/cierre inmediata
         GoRoute(
           path: '/player',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
+          pageBuilder: (context, state) => createNoTransitionPage<void>(
             key: state.pageKey,
             child: const FullPlayerScreen(),
-            transitionsBuilder: SpotifyPageTransitions.playerExpansionTransition,
-            transitionDuration: const Duration(milliseconds: 350), // ✅ Aumentado para animación más visible
-            reverseTransitionDuration: const Duration(milliseconds: 250), // ✅ Aumentado para cierre más suave
           ),
         ),
         // Redirect raíz - DEBE estar al final para no interceptar otras rutas

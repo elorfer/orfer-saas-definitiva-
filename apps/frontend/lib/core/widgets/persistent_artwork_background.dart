@@ -28,14 +28,11 @@ class PersistentArtworkBackground extends StatelessWidget {
             child: _ArtworkImage(song: song),
           ),
         ),
-        // Blur global (encima de la carátula)
+        // Blur removido para máxima fluidez: solo overlay translúcido
         Positioned.fill(
           child: RepaintBoundary(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
-              child: Container(
-                color: Colors.black.withValues(alpha: 0.45),
-              ),
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.35),
             ),
           ),
         ),

@@ -41,9 +41,8 @@ final favoritesServiceProvider = Provider<FavoritesService>((ref) {
   return FavoritesService();
 });
 
-/// Provider del estado de favoritos
-/// ⚡ OPTIMIZACIÓN: autoDispose para liberar memoria cuando no hay listeners
-final favoritesProvider = NotifierProvider.autoDispose<FavoritesNotifier, FavoritesState>(() {
+/// Provider del estado de favoritos (persistente)
+final favoritesProvider = NotifierProvider<FavoritesNotifier, FavoritesState>(() {
   return FavoritesNotifier();
 });
 
@@ -54,15 +53,8 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
   @override
   FavoritesState build() {
     _service = ref.read(favoritesServiceProvider);
-    // ⚡ OPTIMIZACIÓN: Cargar favoritos de forma lazy (solo cuando se necesite)
-    // Diferir la carga hasta que realmente se acceda al estado
-    // Esto evita cargar favoritos cuando solo se expande el reproductor
-    Future.delayed(const Duration(milliseconds: 500), () {
-      // Solo cargar si el estado aún está en loading (no se ha cargado antes)
-      if (state.isLoading) {
-        _loadFavorites();
-      }
-    });
+    // Cargar favoritos inmediatamente la primera vez
+    _loadFavorites();
     return const FavoritesState(isLoading: true);
   }
 

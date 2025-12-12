@@ -293,9 +293,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               // ⚡ Header simplificado (sin gradientes ni sombras pesadas)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), // ⚡ Reducido padding
-                child: Text(
-                  'Buscar',
-                  style: AppTextStyles.searchTitle,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Buscar',
+                    style: AppTextStyles.searchTitle,
+                    textAlign: TextAlign.left,
+                  ),
                 ),
               ),
 

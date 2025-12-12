@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -263,6 +264,7 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
   
   // #region agent log
   void _writeDebugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
+    if (!kDebugMode) return;
     final logEntry = {
       'location': location,
       'message': message,
@@ -273,17 +275,20 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
       'hypothesisId': hypothesisId,
     };
     debugPrint('[DEBUG] ${jsonEncode(logEntry)}');
-    try {
-      final logPath = r'c:\app definitiva\.cursor\debug.log';
-      final logFile = File(logPath);
-      final logDir = logFile.parent;
-      if (!logDir.existsSync()) {
-        logDir.createSync(recursive: true);
+    // Escribir en disco solo en debug y fuera del hilo principal
+    Future.microtask(() async {
+      try {
+        final logPath = r'c:\app definitiva\.cursor\debug.log';
+        final logFile = File(logPath);
+        final logDir = logFile.parent;
+        if (!await logDir.exists()) {
+          await logDir.create(recursive: true);
+        }
+        await logFile.writeAsString('${jsonEncode(logEntry)}\n', mode: FileMode.append);
+      } catch (_) {
+        // Ignorar errores de escritura en debug
       }
-      logFile.writeAsStringSync('${jsonEncode(logEntry)}\n', mode: FileMode.append, flush: true);
-    } catch (e) {
-      debugPrint('[DEBUG LOG FILE ERROR] $e');
-    }
+    });
   }
   // #endregion
 }

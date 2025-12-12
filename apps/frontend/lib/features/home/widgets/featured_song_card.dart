@@ -19,19 +19,42 @@ import '../../../core/widgets/verified_badge.dart';
 class FeaturedSongCard extends ConsumerWidget {
   final FeaturedSong featuredSong;
   final VoidCallback? onTap;
+  final bool precacheAudio;
+
+  // Estilos cacheados para evitar recrearlos por ítem
+  static final TextStyle _titleStyle = GoogleFonts.inter(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.3,
+  );
+
+  static final TextStyle _artistStyle = GoogleFonts.inter(
+    fontSize: 13,
+    color: NeumorphismTheme.textSecondary,
+    fontWeight: FontWeight.w400,
+  );
+
+  static final TextStyle _metaStyle = GoogleFonts.inter(
+    fontSize: 12,
+    color: NeumorphismTheme.textSecondary.withValues(alpha: 0.8),
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+  );
 
   const FeaturedSongCard({
     super.key,
     required this.featuredSong,
     this.onTap,
+    this.precacheAudio = false,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final song = featuredSong.song;
 
-    // ⚡ PRECARGA AUTOMÁTICA: Precargar audio cuando la tarjeta es visible
-    if (song.fileUrl != null && song.fileUrl!.isNotEmpty) {
+    // ⚡ Precarga de audio opcional (solo cuando se indique desde la sección)
+    if (precacheAudio && song.fileUrl != null && song.fileUrl!.isNotEmpty) {
       final normalizedUrl = UrlNormalizer.normalizeUrl(song.fileUrl!);
       // Precargar en background sin bloquear UI
       AudioCacheManager.precacheAudio(normalizedUrl);
@@ -91,6 +114,9 @@ class FeaturedSongCard extends ConsumerWidget {
                       height: 56,
                       borderRadius: 12,
                       placeholderColor: NeumorphismTheme.accentLight,
+                      maxCacheWidth: 200,
+                      maxCacheHeight: 200,
+                      skipFade: true,
                     ),
                   ),
                 ),
@@ -104,12 +130,7 @@ class FeaturedSongCard extends ConsumerWidget {
                     children: [
                       Text(
                         song.title ?? 'Canción Sin Título',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: NeumorphismTheme.textPrimary,
-                          letterSpacing: -0.3,
-                        ),
+                        style: _titleStyle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -121,11 +142,7 @@ class FeaturedSongCard extends ConsumerWidget {
                         ArtistNameWithBadge(
                           artistName: _getArtistName(song),
                           isVerified: song.artist!.isVerifiedValue,
-                          textStyle: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: NeumorphismTheme.textSecondary,
-                            fontWeight: FontWeight.w400,
-                          ),
+                          textStyle: _artistStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           badgeSize: 12.0,
@@ -133,11 +150,7 @@ class FeaturedSongCard extends ConsumerWidget {
                       else
                         Text(
                           _getArtistName(song),
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: NeumorphismTheme.textSecondary,
-                            fontWeight: FontWeight.w400,
-                          ),
+                          style: _artistStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -164,12 +177,7 @@ class FeaturedSongCard extends ConsumerWidget {
                               const SizedBox(width: 4),
                               Text(
                                 '${NumberFormatter.format(song.totalStreams)} • ${song.durationFormatted}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: NeumorphismTheme.textSecondary.withValues(alpha: 0.8),
-                                  fontWeight: FontWeight.w500,
-                                  height: 1.0, // Sin altura adicional para mejor alineación
-                                ),
+                                style: _metaStyle,
                               ),
                             ],
                           );

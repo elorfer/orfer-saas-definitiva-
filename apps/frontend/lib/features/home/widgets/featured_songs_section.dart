@@ -69,12 +69,15 @@ class FeaturedSongsSection extends ConsumerWidget {
         
         // Lista vertical de canciones optimizada (máximo 4)
         // Usar Column con Expanded para evitar shrinkWrap (mejor rendimiento)
-        ...featuredSongs.take(4).map((featuredSong) {
+        ...featuredSongs.take(4).toList().asMap().entries.map((entry) {
+          final index = entry.key;
+          final featuredSong = entry.value;
           return RepaintBoundary(
             key: ValueKey('song_${featuredSong.song.id}'), // Key estable para optimización
             child: FeaturedSongCard(
               key: ValueKey('song_card_${featuredSong.song.id}'), // Key estable
               featuredSong: featuredSong,
+              precacheAudio: index < 2, // Solo precargar audio de los primeros visibles
               onTap: () {
                 _onSongTap(context, featuredSong.song);
               },

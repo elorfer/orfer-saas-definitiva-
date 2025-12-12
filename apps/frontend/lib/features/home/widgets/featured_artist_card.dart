@@ -13,6 +13,26 @@ class FeaturedArtistCard extends StatelessWidget {
   final FeaturedArtist featuredArtist;
   final VoidCallback? onTap;
 
+  // Estilos cacheados para evitar recrearlos por item
+  static final TextStyle _nameStyle = GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w700,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.2,
+  );
+
+  static final TextStyle _followersStyle = GoogleFonts.inter(
+    fontSize: 11.5,
+    color: NeumorphismTheme.textSecondary,
+    fontWeight: FontWeight.w500,
+  );
+
+  static final TextStyle _badgeStyle = GoogleFonts.inter(
+    fontSize: 10.5,
+    color: Colors.white,
+    fontWeight: FontWeight.w700,
+  );
+
   const FeaturedArtistCard({
     super.key,
     required this.featuredArtist,
@@ -62,12 +82,7 @@ class FeaturedArtistCard extends StatelessWidget {
                 ArtistNameWithBadge(
                   artistName: artist.stageName ?? 'Artista Desconocido',
                   isVerified: artist.isVerifiedValue,
-                  textStyle: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: NeumorphismTheme.textPrimary,
-                    letterSpacing: -0.2,
-                  ),
+                  textStyle: _nameStyle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   badgeSize: 12.0,
@@ -87,11 +102,7 @@ class FeaturedArtistCard extends StatelessWidget {
                     Flexible(
                       child: Text(
                         '${NumberFormatter.format(artist.totalFollowers)} seguidores',
-                        style: GoogleFonts.inter(
-                          fontSize: 11.5,
-                          color: NeumorphismTheme.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: _followersStyle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -134,11 +145,7 @@ class FeaturedArtistCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             featuredArtist.featuredReason!,
-                            style: GoogleFonts.inter(
-                              fontSize: 10.5,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: _badgeStyle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -212,8 +219,8 @@ class FeaturedArtistCard extends StatelessWidget {
         fit: BoxFit.cover,
         memCacheWidth: 240, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (240px para imagen de 120px)
         memCacheHeight: 240,
-        maxWidthDiskCache: 600,
-        maxHeightDiskCache: 600,
+        maxWidthDiskCache: 400,
+        maxHeightDiskCache: 400,
         fadeInDuration: Duration.zero, // 🔥 Cero animaciones innecesarias
         fadeOutDuration: Duration.zero,
         errorWidget: (context, url, error) {

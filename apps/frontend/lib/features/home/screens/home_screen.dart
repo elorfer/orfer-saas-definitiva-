@@ -159,7 +159,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           },
                         ),
                       ),
-                      // Artistas destacados
+                      // Compositores destacados
                       SliverToBoxAdapter(
                         child: RepaintBoundary(
                           child: FeaturedArtistsSection(key: const ValueKey('artists')),

@@ -38,26 +38,15 @@ class FinalMiniPlayer extends ConsumerWidget {
       builder: (builderContext) {
         return GestureDetector(
           onTap: onTap ?? () {
-            // Si no hay callback personalizado, abrir reproductor completo
-            // ⚡ OPTIMIZADO: Verificar estado antes de navegar para evitar múltiples llamadas
             try {
               final audioState = ref.read(unifiedAudioProviderFixed);
               if (audioState.currentSong != null && !audioState.isPlayerExpanded) {
-                // Actualizar estado primero
+                // Marcar expansión y navegar de inmediato para reducir latencia percibida
                 ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                
-                // ⚡ CORRECCIÓN: Pequeño delay para permitir que la animación se vea
-                // Usar SchedulerBinding para asegurar que la animación comience correctamente
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (builderContext.mounted) {
-                    // Navegar después del frame para que la animación se ejecute correctamente
-                    Future.microtask(() {
-                      if (builderContext.mounted) {
-                        builderContext.push('/player');
-                      }
-                    });
-                  }
-                });
+                if (builderContext.mounted) {
+                  // Navegar sin animación extra para reducir latencia
+                  builderContext.go('/player');
+                }
               }
             } catch (e) {
               AppLogger.error('[FinalMiniPlayer] Error al abrir reproductor: $e');
@@ -75,18 +64,12 @@ class FinalMiniPlayer extends ConsumerWidget {
             width: 2,
           ),
           boxShadow: [
-            // Sombra exterior más prominente
+            // Sombra exterior suavizada para menor overdraw
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-              spreadRadius: 1,
-            ),
-            // Sombra interior para efecto neumórfico
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(-2, -2),
+              color: Colors.black.withValues(alpha: 0.16),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+              spreadRadius: 0.5,
             ),
           ],
         ),

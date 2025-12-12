@@ -8,6 +8,29 @@ class FeaturedPlaylistCard extends StatelessWidget {
   final FeaturedPlaylist featuredPlaylist;
   final VoidCallback? onTap;
 
+  // Estilos cacheados
+  static final TextStyle _titleStyle = GoogleFonts.inter(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.3,
+  );
+  static final TextStyle _userStyle = GoogleFonts.inter(
+    fontSize: 13,
+    color: NeumorphismTheme.textSecondary,
+    fontWeight: FontWeight.w400,
+  );
+  static final TextStyle _tracksStyle = GoogleFonts.inter(
+    fontSize: 12,
+    color: NeumorphismTheme.textSecondary,
+    fontWeight: FontWeight.w500,
+  );
+  static final TextStyle _badgeStyle = GoogleFonts.inter(
+    fontSize: 11,
+    color: NeumorphismTheme.accent,
+    fontWeight: FontWeight.w600,
+  );
+
   const FeaturedPlaylistCard({
     super.key,
     required this.featuredPlaylist,
@@ -49,8 +72,8 @@ class FeaturedPlaylistCard extends StatelessWidget {
                 height: 160,
                 borderRadius: 16,
                 placeholderColor: NeumorphismTheme.accentLight,
-                maxCacheWidth: 300, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (300px suficiente)
-                maxCacheHeight: 300,
+                maxCacheWidth: 280, // 🔥 Ajuste fino: 280px suficiente para 160px físicos
+                maxCacheHeight: 280,
                 skipFade: true, // 🔥 Sin fade para mejor rendimiento
               ),
               ),
@@ -61,12 +84,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
             // Nombre de la playlist
             Text(
               (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: NeumorphismTheme.textPrimary,
-                letterSpacing: -0.3,
-              ),
+              style: _titleStyle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -82,11 +100,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         playlist.user?.firstName ?? 'Usuario',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: NeumorphismTheme.textSecondary,
-                          fontWeight: FontWeight.w400,
-                        ),
+                        style: _userStyle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -105,11 +119,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           '${playlist.totalTracks}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: NeumorphismTheme.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: _tracksStyle,
                         ),
                       ],
                     ),
@@ -144,11 +154,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                     Expanded( // ✅ Expanded para evitar overflow del texto
                       child: Text(
                         featuredPlaylist.featuredReason!,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: NeumorphismTheme.accent,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: _badgeStyle,
                         maxLines: 1, // ✅ Máximo 1 línea
                         overflow: TextOverflow.ellipsis, // ✅ Ellipsis si es muy largo
                       ),

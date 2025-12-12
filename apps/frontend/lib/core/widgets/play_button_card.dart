@@ -112,20 +112,10 @@ class PlayButtonCard extends ConsumerWidget {
             ),
           ],
         ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 150),
-          transitionBuilder: (child, animation) {
-            return ScaleTransition(
-              scale: animation,
-              child: child,
-            );
-          },
-          child: Icon(
-            isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-            key: ValueKey(isPlaying),
-            color: iconColor ?? Colors.white,
-            size: size * 0.5,
-          ),
+        child: Icon(
+          isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          color: iconColor ?? Colors.white,
+          size: size * 0.5,
         ),
       ),
     );

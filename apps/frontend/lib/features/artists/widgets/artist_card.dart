@@ -31,6 +31,9 @@ class ArtistCard extends ConsumerWidget {
               imageUrl: artist.coverPhotoUrl,
               fit: BoxFit.cover,
               borderRadius: 12,
+              maxCacheWidth: 400, // Ajuste a ~2.5x del tamaño visible
+              maxCacheHeight: 240,
+              skipFade: true,
             ),
           ),
           const SizedBox(height: 8),
@@ -42,6 +45,9 @@ class ArtistCard extends ConsumerWidget {
                   width: 36,
                   height: 36,
                   fit: BoxFit.cover,
+                  maxCacheWidth: 96, // 36*2.6
+                  maxCacheHeight: 96,
+                  skipFade: true,
                 ),
               ),
               const SizedBox(width: 8),

@@ -7,6 +7,30 @@ import '../../../core/widgets/optimized_image.dart';
 class UserProfileCard extends StatelessWidget {
   final User user;
 
+  // Estilos cacheados
+  static final TextStyle _nameStyle = GoogleFonts.inter(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: Colors.grey[800],
+    decoration: TextDecoration.none,
+  );
+  static final TextStyle _usernameStyle = GoogleFonts.inter(
+    fontSize: 14,
+    color: Colors.grey[600],
+    decoration: TextDecoration.none,
+  );
+  static final TextStyle _statValueStyle = GoogleFonts.inter(
+    fontSize: 16,
+    fontWeight: FontWeight.bold,
+    color: Colors.grey[800],
+    decoration: TextDecoration.none,
+  );
+  static final TextStyle _statLabelStyle = GoogleFonts.inter(
+    fontSize: 12,
+    color: Colors.grey[600],
+    decoration: TextDecoration.none,
+  );
+
   const UserProfileCard({
     super.key,
     required this.user,
@@ -48,6 +72,9 @@ class UserProfileCard extends StatelessWidget {
                     width: 60,
                     height: 60,
                     borderRadius: 30,
+                    maxCacheWidth: 160,
+                    maxCacheHeight: 160,
+                    skipFade: true,
                     errorWidget: Container(
                       color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
                       child: Icon(
@@ -67,21 +94,12 @@ class UserProfileCard extends StatelessWidget {
                   children: [
                     Text(
                       user.fullName,
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                        decoration: TextDecoration.none,
-                      ),
+                      style: _nameStyle,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '@${user.username}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        decoration: TextDecoration.none,
-                      ),
+                      style: _usernameStyle,
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -232,6 +250,9 @@ class _StatItem extends StatelessWidget {
   final String label;
   final String value;
 
+  static final TextStyle _statValueStyle = UserProfileCard._statValueStyle;
+  static final TextStyle _statLabelStyle = UserProfileCard._statLabelStyle;
+
   const _StatItem({
     required this.icon,
     required this.label,
@@ -250,20 +271,11 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[800],
-            decoration: TextDecoration.none,
-          ),
+          style: _statValueStyle,
         ),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: Colors.grey[600],
-            decoration: TextDecoration.none,
-          ),
+          style: _statLabelStyle,
         ),
       ],
     );

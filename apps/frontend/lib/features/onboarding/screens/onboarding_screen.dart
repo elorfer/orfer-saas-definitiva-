@@ -221,6 +221,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             pageData.image,
             package: null,
             fit: BoxFit.contain, // 🔥 Mantener tamaño original sin estirar
+            // Ajuste de caché: limitar ancho de decodificación (~1.5x ancho típico)
             cacheWidth: 1080,
             errorBuilder: (context, error, stackTrace) {
               // 🔥 Manejo de error silencioso para evitar crashes
