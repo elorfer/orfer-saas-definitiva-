@@ -172,14 +172,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
 
     return Scaffold(
+      // OPTIMIZACIÓN: Evitar redimensionamiento cuando aparece el teclado para reducir lag
+      resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Obtener el tamaño del teclado
+              final viewInsets = MediaQuery.of(context).viewInsets;
+              final keyboardHeight = viewInsets.bottom;
+              
+              return SingleChildScrollView(
+                // OPTIMIZACIÓN: Agregar padding inferior cuando el teclado está visible
+                padding: EdgeInsets.only(
+                  left: 24.0,
+                  right: 24.0,
+                  top: 24.0,
+                  bottom: keyboardHeight > 0 ? keyboardHeight + 24.0 : 24.0,
+                ),
+                // OPTIMIZACIÓN: Mejorar comportamiento del scroll con el teclado
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
@@ -610,7 +626,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                 const SizedBox(height: 24),
               ],
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),

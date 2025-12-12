@@ -178,3 +178,5 @@ Todas las optimizaciones están centralizadas en `PerformanceConfig` para fácil
 
 
 
+
+

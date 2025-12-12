@@ -238,3 +238,5 @@ Si WebSocket falla, el componente automáticamente:
 
 
 
+
+

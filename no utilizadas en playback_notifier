@@ -1,0 +1,98 @@
+[1mdiff --git a/apps/frontend/lib/core/providers/playback_notifier.dart b/apps/frontend/lib/core/providers/playback_notifier.dart[m
+[1mindex 07fa6e8..9566b59 100644[m
+[1m--- a/apps/frontend/lib/core/providers/playback_notifier.dart[m
+[1m+++ b/apps/frontend/lib/core/providers/playback_notifier.dart[m
+[36m@@ -43,8 +43,6 @@[m [mclass PlaybackNotifier extends Notifier<PlaybackState> {[m
+   bool _isRestartingAlgorithm = false; // 🎯 PROTECCIÓN: Flag para evitar reinicios múltiples del algoritmo[m
+   bool _isReplacingQueue = false; // 🎯 PROTECCIÓN: Flag cuando se reemplaza toda la cola (loadNewQueue)[m
+   Song? _lastConfirmedSong; // 🔒 Conserva la última canción confirmada para evitar flashes de portada[m
+[31m-  Song? _pendingSong; // Canción candidata pendiente de confirmar[m
+[31m-  DateTime? _pendingSince; // Timestamp de la canción candidata[m
+   bool _isDeduplicating = false; // 🛡️ PROTECCIÓN: Flag para evitar deduplicación múltiple simultánea[m
+   DateTime? _lastDeduplicationTime; // 🛡️ PROTECCIÓN: Timestamp de última deduplicación[m
+   static const Duration _deduplicationCooldown = Duration(seconds: 2); // Cooldown entre deduplicaciones[m
+[36m@@ -103,9 +101,6 @@[m [mclass PlaybackNotifier extends Notifier<PlaybackState> {[m
+   int _consecutiveFailures = 0; // Contador de fallos consecutivos en precarga[m
+   DateTime? _lastEmergencyCall; // Timestamp de última llamada de emergencia[m
+   static const Duration _emergencyCooldown = Duration(seconds: 10); // Cooldown entre emergencias[m
+[31m-  DateTime? _lastCoverSetTime; // Controla frecuencia de actualización de portada[m
+[31m-  static const Duration _coverSetDebounce = Duration(milliseconds: 300);[m
+[31m-  static const Duration _coverPendingThreshold = Duration(milliseconds: 400);[m
+ [m
+   // 🔍 FILTRO: Validar canciones antes de cargar a la cola (evita carátulas de tracks corruptos)[m
+   List<Song> _filterPlayableSongs(Iterable<Song> songs) {[m
+[36m@@ -2426,7 +2421,6 @@[m [mclass PlaybackNotifier extends Notifier<PlaybackState> {[m
+       // Actualizar currentSong desde la cola real, conservando la actual hasta que el índice cambie[m
+       final currentIdx = sequenceState.currentIndex;[m
+       final currentSongId = state.currentSong?.id;[m
+[31m-      final now = DateTime.now();[m
+ [m
+       // 🔒 Bloqueo crítico: mientras inicia algoritmo, ignorar índices distintos de 0[m
+       if (_isAwaitingInitialAlgorithmPlay) {[m
+[36m@@ -2455,49 +2449,17 @@[m [mclass PlaybackNotifier extends Notifier<PlaybackState> {[m
+         if (!processingActive) {[m
+           return;[m
+         }[m
+[31m-        final isReady = processingState == ProcessingState.ready;[m
+[31m-        final isActuallyPlaying = service.player.playing || currentPos > Duration.zero;[m
+[31m-        // Requerimos que haya al menos avance real para confirmar portada (evita flash en saltos instantáneos)[m
+[31m-        final hasStartedPlayback = currentPos > const Duration(milliseconds: 500);[m
+[31m-        final isDebounced = _lastCoverSetTime != null &&[m
+[31m-            now.difference(_lastCoverSetTime!) < _coverSetDebounce;[m
+[31m-        final isSamePending = _pendingSong?.id == songAtIdx.id;[m
+[31m-        final pendingElapsed = _pendingSince != null ? now.difference(_pendingSince!) : Duration.zero;[m
+[31m-[m
+[31m-        // No adelantar portada si el player aún no está listo, está en ventana de gracia al reemplazar cola,[m
+[31m-        // o todavía no reproduce (evita flash).[m
+[31m-        if (!isReady || !isActuallyPlaying || !hasStartedPlayback || isDebounced) {[m
+[31m-          state = state.copyWith([m
+[31m-            currentPosition: currentPos,[m
+[31m-            totalDuration: currentDuration ?? state.totalDuration,[m
+[31m-            lastConfirmedSong: songAtIdx,[m
+[31m-          );[m
+[31m-          // Registrar candidato pendiente si es distinto al actual[m
+[31m-          if (state.currentSong?.id != songAtIdx.id && _pendingSong?.id != songAtIdx.id) {[m
+[31m-            _pendingSong = songAtIdx;[m
+[31m-            _pendingSince = now;[m
+[31m-          }[m
+[31m-          return;[m
+[31m-        }[m
+[32m+[m[32m        // No adelantar portada si el player no está activo[m
+[32m+[m[32m        state = state.copyWith([m
+[32m+[m[32m          currentPosition: currentPos,[m
+[32m+[m[32m          totalDuration: currentDuration ?? state.totalDuration,[m
+[32m+[m[32m          lastConfirmedSong: songAtIdx,[m
+[32m+[m[32m        );[m
+ [m
+         // Si aún no cambia la canción, no sobrescribir la portada; solo actualizar barra[m
+         if (currentSongId != null && currentSongId == songAtIdx.id) {[m
+[31m-          state = state.copyWith([m
+[31m-            currentPosition: currentPos,[m
+[31m-            totalDuration: currentDuration ?? state.totalDuration,[m
+[31m-            lastConfirmedSong: songAtIdx,[m
+[31m-          );[m
+[32m+[m[32m          return;[m
+         } else {[m
+[31m-          // Confirmar cambio de portada solo si el candidato estuvo estable el tiempo mínimo[m
+[31m-          if (isSamePending && pendingElapsed < _coverPendingThreshold) {[m
+[31m-            state = state.copyWith([m
+[31m-              currentPosition: currentPos,[m
+[31m-              totalDuration: currentDuration ?? state.totalDuration,[m
+[31m-              lastConfirmedSong: songAtIdx,[m
+[31m-            );[m
+[31m-            return;[m
+[31m-          }[m
+[31m-[m
+           // Solo cambiar currentSong cuando el índice cambia o estaba vacío[m
+           state = state.copyWith([m
+             currentSong: songAtIdx,[m
+[36m@@ -2505,9 +2467,6 @@[m [mclass PlaybackNotifier extends Notifier<PlaybackState> {[m
+             totalDuration: currentDuration ?? Duration.zero,[m
+             lastConfirmedSong: songAtIdx,[m
+           );[m
+[31m-          _lastCoverSetTime = now;[m
+[31m-        _pendingSong = null;[m
+[31m-        _pendingSince = null;[m
+           AppLogger.info('[PlaybackNotifier] ✅ Canción sincronizada: ${songAtIdx.title}');[m
+         }[m
+       } else {[m

@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/home_service.dart';
 import '../models/artist_model.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
+import '../models/app_message_model.dart';
 
 /// Provider para el servicio de home
 final homeServiceProvider = Provider<HomeService>((ref) {
@@ -18,6 +20,7 @@ class HomeState {
   final List<FeaturedPlaylist> featuredPlaylists;
   final List<Song> popularSongs;
   final List<Artist> topArtists;
+  final HomeMessage? homeMessage;
   final bool isLoading;
   final String? error;
   final bool isInitialized;
@@ -28,6 +31,7 @@ class HomeState {
     this.featuredPlaylists = const [],
     this.popularSongs = const [],
     this.topArtists = const [],
+    this.homeMessage,
     this.isLoading = false,
     this.error,
     this.isInitialized = false,
@@ -44,6 +48,7 @@ class HomeState {
       'popularSongs':
           popularSongs.map((s) => s.toJson()).toList(growable: false),
       'topArtists': topArtists.map((a) => a.toJson()).toList(growable: false),
+      'homeMessage': homeMessage?.toJson(),
       'isLoading': isLoading,
       'error': error,
       'isInitialized': isInitialized,
@@ -80,6 +85,10 @@ class HomeState {
                     Artist.fromJson(Map<String, dynamic>.from(e as Map)))
                 .toList() ??
             const [],
+        homeMessage: json['homeMessage'] != null
+            ? HomeMessage.fromJson(
+                Map<String, dynamic>.from(json['homeMessage'] as Map))
+            : null,
         isLoading: json['isLoading'] as bool? ?? false,
         error: json['error'] as String?,
         isInitialized: json['isInitialized'] as bool? ?? false,
@@ -95,6 +104,7 @@ class HomeState {
     List<FeaturedPlaylist>? featuredPlaylists,
     List<Song>? popularSongs,
     List<Artist>? topArtists,
+    HomeMessage? homeMessage,
     bool? isLoading,
     String? error,
     bool? isInitialized,
@@ -105,6 +115,7 @@ class HomeState {
       featuredPlaylists: featuredPlaylists ?? this.featuredPlaylists,
       popularSongs: popularSongs ?? this.popularSongs,
       topArtists: topArtists ?? this.topArtists,
+      homeMessage: homeMessage ?? this.homeMessage,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       isInitialized: isInitialized ?? this.isInitialized,
@@ -122,6 +133,8 @@ class HomeNotifier extends Notifier<HomeState> {
   // TTL del cache local para hidratar el home en arranque frío
   static const Duration _cacheTtl = Duration(minutes: 4);
   bool _hasLoadedCache = false;
+  static const Duration _cacheSaveMinInterval = Duration(seconds: 10);
+  DateTime? _lastCacheSave;
 
   @override
   HomeState build() {
@@ -149,44 +162,80 @@ class HomeNotifier extends Notifier<HomeState> {
   }
 
   /// Cargar todos los datos de la pantalla de inicio
+  /// 🔥 OPTIMIZACIÓN: Carga progresiva - primero lo visible, luego el resto
   Future<void> loadHomeData({bool forceRefresh = false}) async {
     try {
+      // #region agent log
+      final loadStartTime = DateTime.now().millisecondsSinceEpoch;
+      _writeDebugLog('home_provider.dart:152', 'loadHomeData started', {'forceRefresh': forceRefresh}, 'C');
+      // #endregion
+      
       // Mantener datos actuales para evitar parpadeos; solo marcar loading
       state = state.copyWith(isLoading: true, error: null);
 
-      // Cargar datos individualmente para manejar errores por separado
+      // 🔥 FIX: Carga progresiva - cargar primero lo que el usuario ve primero
+      // Fase 1: Cargar datos críticos (lo que aparece primero en pantalla)
       List<FeaturedArtist> featuredArtists = [];
       List<FeaturedSong> featuredSongs = [];
-      List<FeaturedPlaylist> featuredPlaylists = [];
-      List<Song> popularSongs = [];
-      List<Artist> topArtists = [];
-
-      // Cargar datos en paralelo para mejor rendimiento
+      HomeMessage? homeMessage;
+      
+      // #region agent log
+      final phase1StartTime = DateTime.now().millisecondsSinceEpoch;
+      // #endregion
+      
+      // Cargar solo lo esencial primero (artistas y canciones destacadas)
       await Future.wait([
-        // Artistas destacados (✅ OPTIMIZACIÓN: pasar forceRefresh para respetar cache)
         _homeService.getFeaturedArtists(limit: 6, forceRefresh: forceRefresh).then((value) => featuredArtists = value).catchError((_) => <FeaturedArtist>[]),
-        // Canciones destacadas
         _homeService.getFeaturedSongs(limit: 20, forceRefresh: forceRefresh).then((value) => featuredSongs = value).catchError((_) => <FeaturedSong>[]),
-        // Playlists destacadas
-        _homeService.getFeaturedPlaylists(limit: 6).then((value) => featuredPlaylists = value).catchError((_) => <FeaturedPlaylist>[]),
-        // Canciones populares (error silencioso si falla)
-        _homeService.getPopularSongs(limit: 10).then((value) => popularSongs = value).catchError((_) => <Song>[]),
-        // Artistas top
-        _homeService.getTopArtists(limit: 8).then((value) => topArtists = value).catchError((_) => <Artist>[]),
+        _homeService.getHomeMessage(forceRefresh: forceRefresh).then((value) => homeMessage = value).catchError((_) => null),
       ]);
-
+      
+      // Actualizar estado con datos críticos inmediatamente
       state = state.copyWith(
         featuredArtists: featuredArtists,
         featuredSongs: featuredSongs,
-        featuredPlaylists: featuredPlaylists,
-        popularSongs: popularSongs,
-        topArtists: topArtists,
+        homeMessage: homeMessage,
+      );
+      
+      // #region agent log
+      final phase1EndTime = DateTime.now().millisecondsSinceEpoch;
+      _writeDebugLog('home_provider.dart:177', 'Phase 1 (critical) completed', {'duration': phase1EndTime - phase1StartTime}, 'C');
+      // #endregion
+      
+      // Fase 2: Cargar datos secundarios (playlists y otros) de forma asíncrona
+      List<FeaturedPlaylist> featuredPlaylists = [];
+      List<Song> popularSongs = [];
+      List<Artist> topArtists = [];
+      
+      // Marcar como inicializado con datos críticos ya cargados
+      state = state.copyWith(
         isLoading: false,
-        error: null,
         isInitialized: true,
       );
-      // Guardar en cache para arranque en frío
-      await _saveToCache(state);
+      
+      // Guardar cache inicial con datos críticos (con throttle)
+      await _saveToCacheThrottled(state);
+      
+      // Cargar el resto en paralelo de forma asíncrona (sin bloquear)
+      Future.wait([
+        _homeService.getFeaturedPlaylists(limit: 6).then((value) => featuredPlaylists = value).catchError((_) => <FeaturedPlaylist>[]),
+        _homeService.getPopularSongs(limit: 10).then((value) => popularSongs = value).catchError((_) => <Song>[]),
+        _homeService.getTopArtists(limit: 8).then((value) => topArtists = value).catchError((_) => <Artist>[]),
+      ]).then((_) {
+        // Actualizar estado con datos secundarios cuando estén listos
+        state = state.copyWith(
+          featuredPlaylists: featuredPlaylists,
+          popularSongs: popularSongs,
+          topArtists: topArtists,
+        );
+        _saveToCacheThrottled(state);
+      });
+      
+      // #region agent log
+      final loadEndTime = DateTime.now().millisecondsSinceEpoch;
+      final totalLoadDuration = loadEndTime - loadStartTime;
+      _writeDebugLog('home_provider.dart:197', 'loadHomeData completed', {'totalDuration': totalLoadDuration, 'artistsCount': featuredArtists.length, 'songsCount': featuredSongs.length, 'playlistsCount': featuredPlaylists.length}, 'C');
+      // #endregion
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -206,7 +255,7 @@ class HomeNotifier extends Notifier<HomeState> {
     try {
       final artists = await _homeService.getFeaturedArtists(limit: 6);
       state = state.copyWith(featuredArtists: artists);
-      await _saveToCache(state);
+      await _saveToCacheThrottled(state);
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar artistas: $e');
     }
@@ -217,7 +266,7 @@ class HomeNotifier extends Notifier<HomeState> {
     try {
       final songs = await _homeService.getFeaturedSongs(limit: 20, forceRefresh: forceRefresh);
       state = state.copyWith(featuredSongs: songs);
-      await _saveToCache(state);
+      await _saveToCacheThrottled(state);
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar canciones: $e');
     }
@@ -228,7 +277,7 @@ class HomeNotifier extends Notifier<HomeState> {
     try {
       final playlists = await _homeService.getFeaturedPlaylists(limit: 6);
       state = state.copyWith(featuredPlaylists: playlists);
-      await _saveToCache(state);
+      await _saveToCacheThrottled(state);
     } catch (e) {
       state = state.copyWith(error: 'Error al cargar playlists: $e');
     }
@@ -271,6 +320,16 @@ class HomeNotifier extends Notifier<HomeState> {
     }
   }
 
+  Future<void> _saveToCacheThrottled(HomeState newState) async {
+    final now = DateTime.now();
+    if (_lastCacheSave != null &&
+        now.difference(_lastCacheSave!) < _cacheSaveMinInterval) {
+      return;
+    }
+    _lastCacheSave = now;
+    await _saveToCache(newState);
+  }
+
   Future<void> _saveToCache(HomeState newState) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -280,6 +339,32 @@ class HomeNotifier extends Notifier<HomeState> {
     }
   }
 }
+
+// #region agent log
+void _writeDebugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
+  final logEntry = {
+    'location': location,
+    'message': message,
+    'data': data,
+    'timestamp': DateTime.now().millisecondsSinceEpoch,
+    'sessionId': 'debug-session',
+    'runId': 'run1',
+    'hypothesisId': hypothesisId,
+  };
+  print('[DEBUG] ${jsonEncode(logEntry)}');
+  try {
+    final logPath = r'c:\app definitiva\.cursor\debug.log';
+    final logFile = File(logPath);
+    final logDir = logFile.parent;
+    if (!logDir.existsSync()) {
+      logDir.createSync(recursive: true);
+    }
+    logFile.writeAsStringSync('${jsonEncode(logEntry)}\n', mode: FileMode.append, flush: true);
+  } catch (e) {
+    print('[DEBUG LOG FILE ERROR] $e');
+  }
+}
+// #endregion
 
 /// Provider para el estado de home
 final homeStateProvider = NotifierProvider<HomeNotifier, HomeState>(() {
@@ -317,6 +402,11 @@ final topArtistsProvider = Provider<List<Artist>>((ref) {
   // 🔥 OPTIMIZACIÓN: keepAlive para memoization - evita recálculos innecesarios
   ref.keepAlive();
   return ref.watch(homeStateProvider.select((state) => state.topArtists));
+});
+
+final homeMessageProvider = Provider<HomeMessage?>((ref) {
+  ref.keepAlive();
+  return ref.watch(homeStateProvider.select((state) => state.homeMessage));
 });
 
 final isLoadingProvider = Provider<bool>((ref) {

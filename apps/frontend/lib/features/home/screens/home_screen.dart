@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -10,6 +14,7 @@ import '../../../core/theme/text_styles.dart';
 import '../widgets/featured_artists_section.dart';
 import '../widgets/intelligent_featured_songs_section.dart';
 import '../widgets/featured_playlists_section.dart';
+import '../widgets/home_message_banner.dart';
 
 /// HomeScreen optimizado con AutomaticKeepAliveClientMixin
 /// Evita reconstrucciones innecesarias al cambiar de pestañas
@@ -25,102 +30,240 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   bool get wantKeepAlive => true; // Mantener estado al cambiar de pestaña
 
-  // ScrollController simple
-  late final ScrollController _scrollController;
+  // Header fijo visible siempre
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    // #region agent log
+    try {
+      final logEntry = {
+        'sessionId': 'debug-session',
+        'runId': 'run1',
+        'hypothesisId': 'H-init',
+        'location': 'home_screen.dart:initState',
+        'message': 'init_home_screen',
+        'data': {},
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      debugPrint(jsonEncode(logEntry));
+    } catch (_) {}
+    // #endregion
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
     super.dispose();
   }
+  
+  // Sin auto-hide: header fijo
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
+    // #region agent log
+    final buildStartTime = DateTime.now().millisecondsSinceEpoch;
+    _writeDebugLog('home_screen.dart:44', 'HomeScreen build started', {'timestamp': buildStartTime}, 'D');
+    // #endregion
+    
     // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
-    return RepaintBoundary(
+    final mediaQuery = MediaQuery.of(context);
+    final statusBarHeight = mediaQuery.padding.top;
+    final headerHeight = 88.0 + statusBarHeight; // Altura del header + barra de notificaciones
+    // #region agent log
+    try {
+      final logEntry = {
+        'sessionId': 'debug-session',
+        'runId': 'run1',
+        'hypothesisId': 'H-build',
+        'location': 'home_screen.dart:build',
+        'message': 'build_metrics',
+        'data': {
+          'statusBarHeight': statusBarHeight,
+          'headerHeight': headerHeight,
+        },
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      debugPrint(jsonEncode(logEntry));
+    } catch (_) {}
+    // #endregion
+    
+    final widget = RepaintBoundary(
       child: Scaffold(
         key: const ValueKey('home_screen_scaffold'),
         backgroundColor: Colors.transparent,
         drawer: const PremiumProfileDrawer(), // 🔥 Drawer lateral desde la izquierda
-        body: Container(
-          key: const ValueKey('home_screen_container'),
-          decoration: const BoxDecoration(
-            gradient: NeumorphismTheme.backgroundGradient,
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.dark.copyWith(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.dark,
+            statusBarBrightness: Brightness.light,
           ),
-          child: SafeArea(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                // Refrescar todo el home (artistas, canciones, playlists, etc.)
-                final homeNotifier = ref.read(homeStateProvider.notifier);
-                // Ejecutar en paralelo para reducir latencia visible
-                await Future.wait([
-                  homeNotifier.refresh(),
-                  ref
-                      .read(intelligentFeaturedProvider.notifier)
-                      .refreshIntelligentRecommendations(),
-                ]);
-              },
-              color: Colors.white,
-              backgroundColor: NeumorphismTheme.coffeeMedium,
-              notificationPredicate: (_) => true,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics(),
-                ), // ✅ Scroll estilo iPhone
-                padding: const EdgeInsets.only(top: 24.0, bottom: 40.0),
-                clipBehavior: Clip.none, // 🚀 Mejor rendimiento - sin clipping costoso
-                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min, // 🚀 Optimización: tamaño mínimo
-                  children: [
-                    // Header optimizado con RepaintBoundary
-                    RepaintBoundary(
-                      child: _HomeHeader(
-                        key: const ValueKey('home_header'),
+          child: Container(
+            key: const ValueKey('home_screen_container'),
+            decoration: const BoxDecoration(
+              gradient: NeumorphismTheme.backgroundGradient,
+            ),
+            child: Stack(
+              children: [
+                // ✅ CONTENIDO CON SCROLL - Pasa por debajo del header fijo
+                Positioned.fill(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      final isLoading = ref.read(
+                        homeStateProvider.select((state) => state.isLoading),
+                      );
+                      if (isLoading) {
+                        return;
+                      }
+                      final homeNotifier = ref.read(homeStateProvider.notifier);
+                      await homeNotifier.refresh();
+                      ref.read(intelligentFeaturedProvider.notifier)
+                          .refreshIntelligentRecommendations()
+                          .catchError((_) {});
+                    },
+                    color: Colors.white,
+                    backgroundColor: NeumorphismTheme.coffeeMedium,
+                    child: CustomScrollView(
+                      key: const PageStorageKey<String>('home_screen_scroll'),
+                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone (igual que song_detail)
+                      cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento (igual que song_detail)
+                      slivers: [
+                      // Espacio para el header fijo
+                        SliverPadding(
+                          padding: EdgeInsets.only(
+                            top: headerHeight - 16.0, // acercar un poco más al header
+                            bottom: 80.0,
+                          ),
+                        ),
+                      // Mensaje destacado (arriba de artistas)
+                      SliverToBoxAdapter(
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            final homeMessage = ref.watch(homeMessageProvider);
+                            if (homeMessage == null || !homeMessage.isActive) {
+                              return const SizedBox.shrink();
+                            }
+                            return Column(
+                              children: [
+                                RepaintBoundary(
+                                  child: HomeMessageBanner(
+                                    message: homeMessage.message,
+                                    updatedAt: homeMessage.updatedAt,
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      // Artistas destacados
+                      SliverToBoxAdapter(
+                        child: RepaintBoundary(
+                          child: FeaturedArtistsSection(key: const ValueKey('artists')),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 48),
+                      ),
+                      // Canciones destacadas inteligentes
+                      SliverToBoxAdapter(
+                        child: RepaintBoundary(
+                          child: IntelligentFeaturedSongsSection(key: const ValueKey('intelligent_songs')),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 48),
+                      ),
+                      // Playlists destacadas (más arriba)
+                      SliverToBoxAdapter(
+                        child: RepaintBoundary(
+                          child: FeaturedPlaylistsSection(key: const ValueKey('playlists')),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 200),
+                      ),
+                    ],
+                  ),
+                  ),
+                ),
+                // ✅ HEADER FIJO - sin auto-hide
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: RepaintBoundary(
+                    child: Container(
+                      height: headerHeight,
+                      decoration: BoxDecoration(
+                        gradient: NeumorphismTheme.backgroundGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                          child: _HomeHeader(
+                            key: const ValueKey('home_header'),
+                          ),
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 32),
-
-                    // Artistas destacados - Optimizado con RepaintBoundary
-                    RepaintBoundary(
-                      child: FeaturedArtistsSection(key: const ValueKey('artists')),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Canciones destacadas inteligentes - Optimizado con RepaintBoundary
-                    RepaintBoundary(
-                      child: IntelligentFeaturedSongsSection(key: const ValueKey('intelligent_songs')),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Playlists destacadas - Optimizado con RepaintBoundary
-                    RepaintBoundary(
-                      child: FeaturedPlaylistsSection(key: const ValueKey('playlists')),
-                    ),
-
-                    const SizedBox(height: 80),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
       ),
     );
+    // #region agent log
+    final buildEndTime = DateTime.now().millisecondsSinceEpoch;
+    final buildDuration = buildEndTime - buildStartTime;
+    _writeDebugLog('home_screen.dart:122', 'HomeScreen build completed', {'duration': buildDuration, 'timestamp': buildEndTime}, 'D');
+    // #endregion
+    return widget;
   }
+  
+  // #region agent log
+  void _writeDebugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
+    if (!kDebugMode) return;
+    final logEntry = {
+      'location': location,
+      'message': message,
+      'data': data,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'sessionId': 'debug-session',
+      'runId': 'run1',
+      'hypothesisId': hypothesisId,
+    };
+    debugPrint('[DEBUG] ${jsonEncode(logEntry)}');
+    // Escribir a disco fuera del hilo de UI y solo en debug para evitar jank
+    Future.microtask(() async {
+      try {
+        final logPath = r'c:\app definitiva\.cursor\debug.log';
+        final logFile = File(logPath);
+        final logDir = logFile.parent;
+        if (!await logDir.exists()) {
+          await logDir.create(recursive: true);
+        }
+        await logFile.writeAsString('${jsonEncode(logEntry)}\n', mode: FileMode.append);
+      } catch (_) {
+        // Ignorar errores de escritura en debug
+      }
+    });
+  }
+  // #endregion
 }
 
 /// 🆕 Widget separado para el header - Evita rebuilds innecesarios del resto de la pantalla
@@ -129,15 +272,16 @@ class _HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ VISTA TONTA: Solo leer datos de providers, sin inicialización manual
-    // Los providers ya usan select() internamente para evitar rebuilds innecesarios
-    final user = ref.watch(currentUserProvider);
-    // Usar select() directamente para evitar conflicto de nombres con auth_provider
-    final isLoading = ref.watch(homeStateProvider.select((state) => state.isLoading));
+    // 🔥 FIX: Usar select() y cachear para evitar rebuilds durante scroll
+    // Solo observar cuando realmente cambia (no durante scroll)
+    final userFirstName = ref.watch(currentUserProvider.select((u) => u?.firstName));
+    // Solo observar isLoading una vez al inicio, no durante scroll
+    final isLoading = ref.watch(homeStateProvider.select((state) => 
+      state.isLoading && state.featuredArtists.isEmpty));
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: isLoading && user == null
+      padding: const EdgeInsets.symmetric(horizontal: 0.0), // Removido padding horizontal porque ya está en el Container padre
+      child: isLoading && userFirstName == null
           ? _buildHeaderSkeleton()
           : Row(
               children: [
@@ -173,7 +317,7 @@ class _HomeHeader extends ConsumerWidget {
                       ),
                       child: Center(
                         child: Text(
-                          _getInitials(user?.firstName, user?.lastName),
+                          _getInitialsFromFirstName(userFirstName ?? 'Usuario'),
                           style: AppTextStyles.titleMedium.copyWith(
                             color: Colors.white,
                           ),
@@ -194,7 +338,7 @@ class _HomeHeader extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        user?.firstName ?? 'Usuario',
+                        userFirstName ?? 'Usuario',
                         style: AppTextStyles.userName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -208,6 +352,8 @@ class _HomeHeader extends ConsumerWidget {
                   'assets/images/logo.webp',
                   width: 60,
                   height: 60,
+                  cacheWidth: 120,
+                  cacheHeight: 120,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     // Fallback: intentar con diferentes rutas posibles
@@ -324,13 +470,8 @@ class _HomeHeader extends ConsumerWidget {
     );
   }
 
-  String _getInitials(String? firstName, String? lastName) {
-    if (firstName == null && lastName == null) {
-      return 'U';
-    }
-    
-    final firstInitial = firstName?.isNotEmpty == true ? firstName![0].toUpperCase() : '';
-    final lastInitial = lastName?.isNotEmpty == true ? lastName![0].toUpperCase() : '';
-    return (firstInitial + lastInitial).isEmpty ? 'U' : (firstInitial + lastInitial);
+  String _getInitialsFromFirstName(String firstName) {
+    if (firstName.isEmpty) return 'U';
+    return firstName[0].toUpperCase();
   }
 }

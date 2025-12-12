@@ -343,6 +343,14 @@ export const apiClient = {
   getFeaturedArtists: (limit = 10) => api.get(`/featured/artists?limit=${limit}`),
   // Eliminado: featureArtist / unfeatureArtist. La gestión se hace solo desde /artists vía toggleArtistFeatured
 
+  // App messages (home banner)
+  getHomeMessage: () => api.get('/app-messages/home'),
+  publishHomeMessage: (data: { message: string; isActive?: boolean }) =>
+    api.post('/app-messages/home', data),
+  updateHomeMessageStatus: (id: string, isActive: boolean) =>
+    api.patch(`/app-messages/${id}/status`, { isActive }),
+  disableHomeMessages: () => api.post('/app-messages/home/disable'),
+
 
 };
 

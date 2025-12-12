@@ -25,6 +25,7 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
 import { SearchModule } from './modules/search/search.module';
 import { StreamsModule } from './modules/streams/streams.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
+import { AppMessagesModule } from './modules/app-messages/app-messages.module';
 import { entities } from './database/entities';
 
 // Configuración de la base de datos
@@ -202,6 +203,7 @@ import { dataSourceOptions } from './database/data-source';
     SearchModule,
     StreamsModule,
     RealtimeModule,
+    AppMessagesModule,
   ],
 })
 export class AppModule {}

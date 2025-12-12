@@ -14,6 +14,7 @@ import { StreamingStats } from '../common/entities/streaming-stats.entity';
 import { Stream } from '../common/entities/stream.entity';
 import { UserListeningSession } from '../common/entities/user-listening-session.entity';
 import { User } from '../common/entities/user.entity';
+import { AppMessage } from '../common/entities/app-message.entity';
 
 export const entities = [
   Album,
@@ -32,4 +33,5 @@ export const entities = [
   Stream,
   UserListeningSession,
   User,
+  AppMessage,
 ];

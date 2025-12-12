@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/artist_model.dart';
 import '../models/song_model.dart';
 import '../models/playlist_model.dart';
+import '../models/app_message_model.dart';
 import 'http_client_service.dart';
 import '../utils/url_normalizer.dart';
 import '../utils/retry_handler.dart';
@@ -263,6 +264,52 @@ class HomeService {
     } catch (e) {
       ErrorHandler.handleGenericError(e, context: 'HomeService.getFeaturedSongs', logError: false);
       return [];
+    }
+  }
+
+  /// Obtener mensaje público para el banner del home
+  Future<HomeMessage?> getHomeMessage({bool forceRefresh = false}) async {
+    try {
+      final options = Options();
+      if (forceRefresh) {
+        options.extra = {
+          'dio_cache_force_refresh': true,
+        };
+      }
+
+      final response = await RetryHandler.retryDataLoad(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.get(
+          '/public/app-messages/home',
+          options: options,
+        ),
+      );
+
+      if (!ResponseParser.isSuccess(response)) {
+        return null;
+      }
+
+      final data = response.data as Map<String, dynamic>? ?? {};
+      final rawMessage = data['message']?.toString() ?? '';
+      final isActive = data['isActive'] as bool? ?? data['is_active'] as bool? ?? false;
+
+      if (rawMessage.isEmpty || !isActive) {
+        return null;
+      }
+
+      final updatedAt = data['updatedAt'] ?? data['updated_at'] ?? data['publishedAt'] ?? data['published_at'];
+
+      return HomeMessage.fromJson({
+        'id': data['id'],
+        'message': rawMessage,
+        'updatedAt': updatedAt,
+        'isActive': isActive,
+      });
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'HomeService.getHomeMessage', logError: false);
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 

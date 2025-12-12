@@ -993,6 +993,25 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       child: Scaffold(
         key: ValueKey('song_detail_scaffold_${song.id}'), // Key estable para evitar rebuilds
         extendBody: false, // No extender el cuerpo detrás del NavigationBar
+        // ✅ AppBar FIJO - No se mueve con el contenido
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: RepaintBoundary(
+            child: _BackButton(
+              onPressed: () => context.pop(),
+            ),
+          ),
+          actions: [
+            RepaintBoundary(
+              child: _MenuButton(
+                onPressed: () {
+                  // Mostrar menú de opciones (pendiente de implementar)
+                },
+              ),
+            ),
+          ],
+        ),
         body: Container(
         decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
@@ -1005,29 +1024,6 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
             physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
             cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
               slivers: [
-                // AppBar con botón de retroceso
-                SliverAppBar(
-                  expandedHeight: 60,
-                  floating: true,
-                  pinned: true,
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  leading: RepaintBoundary(
-                    child: _BackButton(
-                      onPressed: () => context.pop(),
-                    ),
-                  ),
-                  actions: [
-                    RepaintBoundary(
-                      child: _MenuButton(
-                        onPressed: () {
-                          // Mostrar menú de opciones (pendiente de implementar)
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                
                 // Contenido principal
                 SliverToBoxAdapter(
                   child: Padding(
@@ -1290,6 +1286,23 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       child: Scaffold(
         key: ValueKey('song_detail_scaffold_${song.id}'),
         extendBody: false, // No extender el cuerpo detrás del NavigationBar
+        // ✅ AppBar FIJO - No se mueve con el contenido
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: RepaintBoundary(
+            child: _BackButton(
+              onPressed: () => context.pop(),
+            ),
+          ),
+          actions: [
+            RepaintBoundary(
+              child: _MenuButton(
+                onPressed: () {},
+              ),
+            ),
+          ],
+        ),
         body: Container(
         decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
@@ -1302,25 +1315,6 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
             physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
             cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
               slivers: [
-              SliverAppBar(
-                expandedHeight: 60,
-                floating: true,
-                pinned: true,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                leading: RepaintBoundary(
-                  child: _BackButton(
-                    onPressed: () => context.pop(),
-                  ),
-                ),
-                actions: [
-                  RepaintBoundary(
-                    child: _MenuButton(
-                      onPressed: () {},
-                    ),
-                  ),
-                ],
-              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),

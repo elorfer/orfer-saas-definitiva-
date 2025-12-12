@@ -60,9 +60,9 @@ class IntelligentFeaturedNotifier extends Notifier<IntelligentFeaturedState> {
   @override
   IntelligentFeaturedState build() {
     _service = ref.read(intelligentFeaturedServiceProvider);
-    // Inicializar automáticamente
-    Future.microtask(() => loadIntelligentFeaturedSongs());
-    return const IntelligentFeaturedState(isLoading: true);
+    // ✅ OPTIMIZACIÓN: NO inicializar automáticamente - dejar que los widgets lo hagan cuando lo necesiten
+    // Esto evita cargar datos innecesarios al inicio
+    return const IntelligentFeaturedState();
   }
 
   /// 🧠 CARGAR CANCIONES DESTACADAS INTELIGENTES
@@ -188,24 +188,5 @@ final intelligentFeaturedErrorProvider = Provider<String?>((ref) {
   return ref.watch(intelligentFeaturedProvider.select((state) => state.error));
 });
 
-/// Provider que escucha cambios en la canción actual para actualizar recomendaciones
-/// ✅ OPTIMIZACIÓN: Delay aumentado de 5 segundos a 2 minutos para reducir llamadas API
-final _audioStateListenerProvider = Provider<void>((ref) {
-  // Escuchar cambios en el estado de audio
-  ref.listen(unifiedAudioProviderFixed, (previous, next) {
-    // Si cambió la canción, actualizar recomendaciones
-    if (previous?.currentSong?.id != next.currentSong?.id && next.currentSong != null) {
-      // ✅ OPTIMIZACIÓN: Aumentado de 5 segundos a 2 minutos para reducir llamadas API
-      // Esto permite que el usuario escuche varias canciones antes de actualizar recomendaciones
-      Future.delayed(const Duration(minutes: 2), () {
-        ref.read(intelligentFeaturedProvider.notifier).updateBasedOnCurrentSong();
-      });
-    }
-  });
-});
-
-/// Provider que inicializa el listener de cambios de canción
-final intelligentFeaturedInitProvider = Provider<void>((ref) {
-  // Activar el listener
-  ref.watch(_audioStateListenerProvider);
-});
+/// ✅ OPTIMIZACIÓN: Listener de audio desactivado para evitar sobrecarga del home
+/// Si se necesita en el futuro, se puede activar manualmente desde widgets específicos

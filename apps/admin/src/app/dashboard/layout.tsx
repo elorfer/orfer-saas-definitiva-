@@ -17,6 +17,7 @@ import {
   ListBulletIcon,
   StarIcon,
   TagIcon,
+  MegaphoneIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardLayoutProps {
@@ -68,6 +69,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Géneros musicales', href: '/dashboard/genres', icon: TagIcon },
     { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },
     { name: 'Contenido destacado', href: '/dashboard/featured', icon: StarIcon },
+    { name: 'Mensaje en Home', href: '/dashboard/home-message', icon: MegaphoneIcon },
     { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
   ];
 

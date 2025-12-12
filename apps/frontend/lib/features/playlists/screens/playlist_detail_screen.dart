@@ -85,7 +85,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   
   static const int _initialSongsLimit = 20;
   static const int _loadMoreSongsLimit = 20;
-  static const Duration _debounceDuration = Duration(milliseconds: 300);
+  static const Duration _debounceDuration = Duration(milliseconds: 180);
   
   // ✅ Cache estático para mantener datos entre navegaciones (evita parpadeo)
   // Estructura: { playlistId: { 'playlist': Playlist, 'displayedSongs': List<Song>, 'lastLoad': DateTime } }
@@ -1309,11 +1309,21 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     _playAllDebounce = Timer(_debounceDuration, () async {
       if (!mounted) return;
       
-      // Filtrar solo canciones con fileUrl válido
-      final validSongs = songs.where((s) => s.fileUrl != null && s.fileUrl!.isNotEmpty).toList();
+      // Filtrar canciones reproducibles (URL válida, duración mínima, no placeholders)
+      final validSongs = songs
+          .where((s) => s.isValidForPlayback)
+          .toList();
       
       if (validSongs.isEmpty) {
-        // No mostrar SnackBar - el usuario puede ver que no hay canciones disponibles
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('No hay canciones reproducibles en esta playlist'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
         return;
       }
 

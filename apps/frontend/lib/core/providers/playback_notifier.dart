@@ -794,7 +794,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       _startQueueProtection();
     } catch (e, stackTrace) {
       AppLogger.error('[PlaybackNotifier] Error al iniciar modo algoritmo: $e', stackTrace);
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(isLoading: false, shouldStartAlgorithmAfterQueue: false);
       rethrow;
     }
   }
@@ -813,9 +813,11 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 🎯 FASE 1: Obtener excludeIds del servicio centralizado
       final excludeLimit = 8;
       final playedIds = ref.read(playbackSessionProvider.notifier).getPlayedSongIds(limit: excludeLimit);
+      // Incluir canciones actuales en la cola (playlist) para evitar duplicados en la transición
+      final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
       final excludeIds = excludeSeedFromQueue 
-          ? {...playedIds, seedSong.id}
-          : playedIds;
+          ? {...playedIds, seedSong.id, ...currentQueueIds}
+          : {...playedIds, ...currentQueueIds};
       
       // ⚡ OBTENER BUFFER MÍNIMO: Solo 2 canciones para garantizar transición fluida
       // Esto es mucho más rápido que obtener 6-15 canciones
@@ -901,9 +903,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final totalKnown = sessionNotifier.getPlayedSongIds().length + state.currentQueue.length;
       final excludeLimit = totalKnown <= 12 ? 5 : (excludeSeedFromQueue ? 15 : 8);
       final playedIds = sessionNotifier.getPlayedSongIds(limit: excludeLimit);
+      final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
       final excludeIds = excludeSeedFromQueue 
-          ? {...playedIds, seedSong.id}
-          : playedIds;
+          ? {...playedIds, seedSong.id, ...currentQueueIds}
+          : {...playedIds, ...currentQueueIds};
       
       // 🎯 Obtener canciones que ya están en la cola para usarlas como semillas
       // Esto incluye la semilla original + las canciones del buffer inicial
@@ -2988,8 +2991,24 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     state = state.copyWith(
       shouldStartAlgorithmAfterQueue: true,
     );
-    
-    await playFixedQueue(allSongs, validStartSong, contextId: contextId);
+
+    // Prefetch anticipado de buffer algorítmico con la última canción de la playlist
+    // No se espera; prepara recomendaciones para eliminar gap en la transición
+    if (allSongs.isNotEmpty) {
+      final lastSong = allSongs.last;
+      // Solo lanzar si la semilla es reproducible
+      if (lastSong.isValidForPlayback) {
+        unawaited(_prefetchInitialAlgorithmBuffer(lastSong));
+      }
+    }
+
+    try {
+      await playFixedQueue(allSongs, validStartSong, contextId: contextId);
+    } catch (e) {
+      // Si falla la carga de la cola, limpiar la bandera para evitar estados latentes
+      state = state.copyWith(shouldStartAlgorithmAfterQueue: false);
+      rethrow;
+    }
   }
 
   /// Asegurar que el servicio esté inicializado

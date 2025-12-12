@@ -7,7 +7,6 @@ import '../../../core/providers/intelligent_featured_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/verified_badge.dart';
@@ -26,28 +25,41 @@ class IntelligentFeaturedSongsSection extends ConsumerStatefulWidget {
 
 class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFeaturedSongsSection>
     with AutomaticKeepAliveClientMixin {
+  bool _hasInitialized = false;
+  
   @override
   void initState() {
     super.initState();
-    // Inicializar una vez para evitar trabajo extra en cada rebuild
-    Future.microtask(() {
-      ref.read(intelligentFeaturedInitProvider);
-      ref.read(unifiedAudioProviderFixed.notifier).ensureInitialized();
-    });
+    // ✅ OPTIMIZACIÓN: Carga diferida - solo cargar cuando el widget esté montado y visible
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      // Cargar de forma diferida para no bloquear el build inicial
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          final state = ref.read(intelligentFeaturedProvider);
+          // Solo cargar si no está inicializado
+          if (!state.isInitialized && !state.isLoading) {
+            ref.read(intelligentFeaturedProvider.notifier).loadIntelligentFeaturedSongs(limit: 10);
+          }
+        }
+      });
+    }
   }
 
   @override
-  bool get wantKeepAlive => true; // 🔥 OPTIMIZACIÓN: Mantener estado al hacer scroll
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
+    super.build(context);
     
-    // ✅ OPTIMIZACIÓN: Los providers ya usan select() internamente
-    // Solo se reconstruye cuando cambian estos valores específicos
+    // ✅ OPTIMIZACIÓN: Solo observar las canciones - evitar observar loading/error innecesariamente
     final featuredSongs = ref.watch(intelligentFeaturedSongsProvider);
-    final isLoading = ref.watch(intelligentFeaturedLoadingProvider);
-    final error = ref.watch(intelligentFeaturedErrorProvider);
+    
+    // Solo verificar loading/error una vez al inicio, no en cada build
+    final state = ref.read(intelligentFeaturedProvider);
+    final isLoading = featuredSongs.isEmpty && state.isLoading;
+    final error = featuredSongs.isEmpty ? state.error : null;
 
     // CRÍTICO: Solo mostrar skeleton durante carga inicial (cuando no hay datos)
     // Si hay datos pero está cargando (refresh), mostrar contenido existente
@@ -66,66 +78,36 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Título de la sección con indicador de IA
+        // Título de la sección simplificado
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: [
-              Text(
-                'Destacadas para Ti',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF3D2E20),
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Indicador de IA
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B7A6A).withValues(alpha: 0.2),
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.auto_awesome,
-                      size: 12,
-                      color: Color(0xFF8B7A6A),
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      'IA',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF8B7A6A),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          child: Text(
+            'Para Ti',
+            style: GoogleFonts.inter(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF3D2E20),
+              decoration: TextDecoration.none,
+            ),
           ),
         ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         
-        // 🔥 OPTIMIZACIÓN: Column con items fijos (máximo 4) - más eficiente que ListView con shrinkWrap
+        // ✅ OPTIMIZACIÓN: Column directo - mostrar solo 2 canciones para menos saturación
         Column(
-          children: [
-            for (int index = 0; index < featuredSongs.take(4).length; index++)
-              IntelligentFeaturedSongCard(
-                key: ValueKey('intelligent_song_card_${featuredSongs[index].song.id}'),
-                featuredSong: featuredSongs[index],
+          children: featuredSongs.take(2).map((featuredSong) {
+            return RepaintBoundary(
+              key: ValueKey('intelligent_song_card_${featuredSong.song.id}'),
+              child: IntelligentFeaturedSongCard(
+                key: ValueKey('intelligent_song_${featuredSong.song.id}'),
+                featuredSong: featuredSong,
                 onTap: () {
-                  _onSongTap(context, ref, featuredSongs[index].song);
+                  _onSongTap(context, ref, featuredSong.song);
                 },
               ),
-          ],
+            );
+          }).toList(),
         ),
         
         // Indicador de carga si está actualizando
@@ -156,24 +138,24 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
           ),
         ],
         
-        // Botón para ver todas las canciones destacadas
-        if (featuredSongs.isNotEmpty) ...[
-          const SizedBox(height: 12),
+        // Botón simplificado para ver más
+        if (featuredSongs.length > 2) ...[
+          const SizedBox(height: 16),
           Center(
             child: TextButton(
               onPressed: () {
-                context.push('/featured-songs'); // ✅ Nueva ruta para todas las canciones
+                context.push('/featured-songs');
               },
               style: TextButton.styleFrom(
-                foregroundColor: NeumorphismTheme.accentDark, // ✅ Marrón oscuro
+                foregroundColor: NeumorphismTheme.accentDark,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               child: Text(
-                featuredSongs.length > 4
-                    ? 'Ver ${featuredSongs.length - 4} recomendaciones más'
-                    : 'Ver todas las canciones destacadas',
+                'Ver más',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: NeumorphismTheme.accentDark, // ✅ Marrón oscuro
+                  fontWeight: FontWeight.w600,
+                  color: NeumorphismTheme.accentDark,
                   decoration: TextDecoration.none,
                 ),
               ),
@@ -441,6 +423,21 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
     required this.onTap,
   });
 
+  // ✅ Decoración ligera - sin gradientes pesados ni sombras excesivas
+  static final BoxDecoration _cardDecoration = BoxDecoration(
+    color: NeumorphismTheme.surface.withValues(alpha: 0.6),
+    borderRadius: const BorderRadius.all(Radius.circular(16)),
+    border: Border.all(
+      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+      width: 1,
+    ),
+  );
+  
+  static final BoxDecoration _imageDecoration = BoxDecoration(
+    color: Colors.transparent,
+    borderRadius: const BorderRadius.all(Radius.circular(12)),
+  );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final song = featuredSong.song;
@@ -450,76 +447,41 @@ class IntelligentFeaturedSongCard extends ConsumerWidget {
     
     return Container(
       key: ValueKey('intelligent_song_${song.id}'),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          stops: const [0.0, 0.25, 1.0],
-          colors: [
-            NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15), // Toque de marrón en la izquierda
-            NeumorphismTheme.surface.withValues(alpha: 0.8),
-            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-          ],
-        ),
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8, // Igual que en perfil de artista
-            offset: const Offset(0, 3), // Igual que en perfil de artista
-            spreadRadius: 0,
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: _cardDecoration,
       child: RepaintBoundary(
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
             onTap: onTap,
+            splashColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+            highlightColor: Colors.transparent,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(14.0),
               child: Row(
                 children: [
-                  // Portada con efecto de elevación (igual que perfil de artista)
+                  // Portada simplificada - sin sombras pesadas
                   Container(
-                      width: 64,
-                      height: 64,
-                      constraints: const BoxConstraints(
-                        minWidth: 64,
-                        maxWidth: 64,
-                        minHeight: 64,
-                        maxHeight: 64,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: const BorderRadius.all(Radius.circular(16)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15), // Igual que perfil de artista
-                            blurRadius: 6, // Igual que perfil de artista
-                            offset: const Offset(0, 2), // Igual que perfil de artista
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.all(Radius.circular(16)),
-                        clipBehavior: Clip.antiAlias,
-                        child: OptimizedImage(
-                          imageUrl: coverUrl,
-                          fit: BoxFit.cover,
-                          width: 64,
-                          height: 64,
-                          borderRadius: 16,
-                          useThumbnail: true,
-                          maxCacheWidth: 300, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (300px suficiente)
-                          maxCacheHeight: 300,
-                          skipFade: true, // 🔥 Sin fade para mejor rendimiento
-                        ),
+                    width: 60,
+                    height: 60,
+                    decoration: _imageDecoration,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
+                      clipBehavior: Clip.antiAlias,
+                      child: OptimizedImage(
+                        imageUrl: coverUrl,
+                        fit: BoxFit.cover,
+                        width: 60,
+                        height: 60,
+                        borderRadius: 12,
+                        useThumbnail: true,
+                        maxCacheWidth: 200,
+                        maxCacheHeight: 200,
+                        skipFade: true,
                       ),
                     ),
+                  ),
                   const SizedBox(width: 16),
                   // Información de la canción (igual estilo que perfil de artista)
                   Expanded(

@@ -66,18 +66,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final logoIconSize = isSmallScreen ? 75.0 : (isMediumScreen ? 90.0 : 100.0);
 
     return Scaffold(
+      // OPTIMIZACIÓN: Evitar redimensionamiento cuando aparece el teclado para reducir lag
+      resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
           color: Color(0xFF3E2723), // Marrón oscuro
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            physics: const ClampingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 16.0),
-            clipBehavior: Clip.none,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Obtener el tamaño del teclado
+              final viewInsets = MediaQuery.of(context).viewInsets;
+              final keyboardHeight = viewInsets.bottom;
+              
+              return SingleChildScrollView(
+                controller: _scrollController,
+                physics: const ClampingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                // OPTIMIZACIÓN: Agregar padding inferior cuando el teclado está visible
+                padding: EdgeInsets.only(
+                  left: horizontalPadding,
+                  right: horizontalPadding,
+                  top: 16.0,
+                  bottom: keyboardHeight > 0 ? keyboardHeight + 16.0 : 16.0,
+                ),
+                clipBehavior: Clip.none,
+                // OPTIMIZACIÓN: Mejorar comportamiento del scroll con el teclado
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: 500, // Limitar ancho máximo para tablets
@@ -476,6 +492,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
               ),
             ),
+              );
+            },
           ),
         ),
       ),

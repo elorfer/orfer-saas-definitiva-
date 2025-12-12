@@ -26,15 +26,15 @@ class FeaturedArtistCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 120,
-        margin: const EdgeInsets.only(right: 16),
+        width: 112,
+        margin: const EdgeInsets.only(right: 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Imagen del artista (redonda)
             Container(
-              width: 120,
-              height: 120,
+              width: 112,
+              height: 112,
               decoration: BoxDecoration(
                 shape: BoxShape.circle, // ✅ Forma circular completa
                 boxShadow: [
@@ -50,7 +50,7 @@ class FeaturedArtistCard extends StatelessWidget {
               ),
             ),
             
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             
             // Información del artista mejorada
             // ✅ CORRECCIÓN: Eliminado Expanded - no es necesario aquí ya que el Column se ajusta naturalmente
@@ -63,32 +63,32 @@ class FeaturedArtistCard extends StatelessWidget {
                   artistName: artist.stageName ?? 'Artista Desconocido',
                   isVerified: artist.isVerifiedValue,
                   textStyle: GoogleFonts.inter(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: NeumorphismTheme.textPrimary,
-                    letterSpacing: -0.3,
+                    letterSpacing: -0.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   badgeSize: 12.0,
                 ),
                 
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 
                 // Seguidores con icono
                 Row(
                   children: [
                     const Icon(
                       Icons.people_outline,
-                      size: 12,
+                      size: 11,
                       color: NeumorphismTheme.textSecondary,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 3),
                     Flexible(
                       child: Text(
                         '${NumberFormatter.format(artist.totalFollowers)} seguidores',
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: NeumorphismTheme.textSecondary,
                           fontWeight: FontWeight.w500,
                         ),
@@ -101,9 +101,9 @@ class FeaturedArtistCard extends StatelessWidget {
                 
                 // Badge destacado mejorado (si existe)
                 if (featuredArtist.featuredReason != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -135,7 +135,7 @@ class FeaturedArtistCard extends StatelessWidget {
                           child: Text(
                             featuredArtist.featuredReason!,
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
@@ -148,9 +148,9 @@ class FeaturedArtistCard extends StatelessWidget {
                   ),
                 ] else ...[
                   // Badge "Destacado" por defecto si no hay razón específica
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -181,7 +181,7 @@ class FeaturedArtistCard extends StatelessWidget {
                         Text(
                           'Destacado',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                           ),
