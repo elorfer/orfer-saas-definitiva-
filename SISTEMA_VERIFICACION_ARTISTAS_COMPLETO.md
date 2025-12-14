@@ -222,3 +222,7 @@ El core está 100% funcional. Solo falta integrar el badge en algunos lugares es
 
 
 
+
+
+
+

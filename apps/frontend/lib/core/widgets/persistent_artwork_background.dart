@@ -25,14 +25,17 @@ class PersistentArtworkBackground extends StatelessWidget {
       children: [
         Positioned.fill(
           child: RepaintBoundary(
-            child: _ArtworkImage(song: song),
+            child: _ArtworkImage(
+              key: ValueKey('artwork_${song.id}'),
+              song: song,
+            ),
           ),
         ),
         // Blur removido para máxima fluidez: solo overlay translúcido
         Positioned.fill(
           child: RepaintBoundary(
             child: Container(
-              color: Colors.black.withValues(alpha: 0.35),
+              color: Colors.black.withValues(alpha: 0.6),
             ),
           ),
         ),
@@ -45,7 +48,10 @@ class PersistentArtworkBackground extends StatelessWidget {
 class _ArtworkImage extends StatelessWidget {
   final Song song;
 
-  const _ArtworkImage({required this.song});
+  const _ArtworkImage({
+    super.key,
+    required this.song,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +65,7 @@ class _ArtworkImage extends StatelessWidget {
     }
 
     return CachedNetworkImage(
+      key: ValueKey('cached_image_${song.id}_${song.coverArtUrl}'),
       imageUrl: song.coverArtUrl!,
       fit: BoxFit.cover,
       fadeInDuration: Duration.zero, // Sin fade, ya lo maneja el FadeTransition

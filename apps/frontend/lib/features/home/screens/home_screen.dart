@@ -70,7 +70,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
     final mediaQuery = MediaQuery.of(context);
     final statusBarHeight = mediaQuery.padding.top;
-    final headerHeight = 88.0 + statusBarHeight; // Altura del header + barra de notificaciones
     // #region agent log
     try {
       final logEntry = {
@@ -81,7 +80,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         'message': 'build_metrics',
         'data': {
           'statusBarHeight': statusBarHeight,
-          'headerHeight': headerHeight,
         },
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       };
@@ -94,6 +92,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         key: const ValueKey('home_screen_scaffold'),
         backgroundColor: Colors.transparent,
         drawer: const PremiumProfileDrawer(), // 🔥 Drawer lateral desde la izquierda
+        drawerEdgeDragWidth: 20, // ⚡ Ancho de arrastre reducido para mejor control
+        drawerEnableOpenDragGesture: true, // ⚡ Habilitar arrastre para abrir
         body: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark.copyWith(
             statusBarColor: Colors.transparent,
@@ -105,60 +105,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             decoration: const BoxDecoration(
               gradient: NeumorphismTheme.backgroundGradient,
             ),
-            child: Stack(
-              children: [
-                // ✅ CONTENIDO CON SCROLL - Pasa por debajo del header fijo
-                Positioned.fill(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      final isLoading = ref.read(
-                        homeStateProvider.select((state) => state.isLoading),
-                      );
-                      if (isLoading) {
-                        return;
-                      }
-                      final homeNotifier = ref.read(homeStateProvider.notifier);
-                      await homeNotifier.refresh();
-                      ref.read(intelligentFeaturedProvider.notifier)
-                          .refreshIntelligentRecommendations()
-                          .catchError((_) {});
-                    },
-                    color: Colors.white,
-                    backgroundColor: NeumorphismTheme.coffeeMedium,
-                    child: CustomScrollView(
-                      key: const PageStorageKey<String>('home_screen_scroll'),
-                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone (igual que song_detail)
-                      cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento (igual que song_detail)
-                      slivers: [
-                      // Espacio para el header fijo
-                        SliverPadding(
-                          padding: EdgeInsets.only(
-                            top: headerHeight - 16.0, // acercar un poco más al header
-                            bottom: 80.0,
-                          ),
-                        ),
-                      // Mensaje destacado (arriba de artistas)
-                      SliverToBoxAdapter(
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            final homeMessage = ref.watch(homeMessageProvider);
-                            if (homeMessage == null || !homeMessage.isActive) {
-                              return const SizedBox.shrink();
-                            }
-                            return Column(
-                              children: [
-                                RepaintBoundary(
-                                  child: HomeMessageBanner(
-                                    message: homeMessage.message,
-                                    updatedAt: homeMessage.updatedAt,
-                                  ),
-                                ),
-                                const SizedBox(height: 32),
-                              ],
-                            );
-                          },
-                        ),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                final isLoading = ref.read(
+                  homeStateProvider.select((state) => state.isLoading),
+                );
+                if (isLoading) {
+                  return;
+                }
+                final homeNotifier = ref.read(homeStateProvider.notifier);
+                await homeNotifier.refresh();
+                ref.read(intelligentFeaturedProvider.notifier)
+                    .refreshIntelligentRecommendations()
+                    .catchError((_) {});
+              },
+              color: Colors.white,
+              backgroundColor: NeumorphismTheme.coffeeMedium,
+              child: CustomScrollView(
+                key: const PageStorageKey<String>('home_screen_scroll'),
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
+                cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
+                slivers: [
+                  // ⚡ Header scrolleable (avatar, bienvenido, nombre, logo)
+                  SliverPadding(
+                    padding: EdgeInsets.only(
+                      top: statusBarHeight + 16.0, // Espacio para status bar
+                      left: 24.0,
+                      right: 24.0,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: _HomeHeader(
+                        key: const ValueKey('home_header'),
                       ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  // ⚡ Mensaje destacado (notificaciones) ahora en el scroll junto al contenido
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    sliver: SliverToBoxAdapter(
+                      child: Consumer(
+                        builder: (context, ref, _) {
+                          final homeMessage = ref.watch(homeMessageProvider);
+                          if (homeMessage == null || !homeMessage.isActive) {
+                            return const SizedBox.shrink();
+                          }
+                          return RepaintBoundary(
+                            child: HomeMessageBanner(
+                              message: homeMessage.message,
+                              updatedAt: homeMessage.updatedAt,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
                       // Compositores destacados
                       SliverToBoxAdapter(
                         child: RepaintBoundary(
@@ -184,45 +186,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       ),
                       const SliverToBoxAdapter(
-                        child: SizedBox(height: 200),
+                        child: SizedBox(height: 180), // Espacio para el mini reproductor
                       ),
                     ],
                   ),
-                  ),
                 ),
-                // ✅ HEADER FIJO - sin auto-hide
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: RepaintBoundary(
-                    child: Container(
-                      height: headerHeight,
-                      decoration: BoxDecoration(
-                        gradient: NeumorphismTheme.backgroundGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: SafeArea(
-                        bottom: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                          child: _HomeHeader(
-                            key: const ValueKey('home_header'),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -266,133 +234,121 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   // #endregion
 }
 
-/// 🆕 Widget separado para el header - Evita rebuilds innecesarios del resto de la pantalla
+/// Widget del header scrolleable (avatar, bienvenido, nombre, logo)
 class _HomeHeader extends ConsumerWidget {
   const _HomeHeader({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 🔥 FIX: Usar select() y cachear para evitar rebuilds durante scroll
-    // Solo observar cuando realmente cambia (no durante scroll)
     final userFirstName = ref.watch(currentUserProvider.select((u) => u?.firstName));
-    // Solo observar isLoading una vez al inicio, no durante scroll
     final isLoading = ref.watch(homeStateProvider.select((state) => 
       state.isLoading && state.featuredArtists.isEmpty));
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0.0), // Removido padding horizontal porque ya está en el Container padre
-      child: isLoading && userFirstName == null
-          ? _buildHeaderSkeleton()
-          : Row(
-              children: [
-                // 🔥 Avatar clickeable para abrir drawer
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      // Abrir drawer lateral desde la izquierda
-                      Scaffold.of(context).openDrawer();
-                    },
-                    borderRadius: const BorderRadius.all(Radius.circular(28)),
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            NeumorphismTheme.coffeeMedium,
-                            NeumorphismTheme.coffeeDark,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
+    return isLoading && userFirstName == null
+        ? _buildHeaderSkeleton()
+        : Row(
+            children: [
+              // ⚡ Avatar clickeable para abrir drawer
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                  borderRadius: const BorderRadius.all(Radius.circular(28)),
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          NeumorphismTheme.coffeeMedium,
+                          NeumorphismTheme.coffeeDark,
                         ],
                       ),
-                      child: Center(
-                        child: Text(
-                          _getInitialsFromFirstName(userFirstName ?? 'Usuario'),
-                          style: AppTextStyles.titleMedium.copyWith(
-                            color: Colors.white,
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        _getInitialsFromFirstName(userFirstName ?? 'Usuario'),
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: Colors.white,
                         ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
-                // Texto de bienvenida
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Bienvenido',
-                        style: AppTextStyles.welcomeText,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        userFirstName ?? 'Usuario',
-                        style: AppTextStyles.userName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+              ),
+              const SizedBox(width: 16),
+              // Texto de bienvenida
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Bienvenido',
+                      style: AppTextStyles.welcomeText,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      userFirstName ?? 'Usuario',
+                      style: AppTextStyles.userName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                // Logo alineado a la derecha dentro del header (se desplaza con el scroll)
-                Image.asset(
-                  'assets/images/logo.webp',
-                  width: 60,
-                  height: 60,
-                  cacheWidth: 120,
-                  cacheHeight: 120,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    // Fallback: intentar con diferentes rutas posibles
-                    try {
-                      return Image.asset(
-                        'assets/images/onboarding/logo.png',
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.contain,
-                      );
-                    } catch (e) {
-                      // Si tampoco existe, mostrar un placeholder
-                      return Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.music_note,
-                          color: NeumorphismTheme.coffeeDark,
-                          size: 32,
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-    );
+              ),
+              const SizedBox(width: 12),
+              // Logo
+              Image.asset(
+                'assets/images/logo.webp',
+                width: 60,
+                height: 60,
+                cacheWidth: 120,
+                cacheHeight: 120,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  try {
+                    return Image.asset(
+                      'assets/images/logo.webp',
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.contain,
+                    );
+                  } catch (e) {
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.music_note,
+                        color: NeumorphismTheme.coffeeDark,
+                        size: 32,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          );
   }
 
-  /// Skeleton loader para el header de bienvenida
-  /// CRÍTICO: Debe tener exactamente las mismas dimensiones que el header real
   Widget _buildHeaderSkeleton() {
     return Row(
       children: [
-        // Avatar skeleton - Tamaño exacto 56x56 (igual que el real)
         Container(
           width: 56,
           height: 56,
@@ -417,7 +373,7 @@ class _HomeHeader extends ConsumerWidget {
           child: Shimmer.fromColors(
             baseColor: NeumorphismTheme.shimmerBaseColor,
             highlightColor: NeumorphismTheme.shimmerHighlightColor,
-            period: const Duration(milliseconds: 1200), // Más lento = más ligero
+            period: const Duration(milliseconds: 1200),
             child: Container(
               width: 56,
               height: 56,
@@ -428,38 +384,35 @@ class _HomeHeader extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(width: 16), // Mismo espacio que el real
-        // Texto skeleton - Alturas exactas de los textos reales
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // "Bienvenido" skeleton - AppTextStyles.welcomeText
               Shimmer.fromColors(
                 baseColor: NeumorphismTheme.shimmerBaseColor,
                 highlightColor: NeumorphismTheme.shimmerHighlightColor,
                 period: const Duration(milliseconds: 1200),
                 child: Container(
-                  height: 16, // Misma altura que welcomeText
+                  height: 16,
                   width: 100,
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.shimmerContentColor,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                 ),
               ),
-              const SizedBox(height: 2), // Mismo espacio que el real
-              // Nombre skeleton - AppTextStyles.userName
+              const SizedBox(height: 2),
               Shimmer.fromColors(
                 baseColor: NeumorphismTheme.shimmerBaseColor,
                 highlightColor: NeumorphismTheme.shimmerHighlightColor,
                 period: const Duration(milliseconds: 1200),
                 child: Container(
-                  height: 20, // Misma altura que userName
+                  height: 20,
                   width: 150,
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.shimmerContentColor,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                 ),
               ),

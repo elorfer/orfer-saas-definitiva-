@@ -314,6 +314,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
           // Incluye blur global encima de ambas carátulas
           SizedBox.expand(
             child: PersistentArtworkBackground(
+              key: ValueKey('background_${widget.song.id}'),
               currentSong: widget.song,
             ),
           ),
@@ -545,10 +546,14 @@ class _PlayPauseButton extends ConsumerWidget {
     // Esto elimina toda dependencia del estado de PlaybackNotifier
     final audioService = ref.watch(audioServiceProvider);
     final isPlayingStream = audioService.isPlayingStream;
+    // ✅ CORRECCIÓN: Obtener el valor actual del reproductor como initialData
+    // Esto asegura que el botón muestre el estado correcto desde el inicio
+    final currentPlayingState = audioService.player.playing;
     return StreamBuilder<bool>(
       stream: isPlayingStream,
+      initialData: currentPlayingState, // ✅ Usar estado actual como valor inicial
       builder: (context, isPlayingSnapshot) {
-        final bool isPlaying = isPlayingSnapshot.data ?? false;
+        final bool isPlaying = isPlayingSnapshot.data ?? currentPlayingState;
 
         return GestureDetector(
           onTap: () {
@@ -622,15 +627,6 @@ class _AsyncIconButtonState extends State<_AsyncIconButton> {
                     }
                   },
           ),
-          if (_pending)
-            const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
         ],
       ),
     );

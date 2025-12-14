@@ -43,3 +43,7 @@ COMMENT ON COLUMN artists.is_verified IS 'Indica si el artista está verificado 
 
 
 
+
+
+
+

@@ -435,15 +435,19 @@ class SearchService {
     }
   }
 
-  /// Obtener canciones top/populares
+  /// ⚡ OPTIMIZADO: Obtener canciones top/populares con timeout reducido
   Future<List<Song>> getTopSongs({int limit = 10, CancelToken? cancelToken}) async {
     try {
       await initialize();
       
+      // ⚡ OPTIMIZACIÓN: Timeout más corto para respuesta rápida
       final response = await _httpClient.dio.get(
         '/public/songs/top',
         queryParameters: {'limit': limit},
         cancelToken: cancelToken,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 5), // ⚡ Reducido de 10 a 5 segundos
+        ),
       );
 
       if (response.statusCode != 200 || response.data == null) {
@@ -461,7 +465,9 @@ class SearchService {
         songsList = [];
       }
 
+      // ⚡ OPTIMIZACIÓN: Procesar datos de forma más eficiente
       final songsData = songsList
+          .where((item) => item is Map<String, dynamic>) // Filtrar items inválidos
           .map((item) => DataNormalizer.normalizeSong(item as Map<String, dynamic>))
           .toList();
 
@@ -475,15 +481,23 @@ class SearchService {
     }
   }
 
-  /// Obtener todos los géneros disponibles
+  /// ⚡ OPTIMIZADO: Obtener todos los géneros disponibles con timeout reducido
   Future<List<Genre>> getAllGenres({CancelToken? cancelToken}) async {
     try {
       await initialize();
       
+      // ⚡ OPTIMIZACIÓN: Usar paginación con límite razonable (30 géneros es suficiente)
+      // Timeout reducido para respuesta rápida
       final response = await _httpClient.dio.get(
         '/genres',
-        queryParameters: {'page': 1, 'limit': 50},
+        queryParameters: {
+          'page': 1,
+          'limit': 30, // ⚡ Reducido de 50 a 30 para carga más rápida
+        },
         cancelToken: cancelToken,
+        options: Options(
+          receiveTimeout: const Duration(seconds: 5), // ⚡ Reducido de 10 a 5 segundos
+        ),
       );
 
       if (response.statusCode != 200 || response.data == null) {
@@ -491,8 +505,10 @@ class SearchService {
       }
 
       final data = response.data as Map<String, dynamic>;
+      // ⚡ OPTIMIZACIÓN: Procesar datos de forma más eficiente
       final genresData = (data['genres'] as List<dynamic>?)
-              ?.map((item) => DataNormalizer.normalizeGenre(item as Map<String, dynamic>))
+              ?.where((item) => item is Map<String, dynamic>) // Filtrar items inválidos
+              .map((item) => DataNormalizer.normalizeGenre(item as Map<String, dynamic>))
               .toList() ??
           [];
 

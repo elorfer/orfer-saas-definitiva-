@@ -37,7 +37,8 @@ class PlaybackSessionNotifier extends Notifier<List<String>> {
       current.remove(songId);
       current.add(songId);
       state = current;
-      AppLogger.debug('[PlaybackSession] 🔄 ID re-registrado: ${songId.substring(0, 8)}... (Total: ${current.length})');
+      // ⚡ OPTIMIZACIÓN: Log reducido a debug (solo cuando realmente cambia algo importante)
+      // AppLogger.debug('[PlaybackSession] 🔄 ID re-registrado: ${songId.substring(0, 8)}... (Total: ${current.length})');
       return;
     }
 

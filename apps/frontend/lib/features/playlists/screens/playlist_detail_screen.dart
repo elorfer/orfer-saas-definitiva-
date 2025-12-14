@@ -1276,27 +1276,41 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     _playFromCardAlgorithm(context, song);
   }
 
-  /// Reproduce una canción individual en modo algoritmo (igual que tocar la tarjeta).
+  /// ⚡ OPTIMIZADO: Reproduce una canción individual en modo algoritmo (igual que tocar la tarjeta).
+  /// Validación rápida y reproducción sin bloquear la UI
   Future<void> _playFromCardAlgorithm(BuildContext context, Song song) async {
+    // ⚡ OPTIMIZACIÓN: Validación rápida usando isValidForPlayback (ya valida fileUrl)
+    if (!song.isValidForPlayback) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo válida'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2), // Reducido de 3 a 2 segundos
+          ),
+        );
+      }
+      return;
+    }
+
     try {
-      // Validar que la canción tenga URL válida
-      if (song.fileUrl == null || song.fileUrl!.isEmpty) {
+      // ⚡ OPTIMIZACIÓN: Iniciar reproducción de forma asíncrona sin bloquear la UI
+      // El provider maneja la reproducción y los errores se capturan en el catchError
+      ref.read(unifiedAudioProviderFixed.notifier).playFromCard(
+        song,
+        useAlgorithm: true,
+      ).catchError((e, stackTrace) {
+        debugPrint('❌ [PlaylistDetailScreen] Error al reproducir canción: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
+              content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 3), // Reducido de 4 a 3 segundos
             ),
           );
         }
-        return;
-      }
-
-      await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(
-            song,
-            useAlgorithm: true,
-          );
+      });
     } catch (e, stackTrace) {
       debugPrint('❌ [PlaylistDetailScreen] Error al reproducir canción: $e');
       debugPrint('Stack trace: $stackTrace');
@@ -1305,7 +1319,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
           SnackBar(
             content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 3),
           ),
         );
       }

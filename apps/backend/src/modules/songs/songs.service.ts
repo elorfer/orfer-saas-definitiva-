@@ -72,13 +72,19 @@ export class SongsService {
     return { songs, total };
   }
 
+  // ⚡ OPTIMIZADO: Obtener canciones top con query optimizada
   async getTopSongs(limit: number = 10): Promise<Song[]> {
-    return this.songRepository.find({
-      where: { status: SongStatus.PUBLISHED },
-      relations: ['artist', 'album', 'genre'],
-      order: { totalStreams: 'DESC' },
-      take: limit,
-    });
+    // ⚡ OPTIMIZACIÓN: Usar QueryBuilder para mejor rendimiento y control
+    // Solo cargar relaciones necesarias y limitar datos
+    return this.songRepository
+      .createQueryBuilder('song')
+      .leftJoinAndSelect('song.artist', 'artist')
+      .leftJoinAndSelect('artist.user', 'user') // Solo para datos básicos del artista
+      .where('song.status = :status', { status: SongStatus.PUBLISHED })
+      .orderBy('song.totalStreams', 'DESC')
+      .addOrderBy('song.createdAt', 'DESC') // Orden secundario para consistencia
+      .take(limit)
+      .getMany();
   }
 
   async getSongsByGenre(genreId: string, page: number = 1, limit: number = 10): Promise<{ songs: Song[]; total: number }> {

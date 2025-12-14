@@ -27,3 +27,7 @@ CREATE TRIGGER trg_app_messages_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_app_messages_updated_at();
 
+
+
+
+

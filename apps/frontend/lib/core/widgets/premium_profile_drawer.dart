@@ -7,6 +7,7 @@ import '../theme/neumorphism_theme.dart';
 
 /// Drawer lateral premium para promoción y perfil
 /// Se abre desde la izquierda ocupando un poco más de la mitad de la pantalla
+/// ⚡ OPTIMIZADO: RepaintBoundary y const constructors para evitar lag
 class PremiumProfileDrawer extends ConsumerStatefulWidget {
   const PremiumProfileDrawer({super.key});
 
@@ -61,21 +62,23 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
     final screenWidth = MediaQuery.of(context).size.width;
     final drawerWidth = screenWidth * 0.55;
 
-    return SizedBox(
-      width: drawerWidth,
-      child: Drawer(
-        backgroundColor: NeumorphismTheme.background,
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: NeumorphismTheme.backgroundGradient,
-          ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 🔥 Sección Premium destacada
+    // ⚡ OPTIMIZACIÓN: RepaintBoundary para aislar el drawer del resto de la UI
+    return RepaintBoundary(
+      child: SizedBox(
+        width: drawerWidth,
+        child: Drawer(
+          backgroundColor: NeumorphismTheme.background,
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: NeumorphismTheme.backgroundGradient,
+            ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                  // ⚡ OPTIMIZADO: Sección Premium destacada con sombra reducida
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
@@ -90,10 +93,11 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                       ),
                       borderRadius: const BorderRadius.all(Radius.circular(20)),
                       boxShadow: [
+                        // ⚡ OPTIMIZACIÓN: Reducir blurRadius para mejor rendimiento
                         BoxShadow(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                          blurRadius: 12, // Reducido de 20 a 12
+                          offset: const Offset(0, 4), // Reducido de 8 a 4
                         ),
                       ],
                     ),
@@ -158,10 +162,10 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                   
                   const SizedBox(height: 24),
                   
-                  // 🔥 Tarjeta de perfil compacta
+                  // ⚡ OPTIMIZADO: Tarjeta de perfil compacta con sombra reducida
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20), // 🔥 Padding reducido
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -173,10 +177,11 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                       ),
                       borderRadius: const BorderRadius.all(Radius.circular(20)),
                       boxShadow: [
+                        // ⚡ OPTIMIZACIÓN: Reducir blurRadius para mejor rendimiento
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 8, // Reducido de 16 a 8
+                          offset: const Offset(0, 3), // Reducido de 6 a 3
                         ),
                       ],
                     ),
@@ -197,10 +202,11 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                             ),
                             shape: BoxShape.circle,
                             boxShadow: [
+                              // ⚡ OPTIMIZACIÓN: Reducir sombra del avatar
                               BoxShadow(
-                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
+                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.25),
+                                blurRadius: 8, // Reducido de 12 a 8
+                                offset: const Offset(0, 2), // Reducido de 4 a 2
                               ),
                             ],
                           ),
@@ -296,17 +302,19 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                     ),
                   ),
                   
-                  // 🔥 Lista de opciones de configuración compactas
+                  // ⚡ OPTIMIZADO: Lista de opciones de configuración con RepaintBoundary
                   ...List.generate(
                     _settingsSections.length,
                     (index) {
                       final section = _settingsSections[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _buildSettingsSection(
-                          icon: section['icon'] as IconData,
-                          title: section['title'] as String,
-                          onTap: section['onTap'] as VoidCallback,
+                      return RepaintBoundary(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _buildSettingsSection(
+                            icon: section['icon'] as IconData,
+                            title: section['title'] as String,
+                            onTap: section['onTap'] as VoidCallback,
+                          ),
                         ),
                       );
                     },
@@ -364,7 +372,8 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                   ),
                   
                   const SizedBox(height: 16),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -378,15 +387,16 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
     required String title,
     required VoidCallback onTap,
   }) {
+    // ⚡ OPTIMIZACIÓN: Reducir sombras para mejor rendimiento
     return Container(
       decoration: BoxDecoration(
         color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
         borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4, // Reducido de 8 a 4
+            offset: const Offset(0, 1), // Reducido de 2 a 1
           ),
         ],
       ),

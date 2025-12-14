@@ -46,6 +46,18 @@ Widget _errorWidgetBuilder(FlutterErrorDetails details) {
        stackStr.contains('image resource service') ||
        library.contains('image resource service'));
   
+  // 🔥 OPTIMIZACIÓN: Errores de google_fonts cuando no hay conexión
+  // La app usará fuentes del sistema como fallback automáticamente
+  final isGoogleFontsError = (errorStr.contains('google_fonts') ||
+      errorStr.contains('fonts.gstatic.com') ||
+      errorStr.contains('failed to load font')) &&
+      (errorStr.contains('socketexception') ||
+       errorStr.contains('failed host lookup') ||
+       errorStr.contains('no address associated')) &&
+      (stackStr.contains('google_fonts') ||
+       stackStr.contains('_httpFetchFontAndSaveToDevice') ||
+       stackStr.contains('loadFontIfNecessary'));
+  
   final isRenderingError = errorStr.contains('rendering') ||
       errorStr.contains('layout') ||
       errorStr.contains('overflow') ||
@@ -161,7 +173,15 @@ Widget _errorWidgetBuilder(FlutterErrorDetails details) {
     return const SizedBox.shrink();
   }
   
-  // Errores de red: reportar con detalle (pero no los de precache de imágenes)
+  // 🔥 OPTIMIZACIÓN: Errores de google_fonts cuando no hay conexión
+  // La app usará fuentes del sistema como fallback automáticamente
+  if (isGoogleFontsError) {
+    // Silenciar errores de google_fonts cuando no hay conexión (son esperados)
+    // No loggear para mantener la consola limpia
+    return const SizedBox.shrink();
+  }
+  
+  // Errores de red: reportar con detalle (pero no los de precache de imágenes o google_fonts)
   if (isNetworkError) {
     AppLogger.error(
       '[ErrorHandler] ⚠️ ERROR DE RED DETECTADO',
@@ -248,6 +268,24 @@ void _setupErrorHandlers() {
       return;
     }
     
+    // 🔥 OPTIMIZACIÓN: Detectar errores de google_fonts cuando no hay conexión
+    final isGoogleFontsError = (errorStr.contains('google_fonts') ||
+        errorStr.contains('fonts.gstatic.com') ||
+        errorStr.contains('failed to load font')) &&
+        (errorStr.contains('socketexception') ||
+         errorStr.contains('failed host lookup') ||
+         errorStr.contains('no address associated')) &&
+        (stackStr.contains('google_fonts') ||
+         stackStr.contains('_httpFetchFontAndSaveToDevice') ||
+         stackStr.contains('loadFontIfNecessary'));
+    
+    // Si es error de google_fonts, usar el builder pero no mostrar en debug
+    if (isGoogleFontsError) {
+      _errorWidgetBuilder(details);
+      // NO llamar a FlutterError.presentError para estos errores
+      return;
+    }
+    
     // Usar nuestro builder personalizado
     _errorWidgetBuilder(details);
     
@@ -277,6 +315,25 @@ void _setupErrorHandlers() {
       // Silenciar errores de precache cuando no hay conexión (son esperados)
       // No loggear para mantener la consola limpia
       return true; // Error manejado silenciosamente
+    }
+    
+    // Detectar errores de google_fonts cuando no hay conexión (no críticos)
+    final isGoogleFontsError = (errorStr.contains('google_fonts') ||
+        errorStr.contains('fonts.gstatic.com') ||
+        errorStr.contains('failed to load font')) &&
+        (errorStr.contains('socketexception') ||
+         errorStr.contains('failed host lookup') ||
+         errorStr.contains('no address associated'));
+    
+    if (isGoogleFontsError) {
+      // Errores de google_fonts cuando no hay conexión - usar fuentes del sistema como fallback
+      AppLogger.warning(
+        '[ErrorHandler] ⚠️ Error de Google Fonts (sin conexión): $error',
+      );
+      if (kDebugMode) {
+        debugPrint('📍 [GoogleFonts] La app usará fuentes del sistema como fallback');
+      }
+      return true; // Error manejado
     }
     
     // Detectar errores de lifecycle (no críticos)

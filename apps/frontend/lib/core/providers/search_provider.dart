@@ -219,13 +219,16 @@ final trendingArtistsProvider = FutureProvider<List<Artist>>((ref) async {
   return await searchService.getTrendingArtists(limit: 10);
 });
 
-/// Provider para canciones top/populares
+/// ⚡ OPTIMIZADO: Provider para canciones top/populares SIN autoDispose
+/// Mantiene datos en memoria permanentemente para evitar skeletons al volver
 final topSongsProvider = FutureProvider<List<Song>>((ref) async {
   final searchService = ref.read(searchServiceProvider);
-  return await searchService.getTopSongs(limit: 10);
+  // ⚡ OPTIMIZACIÓN: Reducir límite inicial para carga más rápida
+  return await searchService.getTopSongs(limit: 8);
 });
 
-/// Provider para todos los géneros
+/// ⚡ OPTIMIZADO: Provider para todos los géneros SIN autoDispose
+/// Mantiene datos en memoria permanentemente para evitar skeletons al volver
 final allGenresProvider = FutureProvider<List<Genre>>((ref) async {
   final searchService = ref.read(searchServiceProvider);
   return await searchService.getAllGenres();

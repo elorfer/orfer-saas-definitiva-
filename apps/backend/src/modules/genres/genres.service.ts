@@ -42,13 +42,17 @@ export class GenresService {
   }
 
   /**
-   * Obtiene todos los géneros sin paginación (útil para selectores)
+   * ⚡ OPTIMIZADO: Obtiene todos los géneros sin paginación (útil para selectores)
+   * Query optimizada sin relaciones innecesarias para mejor rendimiento
    * @returns Lista completa de géneros
    */
   async findAllWithoutPagination(): Promise<Genre[]> {
-    return this.genreRepository.find({
-      order: { name: 'ASC' },
-    });
+    // ⚡ OPTIMIZACIÓN: Usar QueryBuilder para mejor control y rendimiento
+    // No cargar relaciones (songs, albums) que no se necesitan para la lista
+    return this.genreRepository
+      .createQueryBuilder('genre')
+      .orderBy('genre.name', 'ASC')
+      .getMany();
   }
 
   /**

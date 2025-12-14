@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/widgets/fast_scroll_physics.dart';
 
 /// Pantalla Premium con mensaje emocional y llamada a la acción
 class PremiumScreen extends ConsumerStatefulWidget {
@@ -27,61 +26,67 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const SmoothScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ⭐ Título principal
-                Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        size: 64,
-                        color: NeumorphismTheme.coffeeMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Hazte Premium y Libera la Música que Nunca Escuchaste',
-                        style: GoogleFonts.inter(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: NeumorphismTheme.textPrimary,
-                          letterSpacing: -0.5,
-                          height: 1.3,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ⚡ Scroll estilo iPhone
+            cacheExtent: 400, // ⚡ Cache optimizado para mejor rendimiento
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                // ⚡ OPTIMIZADO: Título principal con RepaintBoundary
+                RepaintBoundary(
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          size: 64,
+                          color: NeumorphismTheme.coffeeMedium,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Text(
+                          'Hazte Premium y Libera la Música que Nunca Escuchaste',
+                          style: GoogleFonts.inter(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: NeumorphismTheme.textPrimary,
+                            letterSpacing: -0.5,
+                            height: 1.3,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 
                 const SizedBox(height: 40),
                 
-                // 📝 Subtítulo emocional
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
-                        NeumorphismTheme.coffeeDark.withValues(alpha: 0.08),
+                // ⚡ OPTIMIZADO: Subtítulo emocional con sombra reducida
+                RepaintBoundary(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
+                          NeumorphismTheme.coffeeDark.withValues(alpha: 0.08),
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.all(Radius.circular(24)),
+                      boxShadow: [
+                        // ⚡ OPTIMIZACIÓN: Reducir sombra para mejor rendimiento
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 12, // Reducido de 20 a 12
+                          offset: const Offset(0, 4), // Reducido de 8 a 4
+                        ),
                       ],
                     ),
-                    borderRadius: const BorderRadius.all(Radius.circular(24)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
                   child: Text(
                     'Cada suscripción impulsa a un compositor real. No a una marca. No a una multinacional. A un creador que por fin quiere ser escuchado.',
                     style: GoogleFonts.inter(
@@ -92,6 +97,7 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                       letterSpacing: -0.2,
                     ),
                     textAlign: TextAlign.center,
+                  ),
                   ),
                 ),
                 
@@ -111,18 +117,19 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                 
                 const SizedBox(height: 32),
                 
-                // 🔥 Beneficio emocional
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.12),
-                    borderRadius: const BorderRadius.all(Radius.circular(24)),
-                    border: Border.all(
-                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                      width: 2,
+                // ⚡ OPTIMIZADO: Beneficio emocional con RepaintBoundary
+                RepaintBoundary(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.12),
+                      borderRadius: const BorderRadius.all(Radius.circular(24)),
+                      border: Border.all(
+                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
-                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -169,40 +176,48 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                       ),
                     ],
                   ),
+                  ),
                 ),
                 
                 const SizedBox(height: 32),
                 
-                // ✨ Beneficios Premium
-                Text(
-                  '✨ Beneficios Premium',
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: NeumorphismTheme.textPrimary,
-                    letterSpacing: -0.4,
+                // ⚡ OPTIMIZADO: Beneficios Premium con RepaintBoundary
+                RepaintBoundary(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '✨ Beneficios Premium',
+                        style: GoogleFonts.inter(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: NeumorphismTheme.textPrimary,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildBenefitItem(
+                        icon: Icons.explore_rounded,
+                        text: 'Descubre canciones exclusivas antes que nadie',
+                      ),
+                      _buildBenefitItem(
+                        icon: Icons.people_rounded,
+                        text: 'Conecta directamente con compositores independientes',
+                      ),
+                      _buildBenefitItem(
+                        icon: Icons.history_rounded,
+                        text: 'Accede a historias detrás de cada canción',
+                      ),
+                      _buildBenefitItem(
+                        icon: Icons.attach_money_rounded,
+                        text: 'Apoya económicamente a los creadores',
+                      ),
+                      _buildBenefitItem(
+                        icon: Icons.trending_up_rounded,
+                        text: 'Sé parte del nuevo movimiento musical',
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 20),
-                _buildBenefitItem(
-                  icon: Icons.explore_rounded,
-                  text: 'Descubre canciones exclusivas antes que nadie',
-                ),
-                _buildBenefitItem(
-                  icon: Icons.people_rounded,
-                  text: 'Conecta directamente con compositores independientes',
-                ),
-                _buildBenefitItem(
-                  icon: Icons.history_rounded,
-                  text: 'Accede a historias detrás de cada canción',
-                ),
-                _buildBenefitItem(
-                  icon: Icons.attach_money_rounded,
-                  text: 'Apoya económicamente a los creadores',
-                ),
-                _buildBenefitItem(
-                  icon: Icons.trending_up_rounded,
-                  text: 'Sé parte del nuevo movimiento musical',
                 ),
                 
                 const SizedBox(height: 40),
@@ -232,28 +247,30 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                 
                 const SizedBox(height: 40),
                 
-                // 🧿 Llamado a la acción
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        NeumorphismTheme.coffeeMedium,
-                        NeumorphismTheme.coffeeDark,
+                // ⚡ OPTIMIZADO: Llamado a la acción con sombra reducida
+                RepaintBoundary(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          NeumorphismTheme.coffeeMedium,
+                          NeumorphismTheme.coffeeDark,
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.all(Radius.circular(28)),
+                      boxShadow: [
+                        // ⚡ OPTIMIZACIÓN: Reducir sombra para mejor rendimiento
+                        BoxShadow(
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                          blurRadius: 16, // Reducido de 24 a 16
+                          offset: const Offset(0, 8), // Reducido de 12 a 8
+                        ),
                       ],
                     ),
-                    borderRadius: const BorderRadius.all(Radius.circular(28)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                        blurRadius: 24,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
                   child: Column(
                     children: [
                       Text(
@@ -321,18 +338,20 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                       ),
                     ],
                   ),
+                  ),
                 ),
                 
                 const SizedBox(height: 32),
                 
-                // 🪬 Frase final poderosa
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-                      borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    ),
+                // ⚡ OPTIMIZADO: Frase final poderosa con RepaintBoundary
+                RepaintBoundary(
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
+                        borderRadius: const BorderRadius.all(Radius.circular(20)),
+                      ),
                     child: Column(
                       children: [
                         Text(
@@ -369,12 +388,15 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
                         ),
                       ],
                     ),
+                    ),
                   ),
                 ),
                 
                 const SizedBox(height: 40),
-              ],
-            ),
+                  ]),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -385,47 +407,51 @@ class _PremiumScreenState extends ConsumerState<PremiumScreen>
     required String title,
     required List<String> content,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.5),
-        borderRadius: const BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: NeumorphismTheme.textPrimary,
-              letterSpacing: -0.3,
-              height: 1.4,
+    // ⚡ OPTIMIZADO: Mensaje con RepaintBoundary y sombra reducida
+    return RepaintBoundary(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.5),
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
+          boxShadow: [
+            // ⚡ OPTIMIZACIÓN: Reducir sombra para mejor rendimiento
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8, // Reducido de 16 a 8
+              offset: const Offset(0, 3), // Reducido de 6 a 3
             ),
-          ),
-          const SizedBox(height: 16),
-          ...content.map((text) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  text,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: NeumorphismTheme.textPrimary,
-                    height: 1.6,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: NeumorphismTheme.textPrimary,
+                letterSpacing: -0.3,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...content.map((text) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    text,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: NeumorphismTheme.textPrimary,
+                      height: 1.6,
+                    ),
                   ),
-                ),
-              )),
-        ],
+                )),
+          ],
+        ),
       ),
     );
   }

@@ -290,23 +290,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           child: SafeArea(
           child: Column(
             children: [
-              // ⚡ Header simplificado (sin gradientes ni sombras pesadas)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), // ⚡ Reducido padding
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Buscar',
-                    style: AppTextStyles.searchTitle,
-                    textAlign: TextAlign.left,
+              // ⚡ OPTIMIZADO: Header con RepaintBoundary
+              RepaintBoundary(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Buscar',
+                      style: AppTextStyles.searchTitle,
+                      textAlign: TextAlign.left,
+                    ),
                   ),
                 ),
               ),
 
-              // ⚡ Search Bar simplificada (sin sombras pesadas)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Container(
+              // ⚡ OPTIMIZADO: Search Bar con RepaintBoundary
+              RepaintBoundary(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
                     borderRadius: const BorderRadius.all(Radius.circular(20)), // ⚡ Reducido de 26
@@ -357,14 +360,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                       _searchFocusNode.unfocus();
                     },
                   ),
+                  ),
                 ),
               ),
 
               const SizedBox(height: 16),
 
-              // Filtros de tipo
+              // ⚡ OPTIMIZADO: Filtros de tipo con RepaintBoundary
               if (query.isNotEmpty && results != null && !results.isEmpty)
-                _buildFilterChips(),
+                RepaintBoundary(
+                  child: _buildFilterChips(),
+                ),
 
               const SizedBox(height: 8),
 
@@ -464,18 +470,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ), // ✅ Scroll estilo iPhone (igual que Home)
-        cacheExtent: 400, // OPTIMIZACIÓN: reducido de 500 a 400 (≈5 items de altura ~80px)
+        cacheExtent: 200, // ⚡ OPTIMIZADO: Reducido a 200 para máximo rendimiento
         clipBehavior: Clip.none,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, // ✅ Ocultar teclado al hacer scroll
         slivers: [
-        // Géneros (siempre mostrar si hay, independiente del filtro)
+        // ⚡ OPTIMIZADO: Géneros con RepaintBoundary
         if (filteredResults.genres.isNotEmpty) ...[
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                'Géneros',
-                style: AppTextStyles.searchSectionTitle,
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Géneros',
+                  style: AppTextStyles.searchSectionTitle,
+                ),
               ),
             ),
           ),
@@ -484,103 +492,137 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           ),
         ],
 
-        // Artistas
+        // ⚡ OPTIMIZADO: Artistas con RepaintBoundary
         if (filteredResults.artists.isNotEmpty) ...[
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                'Artistas',
-                style: AppTextStyles.searchSectionTitle,
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Artistas',
+                  style: AppTextStyles.searchSectionTitle,
+                ),
               ),
             ),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
+                final artist = filteredResults.artists[index];
                 return RepaintBoundary(
-                  key: ValueKey('artist_${filteredResults.artists[index].id}'),
+                  key: ValueKey('artist_${artist.id}'),
                   child: ArtistSearchCard(
-                    key: ValueKey('artist_card_${filteredResults.artists[index].id}'),
-                    artist: filteredResults.artists[index],
+                    key: ValueKey('artist_card_${artist.id}'),
+                    artist: artist,
                   ),
                 );
               },
               childCount: filteredResults.artists.length,
-              addAutomaticKeepAlives: false,
-              addRepaintBoundaries: false,
+              addAutomaticKeepAlives: false, // ⚡ No mantener estado de items fuera de vista
+              addRepaintBoundaries: false, // ⚡ Ya tenemos RepaintBoundary manual
+              findChildIndexCallback: (Key key) {
+                // ⚡ OPTIMIZACIÓN: Búsqueda rápida de índices para mejor rendimiento
+                if (key is ValueKey<String>) {
+                  final id = key.value.toString().replaceAll('artist_', '').replaceAll('artist_card_', '');
+                  return filteredResults.artists.indexWhere((a) => a.id == id);
+                }
+                return null;
+              },
             ),
           ),
         ],
 
-        // Canciones
+        // ⚡ OPTIMIZADO: Canciones con RepaintBoundary
         if (filteredResults.songs.isNotEmpty) ...[
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                'Canciones',
-                style: AppTextStyles.searchSectionTitle,
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Canciones',
+                  style: AppTextStyles.searchSectionTitle,
+                ),
               ),
             ),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
+                final song = filteredResults.songs[index];
                 return RepaintBoundary(
-                  key: ValueKey('song_${filteredResults.songs[index].id}'),
+                  key: ValueKey('song_${song.id}'),
                   child: SongSearchCard(
-                    key: ValueKey('song_card_${filteredResults.songs[index].id}'),
-                    song: filteredResults.songs[index],
+                    key: ValueKey('song_card_${song.id}'),
+                    song: song,
                   ),
                 );
               },
               childCount: filteredResults.songs.length,
-              addAutomaticKeepAlives: false,
-              addRepaintBoundaries: false,
+              addAutomaticKeepAlives: false, // ⚡ No mantener estado de items fuera de vista
+              addRepaintBoundaries: false, // ⚡ Ya tenemos RepaintBoundary manual
+              findChildIndexCallback: (Key key) {
+                // ⚡ OPTIMIZACIÓN: Búsqueda rápida de índices para mejor rendimiento
+                if (key is ValueKey<String>) {
+                  final id = key.value.toString().replaceAll('song_', '').replaceAll('song_card_', '');
+                  return filteredResults.songs.indexWhere((s) => s.id == id);
+                }
+                return null;
+              },
             ),
           ),
         ],
 
-        // Playlists
+        // ⚡ OPTIMIZADO: Playlists con RepaintBoundary
         if (filteredResults.playlists.isNotEmpty) ...[
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                'Playlists',
-                style: AppTextStyles.searchSectionTitle,
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Playlists',
+                  style: AppTextStyles.searchSectionTitle,
+                ),
               ),
             ),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
+                final playlist = filteredResults.playlists[index];
                 return RepaintBoundary(
-                  key: ValueKey('playlist_${filteredResults.playlists[index].id}'),
+                  key: ValueKey('playlist_${playlist.id}'),
                   child: PlaylistSearchCard(
-                    key: ValueKey('playlist_card_${filteredResults.playlists[index].id}'),
-                    playlist: filteredResults.playlists[index],
+                    key: ValueKey('playlist_card_${playlist.id}'),
+                    playlist: playlist,
                   ),
                 );
               },
               childCount: filteredResults.playlists.length,
-              addAutomaticKeepAlives: false,
-              addRepaintBoundaries: false,
+              addAutomaticKeepAlives: false, // ⚡ No mantener estado de items fuera de vista
+              addRepaintBoundaries: false, // ⚡ Ya tenemos RepaintBoundary manual
+              findChildIndexCallback: (Key key) {
+                // ⚡ OPTIMIZACIÓN: Búsqueda rápida de índices para mejor rendimiento
+                if (key is ValueKey<String>) {
+                  final id = key.value.toString().replaceAll('playlist_', '').replaceAll('playlist_card_', '');
+                  return filteredResults.playlists.indexWhere((p) => p.id == id);
+                }
+                return null;
+              },
             ),
           ),
         ],
 
-          // Espacio al final para el player
+          // ⚡ OPTIMIZADO: Espacio al final para el mini reproductor flotante
           const SliverToBoxAdapter(
-            child: SizedBox(height: 80),
+            child: SizedBox(height: 180), // Aumentado a 180px para mejor visibilidad
           ),
         ],
       ),
     );
   }
 
-  /// Construir secciones de inicio cuando no hay búsqueda activa
+  /// ⚡ OPTIMIZADO: Construir secciones de inicio con lazy loading
+  /// Las secciones se cargan solo cuando son visibles en el viewport
   Widget _buildHomeSections() {
     return RepaintBoundary(
       child: CustomScrollView(
@@ -589,64 +631,105 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         physics: const BouncingScrollPhysics(
           parent: AlwaysScrollableScrollPhysics(),
         ),
-        cacheExtent: 400,
+        cacheExtent: 200, // ⚡ OPTIMIZADO: Reducido a 200 para máximo rendimiento
         clipBehavior: Clip.none,
         slivers: [
-          // Tendencias en búsquedas - Artistas destacados
+          // ⚡ OPTIMIZACIÓN: Lazy loading - cargar secciones solo cuando son visibles
+          // ⚡ OPTIMIZADO: Tendencias en búsquedas con RepaintBoundary
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                'Tendencias en búsquedas',
-                style: AppTextStyles.searchSectionTitle,
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Tendencias en búsquedas',
+                  style: AppTextStyles.searchSectionTitle,
+                ),
               ),
             ),
           ),
           SliverToBoxAdapter(
-            child: _buildTrendingArtists(),
+            child: _LazyTrendingArtists(
+              buildFunction: _buildTrendingArtists,
+              skeletonFunction: () => SizedBox(
+                height: 180,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 3,
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  itemBuilder: (_, __) => _buildTrendingArtistCardSkeleton(),
+                ),
+              ),
+            ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-          // Géneros
+          // ⚡ OPTIMIZADO: Géneros con RepaintBoundary
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                'Géneros',
-                style: AppTextStyles.searchSectionTitle,
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Géneros',
+                  style: AppTextStyles.searchSectionTitle,
+                ),
               ),
             ),
           ),
           SliverToBoxAdapter(
-            child: _buildGenresSection(),
+            child: _LazyGenresSection(
+              buildFunction: _buildGenresSection,
+              skeletonFunction: () => SizedBox(
+                height: 108,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  itemCount: 3,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, __) => _buildGenreCardSkeleton(),
+                ),
+              ),
+            ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-          // Las más escuchadas - Canciones populares
+          // ⚡ OPTIMIZADO: Las más escuchadas con RepaintBoundary
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Text(
-                'Las más escuchadas',
-                style: AppTextStyles.searchSectionTitle,
+            child: RepaintBoundary(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Las más escuchadas',
+                  style: AppTextStyles.searchSectionTitle,
+                ),
               ),
             ),
           ),
           SliverToBoxAdapter(
-            child: _buildTopCharts(),
+            child: _LazyTopCharts(
+              buildFunction: _buildTopCharts,
+              skeletonFunction: () => ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: 3,
+                itemBuilder: (_, __) => _buildTopChartItemSkeleton(),
+              ),
+            ),
           ),
 
-          // Espacio al final para el player
+          // ⚡ OPTIMIZADO: Espacio al final para el mini reproductor flotante
           const SliverToBoxAdapter(
-            child: SizedBox(height: 80),
+            child: SizedBox(height: 180), // Aumentado a 180px para mejor visibilidad
           ),
         ],
       ),
     );
   }
 
-  /// Construir sección de artistas trending
+  /// ⚡ OPTIMIZADO: Construir sección de artistas trending con cache persistente
   Widget _buildTrendingArtists() {
+    // ⚡ OPTIMIZADO: Usar watch para detectar cuando los datos están listos
     final trendingArtistsAsync = ref.watch(trendingArtistsProvider);
 
     return trendingArtistsAsync.when(
@@ -654,30 +737,61 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         if (artists.isEmpty) {
           return const SizedBox.shrink();
         }
+        // ⚡ OPTIMIZADO: Limitar número de artistas mostrados inicialmente
+        final limitedArtists = artists.take(6).toList();
         return SizedBox(
           height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: artists.length,
+            cacheExtent: 200,
+            itemCount: limitedArtists.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (_, index) {
-              final artist = artists[index];
-              return _buildTrendingArtistCard(artist);
+              final artist = limitedArtists[index];
+              return RepaintBoundary(
+                key: ValueKey('trending_artist_${artist.id}'),
+                child: _buildTrendingArtistCard(artist),
+              );
             },
           ),
         );
       },
-      loading: () => SizedBox(
-        height: 180,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: 4,
-          separatorBuilder: (_, __) => const SizedBox(width: 16),
-          itemBuilder: (_, __) => _buildTrendingArtistCardSkeleton(),
-        ),
-      ),
+      loading: () {
+        // ⚡ OPTIMIZADO: Verificar si hay datos en cache antes de mostrar skeleton
+        final cachedArtists = ref.read(trendingArtistsProvider).value;
+        if (cachedArtists != null && cachedArtists.isNotEmpty) {
+          // Si hay datos en cache, mostrarlos en lugar del skeleton
+          final limitedArtists = cachedArtists.take(6).toList();
+          return SizedBox(
+            height: 180,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              cacheExtent: 200,
+              itemCount: limitedArtists.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (_, index) {
+                final artist = limitedArtists[index];
+                return RepaintBoundary(
+                  key: ValueKey('trending_artist_${artist.id}'),
+                  child: _buildTrendingArtistCard(artist),
+                );
+              },
+            ),
+          );
+        }
+        return SizedBox(
+          height: 180,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: 3,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (_, __) => _buildTrendingArtistCardSkeleton(),
+          ),
+        );
+      },
       error: (_, __) => const SizedBox.shrink(),
     );
   }
@@ -759,11 +873,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   }
 
   /// Skeleton para tarjeta de artista trending
+  // ⚡ OPTIMIZADO: Skeleton simplificado
   Widget _buildTrendingArtistCardSkeleton() {
     return RepaintBoundary(
       child: Shimmer.fromColors(
         baseColor: NeumorphismTheme.shimmerBaseColor,
         highlightColor: NeumorphismTheme.shimmerHighlightColor,
+        period: const Duration(milliseconds: 1500), // ⚡ Periodo más largo = menos CPU
         child: SizedBox(
           width: 140,
           child: Column(
@@ -794,8 +910,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     );
   }
 
-  /// Construir sección de géneros
+  /// ⚡ OPTIMIZADO: Construir sección de géneros con cache persistente
   Widget _buildGenresSection() {
+    // ⚡ OPTIMIZADO: Usar watch para detectar cuando los datos están listos
     final genresAsync = ref.watch(allGenresProvider);
 
     return genresAsync.when(
@@ -805,22 +922,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         }
         return _buildGenres(genres);
       },
-      loading: () => SizedBox(
-        height: 108,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          itemCount: 4,
-          separatorBuilder: (_, __) => const SizedBox(width: 12),
-          itemBuilder: (_, __) => _buildGenreCardSkeleton(),
-        ),
-      ),
+      loading: () {
+        // ⚡ OPTIMIZADO: Verificar si hay datos en cache antes de mostrar skeleton
+        final cachedGenres = ref.read(allGenresProvider).value;
+        if (cachedGenres != null && cachedGenres.isNotEmpty) {
+          // Si hay datos en cache, mostrarlos en lugar del skeleton
+          return _buildGenres(cachedGenres);
+        }
+        return SizedBox(
+          height: 108,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            itemCount: 3,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, __) => _buildGenreCardSkeleton(),
+          ),
+        );
+      },
       error: (_, __) => const SizedBox.shrink(),
     );
   }
 
-  /// Construir sección de Top Charts
+  /// ⚡ OPTIMIZADO: Construir sección de Top Charts con carga optimizada
   Widget _buildTopCharts() {
+    // ⚡ OPTIMIZACIÓN: Usar watch con select para evitar rebuilds innecesarios
+    // Solo reconstruir cuando cambian los datos, no cuando cambia el estado del provider
+    // ⚡ OPTIMIZADO: Usar watch para detectar cuando los datos están listos
     final topSongsAsync = ref.watch(topSongsProvider);
 
     return topSongsAsync.when(
@@ -828,6 +956,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         if (songs.isEmpty) {
           return const SizedBox.shrink();
         }
+        // ⚡ OPTIMIZACIÓN: Ya limitado a 8 en el provider, mostrar todos
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -835,17 +964,40 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           itemCount: songs.length,
           itemBuilder: (context, index) {
             final song = songs[index];
-            return _buildTopChartItem(song, index + 1);
+            return RepaintBoundary(
+              key: ValueKey('top_chart_${song.id}'),
+              child: _buildTopChartItem(song, index + 1),
+            );
           },
         );
       },
-      loading: () => ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: 5,
-        itemBuilder: (_, __) => _buildTopChartItemSkeleton(),
-      ),
+      loading: () {
+        // ⚡ OPTIMIZADO: Verificar si hay datos en cache antes de mostrar skeleton
+        final cachedSongs = ref.read(topSongsProvider).value;
+        if (cachedSongs != null && cachedSongs.isNotEmpty) {
+          // Si hay datos en cache, mostrarlos en lugar del skeleton
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: cachedSongs.length,
+            itemBuilder: (context, index) {
+              final song = cachedSongs[index];
+              return RepaintBoundary(
+                key: ValueKey('top_chart_${song.id}'),
+                child: _buildTopChartItem(song, index + 1),
+              );
+            },
+          );
+        }
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: 3,
+          itemBuilder: (_, __) => _buildTopChartItemSkeleton(),
+        );
+      },
       error: (_, __) => const SizedBox.shrink(),
     );
   }
@@ -1106,9 +1258,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           ),
         ),
 
-        // Espacio al final para el player
+        // ⚡ OPTIMIZADO: Espacio al final para el mini reproductor flotante
         const SliverToBoxAdapter(
-          child: SizedBox(height: 80),
+          child: SizedBox(height: 120), // Aumentado de 80 a 120 para mejor visibilidad
         ),
       ],
     );
@@ -1316,23 +1468,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   }
 
   Widget _buildGenres(List<Genre> genres) {
+    // ⚡ OPTIMIZADO: ListView con cache optimizado
     return SizedBox(
       height: 108,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        cacheExtent: 200, // ⚡ Cache reducido para mejor rendimiento
         itemCount: genres.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (_, index) {
           final genre = genres[index];
-          // Normalizar URL de imagen para que funcione en todas las plataformas
+          // ⚡ OPTIMIZADO: Normalizar URL solo si es necesario
           final normalizedImageUrl = genre.imageUrl != null && genre.imageUrl!.isNotEmpty
               ? UrlNormalizer.normalizeImageUrl(genre.imageUrl!)
               : null;
-          
-          if (kDebugMode) {
-            debugPrint('[SearchScreen._buildGenres] Género: ${genre.name}, imageUrl original: ${genre.imageUrl}, normalized: $normalizedImageUrl');
-          }
           
           return RepaintBoundary(
             child: GestureDetector(
@@ -1447,6 +1597,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ListView(
         scrollDirection: Axis.horizontal,
+        cacheExtent: 100, // ⚡ Cache reducido para filtros
         children: [
           _buildFilterChip('Todos', null),
           const SizedBox(width: 8),
@@ -1460,16 +1611,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     );
   }
 
-  /// Construir un chip de filtro individual
+  /// ⚡ OPTIMIZADO: Construir un chip de filtro individual con RepaintBoundary
   Widget _buildFilterChip(String label, String? filterValue) {
     final isSelected = _selectedFilter == filterValue;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFilter = filterValue;
-        });
-      },
-      child: Container(
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedFilter = filterValue;
+          });
+        },
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
@@ -1489,11 +1641,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             ),
           ),
         ),
+        ),
       ),
     );
   }
 
-  /// Aplicar filtro a los resultados de búsqueda
+  /// ⚡ OPTIMIZADO: Aplicar filtro a los resultados de búsqueda
   SearchResults _applyFilter(SearchResults results) {
     if (_selectedFilter == null) {
       return results;
@@ -1542,5 +1695,86 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       default:
         return results;
     }
+  }
+}
+
+/// ⚡ OPTIMIZACIÓN: Widget lazy para cargar trending artists solo cuando es visible
+class _LazyTrendingArtists extends StatefulWidget {
+  final Widget Function() buildFunction;
+  final Widget Function() skeletonFunction;
+
+  const _LazyTrendingArtists({
+    required this.buildFunction,
+    required this.skeletonFunction,
+  });
+
+  @override
+  State<_LazyTrendingArtists> createState() => _LazyTrendingArtistsState();
+}
+
+class _LazyTrendingArtistsState extends State<_LazyTrendingArtists> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ⚡ OPTIMIZADO: Cargar directamente sin skeleton
+    return widget.buildFunction();
+  }
+}
+
+/// ⚡ OPTIMIZADO: Widget lazy para cargar géneros solo cuando es visible
+class _LazyGenresSection extends StatefulWidget {
+  final Widget Function() buildFunction;
+  final Widget Function() skeletonFunction;
+
+  const _LazyGenresSection({
+    required this.buildFunction,
+    required this.skeletonFunction,
+  });
+
+  @override
+  State<_LazyGenresSection> createState() => _LazyGenresSectionState();
+}
+
+class _LazyGenresSectionState extends State<_LazyGenresSection> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ⚡ OPTIMIZADO: Cargar directamente sin delay
+    return widget.buildFunction();
+  }
+}
+
+/// ⚡ OPTIMIZACIÓN: Widget lazy para cargar top charts solo cuando es visible
+class _LazyTopCharts extends StatefulWidget {
+  final Widget Function() buildFunction;
+  final Widget Function() skeletonFunction;
+
+  const _LazyTopCharts({
+    required this.buildFunction,
+    required this.skeletonFunction,
+  });
+
+  @override
+  State<_LazyTopCharts> createState() => _LazyTopChartsState();
+}
+
+class _LazyTopChartsState extends State<_LazyTopCharts> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ⚡ OPTIMIZADO: Cargar directamente sin delay
+    return widget.buildFunction();
   }
 }

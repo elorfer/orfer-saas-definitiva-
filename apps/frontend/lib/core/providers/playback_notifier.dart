@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:rxdart/rxdart.dart';
 import '../models/song_model.dart';
 import '../services/audio_service.dart';
 import '../services/intelligent_featured_service.dart';
@@ -46,6 +47,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   bool _isDeduplicating = false; // 🛡️ PROTECCIÓN: Flag para evitar deduplicación múltiple simultánea
   DateTime? _lastDeduplicationTime; // 🛡️ PROTECCIÓN: Timestamp de última deduplicación
   static const Duration _deduplicationCooldown = Duration(seconds: 2); // Cooldown entre deduplicaciones
+  DateTime? _lastInjectionTime; // 🛡️ PROTECCIÓN: Timestamp de última inyección instantánea
+  static const Duration _injectionProtectionWindow = Duration(milliseconds: 1500); // ⚡ AUMENTADO: Ventana de protección después de inyección (1.5s para evitar deduplicación inmediata)
   String? _lastDedupSignature; // 🛡️ PROTECCIÓN: Firma de la última deduplicación para evitar bucles
   DateTime? _lastDedupSignatureTime; // 🛡️ PROTECCIÓN: Timestamp de la última firma
   static const Duration _dedupSignatureCooldown = Duration(seconds: 5); // Cooldown para firmas repetidas
@@ -100,7 +103,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   Timer? _queueProtectionTimer; // Timer para monitoreo constante de la cola
   int _consecutiveFailures = 0; // Contador de fallos consecutivos en precarga
   DateTime? _lastEmergencyCall; // Timestamp de última llamada de emergencia
+  DateTime? _lastCriticalQueueWarning; // Timestamp de último warning de cola crítica
   static const Duration _emergencyCooldown = Duration(seconds: 10); // Cooldown entre emergencias
+  static const Duration _criticalQueueWarningCooldown = Duration(seconds: 15); // Cooldown entre warnings de cola crítica
 
   // 🔍 FILTRO: Validar canciones antes de cargar a la cola (evita carátulas de tracks corruptos)
   List<Song> _filterPlayableSongs(Iterable<Song> songs) {
@@ -291,7 +296,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           // 🎯 FASE 1: Registrar canción reproducida en servicio centralizado
           ref.read(playbackSessionProvider.notifier).registerPlayedSong(currentSong.id);
           
-          AppLogger.info('[PlaybackNotifier] Canción actual: ${currentSong.title}');
+          // ⚡ OPTIMIZACIÓN: Solo loggear cuando realmente cambia la canción (no en cada update)
+          if (state.currentSong?.id != currentSong.id) {
+            AppLogger.info('[PlaybackNotifier] Canción actual: ${currentSong.title}');
+          }
           
           // 🎯 PRE-FETCH: Si estamos en la última canción de una cola fija y está activo shouldStartAlgorithmAfterQueue,
           // preparar en background las recomendaciones para que al terminar no haya espera.
@@ -365,8 +373,11 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
     // 🚨 5. SINCRONIZACIÓN: Suscribirse a cambios en la cola de just_audio
     // Esto asegura que el estado siempre refleje la realidad del reproductor
+    // ⚡ OPTIMIZACIÓN: Usar debounce para evitar ejecuciones excesivas (máx 2 veces por segundo)
     _subscriptions.add(
-      service.sequenceStateStream.listen((sequenceState) {
+      service.sequenceStateStream
+          .debounceTime(const Duration(milliseconds: 500))
+          .listen((sequenceState) {
         _syncQueueWithAudioService(sequenceState);
         // 🚀 SPOTIFY-LEVEL: Pre-cargar audio de siguiente canción cuando cambia la cola
         _preloadNextSongAudio(sequenceState);
@@ -456,25 +467,24 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 🛡️ Detener sistema de protección de cola (solo para modo algoritmo)
       _stopQueueProtection();
       
-      // 🚨 LIMPIEZA ROBUSTA: Si veníamos de modo algoritmo O si había una transición en curso,
-      // esperar más tiempo para asegurar que el player esté completamente detenido antes de cargar nueva cola
-      
+      // ⚡ OPTIMIZACIÓN: Solo limpiar si realmente veníamos de modo algoritmo
+      // Si no veníamos de algoritmo, iniciar reproducción inmediatamente sin delays
       if (wasAlgorithmMode || hadPendingAlgorithmTransition) {
         AppLogger.info('[PlaybackNotifier] 🔄 Cambiando de modo algoritmo a playlist, limpiando estado...');
         if (hadPendingAlgorithmTransition) {
-          AppLogger.info('[PlaybackNotifier] ⚠️ Transición a algoritmo detectada, cancelando y esperando...');
+          AppLogger.info('[PlaybackNotifier] ⚠️ Transición a algoritmo detectada, cancelando...');
         }
-        // Esperar más tiempo para asegurar que cualquier operación de algoritmo termine
-        await Future.delayed(const Duration(milliseconds: 500));
-        // Detener completamente el player antes de cargar nueva cola
+        // ⚡ OPTIMIZACIÓN: Reducir delays - detener player y continuar más rápido
         try {
           await service.player.pause();
           await service.player.stop();
-          await Future.delayed(const Duration(milliseconds: 300));
+          // Reducir delay de limpieza para inicio más rápido
+          await Future.delayed(const Duration(milliseconds: 100));
         } catch (e) {
           AppLogger.debug('[PlaybackNotifier] Error al limpiar player (puede ser normal): $e');
         }
       }
+      // ⚡ Si NO veníamos de algoritmo, no hay delays - inicio instantáneo
 
       // 🚨 VALIDACIÓN: Filtrar canciones inválidas antes de agregar
       final validPlaylist = playlist.where((s) => s.isValidForPlayback).toList();
@@ -524,7 +534,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           );
         
         // Sincronizar de inmediato para que currentSong no quede nulo en la UI
-        _syncQueueWithAudioService(service.player.sequenceState);
+        // Esperar un momento para que just_audio actualice su estado
+        Future.delayed(const Duration(milliseconds: 200), () {
+          _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+        });
         if (state.currentSong == null && startIndex >= 0 && startIndex < validPlaylist.length) {
           state = state.copyWith(currentSong: validPlaylist[startIndex]);
         }
@@ -544,18 +557,19 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           lastConfirmedSong: state.currentSong ?? state.lastConfirmedSong,
         );
         
-        // Sincronizar cola después de un breve delay
+        // ⚡ OPTIMIZACIÓN: Sincronizar inmediatamente sin delays adicionales
         _syncQueueWithAudioService(service.player.sequenceState);
-        Future.delayed(const Duration(milliseconds: 200), () {
-          _syncQueueWithAudioService(service.player.sequenceState);
-        });
-
+        
         // Asegurar currentSong y posición inicial tras iniciar reproducción
-        _syncQueueWithAudioService(service.player.sequenceState);
         if (state.currentSong == null && startIndex >= 0 && startIndex < validPlaylist.length) {
           state = state.copyWith(currentSong: validPlaylist[startIndex]);
         }
         state = state.copyWith(currentPosition: Duration.zero);
+        
+        // ⚡ OPTIMIZACIÓN: Sincronización adicional en background (no bloquea inicio)
+        Future.microtask(() {
+          _syncQueueWithAudioService(service.player.sequenceState);
+        });
       } finally {
         _isUpdatingQueue = false;
       }
@@ -614,6 +628,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
       
       List<Song> initialSongs = const [];
+      bool usedInjectionForSeed = false; // Variable para rastrear si se usó inyección instantánea
 
       // Ajustar tamaño de excludeIds según origen: playlist (fin) vs tarjeta
       final sessionNotifier = ref.read(playbackSessionProvider.notifier);
@@ -662,32 +677,110 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       state = state.copyWith(isReplacingQueue: true);
         _isUpdatingQueue = true;
         try {
-          final sources = songsToLoad.map((s) => s.toAudioSource()).toList();
-          await service.loadNewQueue(sources, 0);
-          _lastKnownIndex = 0;
-          // Evitar mostrar portada incorrecta: limpiar canción actual hasta que el stream reporte la nueva
-          // Forzar coherencia inmediata con la primera canción de la nueva cola
-          final firstTag = sources.isNotEmpty ? (sources.first as dynamic).tag : null;
-          if (firstTag is Song) {
-            final firstSong = firstTag;
-            state = state.copyWith(
-              currentQueue: songsToLoad,
-              currentSong: firstSong,
-              lastConfirmedSong: firstSong,
-              currentPosition: Duration.zero,
-              isBuffering: true,
-            );
+          // ⚡ OPTIMIZACIÓN: Si hay cola activa, usar inyección instantánea para evitar Release/Init
+          if (service.hasActiveQueue && songsToLoad.isNotEmpty) {
+            final firstSong = songsToLoad.first;
+            final firstSource = firstSong.toAudioSource();
+            
+            // Guardar estado de reproducción antes de insertar
+            final wasPlaying = service.player.playing;
+            
+            // Insertar la primera canción al inicio
+            final success = await service.insertSongAtStart(firstSource);
+            
+            if (success) {
+              usedInjectionForSeed = true;
+              // Insertar el resto de canciones después de la primera
+              if (songsToLoad.length > 1) {
+                final restSources = songsToLoad.sublist(1).map((s) => s.toAudioSource()).toList();
+                await service.appendToQueue(restSources);
+              }
+              
+              _lastKnownIndex = 0;
+              
+              // 🔄 SINCRONIZACIÓN INMEDIATA: Actualizar estado ANTES de cualquier otra operación
+              // Esperar un momento mínimo para que just_audio actualice su sequenceState
+              await Future.delayed(const Duration(milliseconds: 50));
+              
+              // 🔄 CRÍTICO: Sincronizar PRIMERO para actualizar el estado con la nueva cola
+              // Esto evita que la deduplicación detecte una desincronización falsa
+              _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+              
+              // 🔄 ACTUALIZACIÓN EXPLÍCITA: Asegurar que el estado refleje la cola correcta
+              final firstSongFromSync = songsToLoad.isNotEmpty ? songsToLoad.first : seedSong;
+              final syncedState = state;
+              state = syncedState.copyWith(
+                currentSong: firstSongFromSync,
+                lastConfirmedSong: firstSongFromSync,
+                currentPosition: Duration.zero,
+                isBuffering: true,
+                isPlaying: wasPlaying, // Mantener estado de reproducción
+                // currentQueue ya fue actualizado por _syncQueueWithAudioService
+              );
+              
+              AppLogger.debug('[PlaybackNotifier] 🔄 Estado sincronizado después de inyección: ${state.currentQueue.length} canciones');
+              
+              // 🔄 CRÍTICO: Reproducir inmediatamente después de insertar si estaba reproduciendo
+              // Esto previene que el reproductor quede pausado y el frontend quede "muerto"
+              if (wasPlaying) {
+                await service.play();
+                AppLogger.info('[PlaybackNotifier] ▶️ Reproducción reanudada después de inyección instantánea');
+              }
+              
+              // 🛡️ PROTECCIÓN: Marcar tiempo de inyección para evitar deduplicación inmediata
+              _lastInjectionTime = DateTime.now();
+              
+              AppLogger.info('[PlaybackNotifier] ⚡ Inyección instantánea exitosa para algoritmo (${songsToLoad.length} canciones)');
+            } else {
+              // Fallback a método estándar si la inyección falla
+              AppLogger.info('[PlaybackNotifier] Inyección instantánea falló, usando loadNewQueue estándar');
+              final sources = songsToLoad.map((s) => s.toAudioSource()).toList();
+              await service.loadNewQueue(sources, 0);
+              _lastKnownIndex = 0;
+            }
           } else {
+            // No hay cola activa, usar método estándar
+            final sources = songsToLoad.map((s) => s.toAudioSource()).toList();
+            await service.loadNewQueue(sources, 0);
+            _lastKnownIndex = 0;
+          }
+          
+          // ⚠️ Solo resetear el estado manualmente si NO se usó inyección instantánea
+          // Si se usó inyección, la sincronización ya actualizó la cola completa
+          if (!usedInjectionForSeed) {
             // Evitar mostrar portada incorrecta: limpiar canción actual hasta que el stream reporte la nueva
-          state = state.copyWith(
-            currentQueue: songsToLoad,
-            isBuffering: true,
-          );
+            // Forzar coherencia inmediata con la primera canción de la nueva cola
+            final firstSong = songsToLoad.isNotEmpty ? songsToLoad.first : seedSong;
+            final firstSource = firstSong.toAudioSource();
+            final firstTag = (firstSource as dynamic).tag;
+            if (firstTag is Song) {
+              final firstSong = firstTag;
+              state = state.copyWith(
+                currentQueue: songsToLoad,
+                currentSong: firstSong,
+                lastConfirmedSong: firstSong,
+                currentPosition: Duration.zero,
+                isBuffering: true,
+              );
+            } else {
+              // Evitar mostrar portada incorrecta: limpiar canción actual hasta que el stream reporte la nueva
+              state = state.copyWith(
+                currentQueue: songsToLoad,
+                isBuffering: true,
+              );
+            }
           }
         } finally {
           _isReplacingQueue = false;
           _isUpdatingQueue = false;
           state = state.copyWith(isReplacingQueue: false);
+          
+          // 🔄 SINCRONIZACIÓN FORZADA: Esperar un momento para que just_audio actualice su estado
+          // y luego forzar una sincronización para asegurar coherencia
+          // Reducido a 100ms para respuesta más rápida
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+          });
         }
 
         AppLogger.info('[PlaybackNotifier] ✅ Cola cargada sin semilla (start en índice 0). Tamaño: ${state.currentQueue.length}');
@@ -699,20 +792,86 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         _isReplacingQueue = true;
         _isUpdatingQueue = true;
         try {
+          // ⚡ OPTIMIZACIÓN: Si hay cola activa, usar inyección instantánea para evitar Release/Init
           final seedSource = seedSong.toAudioSource();
-          await service.loadNewQueue([seedSource], 0);
-          _lastKnownIndex = 0;
-          state = state.copyWith(
-            currentQueue: <Song>[seedSong],
-            currentSong: seedSong,
-            lastConfirmedSong: seedSong,
-            currentPosition: Duration.zero,
-            isBuffering: true,
-          );
+          
+          if (service.hasActiveQueue) {
+            // Guardar estado de reproducción antes de insertar
+            final wasPlaying = service.player.playing;
+            
+            final success = await service.insertSongAtStart(seedSource);
+            
+            if (success) {
+              usedInjectionForSeed = true;
+              _lastKnownIndex = 0;
+              
+              // 🔄 SINCRONIZACIÓN INMEDIATA: Actualizar estado ANTES de cualquier otra operación
+              // Esperar un momento mínimo para que just_audio actualice su sequenceState
+              await Future.delayed(const Duration(milliseconds: 50));
+              
+              // 🔄 CRÍTICO: Sincronizar PRIMERO para actualizar el estado con la nueva cola
+              // Esto evita que la deduplicación detecte una desincronización falsa
+              _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+              
+              // 🔄 ACTUALIZACIÓN EXPLÍCITA: Asegurar que el estado refleje la cola correcta
+              // Después de la sincronización, actualizar campos adicionales
+              final syncedState = state;
+              state = syncedState.copyWith(
+                currentSong: seedSong,
+                lastConfirmedSong: seedSong,
+                currentPosition: Duration.zero,
+                isBuffering: true,
+                isPlaying: wasPlaying, // Mantener estado de reproducción
+                // currentQueue ya fue actualizado por _syncQueueWithAudioService
+              );
+              
+              AppLogger.debug('[PlaybackNotifier] 🔄 Estado sincronizado después de inyección: ${state.currentQueue.length} canciones');
+              
+              // 🔄 CRÍTICO: Reproducir inmediatamente después de insertar si estaba reproduciendo
+              // Esto previene que el reproductor quede pausado y el frontend quede "muerto"
+              if (wasPlaying) {
+                await service.play();
+                AppLogger.info('[PlaybackNotifier] ▶️ Reproducción reanudada después de inyección instantánea');
+              }
+              
+              // 🛡️ PROTECCIÓN: Marcar tiempo de inyección para evitar deduplicación inmediata
+              _lastInjectionTime = DateTime.now();
+              
+              AppLogger.info('[PlaybackNotifier] ⚡ Inyección instantánea exitosa para semilla: ${seedSong.title}');
+            } else {
+              // Fallback a método estándar si la inyección falla
+              AppLogger.info('[PlaybackNotifier] Inyección instantánea falló, usando loadNewQueue estándar');
+              await service.loadNewQueue([seedSource], 0);
+              _lastKnownIndex = 0;
+            }
+          } else {
+            // No hay cola activa, usar método estándar
+            await service.loadNewQueue([seedSource], 0);
+            _lastKnownIndex = 0;
+          }
+          
+          // ⚠️ Solo resetear el estado si NO se usó inyección instantánea
+          // Si se usó inyección, la sincronización ya actualizó la cola completa
+          if (!usedInjectionForSeed) {
+            state = state.copyWith(
+              currentQueue: <Song>[seedSong],
+              currentSong: seedSong,
+              lastConfirmedSong: seedSong,
+              currentPosition: Duration.zero,
+              isBuffering: true,
+            );
+          }
         } finally {
           _isReplacingQueue = false;
           _isUpdatingQueue = false;
           state = state.copyWith(isReplacingQueue: false);
+          
+          // 🔄 SINCRONIZACIÓN FORZADA: Esperar un momento para que just_audio actualice su estado
+          // y luego forzar una sincronización para asegurar coherencia
+          // Reducido a 100ms para respuesta más rápida
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+          });
         }
 
         AppLogger.info('[PlaybackNotifier] ✅ Semilla cargada: ${seedSong.title}');
@@ -756,7 +915,20 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // Activar bloqueo crítico durante el arranque del modo algoritmo
       _isAwaitingInitialAlgorithmPlay = true;
 
-      await service.play();
+      // 🔄 CRÍTICO: Solo llamar a play() si NO se usó inyección instantánea
+      // Si se usó inyección, ya se llamó a play() inmediatamente después de insertar
+      if (!usedInjectionForSeed) {
+        await service.play();
+      } else {
+        // Si se usó inyección, verificar que el reproductor esté reproduciendo
+        // Si no está reproduciendo, iniciar reproducción
+        if (!service.player.playing) {
+          await service.play();
+          AppLogger.info('[PlaybackNotifier] ▶️ Reproducción iniciada después de verificación');
+        } else {
+          AppLogger.info('[PlaybackNotifier] ✅ Reproductor ya está reproduciendo después de inyección');
+        }
+      }
 
       // 🛡️ FUENTE ÚNICA DE VERDAD: El stream actualizará isPlaying automáticamente
       // Solo actualizar isBuffering si es necesario para otros widgets
@@ -1303,20 +1475,35 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       
       // 🚨 LOG REDUCIDO: Solo cuando realmente inicia la precarga
       
-      // 🎯 FASE 1: Obtener excludeIds del servicio centralizado + canciones en cola
-      const baseExcludeLimit = 8; // precarga usa histórico corto
+      // 🎯 FASE 1: EXCLUSIÓN REFORZADA - Obtener TODAS las canciones de la cola y historial
+      // 🚀 MEJORA: Incluir TODAS las canciones activas para forzar diversidad en el backend
       final sessionNotifier = ref.read(playbackSessionProvider.notifier);
-      final totalKnown = sessionNotifier.getPlayedSongIds().length + state.currentQueue.length;
-      final excludeLimit = totalKnown <= 12 ? 5 : baseExcludeLimit;
-      final playedIds = sessionNotifier.getPlayedSongIds(limit: excludeLimit);
-      final queueIds = state.currentQueue.map((s) => s.id).toList();
-      // Limitar IDs de cola para no inflar el exclude cuando la playlist es enorme
-      final limitedQueueIds = queueIds.length > excludeLimit
-          ? queueIds.sublist(queueIds.length - excludeLimit)
-          : queueIds;
-      final excludeIds = {...limitedQueueIds, ...playedIds};
       
-      AppLogger.debug('[PlaybackNotifier] 🔍 Precarga: Excluyendo ${excludeIds.length} IDs (${limitedQueueIds.length} en cola (limitado) + ${playedIds.length} reproducidas)');
+      // 1. Obtener TODAS las canciones de la cola del audio service (no limitadas)
+      final sequenceState = service.player.sequenceState;
+      final allAudioQueueIds = <String>{};
+      if (sequenceState.sequence.isNotEmpty) {
+        for (final source in sequenceState.sequence) {
+          // Extraer ID del tag de la fuente (método correcto)
+          if (source.tag is Song) {
+            allAudioQueueIds.add((source.tag as Song).id);
+          }
+        }
+      }
+      
+      // 2. También incluir todas las canciones del estado (por si hay desincronización)
+      final allStateQueueIds = state.currentQueue.map((s) => s.id).toSet();
+      
+      // 3. Combinar ambas fuentes para máxima cobertura
+      final allQueueIds = {...allAudioQueueIds, ...allStateQueueIds};
+      
+      // 4. Obtener TODAS las canciones del historial reciente (no limitadas a 8)
+      final allPlayedIds = sessionNotifier.getPlayedSongIds(limit: 40); // Usar máximo del historial
+      
+      // 5. Construir lista de exclusión completa
+      final excludeIds = {...allQueueIds, ...allPlayedIds};
+      
+      AppLogger.info('[PlaybackNotifier] 🔍 Precarga: EXCLUSIÓN REFORZADA - Excluyendo ${excludeIds.length} IDs (${allQueueIds.length} en cola + ${allPlayedIds.length} reproducidas)');
       
       // ⚡ TRANSICIÓN INSTANTÁNEA: Obtener más recomendaciones (20 en lugar de 15 para asegurar tercera canción)
       final featuredSongs = await _intelligentService.getIntelligentFeaturedSongs(
@@ -1329,11 +1516,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       AppLogger.debug('[PlaybackNotifier] 🔍 Precarga: Recibidas ${featuredSongs.length} recomendaciones del servicio');
 
       // Filtrar canciones que ya están en la cola o en el historial reciente
-      final existingIds = limitedQueueIds.toSet();
       final newSongs = featuredSongs
           .map((f) => f.song)
           .where((s) => !excludeIds.contains(s.id))
-          .where((s) => !existingIds.contains(s.id))
           .take(15) // Aumentado de 10 a 15 para asegurar más canciones disponibles
           .toList();
 
@@ -1702,8 +1887,22 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 🎯 FASE 2: Si quedan ≤3 canciones, precargar inmediatamente (usar umbral centralizado)
       // 🚨 PROTECCIÓN: NO activar si se están generando recomendaciones iniciales
       if (effectiveRemainingSongs <= preloadThreshold && effectiveRemainingSongs > 0 && !_isPreloading && !_isGeneratingRecommendations) {
-        AppLogger.warning('[PlaybackNotifier] 🛡️ Cola crítica: Solo $effectiveRemainingSongs canciones restantes. Precarga urgente activada.');
-        _appendMoreAlgorithmSongs();
+        // 🛡️ COOLDOWN: Solo mostrar warning si ha pasado el cooldown (evitar spam de logs)
+        final shouldLogWarning = _lastCriticalQueueWarning == null || 
+            DateTime.now().difference(_lastCriticalQueueWarning!) >= _criticalQueueWarningCooldown;
+        
+        // 🛡️ COOLDOWN ADICIONAL: Verificar que haya pasado tiempo desde la última precarga
+        // para evitar llamadas repetidas muy rápidas
+        final canTriggerPreload = _lastPreloadTime == null || 
+            DateTime.now().difference(_lastPreloadTime!) >= const Duration(seconds: 3);
+        
+        if (canTriggerPreload) {
+          if (shouldLogWarning) {
+            AppLogger.warning('[PlaybackNotifier] 🛡️ Cola crítica: Solo $effectiveRemainingSongs canciones restantes. Precarga urgente activada.');
+            _lastCriticalQueueWarning = DateTime.now();
+          }
+          _appendMoreAlgorithmSongs();
+        }
         return;
       }
 
@@ -1908,6 +2107,15 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
     _consecutiveFailures++;
     AppLogger.warning('[PlaybackNotifier] 🛡️ Todos los fallbacks fallaron. Fallos consecutivos: $_consecutiveFailures');
+    
+    // 🚨 DETENER ALGORITMO: Si todos los fallbacks fallan, detener el algoritmo
+    // pero NO pausar la canción actual (debe seguir reproduciéndose hasta el final)
+    if (state.playbackMode == PlaybackMode.algorithm) {
+      AppLogger.warning('[PlaybackNotifier] ⚠️ No hay más canciones disponibles. Deteniendo algoritmo (la canción actual continuará reproduciéndose).');
+      _stopAlgorithmMonitor(); // Detener el monitor para que no intente generar más recomendaciones
+      // NO pausar aquí - dejar que la canción actual termine de reproducirse
+      // La pausa se hará automáticamente cuando la canción termine en _handleSongCompletion()
+    }
   }
 
   /// ⚡ TRANSICIÓN INSTANTÁNEA: Manejar cuando una canción termina
@@ -1978,7 +2186,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           await playAlgorithmStart(lastSongInQueue, excludeSeedFromQueue: true);
         } else if (state.repeatMode == RepeatMode.all) {
           await service.seek(Duration.zero);
-          await service.player.seek(Duration.zero, index: 0);
+          await service.player.seek(Duration.zero);
         } else {
           AppLogger.info('[PlaybackNotifier] Fin de cola fija. Deteniendo reproducción.');
           await service.pause();
@@ -2004,10 +2212,57 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           // Fallback al método original
           await service.next();
         }
+      } else {
+        // 🚨 PROTECCIÓN: Si no hay siguiente canción, intentar generar recomendaciones urgentes
+        // y si no se pueden generar, pausar para evitar que el reproductor se quede colgado
+        AppLogger.warning('[PlaybackNotifier] ⚠️ No hay siguiente canción en modo algoritmo. Intentando precarga urgente...');
+        
+        final currentSong = state.currentSong;
+        if (currentSong != null) {
+          // Intentar precarga urgente esperando resultado
+          try {
+            await _forceImmediatePreload().timeout(
+              const Duration(seconds: 3),
+              onTimeout: () {
+                AppLogger.warning('[PlaybackNotifier] ⚠️ Timeout en precarga urgente (3s)');
+              },
+            );
+            
+            // Sincronizar después de la precarga
+            _syncQueueWithAudioService(service.player.sequenceState);
+            
+            // Verificar si ahora hay siguiente canción
+            if (service.player.hasNext) {
+              AppLogger.info('[PlaybackNotifier] ✅ Precarga urgente exitosa, avanzando...');
+              await service.player.seekToNext();
+              await service.player.play();
+              _syncQueueWithAudioService(service.player.sequenceState);
+              state = state.copyWith(currentPosition: Duration.zero);
+            } else {
+              // Si aún no hay siguiente después de la precarga, pausar
+              AppLogger.warning('[PlaybackNotifier] ⚠️ No se pudieron generar más canciones. Pausando reproducción.');
+              await service.pause();
+              state = state.copyWith(isPlaying: false);
+            }
+          } catch (e) {
+            AppLogger.error('[PlaybackNotifier] ❌ Error en precarga urgente: $e');
+            // Si hay error, pausar para evitar estado inconsistente
+            await service.pause();
+            state = state.copyWith(isPlaying: false);
+          }
+        } else {
+          // Si no hay canción actual, pausar directamente
+          AppLogger.warning('[PlaybackNotifier] ⚠️ No hay canción actual ni siguiente. Pausando reproducción.');
+          await service.pause();
+          state = state.copyWith(isPlaying: false);
+        }
+        return; // Salir aquí, ya manejamos el caso sin siguiente canción
       }
       
-      // Asegurar que haya más canciones precargadas en background
-      _appendMoreAlgorithmSongs();
+      // Asegurar que haya más canciones precargadas en background (solo si hay siguiente)
+      if (service.player.hasNext) {
+        _appendMoreAlgorithmSongs();
+      }
     }
   }
 
@@ -2017,6 +2272,48 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   Future<void> playSong(Song song) async {
     try {
       AppLogger.info('[PlaybackNotifier] 🎵 Reproduciendo canción individual: ${song.title}');
+      
+      // ⚡ INYECCIÓN INSTANTÁNEA: Si hay una cola activa, usar inserción rápida
+      if (service.hasActiveQueue && song.isValidForPlayback) {
+        try {
+          AppLogger.info('[PlaybackNotifier] ⚡ Usando inyección instantánea para cambio rápido de canción');
+          final source = song.toAudioSource();
+          final success = await service.insertSongAtStart(source);
+          
+          if (success) {
+            // 🔄 SINCRONIZACIÓN INMEDIATA: Esperar que just_audio actualice su estado
+            await Future.delayed(const Duration(milliseconds: 50));
+            
+            // Sincronizar cola primero para obtener el estado real
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+            
+            // Actualizar estado basándose en la sincronización
+            state = state.copyWith(
+              currentSong: song,
+              lastConfirmedSong: song,
+              currentPosition: Duration.zero,
+              isBuffering: true,
+            );
+            
+            // Reproducir inmediatamente
+            await service.play();
+            
+            // Sincronizar una vez más después de reproducir
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+            
+            AppLogger.info('[PlaybackNotifier] ✅ Cambio instantáneo de canción completado');
+            return; // Salir aquí, ya completamos la reproducción
+          } else {
+            AppLogger.info('[PlaybackNotifier] Inyección instantánea falló, usando método estándar');
+            // Continuar con el método estándar
+          }
+        } catch (e, stackTrace) {
+          AppLogger.error('[PlaybackNotifier] Error en inyección instantánea, usando método estándar: $e', e, stackTrace);
+          // Continuar con el método estándar
+        }
+      }
+      
+      // Método estándar (cuando no hay cola activa o la inyección falló)
       await playFixedQueue([song], song);
     } catch (e, stackTrace) {
       AppLogger.error('[PlaybackNotifier] ❌ Error al reproducir canción: $e', stackTrace);
@@ -2148,6 +2445,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
                       nextIndex,
                     );
                     await service.play();
+                    
+                    // 🔄 SINCRONIZACIÓN FORZADA: Asegurar coherencia después de loadNewQueue
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+                    });
+                    
                     AppLogger.info('[PlaybackNotifier] ✅ Avance manual completado a índice $nextIndex');
                   }
                 }
@@ -2186,8 +2489,24 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     try {
       if (service.player.hasNext) {
         await service.next();
+        
+        // ⚡ SINCRONIZACIÓN INMEDIATA: Forzar actualización del estado después de cambio manual
+        // Esto evita que la UI muestre la carátula anterior mientras el audio ya cambió
+        await Future.delayed(const Duration(milliseconds: 50)); // Pequeño delay para que just_audio actualice
+        _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+        AppLogger.debug('[PlaybackNotifier] ⚡ Estado sincronizado inmediatamente después de next()');
       } else {
         AppLogger.info('[PlaybackNotifier] ℹ️ No hay siguiente canción disponible');
+        
+        // 🚨 DETENER ALGORITMO: Si no hay más canciones en modo algoritmo, detener el algoritmo
+        // pero NO pausar la canción actual (debe seguir reproduciéndose hasta el final)
+        if (state.playbackMode == PlaybackMode.algorithm) {
+          AppLogger.warning('[PlaybackNotifier] ⚠️ No hay más canciones disponibles en modo algoritmo. Deteniendo algoritmo (la canción actual continuará reproduciéndose).');
+          // Detener el monitor del algoritmo para que no intente generar más recomendaciones
+          _stopAlgorithmMonitor();
+          // NO pausar aquí - dejar que la canción actual termine de reproducirse
+          // La pausa se hará automáticamente cuando la canción termine en _handleSongCompletion()
+        }
       }
     } catch (e) {
       AppLogger.error('[PlaybackNotifier] Error al avanzar: $e');
@@ -2214,6 +2533,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     }
     
     await service.previous();
+    
+    // ⚡ SINCRONIZACIÓN INMEDIATA: Forzar actualización del estado después de cambio manual
+    // Esto evita que la UI muestre la carátula anterior mientras el audio ya cambió
+    await Future.delayed(const Duration(milliseconds: 50)); // Pequeño delay para que just_audio actualice
+    _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+    AppLogger.debug('[PlaybackNotifier] ⚡ Estado sincronizado inmediatamente después de previous()');
+    
     _isProcessingPrevious = false;
     state = state.copyWith(isProcessingPrevious: false);
   }
@@ -2372,16 +2698,23 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   /// 🔄 SINCRONIZAR COLA CON AUDIO SERVICE
   /// Valida y sincroniza state.currentQueue con la cola real de just_audio
   /// Previene race conditions y desincronizaciones
-  void _syncQueueWithAudioService(SequenceState? sequenceState) {
+  void _syncQueueWithAudioService(SequenceState? sequenceState, {bool forceSync = false}) {
     if (sequenceState == null) {
       return; // No hay estado
+    }
+
+    // 🛡️ PROTECCIÓN: Ignorar sincronización automática durante reemplazo de cola
+    // Solo permitir si es una sincronización forzada (después de loadNewQueue)
+    if (!forceSync && (_isReplacingQueue || _isUpdatingQueue)) {
+      return; // Ignorar sincronización automática durante operaciones críticas
     }
 
     try {
       final audioSources = sequenceState.sequence;
       if (audioSources.isEmpty) {
         // Si la cola de audio está vacía pero el estado tiene canciones, limpiar
-        if (state.currentQueue.isNotEmpty || state.currentSong != null) {
+        // Solo si no estamos en medio de una operación de reemplazo
+        if (!_isReplacingQueue && !_isUpdatingQueue && (state.currentQueue.isNotEmpty || state.currentSong != null)) {
           AppLogger.warning('[PlaybackNotifier] ⚠️ Desincronización detectada: cola de audio vacía pero estado tiene ${state.currentQueue.length} canciones');
           state = state.copyWith(currentQueue: [], currentSong: null, currentPosition: Duration.zero);
         }
@@ -2398,9 +2731,19 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
       // Comparar con el estado actual
       if (songsFromAudio.length != state.currentQueue.length) {
-        AppLogger.warning('[PlaybackNotifier] ⚠️ Desincronización detectada: audio tiene ${songsFromAudio.length} canciones, estado tiene ${state.currentQueue.length}');
-        state = state.copyWith(currentQueue: songsFromAudio);
-        AppLogger.info('[PlaybackNotifier] ✅ Cola sincronizada con audio service');
+        // Solo reportar si la diferencia es significativa y no es una transición esperada
+        // Durante loadNewQueue, puede haber un delay temporal normal
+        if (forceSync || (!_isReplacingQueue && !_isUpdatingQueue)) {
+          // 🛡️ REDUCIR VERBOSIDAD: Solo loggear si la diferencia es > 1 (evitar logs por transiciones menores)
+          final difference = (songsFromAudio.length - state.currentQueue.length).abs();
+          if (difference > 1 || forceSync) {
+            AppLogger.warning('[PlaybackNotifier] ⚠️ Desincronización detectada: audio tiene ${songsFromAudio.length} canciones, estado tiene ${state.currentQueue.length}');
+          }
+          state = state.copyWith(currentQueue: songsFromAudio);
+          if (difference > 1 || forceSync) {
+            AppLogger.info('[PlaybackNotifier] ✅ Cola sincronizada con audio service');
+          }
+        }
       } else {
         // Verificar que los IDs coincidan
         final audioIds = songsFromAudio.map((s) => s.id).toList();
@@ -2415,9 +2758,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         }
         
         if (!idsMatch) {
-          AppLogger.warning('[PlaybackNotifier] ⚠️ Desincronización de IDs detectada, sincronizando...');
-          state = state.copyWith(currentQueue: songsFromAudio);
-          AppLogger.info('[PlaybackNotifier] ✅ IDs sincronizados con audio service');
+          // Solo sincronizar si no estamos en medio de una operación de reemplazo
+          if (forceSync || (!_isReplacingQueue && !_isUpdatingQueue)) {
+            AppLogger.warning('[PlaybackNotifier] ⚠️ Desincronización de IDs detectada, sincronizando...');
+            state = state.copyWith(currentQueue: songsFromAudio);
+            AppLogger.info('[PlaybackNotifier] ✅ IDs sincronizados con audio service');
+          }
         }
       }
 
@@ -2562,6 +2908,17 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       return; // No deduplicar si estamos actualizando, deduplicando, o no hay estado
     }
 
+    // 🛡️ PROTECCIÓN CRÍTICA: No deduplicar inmediatamente después de inyección instantánea
+    // La inyección puede causar una diferencia temporal de 1 canción, lo cual es normal
+    // Si deduplicamos aquí, destruimos el reproductor (loadNewQueue) y anulamos el beneficio de la inyección
+    if (_lastInjectionTime != null) {
+      final timeSinceInjection = DateTime.now().difference(_lastInjectionTime!);
+      if (timeSinceInjection < _injectionProtectionWindow) {
+        AppLogger.debug('[PlaybackNotifier] 🛡️ [DEDUP] Omitiendo deduplicación: dentro de ventana de protección post-inyección (${timeSinceInjection.inMilliseconds}ms)');
+        return; // Aún en ventana de protección post-inyección
+      }
+    }
+
     // No deduplicar si el player está buffering/loading
     final playerState = service.player.playerState;
     if (playerState.processingState == ProcessingState.buffering ||
@@ -2659,6 +3016,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME] 🗑️ Eliminando ${duplicateIndices.length} duplicados...');
         AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME]    • IDs duplicados: ${duplicateIds.map((id) => id.substring(0, 8)).join(", ")}');
         
+        // 🚨 CRÍTICO: SIEMPRE intentar eliminación suave primero para evitar Release/Init
+        AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] 🚨 INICIANDO ELIMINACIÓN SUAVE PRIMERO...');
+        
+        // 🚨 DEBUG: Verificar que llegamos aquí ANTES de calcular índices
+        AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] 🚨 DEBUG 1: Antes de calcular newIndex');
+        
         // 🚨 CRÍTICO: Calcular el nuevo índice preservando la canción actual
         int newIndex = 0;
         if (currentIndex != null && currentSongId != null) {
@@ -2672,42 +3035,113 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           }
         }
         
+        // 🚨 DEBUG: Verificar que llegamos aquí DESPUÉS de calcular índices
+        AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] 🚨 DEBUG 2: Después de calcular newIndex = $newIndex');
+        
         // 🚨 ACTUALIZAR REALMENTE la cola del audio service con canciones únicas
         // Preservar la posición actual si seguimos en la misma canción
         final currentPosition = service.player.position;
+        // 🔄 CRÍTICO: Guardar estado de reproducción ANTES de modificar la cola
+        final wasPlaying = service.player.playing;
+        
+        // 🚨 DEBUG: Verificar que llegamos aquí DESPUÉS de obtener estado del player
+        AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] 🚨 DEBUG 3: wasPlaying = $wasPlaying, currentPosition = $currentPosition');
+        
         _isUpdatingQueue = true; // Marcar que estamos actualizando para evitar sincronizaciones
+        
+        // 🚨 DEBUG: Verificar que llegamos aquí ANTES del bloque try
+        AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] 🚨 DEBUG 4: Llegamos al bloque try, intentando eliminación suave...');
+        
         try {
-          final uniqueSources = songsFromAudio.map((s) => s.toAudioSource()).toList();
-          await service.loadNewQueue(uniqueSources, newIndex);
+          // 🛡️ INTENTAR MÉTODO SUAVE PRIMERO: Usar removeDuplicates si es posible
+          // Esto preserva el pipeline del reproductor (solo flush/start, sin Release/Init)
+          AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] Intentando eliminación suave primero (${duplicateIndices.length} duplicados)...');
+          final softRemoveSuccess = await service.removeDuplicates(duplicateIndices);
+          AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] Resultado eliminación suave: $softRemoveSuccess');
           
-          // Restaurar posición si seguimos en la misma canción y la duración es consistente
-          if (currentSongId != null && newIndex < songsFromAudio.length && songsFromAudio[newIndex].id == currentSongId) {
-            final songDuration = songsFromAudio[newIndex].duration;
-            if (songDuration == null || currentPosition < Duration(seconds: songDuration)) {
-              try {
-                await service.player.seek(currentPosition);
-              } catch (_) {
-                // Ignorar si no se puede restaurar
+          if (softRemoveSuccess) {
+            // ✅ Éxito con método suave: solo actualizar estado, no destruir reproductor
+            AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP] ✅ Eliminación suave exitosa (sin Release/Init)');
+            
+            // Sincronizar el estado con la cola actualizada
+            await Future.delayed(const Duration(milliseconds: 50));
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+            
+            // Actualizar estado con cola deduplicada
+            state = state.copyWith(
+              currentQueue: songsFromAudio,
+              isPlaying: wasPlaying, // Preservar estado de reproducción
+            );
+          } else {
+            // ❌ Fallback a método destructivo: solo si el método suave falla
+            AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] ⚠️ Eliminación suave falló, usando loadNewQueue (destructivo)');
+            
+            // ⚡ OPTIMIZACIÓN: Preservar estado ANTES de loadNewQueue para minimizar pausa
+            final wasPlayingBeforeLoad = service.player.playing;
+            final positionBeforeLoad = service.player.position;
+            
+            final uniqueSources = songsFromAudio.map((s) => s.toAudioSource()).toList();
+            await service.loadNewQueue(uniqueSources, newIndex);
+            
+            // ⚡ OPTIMIZACIÓN: Restaurar posición y reproducción INMEDIATAMENTE después de cargar
+            // Esto minimiza la pausa perceptible
+            if (currentSongId != null && newIndex < songsFromAudio.length && songsFromAudio[newIndex].id == currentSongId) {
+              final songDuration = songsFromAudio[newIndex].duration;
+              if (songDuration == null || positionBeforeLoad < Duration(seconds: songDuration)) {
+                try {
+                  await service.player.seek(positionBeforeLoad);
+                  AppLogger.debug('[PlaybackNotifier] 🛡️ [DEDUP] ⚡ Posición restaurada: ${positionBeforeLoad.inSeconds}s');
+                } catch (_) {
+                  // Ignorar si no se puede restaurar
+                }
               }
             }
+            
+            // 🔄 CRÍTICO: Reanudar reproducción INMEDIATAMENTE si estaba reproduciendo antes
+            // loadNewQueue pausa el reproductor, necesitamos reanudarlo lo más rápido posible
+            if (wasPlayingBeforeLoad) {
+              // Intentar reanudar inmediatamente sin delay adicional
+              try {
+                await service.play();
+                AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP] ▶️ Reproducción reanudada inmediatamente después de deduplicación');
+              } catch (e) {
+                AppLogger.warning('[PlaybackNotifier] 🛡️ [DEDUP] ⚠️ Error al reanudar reproducción: $e');
+                // Reintentar después de un pequeño delay
+                await Future.delayed(const Duration(milliseconds: 100));
+                try {
+                  await service.play();
+                  AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP] ▶️ Reproducción reanudada después de reintento');
+                } catch (_) {
+                  // Si falla de nuevo, continuar sin reproducir
+                }
+              }
+            }
+            
+            // Actualizar estado con cola deduplicada y estado de reproducción
+            state = state.copyWith(
+              currentQueue: songsFromAudio,
+              isPlaying: wasPlayingBeforeLoad, // Preservar estado de reproducción original
+            );
           }
-          
-          // Actualizar estado con cola deduplicada
-          state = state.copyWith(currentQueue: songsFromAudio);
-          
-          // 📊 CALCULAR IMPACTO DESPUÉS DE ACTUALIZAR
-          final queueSizeAfter = songsFromAudio.length;
-          final remainingSongsAfter = _getRemainingQueueSize();
-          
-          AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME] 📊 Estado DESPUÉS:');
-          AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME]    • Total canciones: $queueSizeAfter (${queueSizeBefore - queueSizeAfter} eliminadas)');
-          AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME]    • Canciones restantes: ${remainingSongsAfter >= 0 ? remainingSongsAfter : "N/A"} ${remainingSongsBefore >= 0 && remainingSongsAfter >= 0 && remainingSongsBefore != remainingSongsAfter ? "(${remainingSongsBefore - remainingSongsAfter} menos)" : ""}');
-          AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME]    • Índice actualizado: ${currentIndex ?? "N/A"} → $newIndex');
-          AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME] ✅ Deduplicación completada: ${songsFromAudio.length} únicas (${duplicateIndices.length} duplicados eliminados del audio service)');
-          AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME] ════════════════════════════════════════');
         } finally {
           _isUpdatingQueue = false;
+          
+          // 🔄 SINCRONIZACIÓN FORZADA: Esperar un momento para que just_audio actualice su estado
+          Future.delayed(const Duration(milliseconds: 200), () {
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+          });
         }
+        
+        // 📊 CALCULAR IMPACTO DESPUÉS DE ACTUALIZAR
+        final queueSizeAfter = songsFromAudio.length;
+        final remainingSongsAfter = _getRemainingQueueSize();
+        
+        AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME] 📊 Estado DESPUÉS:');
+        AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME]    • Total canciones: $queueSizeAfter (${queueSizeBefore - queueSizeAfter} eliminadas)');
+        AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME]    • Canciones restantes: ${remainingSongsAfter >= 0 ? remainingSongsAfter : "N/A"} ${remainingSongsBefore >= 0 && remainingSongsAfter >= 0 && remainingSongsBefore != remainingSongsAfter ? "(${remainingSongsBefore - remainingSongsAfter} menos)" : ""}');
+        AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME]    • Índice actualizado: ${currentIndex ?? "N/A"} → $newIndex');
+        AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME] ✅ Deduplicación completada: ${songsFromAudio.length} únicas (${duplicateIndices.length} duplicados eliminados del audio service)');
+        AppLogger.info('[PlaybackNotifier] 🛡️ [DEDUP RUNTIME] ════════════════════════════════════════');
       }
     } catch (e) {
       AppLogger.debug('[PlaybackNotifier] Error en deduplicación runtime (no crítico): $e');
@@ -2887,13 +3321,61 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           AppLogger.error('[PlaybackNotifier] No se puede reproducir sin canción');
           return;
         }
-        await playSong(song);
+        
+        // ⚡ INYECCIÓN INSTANTÁNEA: Si hay una cola activa, usar inserción rápida
+        if (service.hasActiveQueue && song.isValidForPlayback) {
+          try {
+            AppLogger.info('[PlaybackNotifier] ⚡ Usando inyección instantánea para cambio rápido de canción');
+            final source = song.toAudioSource();
+            final success = await service.insertSongAtStart(source);
+            
+            if (success) {
+              // 🛡️ PROTECCIÓN: Marcar tiempo de inyección para evitar deduplicación inmediata
+              _lastInjectionTime = DateTime.now();
+              
+              // 🔄 SINCRONIZACIÓN INMEDIATA: Esperar que just_audio actualice su estado
+              await Future.delayed(const Duration(milliseconds: 50));
+              
+              // 🔄 CRÍTICO: Sincronizar PRIMERO para actualizar el estado con la nueva cola
+              // Esto evita que la deduplicación detecte una desincronización falsa
+              _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+              
+              // 🔄 ACTUALIZACIÓN EXPLÍCITA: Asegurar que el estado refleje la cola correcta
+              final syncedState = state;
+              state = syncedState.copyWith(
+                currentSong: song,
+                lastConfirmedSong: song,
+                currentPosition: Duration.zero,
+                isBuffering: true,
+                // currentQueue ya fue actualizado por _syncQueueWithAudioService
+              );
+              
+              AppLogger.debug('[PlaybackNotifier] 🔄 Estado sincronizado después de inyección: ${state.currentQueue.length} canciones');
+              
+              // Reproducir inmediatamente
+              await service.play();
+              
+              // Sincronizar una vez más después de reproducir
+              _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+              
+              AppLogger.info('[PlaybackNotifier] ✅ Cambio instantáneo de canción completado');
+              return; // Salir aquí, ya completamos la reproducción
+            } else {
+              AppLogger.info('[PlaybackNotifier] Inyección instantánea falló, usando método estándar');
+              // Continuar con el método estándar
+            }
+        } catch (e, stackTrace) {
+          AppLogger.error('[PlaybackNotifier] Error en inyección instantánea, usando método estándar: $e', e, stackTrace);
+          // Continuar con el método estándar
+        }
       }
       
-      // 🛡️ FUENTE ÚNICA DE VERDAD: El stream actualizará isPlaying automáticamente
-      // NO actualizar isPlaying manualmente - el stream es la única fuente de verdad
-      // Solo actualizar isBuffering si es necesario para otros widgets
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Método estándar (cuando no hay cola activa o la inyección falló)
+      await playSong(song);
+      }
+      
+      // ⚡ OPTIMIZACIÓN: Actualizar estado de buffering de forma asíncrona sin bloquear
+      // No esperar delay - actualizar inmediatamente y dejar que el stream maneje el resto
       final actualPlayerState = service.player.playerState;
       final actualIsBuffering = actualPlayerState.processingState == ProcessingState.buffering ||
                                actualPlayerState.processingState == ProcessingState.loading;
@@ -2902,12 +3384,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         isBuffering: actualIsBuffering,
       );
       
-      AppLogger.info('[PlaybackNotifier] Reproducción desde tarjeta completada');
+      AppLogger.info('[PlaybackNotifier] Reproducción desde tarjeta iniciada');
       
     } finally {
-      // 🚨 PROTECCIÓN: Liberar flag después de que la reproducción se haya iniciado completamente
-      // Usar un delay para permitir que el listener se actualice, pero no demasiado largo
-      Future.delayed(const Duration(milliseconds: 1500), () {
+      // ⚡ OPTIMIZACIÓN: Reducir delay de liberación de flag para respuesta más rápida
+      // El flag solo necesita mantenerse el tiempo mínimo necesario
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (_isPlayingFromCard) {
           _isPlayingFromCard = false;
           AppLogger.debug('[PlaybackNotifier] Flag _isPlayingFromCard liberado');

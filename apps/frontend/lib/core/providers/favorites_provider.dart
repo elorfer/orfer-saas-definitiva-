@@ -53,15 +53,29 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
   @override
   FavoritesState build() {
     _service = ref.read(favoritesServiceProvider);
-    // Cargar favoritos inmediatamente la primera vez
-    _loadFavorites();
+    // Cargar favoritos después de que el build haya completado
+    // Usar un delay más largo para asegurar que el provider esté completamente inicializado
+    // y que el estado esté disponible antes de intentar accederlo
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (ref.mounted) {
+        _loadFavorites();
+      }
+    });
     return const FavoritesState(isLoading: true);
   }
 
   /// Cargar favoritos del usuario
   Future<void> _loadFavorites() async {
+    // Verificar que el provider esté montado antes de hacer cualquier cosa
+    if (!ref.mounted) return;
+    
     try {
-      state = state.copyWith(isLoading: true, error: null);
+      // Solo actualizar si el provider está montado
+      if (!ref.mounted) return;
+      
+      // Capturar el estado actual de forma segura
+      final currentState = state;
+      state = currentState.copyWith(isLoading: true, error: null);
       
       // 🚨 OPERACIÓN ASÍNCRONA: Llamada al servicio
       final favorites = await _service!.getMyFavorites();

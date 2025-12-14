@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/safe_google_fonts.dart';
 
 
 /// Theme moderno "Soft UI" + Glassmorphism
