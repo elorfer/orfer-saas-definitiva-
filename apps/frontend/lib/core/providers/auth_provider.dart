@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -71,12 +72,19 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       
       if (_authService.isAuthenticated) {
+        // Primero establecer el estado con el usuario guardado
         state = state.copyWith(
           user: _authService.currentUser,
           isAuthenticated: true,
           isLoading: false,
           isInitialized: true,
         );
+        
+        // Luego refrescar el perfil en segundo plano (sin bloquear)
+        refreshProfile().catchError((e) {
+          // Silenciar errores de refresh, el usuario ya está cargado
+          // El error se ignora silenciosamente
+        });
       } else {
         state = state.copyWith(
           isLoading: false,
@@ -184,6 +192,15 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Actualizar usuario inmediatamente sin hacer HTTP
+  /// Útil para actualizaciones en tiempo real vía WebSocket
+  void updateUserImmediately(User updatedUser) {
+    state = state.copyWith(
+      user: updatedUser,
+      isAuthenticated: true,
+    );
+  }
+
   /// Refrescar perfil
   Future<void> refreshProfile() async {
     try {
@@ -191,10 +208,14 @@ class AuthNotifier extends Notifier<AuthState> {
       
       final user = await _authService.getProfile();
       
+      // Debug: Verificar estado premium después del refresh
+      debugPrint('🔄 AuthProvider.refreshProfile - subscriptionStatus: ${user.subscriptionStatus}, isPremium: ${user.isPremium}');
+      
       state = state.copyWith(
         user: user,
         isLoading: false,
         error: null,
+        isAuthenticated: true, // Asegurar que sigue autenticado
       );
     } catch (e) {
       state = state.copyWith(

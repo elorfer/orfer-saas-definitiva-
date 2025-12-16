@@ -680,6 +680,11 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
   String? _cachedTotalTime;
   int? _lastCachedPositionMs;
   int? _lastCachedDurationMs;
+  
+  // ✅ PROTECCIÓN: Guardar última posición válida para evitar saltos a 0
+  Duration? _lastValidPosition;
+  // ✅ PROTECCIÓN: Guardar ID de la última canción para detectar cambios
+  String? _lastSongId;
 
   /// ✅ MEMOIZACIÓN: Formatear duración con cache para evitar recálculos
   /// Compara por milisegundos para mejor precisión del cache
@@ -721,6 +726,9 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
   Widget build(BuildContext context) {
     // ✅ OPTIMIZACIÓN: UN SOLO WATCH que combina todos los valores necesarios
     // Esto reduce de 3 rebuilds potenciales a solo 1
+    final currentSong = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentSong?.id),
+    );
     final progressData = ref.watch(
       unifiedAudioProviderFixed.select((state) => _ProgressData(
         currentPosition: state.currentPosition,
@@ -729,12 +737,30 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
       )),
     );
     
+    // ✅ PROTECCIÓN: Si cambió la canción, resetear la posición guardada
+    if (currentSong != null && currentSong != _lastSongId) {
+      _lastSongId = currentSong;
+      _lastValidPosition = null; // Resetear posición guardada cuando cambia la canción
+    }
+    
     // ✅ MEMOIZACIÓN: Cache se actualiza automáticamente en _formatDuration
     
-    // Usar posición de drag si está activa, sino usar la posición actual
+    // ✅ PROTECCIÓN: Evitar saltos a 0 cuando la posición se resetea temporalmente
+    // Solo usar la posición del estado si es válida (mayor que 0) o si no tenemos una posición guardada
+    Duration effectivePosition = progressData.currentPosition;
+    if (effectivePosition.inMilliseconds == 0 && _lastValidPosition != null && currentSong == _lastSongId) {
+      // Si la posición es 0 pero tenemos una posición válida guardada Y es la misma canción, mantenerla
+      // Esto evita que la barra parpadee cuando se sincroniza el estado
+      effectivePosition = _lastValidPosition!;
+    } else if (effectivePosition.inMilliseconds > 0) {
+      // Guardar la última posición válida
+      _lastValidPosition = effectivePosition;
+    }
+    
+    // Usar posición de drag si está activa, sino usar la posición efectiva
     final currentPosition = _isDraggingSeek && _dragPosition != null
         ? _dragPosition!
-        : progressData.currentPosition;
+        : effectivePosition;
 
     final currentDuration = progressData.totalDuration;
 
@@ -743,7 +769,9 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
         ? (currentDuration.inMilliseconds > 0
             ? (_dragPosition!.inMilliseconds / currentDuration.inMilliseconds).clamp(0.0, 1.0)
             : 0.0)
-        : progressData.progress;
+        : (currentDuration.inMilliseconds > 0
+            ? (currentPosition.inMilliseconds / currentDuration.inMilliseconds).clamp(0.0, 1.0)
+            : progressData.progress);
     final clampedProgress = finalProgress.clamp(0.0, 1.0);
 
     return Column(

@@ -9,7 +9,15 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
-import { useCreateUser, useDeactivateUser, useActivateUser, useUsers } from '@/hooks/useUsers';
+import { 
+  useCreateUser, 
+  useDeactivateUser, 
+  useActivateUser, 
+  useUsers,
+  useMarkAsPremium,
+  useRemovePremium,
+  usePremiumUsersCount,
+} from '@/hooks/useUsers';
 import type { UserModel } from '@/types/user';
 
 const PAGE_SIZE = 10;
@@ -39,6 +47,9 @@ export default function UsersPage() {
   const { mutateAsync: createUser, isLoading: isCreating } = useCreateUser();
   const { mutateAsync: deactivateUser } = useDeactivateUser();
   const { mutateAsync: activateUser } = useActivateUser();
+  const { mutateAsync: markAsPremium } = useMarkAsPremium();
+  const { mutateAsync: removePremium } = useRemovePremium();
+  const { data: premiumCount } = usePremiumUsersCount();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState(DEFAULT_CREATE_FORM);
@@ -94,6 +105,40 @@ export default function UsersPage() {
     }
   };
 
+  const handleMarkAsPremium = async (user: UserModel) => {
+    if (user.subscriptionStatus === 'active') {
+      window.alert('El usuario ya tiene premium activo.');
+      return;
+    }
+
+    const confirmed = window.confirm(`¿Seguro que deseas marcar a ${user.email} como premium?`);
+    if (!confirmed) return;
+
+    try {
+      setUpdatingId(user.id);
+      await markAsPremium({ id: user.id });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleRemovePremium = async (user: UserModel) => {
+    if (user.subscriptionStatus !== 'active') {
+      window.alert('El usuario no tiene premium activo.');
+      return;
+    }
+
+    const confirmed = window.confirm(`¿Seguro que deseas remover el premium de ${user.email}?`);
+    if (!confirmed) return;
+
+    try {
+      setUpdatingId(user.id);
+      await removePremium(user.id);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return users;
     const query = search.toLowerCase();
@@ -132,6 +177,11 @@ export default function UsersPage() {
             <p className="mt-1 text-sm text-gray-500">
               Consulta, filtra y gestiona los usuarios registrados.
             </p>
+            {premiumCount !== undefined && (
+              <p className="mt-1 text-sm font-medium text-brown-700">
+                Usuarios premium: <span className="font-bold">{premiumCount}</span>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -238,36 +288,61 @@ export default function UsersPage() {
                               {user.isActive ? 'Activo' : 'Inactivo'}
                             </span>
                           </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
+                          <td className="py-4 px-4">
                             {user.subscriptionStatus === 'active' ? (
-                              <span className="text-green-600 font-medium">Activa</span>
+                              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800">
+                                Premium
+                              </span>
                             ) : (
-                              <span className="text-gray-500">{user.subscriptionStatus ?? 'Sin suscripción'}</span>
+                              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-gray-100 text-gray-600">
+                                Sin premium
+                              </span>
                             )}
                           </td>
                           <td className="py-4 px-4 text-sm text-gray-500">
                             {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('es-ES') : 'Nunca'}
                           </td>
                           <td className="py-4 px-4 text-right">
-                            {user.isActive ? (
-                              <button
-                                onClick={() => handleDeactivateUser(user)}
-                                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-yellow-300 hover:text-yellow-600 disabled:cursor-not-allowed disabled:opacity-60"
-                                disabled={updatingId === user.id}
-                              >
-                                <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
-                                <span className="ml-1">Desactivar</span>
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleActivateUser(user)}
-                                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-green-300 hover:text-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                                disabled={updatingId === user.id}
-                              >
-                                <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
-                                <span className="ml-1">Activar</span>
-                              </button>
-                            )}
+                            <div className="flex items-center justify-end gap-2">
+                              {user.subscriptionStatus === 'active' ? (
+                                <button
+                                  onClick={() => handleRemovePremium(user)}
+                                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                  disabled={updatingId === user.id}
+                                  title="Remover premium"
+                                >
+                                  <span className="ml-1">Quitar Premium</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleMarkAsPremium(user)}
+                                  className="inline-flex items-center rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs font-semibold text-yellow-700 transition hover:border-yellow-400 hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  disabled={updatingId === user.id}
+                                  title="Marcar como premium"
+                                >
+                                  <span className="ml-1">Marcar Premium</span>
+                                </button>
+                              )}
+                              {user.isActive ? (
+                                <button
+                                  onClick={() => handleDeactivateUser(user)}
+                                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-yellow-300 hover:text-yellow-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                  disabled={updatingId === user.id}
+                                >
+                                  <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
+                                  <span className="ml-1">Desactivar</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleActivateUser(user)}
+                                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-green-300 hover:text-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                  disabled={updatingId === user.id}
+                                >
+                                  <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
+                                  <span className="ml-1">Activar</span>
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

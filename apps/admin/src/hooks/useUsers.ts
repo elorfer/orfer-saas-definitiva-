@@ -202,3 +202,59 @@ export const useVerifyUser = () => {
   );
 };
 
+export const useMarkAsPremium = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    async ({ id, expiresAt }: { id: string; expiresAt?: string }) => {
+      const response = await apiClient.markAsPremium(id, expiresAt);
+      return mapUser(response.data);
+    },
+    {
+      onSuccess: () => {
+        toast.success('Usuario marcado como premium');
+        queryClient.invalidateQueries(USERS_QUERY_KEY);
+      },
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+
+export const useRemovePremium = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    async (id: string) => {
+      const response = await apiClient.removePremium(id);
+      return mapUser(response.data);
+    },
+    {
+      onSuccess: () => {
+        toast.success('Premium removido del usuario');
+        queryClient.invalidateQueries(USERS_QUERY_KEY);
+      },
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+
+export const usePremiumUsersCount = () => {
+  return useQuery<number, Error>(
+    ['premium-users-count'],
+    async () => {
+      const response = await apiClient.getPremiumUsersCount();
+      return response.data.count;
+    },
+    {
+      refetchOnWindowFocus: true,
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+

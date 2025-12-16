@@ -16,7 +16,9 @@ import '../../features/library/screens/library_screen.dart';
 import '../../features/library/screens/favorites_screen.dart';
 import '../../features/library/screens/recently_played_screen.dart';
 import '../../features/library/screens/followed_artists_screen.dart';
-import '../../features/premium/screens/premium_screen.dart';
+import '../../features/premium/screens/premium_deactivated_screen.dart';
+import '../../features/premium/screens/premium_activated_screen.dart';
+import '../../features/premium/screens/premium_router_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../core/providers/onboarding_provider.dart';
 import '../../features/artists/pages/artist_page.dart';
@@ -481,12 +483,23 @@ class GoRouterNotifier extends ChangeNotifier {
                   name: 'premium',
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
                     key: const PageStorageKey('premium_screen'),
-                    child: const PremiumScreen(),
+                    child: const PremiumRouterScreen(),
                   ),
                 ),
               ],
             ),
           ],
+        ),
+        // Premium Activated Screen - se muestra cuando se activa premium
+        GoRoute(
+          path: '/premium/activated',
+          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+            key: const PageStorageKey('premium_activated_screen'),
+            child: const PremiumActivatedScreen(),
+            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+            transitionDuration: const Duration(milliseconds: 300),
+            reverseTransitionDuration: const Duration(milliseconds: 200),
+          ),
         ),
         // Full Player - FUERA del ShellRoute para que no muestre el mini player
         // Sin transición para apertura/cierre inmediata

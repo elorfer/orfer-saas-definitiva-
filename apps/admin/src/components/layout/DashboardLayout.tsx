@@ -17,6 +17,7 @@ import {
   ChevronDownIcon,
   StarIcon,
   ListBulletIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardLayoutProps {
@@ -26,6 +27,7 @@ interface DashboardLayoutProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Administrar usuarios', href: '/dashboard/users', icon: UsersIcon },
+  { name: 'Usuarios Premium', href: '/dashboard/premium', icon: SparklesIcon },
   { name: 'Administrar artistas', href: '/dashboard/artists', icon: MusicalNoteIcon },
   { name: 'Gestionar canciones', href: '/dashboard/songs', icon: MusicalNoteIcon },
   { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },

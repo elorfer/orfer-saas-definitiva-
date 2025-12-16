@@ -99,6 +99,22 @@ export const apiClient = {
   
   verifyUser: (id: string) => api.post(`/users/${id}/verify`),
 
+  // Premium users
+  markAsPremium: (id: string, expiresAt?: string) => 
+    api.post(`/users/${id}/premium`, expiresAt ? { expiresAt } : {}),
+  
+  removePremium: (id: string) => api.post(`/users/${id}/remove-premium`),
+  
+  getPremiumUsersCount: () => api.get('/users/premium/count'),
+  
+  getPremiumUsers: (page = 1, limit = 10) =>
+    api.get(`/users/premium/list?page=${page}&limit=${limit}`),
+  
+  getPremiumUsersExpiringSoon: (days = 30) =>
+    api.get(`/users/premium/expiring-soon?days=${days}`),
+  
+  getPremiumStats: () => api.get('/users/premium/stats'),
+
   // Artists
   getArtists: (page = 1, limit = 100) =>
     api.get(`/artists?page=${page}&limit=${limit}`),

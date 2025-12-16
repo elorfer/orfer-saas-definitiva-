@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
 class AuthTextField extends StatelessWidget {
@@ -48,10 +47,11 @@ class AuthTextField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
+            color: Colors.grey,
           ),
         ),
         const SizedBox(height: 8),
@@ -69,15 +69,17 @@ class AuthTextField extends StatelessWidget {
           readOnly: readOnly,
           maxLines: maxLines,
           maxLength: maxLength,
-          style: GoogleFonts.inter(
+          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+          style: const TextStyle(
             fontSize: 16,
-            color: Colors.grey[800],
+            color: Colors.black87,
           ),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            hintStyle: const TextStyle(
               fontSize: 16,
-              color: Colors.grey[400],
+              color: Colors.grey,
             ),
             prefixIcon: prefixIcon != null
                 ? Icon(

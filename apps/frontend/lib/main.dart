@@ -8,6 +8,7 @@ import 'core/theme/neumorphism_theme.dart';
 import 'core/utils/logger.dart';
 import 'core/widgets/optimized_scroll_behavior.dart';
 import 'core/providers/page_storage_provider.dart';
+import 'core/widgets/premium_status_listener.dart';
 
 /// Builder personalizado para manejar errores no capturados
 /// Ignora errores no críticos y reporta adecuadamente los errores críticos
@@ -469,9 +470,10 @@ class VintageMusicApp extends ConsumerWidget {
 
     final neumorphismTheme = NeumorphismTheme();
     
-    return PageStorage(
-      bucket: pageStorageBucket,
-      child: MaterialApp.router(
+    return PremiumStatusListener(
+      child: PageStorage(
+        bucket: pageStorageBucket,
+        child: MaterialApp.router(
         title: 'struky',
         debugShowCheckedModeBanner: false,
         // 🔥 ScrollBehavior optimizado global
@@ -498,6 +500,7 @@ class VintageMusicApp extends ConsumerWidget {
         ),
         routerConfig: router,
       ),
+    ),
     );
   }
 }

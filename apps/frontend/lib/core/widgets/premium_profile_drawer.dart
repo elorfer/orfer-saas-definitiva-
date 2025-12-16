@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../models/user_model.dart';
 import '../theme/neumorphism_theme.dart';
 
 /// Drawer lateral premium para promoción y perfil
@@ -52,11 +53,17 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.read(authStateProvider);
-    final user = authState.user;
+    // ⚡ OPTIMIZACIÓN: Usar select para evitar reconstrucciones innecesarias
+    // Solo escuchar cambios en el usuario, no en todo el authState
+    final user = ref.watch(authStateProvider.select((state) => state.user));
     final userName = '${user?.firstName ?? 'Usuario'} ${user?.lastName ?? ''}'.trim();
     final userEmail = user?.email ?? 'usuario@ejemplo.com';
     final userRole = user?.role.toString() ?? 'Usuario';
+    
+    // Calcular isPremium de forma explícita para asegurar que se actualice
+    final isPremium = user != null && 
+                      (user.subscriptionStatus == SubscriptionStatus.premium || 
+                       user.subscriptionStatus == SubscriptionStatus.vip);
     
     // Ancho del drawer: un poco más de la mitad (55%)
     final screenWidth = MediaQuery.of(context).size.width;
@@ -78,87 +85,8 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  // ⚡ OPTIMIZADO: Sección Premium destacada con sombra reducida
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          NeumorphismTheme.coffeeMedium,
-                          NeumorphismTheme.coffeeDark,
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.all(Radius.circular(20)),
-                      boxShadow: [
-                        // ⚡ OPTIMIZACIÓN: Reducir blurRadius para mejor rendimiento
-                        BoxShadow(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                          blurRadius: 12, // Reducido de 20 a 12
-                          offset: const Offset(0, 4), // Reducido de 8 a 4
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.star_rounded,
-                          color: Colors.white,
-                          size: 32, // 🔥 Icono reducido
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Vintage Music Premium',
-                          style: GoogleFonts.inter(
-                            fontSize: 18, // 🔥 Tamaño reducido
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -0.3,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Disfruta de música sin límites',
-                          style: GoogleFonts.inter(
-                            fontSize: 13, // 🔥 Tamaño reducido
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          width: double.infinity,
-                          height: 40, // 🔥 Altura reducida
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: const BorderRadius.all(Radius.circular(12)),
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                // Nota: Navegación a pantalla de suscripción premium pendiente de implementar
-                              },
-                              borderRadius: const BorderRadius.all(Radius.circular(12)),
-                              child: Center(
-                                child: Text(
-                                  'Actualizar a Premium',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14, // 🔥 Tamaño reducido
-                                    fontWeight: FontWeight.w600,
-                                    color: NeumorphismTheme.coffeeDark,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // 🔥 Estado de Suscripción - Arriba
+                  _buildSubscriptionStatus(isPremium),
                   
                   const SizedBox(height: 24),
                   
@@ -450,6 +378,137 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
         ),
       ),
     );
+  }
+
+  /// Widget para mostrar el estado de suscripción
+  Widget _buildSubscriptionStatus(bool isPremium) {
+    if (isPremium) {
+      // Usuario Premium - Mensaje en verde
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.15),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          border: Border.all(
+            color: Colors.green.withValues(alpha: 0.4),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.verified_rounded,
+              color: Colors.green[700],
+              size: 32,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Eres un usuario premium activo',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.green[800],
+                letterSpacing: -0.2,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Disfruta de música única en el mundo',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.green[700],
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Usuario NO Premium - Botón para actualizar
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              NeumorphismTheme.coffeeMedium,
+              NeumorphismTheme.coffeeDark,
+            ],
+          ),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.star_rounded,
+              color: Colors.white,
+              size: 32,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Estado de Suscripción',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: -0.3,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Actualiza a Premium para disfrutar de música sin límites',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).pop(); // Cerrar drawer
+                    context.go('/premium'); // Navegar a pantalla premium
+                  },
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  child: Center(
+                    child: Text(
+                      'Actualizar Premium',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: NeumorphismTheme.coffeeDark,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
 

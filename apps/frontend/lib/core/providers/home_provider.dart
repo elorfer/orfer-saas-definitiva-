@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/home_service.dart';
@@ -165,9 +164,10 @@ class HomeNotifier extends Notifier<HomeState> {
   /// 🔥 OPTIMIZACIÓN: Carga progresiva - primero lo visible, luego el resto
   Future<void> loadHomeData({bool forceRefresh = false}) async {
     try {
+      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
       // #region agent log
-      final loadStartTime = DateTime.now().millisecondsSinceEpoch;
-      _writeDebugLog('home_provider.dart:152', 'loadHomeData started', {'forceRefresh': forceRefresh}, 'C');
+      // final loadStartTime = DateTime.now().millisecondsSinceEpoch;
+      // _writeDebugLog('home_provider.dart:152', 'loadHomeData started', {'forceRefresh': forceRefresh}, 'C');
       // #endregion
       
       // Mantener datos actuales para evitar parpadeos; solo marcar loading
@@ -179,8 +179,9 @@ class HomeNotifier extends Notifier<HomeState> {
       List<FeaturedSong> featuredSongs = [];
       HomeMessage? homeMessage;
       
+      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
       // #region agent log
-      final phase1StartTime = DateTime.now().millisecondsSinceEpoch;
+      // final phase1StartTime = DateTime.now().millisecondsSinceEpoch;
       // #endregion
       
       // Cargar solo lo esencial primero (artistas y canciones destacadas)
@@ -197,9 +198,10 @@ class HomeNotifier extends Notifier<HomeState> {
         homeMessage: homeMessage,
       );
       
+      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
       // #region agent log
-      final phase1EndTime = DateTime.now().millisecondsSinceEpoch;
-      _writeDebugLog('home_provider.dart:177', 'Phase 1 (critical) completed', {'duration': phase1EndTime - phase1StartTime}, 'C');
+      // final phase1EndTime = DateTime.now().millisecondsSinceEpoch;
+      // _writeDebugLog('home_provider.dart:177', 'Phase 1 (critical) completed', {'duration': phase1EndTime - phase1StartTime}, 'C');
       // #endregion
       
       // Fase 2: Cargar datos secundarios (playlists y otros) de forma asíncrona
@@ -231,10 +233,12 @@ class HomeNotifier extends Notifier<HomeState> {
         _saveToCacheThrottled(state);
       });
       
+      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
+      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
       // #region agent log
-      final loadEndTime = DateTime.now().millisecondsSinceEpoch;
-      final totalLoadDuration = loadEndTime - loadStartTime;
-      _writeDebugLog('home_provider.dart:197', 'loadHomeData completed', {'totalDuration': totalLoadDuration, 'artistsCount': featuredArtists.length, 'songsCount': featuredSongs.length, 'playlistsCount': featuredPlaylists.length}, 'C');
+      // final loadEndTime = DateTime.now().millisecondsSinceEpoch;
+      // final totalLoadDuration = loadEndTime - loadStartTime;
+      // _writeDebugLog('home_provider.dart:197', 'loadHomeData completed', {'totalDuration': totalLoadDuration, 'artistsCount': featuredArtists.length, 'songsCount': featuredSongs.length, 'playlistsCount': featuredPlaylists.length}, 'C');
       // #endregion
     } catch (e) {
       state = state.copyWith(
@@ -340,31 +344,7 @@ class HomeNotifier extends Notifier<HomeState> {
   }
 }
 
-// #region agent log
-void _writeDebugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
-  final logEntry = {
-    'location': location,
-    'message': message,
-    'data': data,
-    'timestamp': DateTime.now().millisecondsSinceEpoch,
-    'sessionId': 'debug-session',
-    'runId': 'run1',
-    'hypothesisId': hypothesisId,
-  };
-  print('[DEBUG] ${jsonEncode(logEntry)}');
-  try {
-    final logPath = r'c:\app definitiva\.cursor\debug.log';
-    final logFile = File(logPath);
-    final logDir = logFile.parent;
-    if (!logDir.existsSync()) {
-      logDir.createSync(recursive: true);
-    }
-    logFile.writeAsStringSync('${jsonEncode(logEntry)}\n', mode: FileMode.append, flush: true);
-  } catch (e) {
-    print('[DEBUG LOG FILE ERROR] $e');
-  }
-}
-// #endregion
+// OPTIMIZACIÓN: Método de logging removido para mejor rendimiento
 
 /// Provider para el estado de home
 final homeStateProvider = NotifierProvider<HomeNotifier, HomeState>(() {

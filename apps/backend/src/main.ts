@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { join } from 'path';
 // import * as compression from 'compression';
 import { AppModule } from './app.module';
@@ -112,6 +113,9 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Configurar WebSocket adapter para Socket.io
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Prefijo global para la API
   app.setGlobalPrefix('api/v1');

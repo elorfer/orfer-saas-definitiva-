@@ -2288,10 +2288,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
             
             // Actualizar estado basándose en la sincronización
+            // ✅ CORRECCIÓN: NO resetear currentPosition a 0 manualmente
+            // Dejar que el stream de posición lo actualice para evitar parpadeos
             state = state.copyWith(
               currentSong: song,
               lastConfirmedSong: song,
-              currentPosition: Duration.zero,
+              // NO actualizar currentPosition aquí - el stream lo hará automáticamente
               isBuffering: true,
             );
             
@@ -2798,21 +2800,31 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         if (!processingActive) {
           return;
         }
+        // ✅ CORRECCIÓN: Actualizar posición solo si es válida (mayor que 0) o si la canción cambió
+        // Esto evita que la barra parpadee cuando se sincroniza
+        final shouldUpdatePosition = currentPos.inMilliseconds > 0 || 
+                                     (currentSongId != null && currentSongId != songAtIdx.id);
+        final positionToUse = shouldUpdatePosition ? currentPos : state.currentPosition;
+
         // No adelantar portada si el player no está activo
         state = state.copyWith(
-          currentPosition: currentPos,
+          currentPosition: positionToUse,
           totalDuration: currentDuration ?? state.totalDuration,
           lastConfirmedSong: songAtIdx,
         );
 
         // Si aún no cambia la canción, no sobrescribir la portada; solo actualizar barra
         if (currentSongId != null && currentSongId == songAtIdx.id) {
+          // ✅ CORRECCIÓN: Aún así actualizar la posición si es válida para mantener la barra fluida
+          if (currentPos.inMilliseconds > 0) {
+            state = state.copyWith(currentPosition: currentPos);
+          }
           return;
         } else {
           // Solo cambiar currentSong cuando el índice cambia o estaba vacío
           state = state.copyWith(
             currentSong: songAtIdx,
-            currentPosition: currentPos,
+            currentPosition: positionToUse,
             totalDuration: currentDuration ?? Duration.zero,
             lastConfirmedSong: songAtIdx,
           );
@@ -2820,8 +2832,15 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         }
       } else {
         // Sin índice válido: si tenemos una confirmada previa, mantenerla para evitar flashes
+        // ✅ CORRECCIÓN: NO resetear currentPosition a 0 si ya hay una posición válida
+        // Esto evita que la barra de progreso parpadee cuando se sincroniza
         if (state.currentSong == null && state.lastConfirmedSong != null) {
-          state = state.copyWith(currentSong: state.lastConfirmedSong, currentPosition: Duration.zero);
+          // Mantener la posición actual si existe, solo actualizar la canción
+          final currentPos = service.player.position;
+          state = state.copyWith(
+            currentSong: state.lastConfirmedSong,
+            currentPosition: currentPos.inMilliseconds > 0 ? currentPos : state.currentPosition,
+          );
         }
       }
 
@@ -3341,11 +3360,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
               _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
               
               // 🔄 ACTUALIZACIÓN EXPLÍCITA: Asegurar que el estado refleje la cola correcta
+              // ✅ CORRECCIÓN: NO resetear currentPosition a 0 manualmente
+              // Dejar que el stream de posición lo actualice para evitar parpadeos
               final syncedState = state;
               state = syncedState.copyWith(
                 currentSong: song,
                 lastConfirmedSong: song,
-                currentPosition: Duration.zero,
+                // NO actualizar currentPosition aquí - el stream lo hará automáticamente
                 isBuffering: true,
                 // currentQueue ya fue actualizado por _syncQueueWithAudioService
               );

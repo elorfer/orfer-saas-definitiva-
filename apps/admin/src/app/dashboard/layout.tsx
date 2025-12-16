@@ -18,6 +18,7 @@ import {
   StarIcon,
   TagIcon,
   MegaphoneIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardLayoutProps {
@@ -64,6 +65,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
     { name: 'Administrar usuarios', href: '/dashboard/users', icon: UsersIcon },
+    { name: 'Usuarios Premium', href: '/dashboard/premium', icon: SparklesIcon },
     { name: 'Gestionar canciones', href: '/dashboard/songs', icon: MusicalNoteIcon },
     { name: 'Artistas', href: '/dashboard/artists', icon: UsersIcon },
     { name: 'Géneros musicales', href: '/dashboard/genres', icon: TagIcon },

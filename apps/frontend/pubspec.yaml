@@ -32,6 +32,7 @@ dependencies:
   dio: ^5.4.3+1
   retrofit: ^4.1.0
   json_annotation: ^4.8.1
+  socket_io_client: ^2.0.3+1  # WebSocket para notificaciones en tiempo real
 
   # Local Storage
   shared_preferences: ^2.2.3

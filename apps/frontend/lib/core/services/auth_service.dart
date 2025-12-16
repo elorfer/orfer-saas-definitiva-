@@ -9,6 +9,7 @@ import '../config/app_config.dart';
 import '../utils/logger.dart';
 import '../utils/retry_handler.dart';
 import '../utils/error_handler.dart';
+import '../utils/data_normalizer.dart';
 import '../exceptions/auth_exception.dart';
 import 'http_client_service.dart';
 
@@ -95,7 +96,10 @@ class AuthService {
 
       if (token != null && userData != null) {
         _accessToken = token;
-        _currentUser = User.fromJson(jsonDecode(userData));
+        // Normalizar datos del usuario al cargar desde almacenamiento
+        final userJson = jsonDecode(userData) as Map<String, dynamic>;
+        final normalizedData = DataNormalizer.normalizeUser(userJson);
+        _currentUser = User.fromJson(normalizedData);
       }
     } catch (e) {
       // Si hay error al cargar datos, limpiar todo
@@ -185,7 +189,15 @@ class AuthService {
       }
 
       if (response.statusCode == 200) {
-        final authResponse = AuthResponse.fromJson(response.data);
+        // Normalizar datos del usuario antes de parsear (maneja nulls y valores por defecto)
+        final responseData = Map<String, dynamic>.from(response.data);
+        if (responseData['user'] != null) {
+          final userData = responseData['user'] as Map<String, dynamic>;
+          // Normalizar completamente los datos del usuario
+          responseData['user'] = DataNormalizer.normalizeUser(userData);
+        }
+        
+        final authResponse = AuthResponse.fromJson(responseData);
         await _saveAuthData(authResponse);
         return authResponse;
       } else {
@@ -270,56 +282,11 @@ class AuthService {
             }
           }
           
-          // Validar que los campos requeridos del user no sean null
+          // Normalizar datos del usuario antes de parsear (maneja nulls y valores por defecto)
           if (data['user'] != null) {
             final userData = data['user'] as Map<String, dynamic>;
-            // Asegurar que los campos requeridos no sean null
-            if (userData['first_name'] == null && userData['firstName'] == null) {
-              AppLogger.error('Error: first_name/firstName es null');
-              throw AuthException('El campo first_name es requerido pero está ausente');
-            }
-            if (userData['last_name'] == null && userData['lastName'] == null) {
-              AppLogger.error('Error: last_name/lastName es null');
-              throw AuthException('El campo last_name es requerido pero está ausente');
-            }
-            
-            // Normalizar a snake_case si viene en camelCase
-            if (userData.containsKey('firstName') && !userData.containsKey('first_name')) {
-              userData['first_name'] = userData['firstName'];
-              userData.remove('firstName');
-            }
-            if (userData.containsKey('lastName') && !userData.containsKey('last_name')) {
-              userData['last_name'] = userData['lastName'];
-              userData.remove('lastName');
-            }
-            if (userData.containsKey('avatarUrl') && !userData.containsKey('avatar_url')) {
-              userData['avatar_url'] = userData['avatarUrl'];
-              userData.remove('avatarUrl');
-            }
-            if (userData.containsKey('subscriptionStatus') && !userData.containsKey('subscription_status')) {
-              userData['subscription_status'] = userData['subscriptionStatus'];
-              userData.remove('subscriptionStatus');
-            }
-            if (userData.containsKey('isVerified') && !userData.containsKey('is_verified')) {
-              userData['is_verified'] = userData['isVerified'];
-              userData.remove('isVerified');
-            }
-            if (userData.containsKey('isActive') && !userData.containsKey('is_active')) {
-              userData['is_active'] = userData['isActive'];
-              userData.remove('isActive');
-            }
-            if (userData.containsKey('lastLoginAt') && !userData.containsKey('last_login_at')) {
-              userData['last_login_at'] = userData['lastLoginAt'];
-              userData.remove('lastLoginAt');
-            }
-            if (userData.containsKey('createdAt') && !userData.containsKey('created_at')) {
-              userData['created_at'] = userData['createdAt'];
-              userData.remove('createdAt');
-            }
-            if (userData.containsKey('updatedAt') && !userData.containsKey('updated_at')) {
-              userData['updated_at'] = userData['updatedAt'];
-              userData.remove('updatedAt');
-            }
+            // Normalizar completamente los datos del usuario
+            data['user'] = DataNormalizer.normalizeUser(userData);
           }
           
           final authResponse = AuthResponse.fromJson(data);
@@ -445,7 +412,44 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        final user = User.fromJson(response.data);
+        // Normalizar datos del usuario antes de parsear (maneja nulls y valores por defecto)
+        final responseData = Map<String, dynamic>.from(response.data);
+        
+        // El backend devuelve { user: {...} }, necesitamos extraer el objeto user
+        Map<String, dynamic> userData;
+        if (responseData.containsKey('user') && responseData['user'] is Map<String, dynamic>) {
+          userData = Map<String, dynamic>.from(responseData['user'] as Map<String, dynamic>);
+        } else {
+          // Si no viene en formato { user: {...} }, usar responseData directamente
+          userData = responseData;
+        }
+        
+        // Debug: Ver qué viene del backend
+        if (kDebugMode) {
+          AppLogger.debug('📥 AuthService.getProfile - Datos del backend:');
+          AppLogger.debug('  - responseData completo: $responseData');
+          AppLogger.debug('  - userData extraído: $userData');
+          AppLogger.debug('  - subscription_status (raw): ${userData['subscription_status']}');
+        }
+        
+        final normalizedData = DataNormalizer.normalizeUser(userData);
+        
+        // Debug: Ver qué queda después de normalizar
+        if (kDebugMode) {
+          AppLogger.debug('📤 AuthService.getProfile - Datos normalizados:');
+          AppLogger.debug('  - normalizedData: $normalizedData');
+          AppLogger.debug('  - subscription_status (normalized): ${normalizedData['subscription_status']}');
+        }
+        
+        final user = User.fromJson(normalizedData);
+        
+        // Debug: Ver el estado final del usuario
+        if (kDebugMode) {
+          AppLogger.debug('✅ AuthService.getProfile - Usuario parseado:');
+          AppLogger.debug('  - subscriptionStatus: ${user.subscriptionStatus}');
+          AppLogger.debug('  - isPremium: ${user.isPremium}');
+        }
+        
         _currentUser = user;
         await _secureStorage.write(key: _userKey, value: jsonEncode(user.toJson()));
         return user;

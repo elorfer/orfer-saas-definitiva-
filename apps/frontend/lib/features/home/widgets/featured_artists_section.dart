@@ -1,9 +1,5 @@
-import 'dart:io';
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../features/artists/models/artist.dart';
@@ -37,10 +33,6 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
-    // #region agent log
-    final buildStartTime = DateTime.now().millisecondsSinceEpoch;
-    // #endregion
-    
     // 🔥 FIX: Usar select() directamente para evitar rebuilds innecesarios durante scroll
     // Solo observar isLoading si realmente lo necesitamos para mostrar skeleton
     final featuredArtists = ref.watch(featuredArtistsProvider);
@@ -50,11 +42,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
         ? ref.watch(homeStateProvider.select((state) => state.isLoading)) 
         : false;
     
-    // #region agent log
-    final buildEndTime = DateTime.now().millisecondsSinceEpoch;
-    final buildDuration = buildEndTime - buildStartTime;
-    _writeDebugLog('featured_artists_section.dart:159', 'FeaturedArtistsSection build completed', {'duration': buildDuration}, 'A');
-    // #endregion
+    // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
 
     // CRÍTICO: Solo mostrar skeleton durante carga inicial (cuando no hay datos)
     // Si hay datos pero está cargando (refresh), mostrar contenido existente
@@ -74,7 +62,8 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
             'Compositores',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               color: NeumorphismTheme.textPrimary,
@@ -234,7 +223,8 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
       children: [
         Text(
           'Compositores Destacados',
-          style: GoogleFonts.inter(
+          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -260,7 +250,8 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
                 const SizedBox(height: 16),
                 Text(
                   'No hay compositores destacados',
-                  style: GoogleFonts.inter(
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: TextStyle(
                     fontSize: 16,
                     color: Colors.white.withValues(alpha: 0.7),
                     decoration: TextDecoration.none,
@@ -269,7 +260,8 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
                 const SizedBox(height: 8),
                 Text(
                   'Vuelve más tarde para descubrir nuevos talentos',
-                  style: GoogleFonts.inter(
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: TextStyle(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.5),
                     decoration: TextDecoration.none,
@@ -296,33 +288,5 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
     context.push('/artist/${artist.id}', extra: lite);
   }
   
-  // #region agent log
-  void _writeDebugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
-    if (!kDebugMode) return;
-    final logEntry = {
-      'location': location,
-      'message': message,
-      'data': data,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-      'sessionId': 'debug-session',
-      'runId': 'run1',
-      'hypothesisId': hypothesisId,
-    };
-    debugPrint('[DEBUG] ${jsonEncode(logEntry)}');
-    // Escribir en disco solo en debug y fuera del hilo principal
-    Future.microtask(() async {
-      try {
-        final logPath = r'c:\app definitiva\.cursor\debug.log';
-        final logFile = File(logPath);
-        final logDir = logFile.parent;
-        if (!await logDir.exists()) {
-          await logDir.create(recursive: true);
-        }
-        await logFile.writeAsString('${jsonEncode(logEntry)}\n', mode: FileMode.append);
-      } catch (_) {
-        // Ignorar errores de escritura en debug
-      }
-    });
-  }
-  // #endregion
+  // OPTIMIZACIÓN: Método de logging removido para mejor rendimiento
 }

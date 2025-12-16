@@ -19,7 +19,7 @@ interface AuthenticatedSocket extends Socket {
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.ADMIN_FRONTEND_URL || 'http://localhost:3002',
+    origin: '*', // Permitir conexiones desde cualquier origen (app móvil)
     credentials: true,
   },
   namespace: '/realtime',
@@ -29,6 +29,8 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   server: Server;
 
   private readonly logger = new Logger(RealtimeGateway.name);
+  // Almacenar sockets de usuarios por userId para notificaciones específicas
+  private readonly userSockets = new Map<string, Set<string>>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -37,15 +39,21 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
+      this.logger.log(`🔌 Intento de conexión desde: ${client.handshake.address} (${client.id})`);
+      this.logger.debug(`Handshake auth: ${JSON.stringify(client.handshake.auth)}`);
+      this.logger.debug(`Handshake query: ${JSON.stringify(client.handshake.query)}`);
+      
       // Verificar autenticación JWT desde query params o headers
       const token = client.handshake.auth?.token || 
                    client.handshake.query?.token as string;
 
       if (!token) {
-        this.logger.warn(`Cliente intentó conectar sin token: ${client.id}`);
+        this.logger.warn(`⚠️ Cliente intentó conectar sin token: ${client.id}`);
         client.disconnect();
         return;
       }
+      
+      this.logger.debug(`✅ Token encontrado para cliente: ${client.id}`);
 
       // Verificar y decodificar el token
       let payload: any;
@@ -67,21 +75,30 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       client.userId = payload.sub;
       client.userRole = payload.role;
 
-      // Solo permitir conexiones de administradores para el monitoreo
-      if (client.userRole !== 'admin') {
-        this.logger.warn(`Usuario no admin intentó conectar: ${client.userId}`);
-        client.disconnect();
-        return;
+      // Unir al usuario a una sala personalizada para recibir notificaciones
+      const userRoom = `user:${client.userId}`;
+      client.join(userRoom);
+
+      // Registrar socket del usuario para notificaciones específicas
+      if (!this.userSockets.has(client.userId)) {
+        this.userSockets.set(client.userId, new Set());
       }
+      this.userSockets.get(client.userId)!.add(client.id);
 
-      // Registrar usuario activo
-      await this.realtimeService.addActiveUser(client.userId, client.id);
-      
-      // Enviar conteo actual de usuarios activos
-      const activeUsersCount = await this.realtimeService.getActiveUsersCount();
-      this.server.emit('activeUsersCount', { count: activeUsersCount });
+      // Solo registrar como "activo" si es admin (para estadísticas de admin)
+      if (client.userRole === 'admin') {
+        // Unir admin a la sala 'admin' para recibir eventos de monitoreo
+        client.join('admin');
+        await this.realtimeService.addActiveUser(client.userId, client.id);
+        
+        // Enviar conteo actual de usuarios activos solo a admins
+        const activeUsersCount = await this.realtimeService.getActiveUsersCount();
+        this.server.to('admin').emit('activeUsersCount', { count: activeUsersCount });
 
-      this.logger.log(`Admin conectado: ${client.userId} (${client.id})`);
+        this.logger.log(`Admin conectado: ${client.userId} (${client.id})`);
+      } else {
+        this.logger.log(`Usuario conectado: ${client.userId} (${client.id})`);
+      }
     } catch (error) {
       this.logger.error(`Error en conexión: ${error.message}`);
       client.disconnect();
@@ -90,13 +107,27 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   async handleDisconnect(client: AuthenticatedSocket) {
     if (client.userId) {
-      await this.realtimeService.removeActiveUser(client.userId, client.id);
-      
-      // Enviar conteo actualizado
-      const activeUsersCount = await this.realtimeService.getActiveUsersCount();
-      this.server.emit('activeUsersCount', { count: activeUsersCount });
+      // Remover socket del usuario
+      const userSockets = this.userSockets.get(client.userId);
+      if (userSockets) {
+        userSockets.delete(client.id);
+        if (userSockets.size === 0) {
+          this.userSockets.delete(client.userId);
+        }
+      }
 
-      this.logger.log(`Admin desconectado: ${client.userId} (${client.id})`);
+      // Solo actualizar estadísticas de admin si era admin
+      if (client.userRole === 'admin') {
+        await this.realtimeService.removeActiveUser(client.userId, client.id);
+        
+        // Enviar conteo actualizado solo a admins
+        const activeUsersCount = await this.realtimeService.getActiveUsersCount();
+        this.server.to('admin').emit('activeUsersCount', { count: activeUsersCount });
+
+        this.logger.log(`Admin desconectado: ${client.userId} (${client.id})`);
+      } else {
+        this.logger.log(`Usuario desconectado: ${client.userId} (${client.id})`);
+      }
     }
   }
 
@@ -109,7 +140,39 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   // Método para emitir actualización de usuarios activos (llamado externamente)
   async broadcastActiveUsersCount() {
     const count = await this.realtimeService.getActiveUsersCount();
-    this.server.emit('activeUsersCount', { count });
+    this.server.to('admin').emit('activeUsersCount', { count });
+  }
+
+  /**
+   * Emitir evento de cambio de estado premium a un usuario específico
+   * @param userId ID del usuario que recibirá la notificación
+   * @param subscriptionStatus Nuevo estado de suscripción
+   */
+  notifyPremiumStatusChange(userId: string, subscriptionStatus: string): void {
+    const userRoom = `user:${userId}`;
+    const isConnected = this.isUserConnected(userId);
+    
+    this.logger.log(`📢 Emitiendo notificación premium a usuario ${userId}`);
+    this.logger.log(`   - Sala: ${userRoom}`);
+    this.logger.log(`   - Estado: ${subscriptionStatus}`);
+    this.logger.log(`   - Usuario conectado: ${isConnected}`);
+    this.logger.log(`   - Sockets del usuario: ${this.userSockets.get(userId)?.size ?? 0}`);
+    
+    const eventData = {
+      userId,
+      subscriptionStatus,
+      timestamp: new Date().toISOString(),
+    };
+    
+    this.server.to(userRoom).emit('premiumStatusChanged', eventData);
+    this.logger.log(`✅ Notificación premium enviada a sala ${userRoom}: ${JSON.stringify(eventData)}`);
+  }
+
+  /**
+   * Verificar si un usuario está conectado
+   */
+  isUserConnected(userId: string): boolean {
+    return this.userSockets.has(userId) && this.userSockets.get(userId)!.size > 0;
   }
 }
 

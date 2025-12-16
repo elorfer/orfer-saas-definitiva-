@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,20 +33,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void initState() {
     super.initState();
-    // #region agent log
-    try {
-      final logEntry = {
-        'sessionId': 'debug-session',
-        'runId': 'run1',
-        'hypothesisId': 'H-init',
-        'location': 'home_screen.dart:initState',
-        'message': 'init_home_screen',
-        'data': {},
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-      debugPrint(jsonEncode(logEntry));
-    } catch (_) {}
-    // #endregion
+    // OPTIMIZACIÓN: Logging removido para mejor rendimiento
   }
 
   @override
@@ -62,30 +47,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // #region agent log
-    final buildStartTime = DateTime.now().millisecondsSinceEpoch;
-    _writeDebugLog('home_screen.dart:44', 'HomeScreen build started', {'timestamp': buildStartTime}, 'D');
-    // #endregion
+    // 🚀 OPTIMIZACIÓN: Eliminar logging del build para mejor rendimiento
+    // El logging se mueve fuera del build para evitar trabajo en el hilo principal
     
     // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
     final mediaQuery = MediaQuery.of(context);
     final statusBarHeight = mediaQuery.padding.top;
-    // #region agent log
-    try {
-      final logEntry = {
-        'sessionId': 'debug-session',
-        'runId': 'run1',
-        'hypothesisId': 'H-build',
-        'location': 'home_screen.dart:build',
-        'message': 'build_metrics',
-        'data': {
-          'statusBarHeight': statusBarHeight,
-        },
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      };
-      debugPrint(jsonEncode(logEntry));
-    } catch (_) {}
-    // #endregion
     
     final widget = RepaintBoundary(
       child: Scaffold(
@@ -113,6 +80,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 if (isLoading) {
                   return;
                 }
+                // Refrescar perfil del usuario para actualizar estado premium
+                ref.read(authStateProvider.notifier).refreshProfile().catchError((_) {});
                 final homeNotifier = ref.read(homeStateProvider.notifier);
                 await homeNotifier.refresh();
                 ref.read(intelligentFeaturedProvider.notifier)
@@ -141,13 +110,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   // ⚡ Mensaje destacado (notificaciones) ahora en el scroll junto al contenido
+                  // ⚡ OPTIMIZACIÓN: Usar select para observar solo isActive y message
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
                     sliver: SliverToBoxAdapter(
                       child: Consumer(
                         builder: (context, ref, _) {
-                          final homeMessage = ref.watch(homeMessageProvider);
-                          if (homeMessage == null || !homeMessage.isActive) {
+                          // ⚡ OPTIMIZACIÓN: Observar solo los campos necesarios
+                          final homeMessage = ref.watch(
+                            homeMessageProvider.select((msg) => 
+                              msg != null && msg.isActive ? msg : null)
+                          );
+                          if (homeMessage == null) {
                             return const SizedBox.shrink();
                           }
                           return RepaintBoundary(
@@ -195,43 +169,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
       ),
     );
-    // #region agent log
-    final buildEndTime = DateTime.now().millisecondsSinceEpoch;
-    final buildDuration = buildEndTime - buildStartTime;
-    _writeDebugLog('home_screen.dart:122', 'HomeScreen build completed', {'duration': buildDuration, 'timestamp': buildEndTime}, 'D');
-    // #endregion
+    // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
     return widget;
   }
   
-  // #region agent log
-  void _writeDebugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
-    if (!kDebugMode) return;
-    final logEntry = {
-      'location': location,
-      'message': message,
-      'data': data,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-      'sessionId': 'debug-session',
-      'runId': 'run1',
-      'hypothesisId': hypothesisId,
-    };
-    debugPrint('[DEBUG] ${jsonEncode(logEntry)}');
-    // Escribir a disco fuera del hilo de UI y solo en debug para evitar jank
-    Future.microtask(() async {
-      try {
-        final logPath = r'c:\app definitiva\.cursor\debug.log';
-        final logFile = File(logPath);
-        final logDir = logFile.parent;
-        if (!await logDir.exists()) {
-          await logDir.create(recursive: true);
-        }
-        await logFile.writeAsString('${jsonEncode(logEntry)}\n', mode: FileMode.append);
-      } catch (_) {
-        // Ignorar errores de escritura en debug
-      }
-    });
-  }
-  // #endregion
+  // OPTIMIZACIÓN: Método de logging removido para mejor rendimiento
 }
 
 /// Widget del header scrolleable (avatar, bienvenido, nombre, logo)
@@ -240,13 +182,20 @@ class _HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ⚡ OPTIMIZACIÓN: Usar select para escuchar solo los valores necesarios
+    // Solo observar firstName, no isLoading (evita rebuilds innecesarios)
     final userFirstName = ref.watch(currentUserProvider.select((u) => u?.firstName));
-    final isLoading = ref.watch(homeStateProvider.select((state) => 
-      state.isLoading && state.featuredArtists.isEmpty));
+    
+    // ⚡ OPTIMIZACIÓN: Remover watch de isLoading - solo se usa para skeleton inicial
+    // El skeleton solo se muestra cuando userFirstName es null, no necesitamos observar isLoading
+    final isLoading = userFirstName == null;
+    
+    // OPTIMIZACIÓN: RepaintBoundary para aislar el header y evitar rebuilds innecesarios
 
-    return isLoading && userFirstName == null
-        ? _buildHeaderSkeleton()
-        : Row(
+    return RepaintBoundary(
+      child: isLoading && userFirstName == null
+          ? _buildHeaderSkeleton()
+          : Row(
             children: [
               // ⚡ Avatar clickeable para abrir drawer
               Material(
@@ -309,41 +258,44 @@ class _HomeHeader extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Logo
-              Image.asset(
-                'assets/images/logo.webp',
-                width: 60,
-                height: 60,
-                cacheWidth: 120,
-                cacheHeight: 120,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  try {
-                    return Image.asset(
-                      'assets/images/logo.webp',
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.contain,
-                    );
-                  } catch (e) {
-                    return Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.music_note,
-                        color: NeumorphismTheme.coffeeDark,
-                        size: 32,
-                      ),
-                    );
-                  }
-                },
+              // Logo - Tamaño aumentado con RepaintBoundary para mejor rendimiento
+              RepaintBoundary(
+                child: Image.asset(
+                  'assets/images/logo.webp',
+                  width: 90,
+                  height: 90,
+                  cacheWidth: 180,
+                  cacheHeight: 180,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    try {
+                      return Image.asset(
+                        'assets/images/logo.webp',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.contain,
+                      );
+                    } catch (e) {
+                      return Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.music_note,
+                          color: NeumorphismTheme.coffeeDark,
+                          size: 48,
+                        ),
+                      );
+                    }
+                  },
+                ),
               ),
             ],
-          );
+          ),
+    );
   }
 
   Widget _buildHeaderSkeleton() {

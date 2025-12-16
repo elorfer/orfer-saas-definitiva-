@@ -83,10 +83,11 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
             'Para Ti',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF3D2E20),
+              color: Color(0xFF3D2E20),
               decoration: TextDecoration.none,
             ),
           ),

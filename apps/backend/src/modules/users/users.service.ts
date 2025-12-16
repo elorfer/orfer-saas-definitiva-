@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 
@@ -6,6 +6,7 @@ import { User } from '../../common/entities/user.entity';
 import { Artist } from '../../common/entities/artist.entity';
 import { SubscriptionStatus } from '../../common/entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,8 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Artist)
     private readonly artistRepository: Repository<Artist>,
+    @Inject(forwardRef(() => RealtimeGateway))
+    private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
   /**
@@ -205,5 +208,106 @@ export class UsersService {
     });
 
     return { users, total };
+  }
+
+  async markAsPremium(id: string, expiresAt?: Date): Promise<User> {
+    const user = await this.findOne(id);
+    const previousStatus = user.subscriptionStatus;
+    user.subscriptionStatus = SubscriptionStatus.ACTIVE;
+    
+    // Si no se proporciona fecha de expiración, establecer 1 año desde ahora
+    if (!expiresAt) {
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      user.subscriptionExpiresAt = oneYearFromNow;
+    } else {
+      user.subscriptionExpiresAt = expiresAt;
+    }
+    
+    const savedUser = await this.userRepository.save(user);
+    
+    // Notificar cambio de estado premium vía WebSocket
+    // Emitir siempre, incluso si ya era ACTIVE (por si el usuario se reconectó)
+    try {
+      this.realtimeGateway.notifyPremiumStatusChange(user.id, 'active');
+    } catch (error) {
+      // Log error pero no fallar la operación
+      console.error('Error enviando notificación WebSocket:', error);
+    }
+    
+    return savedUser;
+  }
+
+  async removePremium(id: string): Promise<User> {
+    const user = await this.findOne(id);
+    const previousStatus = user.subscriptionStatus;
+    user.subscriptionStatus = SubscriptionStatus.INACTIVE;
+    user.subscriptionExpiresAt = null;
+    
+    const savedUser = await this.userRepository.save(user);
+    
+    // Notificar cambio de estado premium vía WebSocket (si el usuario está conectado)
+    if (previousStatus === SubscriptionStatus.ACTIVE) {
+      try {
+        this.realtimeGateway.notifyPremiumStatusChange(user.id, 'inactive');
+      } catch (error) {
+        // Silenciar errores de WebSocket
+        console.error('Error enviando notificación WebSocket:', error);
+      }
+    }
+    
+    return savedUser;
+  }
+
+  async getPremiumUsersCount(): Promise<number> {
+    return this.userRepository.count({
+      where: { 
+        subscriptionStatus: SubscriptionStatus.ACTIVE,
+        subscriptionExpiresAt: MoreThan(new Date()),
+      },
+    });
+  }
+
+  async getPremiumUsersExpiringSoon(days: number = 30): Promise<User[]> {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + days);
+    
+    return this.userRepository.find({
+      where: { 
+        subscriptionStatus: SubscriptionStatus.ACTIVE,
+        subscriptionExpiresAt: MoreThan(new Date()),
+      },
+      relations: ['artist'],
+      order: { subscriptionExpiresAt: 'ASC' },
+    }).then(users => 
+      users.filter(user => 
+        user.subscriptionExpiresAt && 
+        user.subscriptionExpiresAt <= futureDate &&
+        user.subscriptionExpiresAt > new Date()
+      )
+    );
+  }
+
+  async getPremiumStats(): Promise<{
+    total: number;
+    expiringSoon: number;
+    recentlyAdded: number;
+  }> {
+    const total = await this.getPremiumUsersCount();
+    const expiringSoon = (await this.getPremiumUsersExpiringSoon(30)).length;
+    
+    // Usuarios premium agregados en los últimos 30 días
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentlyAdded = await this.userRepository.count({
+      where: { 
+        subscriptionStatus: SubscriptionStatus.ACTIVE,
+        subscriptionExpiresAt: MoreThan(new Date()),
+        updatedAt: MoreThan(thirtyDaysAgo),
+      },
+    });
+
+    return { total, expiringSoon, recentlyAdded };
   }
 }

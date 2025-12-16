@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+// OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
 import 'package:shimmer/shimmer.dart';
 import '../../../core/providers/playlist_provider.dart';
 import '../../../core/models/playlist_model.dart';
@@ -110,7 +110,8 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
         ),
         title: Text(
           'Playlists',
-          style: GoogleFonts.inter(
+          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -219,18 +220,20 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
           const SizedBox(height: 16),
           Text(
             'No hay playlists disponibles',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              color: Colors.grey,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Las playlists aparecerán aquí cuando estén disponibles',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: Colors.grey,
             ),
             textAlign: TextAlign.center,
           ),
@@ -299,18 +302,20 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
           const SizedBox(height: 16),
           Text(
             'Error al cargar playlists',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
+              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             error.toString(),
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: Colors.grey,
             ),
             textAlign: TextAlign.center,
           ),
@@ -330,9 +335,10 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
             ),
-            child: Text(
+            child: const Text(
               'Reintentar',
-              style: GoogleFonts.inter(
+              // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -400,7 +406,8 @@ class _PlaylistCard extends StatelessWidget {
           // Nombre de la playlist
           Text(
             (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
@@ -414,9 +421,10 @@ class _PlaylistCard extends StatelessWidget {
           // Información adicional
           Text(
             '${playlist.totalTracks ?? 0} canciones',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 12,
-              color: Colors.grey[600],
+              color: Colors.grey,
             ),
           ),
         ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
 class AuthButton extends StatelessWidget {
@@ -59,7 +58,8 @@ class AuthButton extends StatelessWidget {
               )
             : Text(
                 text,
-                style: GoogleFonts.inter(
+                // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),

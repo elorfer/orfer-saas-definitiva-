@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+// OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
 import '../../../core/models/song_model.dart';
 import '../../../core/providers/favorites_provider.dart';
 import '../../../core/providers/follow_provider.dart';
@@ -26,9 +26,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   @override
   void initState() {
     super.initState();
-    // Cargar artistas seguidos inmediatamente al montar la pantalla
+    // 🔥 OPTIMIZACIÓN: Carga diferida - solo cargar cuando la pantalla esté visible
+    // Usar un delay para no bloquear el build inicial
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(followProvider.notifier).ensureLoaded();
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          ref.read(followProvider.notifier).ensureLoaded();
+        }
+      });
     });
   }
 
@@ -36,16 +41,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // Optimización: usar select para escuchar solo cambios necesarios
+    // 🔥 OPTIMIZACIÓN: Usar select para escuchar solo cambios necesarios
+    // Cachear valores para evitar recálculos en cada build
     final favoritesCount = ref.watch(
       favoritesProvider.select((state) => state.favorites.length),
     );
+    final historyCount = ref.watch(
+      playHistoryProvider.select((state) => state.length),
+    );
+    // 🔥 OPTIMIZACIÓN: Solo tomar las primeras 8 canciones una vez
     final recentHistory = ref.watch(
       playHistoryProvider.select(
-        (state) => state.reversed.take(8).toList(),
+        (state) => state.length > 8 ? state.reversed.take(8).toList() : state.reversed.toList(),
       ),
     );
-    final historyCount = recentHistory.length;
     final followedArtistsCount = ref.watch(
       followProvider.select((state) => state.followedArtistIds.length),
     );
@@ -63,6 +72,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         child: SafeArea(
           child: CustomScrollView(
             physics: const SmoothScrollPhysics(),
+            cacheExtent: 400, // 🔥 OPTIMIZACIÓN: Cache de scroll para mejor rendimiento
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 72),
@@ -144,7 +154,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             children: [
               Text(
                 'Tu Biblioteca',
-                style: GoogleFonts.inter(
+                // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                   color: NeumorphismTheme.coffeeDark,
@@ -154,7 +165,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               const SizedBox(height: 6),
               Text(
                 '$historyCount canciones escuchadas · $favoritesCount favoritas',
-                style: GoogleFonts.inter(
+                // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: NeumorphismTheme.coffeeDark,
@@ -170,7 +182,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
-      style: GoogleFonts.inter(
+      // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+      style: const TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w700,
         color: NeumorphismTheme.textPrimary,
@@ -191,7 +204,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         child: Center(
           child: Text(
             'Cuando reproduzcas música, aparecerá aquí',
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               color: NeumorphismTheme.textSecondary,
               fontSize: 15,
             ),
@@ -217,85 +231,92 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
 
   Widget _buildRecentCard(Song song) {
     final cover = song.coverArtUrl;
-    return Container(
-      width: 126,
-      decoration: BoxDecoration(
-        color: NeumorphismTheme.surface,
-        borderRadius: const BorderRadius.all(Radius.circular(18)),
-        boxShadow: NeumorphismTheme.softShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(18),
-              topRight: Radius.circular(18),
-            ),
-            child: SizedBox(
-              height: 96,
-              width: double.infinity,
-              child: cover != null && cover.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: cover,
-                      fit: BoxFit.cover,
-                      placeholder: (context, _) => Container(
-                        decoration: const BoxDecoration(
-                          gradient: NeumorphismTheme.imagePlaceholderGradient,
+    return RepaintBoundary(
+      child: Container(
+        width: 126,
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(18)),
+          boxShadow: NeumorphismTheme.softShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(18),
+                topRight: Radius.circular(18),
+              ),
+              child: SizedBox(
+                height: 96,
+                width: double.infinity,
+                child: cover != null && cover.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: cover,
+                        fit: BoxFit.cover,
+                        // 🔥 OPTIMIZACIÓN: Cache de imágenes con tamaños específicos
+                        memCacheWidth: 252, // 2x el tamaño de visualización (126 * 2)
+                        memCacheHeight: 192, // 2x el tamaño de visualización (96 * 2)
+                        placeholder: (context, _) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: NeumorphismTheme.imagePlaceholderGradient,
+                          ),
                         ),
-                      ),
-                      errorWidget: (context, _, __) => Container(
+                        errorWidget: (context, _, __) => Container(
+                          decoration: const BoxDecoration(
+                            gradient: NeumorphismTheme.imagePlaceholderGradient,
+                          ),
+                          child: const Icon(
+                            Icons.music_note_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                      )
+                    : Container(
                         decoration: const BoxDecoration(
                           gradient: NeumorphismTheme.imagePlaceholderGradient,
                         ),
                         child: const Icon(
                           Icons.music_note_rounded,
                           color: Colors.white,
-                          size: 30,
+                          size: 28,
                         ),
                       ),
-                    )
-                  : Container(
-                      decoration: const BoxDecoration(
-                        gradient: NeumorphismTheme.imagePlaceholderGradient,
-                      ),
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        color: Colors.white,
-                        size: 28,
-                      ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    song.title ?? 'Canción sin título',
+                    // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: NeumorphismTheme.textPrimary,
                     ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  song.title ?? 'Canción sin título',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: NeumorphismTheme.textPrimary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  song.artist?.displayName ?? 'Artista desconocido',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: NeumorphismTheme.textSecondary,
+                  const SizedBox(height: 4),
+                  Text(
+                    song.artist?.displayName ?? 'Artista desconocido',
+                    // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: NeumorphismTheme.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -389,7 +410,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
               children: [
                 Text(
                   'Tus favoritos del mes',
-                  style: GoogleFonts.inter(
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
@@ -400,7 +422,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   favoritesCount == 0
                       ? 'Empieza a marcar canciones como favoritas'
                       : 'Tus mejores $favoritesCount canciones guardadas',
-                  style: GoogleFonts.inter(
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: TextStyle(
                     fontSize: 13,
                     color: Colors.white.withValues(alpha: 0.85),
                   ),
@@ -496,7 +519,8 @@ class _CategoryCard extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.inter(
+                    // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: NeumorphismTheme.textPrimary,
@@ -507,7 +531,8 @@ class _CategoryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     value,
-                    style: GoogleFonts.inter(
+                    // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                    style: const TextStyle(
                       fontSize: 12,
                       color: NeumorphismTheme.textSecondary,
                     ),
@@ -562,7 +587,8 @@ class _MetricCard extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 value,
-                style: GoogleFonts.inter(
+                // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: NeumorphismTheme.textPrimary,
@@ -573,7 +599,8 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: GoogleFonts.inter(
+            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+            style: const TextStyle(
               fontSize: 13,
               color: NeumorphismTheme.textSecondary,
             ),

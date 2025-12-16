@@ -23,17 +23,17 @@ class HomeMessageBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: NeumorphismTheme.accentDark.withOpacity(0.08),
+              color: NeumorphismTheme.accentDark.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
           ],
           border: Border.all(
-            color: NeumorphismTheme.accentLight.withOpacity(0.22),
+            color: NeumorphismTheme.accentLight.withValues(alpha: 0.22),
           ),
         ),
         padding: const EdgeInsets.all(12),
@@ -65,7 +65,7 @@ class HomeMessageBanner extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
-                      color: NeumorphismTheme.coffeeDark.withOpacity(0.9),
+                      color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

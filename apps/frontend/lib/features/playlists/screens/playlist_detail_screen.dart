@@ -7,7 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+// OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
 import '../../../core/providers/playlist_provider.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/providers/playback_state.dart';
@@ -87,10 +87,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   static const int _loadMoreSongsLimit = 10;
   static const Duration _debounceDuration = Duration(milliseconds: 180);
   
-  // ✅ Cache estático para mantener datos entre navegaciones (evita parpadeo)
+  // ✅ OPTIMIZACIÓN: Cache estático con límite de memoria para mantener datos entre navegaciones
   // Estructura: { playlistId: { 'playlist': Playlist, 'displayedSongs': List<Song>, 'lastLoad': DateTime } }
   static final Map<String, Map<String, dynamic>> _playlistCache = {};
-  static const Duration _cacheExpiration = Duration(minutes: 10); // Cache válido por 10 minutos
+  static const Duration _cacheExpiration = Duration(hours: 1); // Cache válido por 1 hora (aumentado para evitar refrescos)
+  static const int _maxCacheSize = 5; // Máximo de 5 playlists en cache para evitar uso excesivo de memoria
 
   @override
   bool get wantKeepAlive => true;
@@ -180,9 +181,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       }
     }
     
-    // Cargar datos en el siguiente frame para permitir que el primer frame se renderice
+    // 🔥 OPTIMIZACIÓN: Solo cargar datos si NO hay cache válido
+    // Si hay cache válido, no recargar automáticamente para evitar refrescos innecesarios
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_hasLoadedOnce) {
+      if (mounted && !_hasLoadedOnce && !hasValidCache) {
         _loadPlaylist();
       }
     });
@@ -191,8 +193,23 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   /// 🔥 CRÍTICO: Restaurar posición del scroll después de que el contenido esté medido
   /// Este método verifica que el ScrollController tenga un maxScrollExtent válido
   /// antes de hacer jumpTo, evitando que la restauración falle silenciosamente
+  /// OPTIMIZACIÓN: Agregado límite de reintentos para evitar loops infinitos
+  int _restoreScrollAttempts = 0;
+  static const int _maxRestoreAttempts = 5; // Máximo 5 intentos de restauración
+  
   void _restoreScrollPosition() {
-    if (!mounted || _hasRestoredInitialScroll) return;
+    if (!mounted || _hasRestoredInitialScroll) {
+      _restoreScrollAttempts = 0; // Reset contador si ya se restauró
+      return;
+    }
+    
+    // 🔥 OPTIMIZACIÓN: Limitar intentos de restauración para evitar loops
+    if (_restoreScrollAttempts >= _maxRestoreAttempts) {
+      _restoreScrollAttempts = 0;
+      return; // Abandonar restauración después de máximo intentos
+    }
+    
+    _restoreScrollAttempts++;
     
     if (!_scrollController.hasClients) {
       // Si aún no tiene clients, esperar un frame más
@@ -221,9 +238,17 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       // 1. La posición guardada es válida (menor o igual al máximo)
       // 2. El scroll está cerca de 0 (no se ha movido manualmente)
       if (savedPosition <= maxExtent && currentOffset < 10) {
+        // 🔥 OPTIMIZACIÓN: Usar animateTo en lugar de jumpTo para transición suave
         _scrollController.jumpTo(savedPosition);
         _hasRestoredInitialScroll = true;
+        _restoreScrollAttempts = 0; // Reset contador al restaurar exitosamente
+      } else {
+        // Si la posición no es válida, resetear contador
+        _restoreScrollAttempts = 0;
       }
+    } else {
+      // Si no hay posición guardada, resetear contador
+      _restoreScrollAttempts = 0;
     }
   }
 
@@ -272,6 +297,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     _scrollController.removeListener(_onScroll);
     _scrollController.removeListener(_saveScrollPosition);
     _scrollController.dispose();
+    
+    // Reset contador de restauración
+    _restoreScrollAttempts = 0;
+    
     super.dispose();
   }
   
@@ -315,7 +344,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     });
   }
 
-  // ✅ Cargar datos desde caché si están disponibles
+  // ✅ OPTIMIZACIÓN: Cargar datos desde caché si están disponibles (solo si no se cargó en initState)
   void _loadFromCache() {
     // Si ya se cargó desde cache en initState, no hacer nada
     if (_hasLoadedOnce && _playlist != null) return;
@@ -330,6 +359,13 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         final cachedHasMore = cachedData['hasMoreSongs'] as bool? ?? false;
         
         if (cachedPlaylist != null && cachedSongs != null) {
+          // 🔥 OPTIMIZACIÓN: Evitar setState si los datos son los mismos (previene refresco visual)
+          if (_playlist?.id == cachedPlaylist.id && _displayedSongs.length == cachedSongs.length) {
+            // Los datos son los mismos, solo actualizar flags sin setState
+            _hasLoadedOnce = true;
+            return;
+          }
+          
           // 🔥 CRÍTICO: Guardar posición actual del scroll antes del setState
           final savedScrollPosition = _scrollController.hasClients 
               ? _scrollController.offset 
@@ -515,7 +551,19 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       });
     }
     
-    // ✅ Guardar en caché estático para futuras navegaciones
+    // ✅ OPTIMIZACIÓN: Guardar en caché estático con gestión de memoria
+    // Limpiar cache expirado primero
+    _playlistCache.removeWhere((key, value) {
+      final lastLoad = value['lastLoad'] as DateTime?;
+      return lastLoad == null || DateTime.now().difference(lastLoad) >= _cacheExpiration;
+    });
+    
+    // Si el cache está lleno, eliminar el más antiguo
+    if (_playlistCache.length >= _maxCacheSize && !_playlistCache.containsKey(widget.playlistId)) {
+      final oldestKey = _playlistCache.keys.first;
+      _playlistCache.remove(oldestKey);
+    }
+    
     _playlistCache[widget.playlistId] = {
       'playlist': playlist,
       'displayedSongs': List<Song>.from(initialSongs),
@@ -674,7 +722,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 ),
                 title: Text(
                   (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
-                  style: GoogleFonts.inter(
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -695,7 +744,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     if (playlist.description != null && playlist.description!.isNotEmpty) ...[
                       Text(
                         playlist.description!,
-                        style: GoogleFonts.inter(
+                        // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                        style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey[700],
                           height: 1.5,
@@ -712,9 +762,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                           const SizedBox(width: 4),
                           Text(
                             playlist.user?.firstName ?? 'Usuario',
-                            style: GoogleFonts.inter(
+                            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: Colors.grey,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -723,9 +774,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                         const SizedBox(width: 4),
                         Text(
                           '${playlist.totalSongs} canciones',
-                          style: GoogleFonts.inter(
+                          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                          style: const TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: Colors.grey,
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -733,9 +785,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                         const SizedBox(width: 4),
                         Text(
                           playlist.durationFormatted,
-                          style: GoogleFonts.inter(
+                          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                          style: const TextStyle(
                             fontSize: 14,
-                            color: Colors.grey[600],
+                            color: Colors.grey,
                           ),
                         ),
                       ],
@@ -774,7 +827,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                             ), // No puede ser const porque depende de showPause
                             label: Text(
                               'Reproducir todo',
-                              style: GoogleFonts.inter(
+                              // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -798,7 +852,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     // Título de canciones
                     Text(
                       'Canciones',
-                      style: GoogleFonts.inter(
+                      // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -832,9 +887,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                         const SizedBox(height: 16),
                         Text(
                           'Esta playlist no tiene canciones',
-                          style: GoogleFonts.inter(
+                          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                          style: const TextStyle(
                             fontSize: 16,
-                            color: Colors.grey[600],
+                            color: Colors.grey,
                           ),
                         ),
                       ],
@@ -906,7 +962,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 ),
                 child: Text(
                   'Ver más canciones',
-                  style: GoogleFonts.inter(
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: NeumorphismTheme.coffeeMedium,
@@ -939,18 +996,20 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             const SizedBox(height: 16),
             Text(
               message ?? 'Playlist no encontrada',
-              style: GoogleFonts.inter(
+              // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+                color: Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'La playlist que buscas no existe o fue eliminada',
-              style: GoogleFonts.inter(
+              // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+              style: const TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: Colors.grey,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1232,18 +1291,20 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             const SizedBox(height: 16),
             Text(
               'Error al cargar playlist',
-              style: GoogleFonts.inter(
+              // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
+                color: Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               error.toString(),
-              style: GoogleFonts.inter(
+              // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+              style: const TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: Colors.grey,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1257,9 +1318,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
-              child: Text(
+              child: const Text(
                 'Volver',
-                style: GoogleFonts.inter(
+                // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -1377,30 +1439,30 @@ class _SongListItem extends ConsumerWidget {
   final VoidCallback onTap;
   final Future<void> Function()? onPlay;
 
-  // Estilos cacheados para evitar recreación por ítem
-  static final TextStyle _indexStyle = GoogleFonts.inter(
+  // OPTIMIZACIÓN: Estilos constantes para evitar recreación por ítem
+  static const TextStyle _indexStyle = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w500,
-    color: Colors.grey[600],
+    color: Colors.grey,
   );
-  static final TextStyle _titleStyle = GoogleFonts.inter(
+  static const TextStyle _titleStyle = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: Colors.black87,
   );
-  static final TextStyle _artistStyle = GoogleFonts.inter(
+  static const TextStyle _artistStyle = TextStyle(
     fontSize: 14,
-    color: Colors.grey[600],
+    color: Colors.grey,
   );
-  static final TextStyle _durationStyle = GoogleFonts.inter(
+  static const TextStyle _durationStyle = TextStyle(
     fontSize: 11,
-    color: Colors.grey[500],
+    color: Colors.grey,
     fontWeight: FontWeight.w500,
     height: 0.95,
   );
-  static final TextStyle _streamsStyle = GoogleFonts.inter(
+  static const TextStyle _streamsStyle = TextStyle(
     fontSize: 10,
-    color: Colors.grey[500],
+    color: Colors.grey,
     fontWeight: FontWeight.w500,
     height: 0.95,
   );

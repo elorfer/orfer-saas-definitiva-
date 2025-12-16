@@ -142,20 +142,53 @@ class _MiniPlayerPlayButton extends ConsumerWidget {
 
 /// ⚡ OPTIMIZACIÓN: Widget separado para la barra de progreso
 /// Solo se reconstruye si cambia el progreso
-class _MiniPlayerProgressBar extends ConsumerWidget {
+/// ✅ PROTECCIÓN: Evita parpadeos cuando el progreso se resetea temporalmente
+class _MiniPlayerProgressBar extends ConsumerStatefulWidget {
   const _MiniPlayerProgressBar();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MiniPlayerProgressBar> createState() => _MiniPlayerProgressBarState();
+}
+
+class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> {
+  // ✅ PROTECCIÓN: Guardar último progreso válido para evitar saltos a 0
+  double? _lastValidProgress;
+  // ✅ PROTECCIÓN: Guardar ID de la última canción para detectar cambios
+  String? _lastSongId;
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ PROTECCIÓN: Observar también el ID de la canción para detectar cambios
+    final currentSongId = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentSong?.id),
+    );
     // ⚡ OPTIMIZACIÓN: Solo escuchar progress, no todo el estado
     final progress = ref.watch(
       unifiedAudioProviderFixed.select((state) => state.progress),
     );
     
+    // ✅ PROTECCIÓN: Si cambió la canción, resetear el progreso guardado
+    if (currentSongId != null && currentSongId != _lastSongId) {
+      _lastSongId = currentSongId;
+      _lastValidProgress = null; // Resetear progreso guardado cuando cambia la canción
+    }
+    
+    // ✅ PROTECCIÓN: Evitar saltos a 0 cuando el progreso se resetea temporalmente
+    // Solo usar el progreso del estado si es válido (mayor que 0) o si no tenemos un progreso guardado
+    double effectiveProgress = progress.clamp(0.0, 1.0);
+    if (effectiveProgress == 0.0 && _lastValidProgress != null && _lastValidProgress! > 0.0 && currentSongId == _lastSongId) {
+      // Si el progreso es 0 pero tenemos un progreso válido guardado Y es la misma canción, mantenerlo
+      // Esto evita que la barra parpadee cuando se sincroniza el estado
+      effectiveProgress = _lastValidProgress!;
+    } else if (effectiveProgress > 0.0) {
+      // Guardar el último progreso válido
+      _lastValidProgress = effectiveProgress;
+    }
+    
     return SizedBox(
       height: 3,
       child: LinearProgressIndicator(
-        value: progress.clamp(0.0, 1.0),
+        value: effectiveProgress.clamp(0.0, 1.0),
         backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
         valueColor: const AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
         borderRadius: const BorderRadius.all(Radius.circular(1.5)),

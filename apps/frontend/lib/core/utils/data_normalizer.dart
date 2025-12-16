@@ -426,13 +426,22 @@ class DataNormalizer {
     if (data['subscription_status'] == null) return;
     
     final subStatusValue = data['subscription_status'].toString().toUpperCase();
-    const validStatuses = {'FREE', 'PREMIUM', 'VIP', 'INACTIVE'};
+    const validStatuses = {'FREE', 'PREMIUM', 'VIP', 'INACTIVE', 'ACTIVE', 'CANCELLED', 'EXPIRED'};
     
-    if (validStatuses.contains(subStatusValue)) {
-      data['subscription_status'] = subStatusValue == 'INACTIVE' ? 'inactive' : subStatusValue;
+    // Mapear estados del backend a estados del frontend
+    String normalizedStatus;
+    if (subStatusValue == 'ACTIVE') {
+      // El backend usa 'active', el frontend espera 'PREMIUM'
+      normalizedStatus = 'PREMIUM';
+    } else if (subStatusValue == 'INACTIVE' || subStatusValue == 'CANCELLED' || subStatusValue == 'EXPIRED') {
+      normalizedStatus = 'inactive';
+    } else if (validStatuses.contains(subStatusValue)) {
+      normalizedStatus = subStatusValue;
     } else {
-      data['subscription_status'] = _defaultSubscriptionStatus;
+      normalizedStatus = _defaultSubscriptionStatus;
     }
+    
+    data['subscription_status'] = normalizedStatus;
   }
 
   /// Normalizar datos de playlist

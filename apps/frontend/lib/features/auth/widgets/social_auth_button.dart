@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class SocialAuthButton extends StatelessWidget {
   final IconData icon;
@@ -27,8 +26,9 @@ class SocialAuthButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usar InkWell en lugar de OutlinedButton para evitar problemas con Expanded/Flexible
-    return SizedBox(
+    // OPTIMIZACIÓN: RepaintBoundary para aislar repaints del botón
+    return RepaintBoundary(
+      child: SizedBox(
       height: _defaultHeight,
       child: InkWell(
         onTap: onPressed,
@@ -55,7 +55,8 @@ class SocialAuthButton extends StatelessWidget {
               Flexible(
                 child: Text(
                   text,
-                  style: GoogleFonts.inter(
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: textColor ?? Colors.grey[700],
@@ -66,6 +67,7 @@ class SocialAuthButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

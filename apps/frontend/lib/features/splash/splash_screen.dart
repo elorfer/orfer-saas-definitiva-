@@ -1,11 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/auth_provider.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _imageLoaded = false;
+  bool _canNavigate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Precargar imagen del logo
+    _preloadImage();
+    // OPTIMIZACIÓN: Delay mínimo de 2 segundos para asegurar que el splash se muestre
+    // Esto es especialmente importante en hot restart donde la navegación puede ser instantánea
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        setState(() {
+          _canNavigate = true;
+        });
+        _checkAndNavigate();
+      }
+    });
+  }
+
+  void _checkAndNavigate() {
+    if (!_canNavigate || !mounted) return;
+    
+    final authState = ref.read(authStateProvider);
+    final router = GoRouter.of(context);
+    
+    // Solo navegar si el estado está inicializado
+    if (authState.isInitialized) {
+      if (authState.isAuthenticated) {
+        router.go('/home');
+      } else {
+        router.go('/login');
+      }
+    }
+  }
+
+
+  Future<void> _preloadImage() async {
+    try {
+      await precacheImage(
+        const AssetImage('assets/images/Logo principal.webp'),
+        context,
+      );
+      if (mounted) {
+        setState(() {
+          _imageLoaded = true;
+        });
+      }
+    } catch (e) {
+      // Si falla la precarga, continuar de todas formas
+      if (mounted) {
+        setState(() {
+          _imageLoaded = true;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Observar el estado de autenticación para reaccionar a cambios
+    final authState = ref.watch(authStateProvider);
+    
+    // Si ya podemos navegar y el estado está inicializado, navegar
+    if (_canNavigate && authState.isInitialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _checkAndNavigate();
+        }
+      });
+    }
+    
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
     final isMediumScreen = screenWidth < 600;
@@ -40,28 +118,34 @@ class SplashScreen extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.all(Radius.circular(24)),
-                  child: Image.asset(
-                    'assets/images/logo.webp',
-                    width: logoSize,
-                    height: logoSize,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      // Fallback a icono si la imagen no se carga
-                      return Icon(
-                        Icons.music_note,
-                        size: logoIconSize,
-                        color: Colors.white,
-                      );
-                    },
-                  ),
+                  child: _imageLoaded
+                      ? Image.asset(
+                          'assets/images/Logo principal.webp',
+                          width: logoSize,
+                          height: logoSize,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback a icono si la imagen no se carga
+                            return Icon(
+                              Icons.music_note,
+                              size: logoIconSize,
+                              color: Colors.white,
+                            );
+                          },
+                        )
+                      : Icon(
+                          Icons.music_note,
+                          size: logoIconSize,
+                          color: Colors.white,
+                        ),
                 ),
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
-                'struky',
+                'Struky',
                 style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 28 : (isMediumScreen ? 32 : 36),
-                  fontWeight: FontWeight.bold,
+                  fontSize: isSmallScreen ? 36 : (isMediumScreen ? 42 : 48),
+                  fontWeight: FontWeight.w900,
                   color: Colors.white,
                   letterSpacing: 0.8,
                 ),

@@ -177,6 +177,76 @@ export class UsersController {
       total: artists.length,
     };
   }
+
+  @Post(':id/premium')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Marcar usuario como premium (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Usuario marcado como premium exitosamente' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async markAsPremium(@Param('id') id: string, @Body() body: { expiresAt?: string } = {}) {
+    const expiresAt = body?.expiresAt ? new Date(body.expiresAt) : undefined;
+    const user = await this.usersService.markAsPremium(id, expiresAt);
+    return this.usersService.transformUserData(user);
+  }
+
+  @Post(':id/remove-premium')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Remover premium de usuario (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Premium removido exitosamente' })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
+  async removePremium(@Param('id') id: string) {
+    const user = await this.usersService.removePremium(id);
+    return this.usersService.transformUserData(user);
+  }
+
+  @Get('premium/count')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener número de usuarios premium (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Conteo de usuarios premium' })
+  async getPremiumUsersCount() {
+    const count = await this.usersService.getPremiumUsersCount();
+    return { count };
+  }
+
+  @Get('premium/list')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener lista de usuarios premium (Solo Admin)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios premium' })
+  async getPremiumUsers(
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+  ) {
+    const result = await this.usersService.getUsersWithActiveSubscription(page, limit);
+    return {
+      users: result.users.map(user => this.usersService.transformUserData(user)),
+      total: result.total,
+    };
+  }
+
+  @Get('premium/expiring-soon')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener usuarios premium próximos a expirar (Solo Admin)' })
+  @ApiQuery({ name: 'days', required: false, type: Number, description: 'Días para considerar próximos a expirar' })
+  @ApiResponse({ status: 200, description: 'Lista de usuarios próximos a expirar' })
+  async getPremiumUsersExpiringSoon(
+    @Query('days', new ParseIntPipe({ optional: true })) days: number = 30,
+  ) {
+    const users = await this.usersService.getPremiumUsersExpiringSoon(days);
+    return {
+      users: users.map(user => this.usersService.transformUserData(user)),
+      total: users.length,
+    };
+  }
+
+  @Get('premium/stats')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Obtener estadísticas de usuarios premium (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Estadísticas de premium' })
+  async getPremiumStats() {
+    return this.usersService.getPremiumStats();
+  }
 }
 
 
