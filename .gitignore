@@ -9,6 +9,11 @@ build/
 **/build/
 *.tsbuildinfo
 
+# Next.js
+.next/
+**/.next/
+out/
+
 # Environment variables
 .env
 .env.local
@@ -67,6 +72,10 @@ uploads/**/*
 !uploads/.gitkeep
 !uploads/covers/.gitkeep
 !uploads/songs/.gitkeep
+!uploads/ads/.gitkeep
+**/uploads/**/*
+!**/uploads/.gitkeep
+!**/uploads/*/.gitkeep
 
 # Temporary files
 *.tmp
