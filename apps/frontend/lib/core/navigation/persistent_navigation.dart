@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
+import '../services/player_navigation_service.dart';
 import '../widgets/final_mini_player.dart';
+import '../../features/ads/widgets/ads_mini_player.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
 
@@ -51,9 +53,9 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
     
     // Obtener índice actual del navigationShell (ya viene de GoRouter)
     final currentIndex = widget.navigationShell.currentIndex;
-    final currentSong = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.currentSong),
-    );
+    final playbackState = ref.watch(unifiedAudioProviderFixed);
+    final currentSong = playbackState.currentSong;
+    final isPlayingAd = playbackState.isPlayingAd;
     
     final navBarHeight = _cachedNavBarHeight ?? 80.0;
 
@@ -76,8 +78,24 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             ),
           ),
           
-          // Mini Player
-          if (currentSong != null)
+          // 📢 Mini Player de Anuncios (prioridad sobre el mini player normal)
+          if (isPlayingAd)
+            Positioned(
+              bottom: navBarHeight,
+              left: 0,
+              right: 0,
+              child: RepaintBoundary(
+                child: AdsMiniPlayer(
+                  // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
+                  onTap: () => PlayerNavigationService.openFullPlayer(
+                    context: context,
+                    ref: ref,
+                  ),
+                ),
+              ),
+            )
+          // Mini Player normal (solo cuando no hay anuncio)
+          else if (currentSong != null)
             Positioned(
               bottom: navBarHeight,
               left: 0,

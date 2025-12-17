@@ -76,16 +76,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// Precargar la pantalla de Home en background
   void _preloadHome() {
     try {
+      // ✅ FIX: Usar watch o listen en lugar de read para evitar error de inicialización
       // Inicializar el provider de Home para que cargue los datos
       // Esto activará el build() del Notifier que carga los datos automáticamente
-      ref.read(homeStateProvider);
-      
-      // También precargar las recomendaciones inteligentes
-      ref.read(intelligentFeaturedProvider);
-      
-      debugPrint('✅ Home precargado en background');
+      // Usar un Future.microtask para evitar acceder al provider durante su construcción
+      Future.microtask(() {
+        try {
+          ref.read(homeStateProvider.notifier);
+          // También precargar las recomendaciones inteligentes
+          ref.read(intelligentFeaturedProvider.notifier);
+          debugPrint('✅ Home precargado en background');
+        } catch (e) {
+          debugPrint('⚠️ Error precargando Home (no crítico): $e');
+        }
+      });
     } catch (e) {
-      debugPrint('Error precargando Home: $e');
+      debugPrint('⚠️ Error en _preloadHome (no crítico): $e');
     }
   }
 
@@ -121,29 +127,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       // Guardar el estado del onboarding
       await ref.read(onboardingProvider.notifier).completeOnboarding();
       
-      // 🔥 Asegurar que Home esté completamente cargado antes de navegar
+      // ✅ FIX: Navegar directamente sin esperar Home
+      // El router ya maneja la redirección y Home se cargará cuando sea necesario
       if (mounted) {
-        // Esperar a que el provider de Home esté inicializado
-        final homeState = ref.read(homeStateProvider);
+        // Esperar un frame para asegurar que el estado se actualice
+        await Future.delayed(const Duration(milliseconds: 50));
         
-        // Si aún está cargando, esperar un poco más
-        if (homeState.isLoading) {
-          await Future.delayed(const Duration(milliseconds: 200));
-        }
-        
-        // Esperar un frame para asegurar que todo esté listo
-        await Future.delayed(const Duration(milliseconds: 100));
-        
-        // Navegar a Home (ya debería estar precargado)
+        // Navegar a Home (el router manejará la carga)
         if (mounted) {
           context.go('/home');
         }
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       // 🔥 Manejo de error para evitar crashes
-      debugPrint('Error completando onboarding: $e');
+      debugPrint('⚠️ Error completando onboarding: $e');
+      debugPrint('Stack trace: $stackTrace');
       if (mounted) {
-        context.go('/home');
+        // Intentar navegar de todas formas
+        try {
+          context.go('/home');
+        } catch (navError) {
+          debugPrint('⚠️ Error navegando a home: $navError');
+        }
       }
     }
   }

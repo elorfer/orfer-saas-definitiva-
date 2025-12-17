@@ -32,11 +32,10 @@ export class FeaturedService {
       take: validLimit,
     });
 
-    // Log para diagnóstico
-    this.logger.log(`[getFeaturedSongs] Encontradas ${featuredExplicit.length} canciones con isFeatured=true y status=PUBLISHED`);
-    featuredExplicit.forEach((song, index) => {
-      this.logger.log(`[getFeaturedSongs] ${index + 1}. ${song.title} (ID: ${song.id}, status: ${song.status}, isFeatured: ${song.isFeatured})`);
-    });
+    // Log resumido para diagnóstico (solo en modo debug)
+    if (featuredExplicit.length > 0) {
+      this.logger.debug(`[getFeaturedSongs] Encontradas ${featuredExplicit.length} canciones destacadas`);
+    }
 
     // Devolver SOLO las canciones explícitamente destacadas (puede ser menos que el límite)
     return featuredExplicit;
@@ -88,9 +87,9 @@ export class FeaturedService {
       throw new NotFoundException('Canción no encontrada');
     }
 
-    // Log para diagnóstico
-    this.logger.log(`Intentando ${featured ? 'destacar' : 'quitar destacado'} canción: ${song.title} (ID: ${songId})`);
-    this.logger.log(`Estado actual: status=${song.status}, isFeatured=${song.isFeatured}, genres=${JSON.stringify(song.genres)}`);
+    // ✅ OPTIMIZACIÓN PRODUCCIÓN: Logs solo en modo debug
+    this.logger.debug(`Intentando ${featured ? 'destacar' : 'quitar destacado'} canción: ${song.title} (ID: ${songId})`);
+    this.logger.debug(`Estado actual: status=${song.status}, isFeatured=${song.isFeatured}, genres=${JSON.stringify(song.genres)}`);
 
     // VALIDACIÓN: Si se está destacando, verificar que tenga géneros asignados
     if (featured && (!song.genres || song.genres.length === 0)) {
@@ -123,11 +122,8 @@ export class FeaturedService {
     // Actualizar el objeto song con el nuevo estado
     song.isFeatured = featured;
 
-    this.logger.log(`Canción "${song.title}" ${featured ? 'destacada' : 'ya no está destacada'}`);
-    
-    if (featured) {
-      this.logger.log(`Géneros de la canción destacada: ${song.genres?.join(', ') || 'ninguno'}`);
-    }
+    // ✅ OPTIMIZACIÓN PRODUCCIÓN: Log resumido solo
+    this.logger.debug(`Canción "${song.title}" ${featured ? 'destacada' : 'ya no está destacada'}`);
 
     return song;
   }
@@ -158,7 +154,8 @@ export class FeaturedService {
       relations: ['user'],
     });
 
-    this.logger.log(`Artista "${artist?.stageName || artistId}" ${featured ? 'destacado' : 'ya no está destacado'}`);
+    // ✅ OPTIMIZACIÓN PRODUCCIÓN: Log solo en modo debug
+    this.logger.debug(`Artista "${artist?.stageName || artistId}" ${featured ? 'destacado' : 'ya no está destacado'}`);
 
     return artist;
   }
@@ -180,7 +177,8 @@ export class FeaturedService {
       relations: ['user'],
     });
 
-    this.logger.log(`Playlist "${playlist?.name || playlistId}" ${featured ? 'destacada' : 'ya no está destacada'}`);
+    // ✅ OPTIMIZACIÓN PRODUCCIÓN: Log solo en modo debug
+    this.logger.debug(`Playlist "${playlist?.name || playlistId}" ${featured ? 'destacada' : 'ya no está destacada'}`);
 
     return playlist;
   }

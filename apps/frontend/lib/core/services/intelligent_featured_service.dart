@@ -100,11 +100,18 @@ class IntelligentFeaturedService {
           final finalRecommendations = dynamicRecommendations.take(limit).toList();
           debugPrint('✅ [IntelligentFeatured] Usando ${finalRecommendations.length} recomendaciones dinámicas del algoritmo (solicitadas: $limit)');
           
+          // ✅ CRÍTICO: Las recomendaciones vienen ordenadas por score del backend (mejor primero)
+          // La primera canción es la mejor recomendación y será la siguiente canción
+          if (finalRecommendations.isNotEmpty) {
+            debugPrint('🎯 [IntelligentFeatured] SIGUIENTE CANCIÓN (mejor recomendación): ${finalRecommendations.first.song.title}');
+          }
+          
           // Log de las canciones recomendadas para debugging
           for (int i = 0; i < finalRecommendations.length && i < 5; i++) {
             debugPrint('   ${i + 1}. ${finalRecommendations[i].song.title}');
           }
           
+          // ✅ IMPORTANTE: Retornar manteniendo el orden de score (mejor primero)
           // Retornar solo las dinámicas, ignorando las estáticas
           return finalRecommendations;
         } else {
@@ -221,10 +228,34 @@ class IntelligentFeaturedService {
       // Estrategia 2: Si aún necesitamos más, usar canciones populares diversas
       if (recommendations.length < count) {
         final remaining = count - recommendations.length;
-        final popularSongs = await _getPopularDiverseSongs(
+        var popularSongs = await _getPopularDiverseSongs(
           count: remaining,
           excludeIds: usedSongIds,
         );
+        
+        // 🛡️ FALLBACK DE AGOTAMIENTO: Si no hay canciones nuevas, relajar filtros
+        if (popularSongs.isEmpty && excludeIds.isNotEmpty) {
+          debugPrint('⚠️ [IntelligentFeatured] REPERTORIO AGOTADO. Aplicando relajación de filtros.');
+          
+          // Opción 1: Solo excluir la canción que está sonando actualmente
+          final relaxedExcludeIds = currentSongId != null ? {currentSongId} : <String>{};
+          popularSongs = await _getPopularDiverseSongs(
+            count: remaining,
+            excludeIds: relaxedExcludeIds,
+          );
+          
+          debugPrint('🔄 [IntelligentFeatured] Relajación nivel 1: ${popularSongs.length} canciones obtenidas (solo excluyendo canción actual)');
+          
+          // Opción 2: Si aún así está vacío, traer todas las canciones disponibles
+          if (popularSongs.isEmpty) {
+            debugPrint('⚠️ [IntelligentFeatured] Aún sin resultados. Permitiendo todas las canciones disponibles.');
+            popularSongs = await _getPopularDiverseSongs(
+              count: remaining,
+              excludeIds: <String>{}, // Sin exclusiones
+            );
+            debugPrint('🔄 [IntelligentFeatured] Relajación nivel 2: ${popularSongs.length} canciones obtenidas (sin exclusiones)');
+          }
+        }
         
         recommendations.addAll(popularSongs);
         debugPrint('🔥 [IntelligentFeatured] Canciones populares diversas: ${popularSongs.length}');

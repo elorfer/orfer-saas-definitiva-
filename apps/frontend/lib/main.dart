@@ -6,6 +6,7 @@ import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'core/navigation/app_router.dart';
 import 'core/theme/neumorphism_theme.dart';
 import 'core/utils/logger.dart';
+import 'core/utils/url_normalizer.dart';
 import 'core/widgets/optimized_scroll_behavior.dart';
 import 'core/providers/page_storage_provider.dart';
 import 'core/widgets/premium_status_listener.dart';
@@ -412,6 +413,12 @@ Future<void> _setOptimalDisplayMode() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // ✅ FIX: Limpiar cache de URLs duplicadas al inicio
+  UrlNormalizer.cleanDuplicateUrlsFromCache();
+  if (kDebugMode) {
+    debugPrint('🧹 [MAIN] Cache de URLs limpiado de duplicaciones');
+  }
+  
   // Configurar manejo de errores ANTES de cualquier otra inicialización
   _setupErrorHandlers();
   
@@ -425,7 +432,10 @@ void main() async {
   
   // 🚀 USANDO PROVIDER UNIFICADO CORREGIDO - ÚNICA FUENTE DE VERDAD
   // Todos los sistemas de audio antiguos han sido reemplazados
-  debugPrint('🚀 [MAIN] Usando unifiedAudioProviderFixed como único sistema de audio');
+  // ✅ OPTIMIZACIÓN PRODUCCIÓN: Solo log en modo debug
+  if (kDebugMode) {
+    debugPrint('🚀 [MAIN] Usando unifiedAudioProviderFixed como único sistema de audio');
+  }
   
   // El provider se inicializa automáticamente cuando se usa por primera vez
   
@@ -448,8 +458,10 @@ void main() async {
   // Crear el ProviderContainer
   final container = ProviderContainer();
   
-  // El provider unificado se inicializa automáticamente cuando se usa
-  debugPrint('🚀 [MAIN] Provider unificado listo para usar');
+  // ✅ OPTIMIZACIÓN PRODUCCIÓN: Solo log en modo debug
+  if (kDebugMode) {
+    debugPrint('🚀 [MAIN] Provider unificado listo para usar');
+  }
   
   runApp(
     UncontrolledProviderScope(

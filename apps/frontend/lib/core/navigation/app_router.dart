@@ -16,7 +16,6 @@ import '../../features/library/screens/library_screen.dart';
 import '../../features/library/screens/favorites_screen.dart';
 import '../../features/library/screens/recently_played_screen.dart';
 import '../../features/library/screens/followed_artists_screen.dart';
-import '../../features/premium/screens/premium_deactivated_screen.dart';
 import '../../features/premium/screens/premium_activated_screen.dart';
 import '../../features/premium/screens/premium_router_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
@@ -55,18 +54,39 @@ class GoRouterNotifier extends ChangeNotifier {
   GoRouterNotifier(this.ref) {
     // ✅ OPTIMIZACIÓN: fireImmediately: false para evitar trabajo innecesario al inicio
     // El estado de auth se leerá cuando realmente se necesite (en getters)
-    _subscription = ref.listen<AuthState>(
+    _authSubscription = ref.listen<AuthState>(
       authStateProvider,
       (_, __) => notifyListeners(),
       fireImmediately: false, // Optimización: no ejecutar inmediatamente
     );
+    
+    // ✅ FIX: Escuchar cambios en el onboarding para actualizar el router
+    _onboardingSubscription = ref.listen<bool>(
+      onboardingProvider,
+      (_, __) {
+        // Cuando cambia el estado del onboarding, notificar al router
+        notifyListeners();
+      },
+      fireImmediately: false,
+    );
   }
 
   final Ref ref;
-  late final ProviderSubscription<AuthState> _subscription;
+  late final ProviderSubscription<AuthState> _authSubscription;
+  late final ProviderSubscription<bool> _onboardingSubscription;
 
   AuthState get _authState => ref.read(authStateProvider);
-  bool get _onboardingCompleted => ref.read(onboardingProvider);
+  
+  // ✅ FIX: Manejar errores al leer onboardingProvider
+  bool get _onboardingCompleted {
+    try {
+      return ref.read(onboardingProvider);
+    } catch (e) {
+      // Si hay error leyendo el provider, asumir que no está completado
+      // Esto evita crashes durante la inicialización
+      return false;
+    }
+  }
 
   String get initialLocation {
     if (!_authState.isAuthenticated) {
@@ -566,7 +586,8 @@ class GoRouterNotifier extends ChangeNotifier {
 
   @override
   void dispose() {
-    _subscription.close();
+    _authSubscription.close();
+    _onboardingSubscription.close();
     super.dispose();
   }
 }

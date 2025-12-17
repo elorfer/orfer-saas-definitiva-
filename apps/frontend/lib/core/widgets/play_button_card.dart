@@ -81,7 +81,15 @@ class PlayButtonCard extends ConsumerWidget {
         
         try {
           final notifier = ref.read(unifiedAudioProviderFixed.notifier);
-          await notifier.playFromCard(song, useAlgorithm: true);
+          final currentAudioState = ref.read(unifiedAudioProviderFixed);
+          
+          // ✅ FIX CRÍTICO: Si es la misma canción que está reproduciéndose, solo hacer toggle play/pause
+          // Esto evita que se cambie la carátula cuando se presiona play después de un anuncio
+          if (currentAudioState.currentSong?.id == song.id) {
+            await notifier.togglePlayPause();
+          } else {
+            await notifier.playFromCard(song, useAlgorithm: true);
+          }
         } catch (e, stackTrace) {
           debugPrint('❌ [PlayButtonCard] Error al reproducir canción: $e');
           debugPrint('Stack trace: $stackTrace');

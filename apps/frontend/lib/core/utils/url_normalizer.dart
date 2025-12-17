@@ -21,19 +21,52 @@ class UrlNormalizer {
       return null;
     }
 
-    // OPTIMIZACIÓN: Verificar cache primero
-    final cached = _urlCache[imageUrl];
+    // ✅ FIX: Limpiar duplicaciones ANTES de verificar cache
+    // Esto asegura que URLs duplicadas no se guarden en cache
+    String cleanUrl = imageUrl;
+    if (cleanUrl.contains('/uploads/uploads/')) {
+      cleanUrl = cleanUrl.replaceAll('/uploads/uploads/', '/uploads/');
+    }
+
+    // OPTIMIZACIÓN: Verificar cache con URL limpia
+    final cached = _urlCache[cleanUrl];
     if (cached != null) {
-      return cached;
+      // Verificar que el cache no tenga duplicaciones
+      if (cached.contains('/uploads/uploads/')) {
+        // Cache corrupto, limpiarlo y recalcular
+        _urlCache.remove(cleanUrl);
+      } else {
+        return cached;
+      }
     }
 
     // Si ya es una URL completa, usar la lógica centralizada
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      String normalized = _applyBaseNormalization(imageUrl);
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      String normalized = _applyBaseNormalization(cleanUrl);
       
-      // Corregir rutas específicas de imágenes
-      if (normalized.contains('/covers/') && !normalized.contains('/uploads/covers/')) {
-        normalized = normalized.replaceAll('/covers/', '/uploads/covers/');
+      // ✅ FIX: Corregir duplicaciones de forma exhaustiva
+      // Reemplazar todas las ocurrencias de /uploads/uploads/ por /uploads/
+      while (normalized.contains('/uploads/uploads/')) {
+        normalized = normalized.replaceAll('/uploads/uploads/', '/uploads/');
+      }
+      
+      // ✅ FIX: Solo agregar /uploads/ si NO está presente antes de /covers/
+      final coversIndex = normalized.indexOf('/covers/');
+      if (coversIndex != -1) {
+        // Verificar si hay /uploads/ antes de /covers/
+        final beforeCovers = normalized.substring(0, coversIndex);
+        
+        // Verificar si ya tiene /uploads/ antes de /covers/
+        if (!beforeCovers.contains('/uploads/')) {
+          // No hay /uploads/ antes, agregar /uploads/ antes de /covers/
+          normalized = normalized.replaceFirst('/covers/', '/uploads/covers/');
+        }
+        // Si ya tiene /uploads/ antes, no hacer nada
+      }
+      
+      // ✅ FIX: Verificación final - asegurar que no haya duplicaciones
+      if (normalized.contains('/uploads/uploads/')) {
+        normalized = normalized.replaceAll('/uploads/uploads/', '/uploads/');
       }
       
       if (enableLogging) {
@@ -41,7 +74,7 @@ class UrlNormalizer {
       }
       
       // OPTIMIZACIÓN: Guardar en cache y limpiar si es necesario
-      _addToCache(imageUrl, normalized);
+      _addToCache(cleanUrl, normalized);
       return normalized;
     }
 
@@ -191,17 +224,42 @@ class UrlNormalizer {
 
   /// Agrega una URL al cache y limpia entradas antiguas si es necesario
   static void _addToCache(String original, String normalized) {
+    // ✅ FIX: Verificar que la URL normalizada no tenga duplicaciones antes de cachear
+    String finalNormalized = normalized;
+    
+    // Limpiar duplicaciones de forma exhaustiva
+    while (finalNormalized.contains('/uploads/uploads/')) {
+      finalNormalized = finalNormalized.replaceAll('/uploads/uploads/', '/uploads/');
+    }
+    
     // Limpiar cache si excede el tamaño máximo (FIFO simple)
     if (_urlCache.length >= _maxCacheSize) {
       final firstKey = _urlCache.keys.first;
       _urlCache.remove(firstKey);
     }
-    _urlCache[original] = normalized;
+    
+    // Solo guardar si no tiene duplicaciones
+    if (!finalNormalized.contains('/uploads/uploads/')) {
+      _urlCache[original] = finalNormalized;
+    }
   }
 
   /// Limpia el cache de URLs (útil para testing o cuando cambia la configuración)
   static void clearCache() {
     _urlCache.clear();
+  }
+  
+  /// Limpia URLs duplicadas del cache (útil para corregir cache corrupto)
+  static void cleanDuplicateUrlsFromCache() {
+    final keysToRemove = <String>[];
+    _urlCache.forEach((key, value) {
+      if (value.contains('/uploads/uploads/')) {
+        keysToRemove.add(key);
+      }
+    });
+    for (final key in keysToRemove) {
+      _urlCache.remove(key);
+    }
   }
 }
 

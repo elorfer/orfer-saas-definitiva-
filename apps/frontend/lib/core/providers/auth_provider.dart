@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../exceptions/auth_exception.dart';
+import 'onboarding_provider.dart';
 
 /// Provider para el servicio de autenticación
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -157,6 +158,18 @@ class AuthNotifier extends Notifier<AuthState> {
         isLoading: false,
         error: null,
       );
+      
+      // ✅ FIX: Resetear onboarding para el nuevo usuario registrado
+      // Esto asegura que el onboarding aparezca solo para usuarios nuevos
+      if (authResponse.user.id.isNotEmpty) {
+        try {
+          final onboardingNotifier = ref.read(onboardingProvider.notifier);
+          await onboardingNotifier.resetForNewUser(authResponse.user.id);
+        } catch (e) {
+          // Si hay error reseteando onboarding, continuar de todas formas
+          debugPrint('⚠️ Error reseteando onboarding para nuevo usuario: $e');
+        }
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,

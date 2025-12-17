@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
+import '../services/player_navigation_service.dart';
 import '../widgets/final_mini_player.dart';
+import '../../features/ads/widgets/ads_mini_player.dart';
 import '../theme/neumorphism_theme.dart';
-import '../utils/logger.dart';
 
 /// Navegación principal con bottom navigation bar y mini player
 class MainNavigation extends ConsumerStatefulWidget {
@@ -46,8 +47,10 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
-    // ✅ OPTIMIZACIÓN: Solo escuchar cambios en currentSong, no todo el estado
-    final currentSong = ref.watch(unifiedAudioProviderFixed.select((state) => state.currentSong));
+    // ✅ OPTIMIZACIÓN: Solo escuchar cambios necesarios
+    final playbackState = ref.watch(unifiedAudioProviderFixed);
+    final currentSong = playbackState.currentSong;
+    final isPlayingAd = playbackState.isPlayingAd;
     
     // ✅ Usar valores cacheados - NUNCA recalcular
     final navBarHeight = _cachedNavBarHeight ?? 80.0;
@@ -77,32 +80,35 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
             ),
           ),
           
-          // ✅ MINI PLAYER OPTIMIZADO - Solo se muestra cuando hay canción
-          if (currentSong != null)
+          // 📢 Mini Player de Anuncios (prioridad sobre el mini player normal)
+          if (isPlayingAd)
+            Positioned(
+              bottom: navBarHeight,
+              left: 0,
+              right: 0,
+              child: RepaintBoundary(
+                child: AdsMiniPlayer(
+                  // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
+                  onTap: () => PlayerNavigationService.openFullPlayer(
+                    context: context,
+                    ref: ref,
+                  ),
+                ),
+              ),
+            )
+          // Mini Player normal (solo cuando no hay anuncio)
+          else if (currentSong != null)
             Positioned(
               bottom: navBarHeight, // Ajustado para la nueva altura de barra
               left: 0,
               right: 0,
               child: RepaintBoundary(
                 child: FinalMiniPlayer(
-                  onTap: () {
-                    // Abrir reproductor completo con transición estilo Spotify
-                    // ✅ OPTIMIZADO: Verificar estado antes de navegar para evitar múltiples llamadas
-                    try {
-                      final audioState = ref.read(unifiedAudioProviderFixed);
-                      if (audioState.currentSong != null && !audioState.isPlayerExpanded) {
-                        // Actualizar estado y navegar en una sola operación
-                        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                        
-                        // Navegar inmediatamente sin delay
-                        if (context.mounted) {
-                          context.push('/player');
-                        }
-                      }
-                    } catch (e) {
-                      AppLogger.error('[MainNavigation] Error al abrir reproductor: $e');
-                    }
-                  },
+                  // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
+                  onTap: () => PlayerNavigationService.openFullPlayer(
+                    context: context,
+                    ref: ref,
+                  ),
                 ),
               ),
             ),

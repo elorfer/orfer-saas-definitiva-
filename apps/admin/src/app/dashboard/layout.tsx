@@ -72,6 +72,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Administrar Playlists', href: '/dashboard/playlists', icon: ListBulletIcon },
     { name: 'Contenido destacado', href: '/dashboard/featured', icon: StarIcon },
     { name: 'Mensaje en Home', href: '/dashboard/home-message', icon: MegaphoneIcon },
+    { name: 'Anuncios de Audio', href: '/dashboard/ads', icon: MegaphoneIcon },
     { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
   ];
 

@@ -3,6 +3,15 @@ import 'package:flutter/foundation.dart';
 /// Sistema de logging seguro para producción
 /// Solo muestra logs en modo DEBUG, nunca en producción
 class AppLogger {
+  // #region agent log
+  static void debugLog(String location, String message, Map<String, dynamic> data, String hypothesisId) {
+    // Solo usar logs de consola ya que el sistema de archivos puede ser de solo lectura en Android
+    if (kDebugMode) {
+      final dataStr = data.entries.map((e) => '${e.key}=${e.value}').join(', ');
+      debugPrint('🔍 [DEBUG] $location: $message | H:$hypothesisId | $dataStr');
+    }
+  }
+  // #endregion
   /// Log de información (solo en debug)
   static void info(String message) {
     if (kDebugMode) {

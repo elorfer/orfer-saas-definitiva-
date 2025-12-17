@@ -101,7 +101,10 @@ class User {
   String get displayName => username;
   bool get isArtist => role == UserRole.artist;
   bool get isAdmin => role == UserRole.admin;
-  bool get isPremium => subscriptionStatus != SubscriptionStatus.free;
+  // ✅ FIX: isPremium solo debe ser true para premium o vip, NO para inactive
+  // Los usuarios inactive deben ver anuncios
+  bool get isPremium => subscriptionStatus == SubscriptionStatus.premium || 
+                        subscriptionStatus == SubscriptionStatus.vip;
   bool get isUserActive => isActive ?? true; // Por defecto activo si no se especifica
   bool get isUserVerified => isVerified ?? false; // Por defecto no verificado si no se especifica
 }

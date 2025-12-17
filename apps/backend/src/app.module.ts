@@ -26,6 +26,8 @@ import { SearchModule } from './modules/search/search.module';
 import { StreamsModule } from './modules/streams/streams.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { AppMessagesModule } from './modules/app-messages/app-messages.module';
+import { AdsModule } from './modules/ads/ads.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { entities } from './database/entities';
 
 // Configuración de la base de datos
@@ -72,12 +74,25 @@ import { dataSourceOptions } from './database/data-source';
         
         const sslOptions = sslEnabled ? { rejectUnauthorized } : false;
 
+        // Configurar logging de TypeORM de forma más selectiva
+        // Solo mostrar errores y warnings en desarrollo, no todas las queries
+        const dbLoggingEnv = configService.get<string>('DB_LOGGING');
+        let dbLogging: boolean | ('query' | 'error' | 'schema' | 'warn' | 'info' | 'log' | 'migration')[] = false;
+        
+        if (dbLoggingEnv === 'true' || dbLoggingEnv === '1') {
+          // Si se especifica explícitamente, habilitar logging completo
+          dbLogging = true;
+        } else if (!isProduction) {
+          // En desarrollo, solo mostrar errores y warnings (no queries normales)
+          dbLogging = ['error', 'warn'];
+        }
+
         const baseOptions: TypeOrmModuleOptions = {
           type: 'postgres',
           entities,
           autoLoadEntities: true,
           synchronize: !isProduction,
-          logging: !isProduction,
+          logging: dbLogging,
           connectTimeoutMS: 30000, // 30 segundos de timeout
           extra: {
             connectionTimeoutMillis: 30000,
@@ -204,6 +219,8 @@ import { dataSourceOptions } from './database/data-source';
     StreamsModule,
     RealtimeModule,
     AppMessagesModule,
+    AdsModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

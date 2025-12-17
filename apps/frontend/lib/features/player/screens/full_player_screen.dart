@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/services/player_navigation_service.dart';
 import '../../../core/widgets/professional_audio_player.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
@@ -23,34 +24,37 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
 
   @override
   void dispose() {
-    // Cerrar el reproductor completo cuando se desmonta
-    Future.microtask(() {
-      try {
-        ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
-      } catch (e) {
-        // Ignorar errores si el provider ya fue disposed
-      }
-    });
+    // ✅ FIX: Cerrar el reproductor completo cuando se desmonta
+    // Asegurar que se cierre inmediatamente para evitar bloqueos
+    try {
+      ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
+    } catch (e) {
+      // Ignorar errores si el provider ya fue disposed
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Abrir el reproductor completo cuando se construye
+    // ✅ OPTIMIZACIÓN: Escuchar tanto canción como anuncio
+    final playbackState = ref.watch(unifiedAudioProviderFixed);
+    final currentSong = playbackState.lastConfirmedSong ?? playbackState.currentSong;
+    final isPlayingAd = playbackState.isPlayingAd;
+    
+    // ✅ FIX: Abrir el reproductor completo cuando se construye, pero solo una vez
+    // Usar un flag para evitar múltiples llamadas
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+        final audioState = ref.read(unifiedAudioProviderFixed);
+        if (!audioState.isPlayerExpanded) {
+          ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+        }
       }
     });
-    
-    // ✅ OPTIMIZACIÓN: Solo escuchar currentSong, no todo el estado
-    final currentSong = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.lastConfirmedSong ?? state.currentSong),
-    );
 
-    // Si no hay canción, regresar de forma segura
+    // ✅ FIX: Si no hay canción ni anuncio, regresar de forma segura
     // ✅ CORRECCIÓN: Usar Future.delayed para evitar conflictos con animaciones Hero
-    if (currentSong == null) {
+    if (currentSong == null && !isPlayingAd) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && context.mounted) {
           // Pequeño delay para permitir que las animaciones Hero terminen
@@ -79,16 +83,12 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) return; // Ya se cerró, no hacer nada
         
-        // ✅ Manejar cierre del reproductor sin afectar la reproducción
+        // ✅ MEJOR PRÁCTICA: Usar servicio centralizado para cerrar
         if (mounted && context.mounted) {
-          ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
-          if (context.mounted) {
-            try {
-              context.pop();
-            } catch (e) {
-              // Ignorar errores de navegación si el contexto ya no es válido
-            }
-          }
+          await PlayerNavigationService.closeFullPlayer(
+            context: context,
+            ref: ref,
+          );
         }
       },
       child: RepaintBoundary(
@@ -100,8 +100,14 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
           child: Stack(
             children: [
               // ✅ Reproductor profesional completo (con fondo lazy)
-              // Key única basada en el ID de la canción para forzar reconstrucción cuando cambia
-              ProfessionalAudioPlayer(key: ValueKey('full_player_${currentSong.id}')),
+              // Key única basada en el ID de la canción o anuncio para forzar reconstrucción cuando cambia
+              ProfessionalAudioPlayer(
+                key: ValueKey(
+                  isPlayingAd 
+                      ? 'full_player_ad_${playbackState.currentAd?.id ?? 'none'}'
+                      : 'full_player_${currentSong?.id ?? 'none'}',
+                ),
+              ),
               
               // Botón de cerrar - OPTIMIZADO con const
               Positioned(
@@ -110,14 +116,13 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
                 child: SafeArea(
                   child: RepaintBoundary(
                     child: _CloseButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (mounted && context.mounted) {
-                          ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
-                          try {
-                            context.pop();
-                          } catch (e) {
-                            // Ignorar errores de navegación si el contexto ya no es válido
-                          }
+                          // ✅ MEJOR PRÁCTICA: Usar servicio centralizado para cerrar
+                          await PlayerNavigationService.closeFullPlayer(
+                            context: context,
+                            ref: ref,
+                          );
                         }
                       },
                     ),

@@ -32,16 +32,7 @@ export const api = axios.create({
   },
 });
 
-// Interceptor para eliminar Content-Type cuando se envía FormData
-api.interceptors.request.use((config) => {
-  if (config.data instanceof FormData) {
-    // Eliminar Content-Type para que el navegador establezca el boundary correcto
-    delete config.headers['Content-Type'];
-  }
-  return config;
-});
-
-// Request interceptor para agregar el token de autenticación
+// Request interceptor para agregar el token de autenticación PRIMERO
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
@@ -56,6 +47,23 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Interceptor para eliminar Content-Type cuando se envía FormData (DESPUÉS de agregar el token)
+api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    // Eliminar Content-Type para que el navegador establezca el boundary correcto
+    // Asegurar que Authorization se mantenga
+    delete config.headers['Content-Type'];
+    // Asegurar que el header Authorization esté presente
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+  }
+  return config;
+});
 
 // Response interceptor para manejar errores
 api.interceptors.response.use(
@@ -367,7 +375,52 @@ export const apiClient = {
     api.patch(`/app-messages/${id}/status`, { isActive }),
   disableHomeMessages: () => api.post('/app-messages/home/disable'),
 
+  // Ads
+  getAds: (page = 1, limit = 10, status?: string) => {
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    if (status) params.append('status', status);
+    return api.get(`/ads?${params.toString()}`);
+  },
+  
+  getAd: (id: string) => api.get(`/ads/${id}`),
+  
+  createAd: (data: any) => api.post('/ads', data),
+  
+  updateAd: (id: string, data: any) => api.patch(`/ads/${id}`, data),
+  
+  deleteAd: (id: string) => api.delete(`/ads/${id}`),
+  
+  activateAd: (id: string) => api.post(`/ads/${id}/activate`),
+  
+  pauseAd: (id: string) => api.post(`/ads/${id}/pause`),
+  
+  uploadAdAudio: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    // No establecer Content-Type explícitamente - el interceptor lo maneja automáticamente
+    return api.post(`/ads/${id}/upload-audio`, formData);
+  },
+  
+  uploadAdCover: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    // No establecer Content-Type explícitamente - el interceptor lo maneja automáticamente
+    return api.post(`/ads/${id}/upload-cover`, formData);
+  },
+  
+  getAdStats: (id: string) => api.get(`/ads/${id}/stats`),
 
+  // Settings (Configuraciones)
+  getSettings: () => api.get('/settings'),
+  
+  getAdFrequency: () => api.get('/settings/ad-frequency'),
+  
+  updateAdFrequency: (value: number) => api.put('/settings/ad-frequency', { value }),
+  
+  getSetting: (key: string) => api.get(`/settings/${key}`),
+  
+  updateSetting: (key: string, value: number, description?: string) => 
+    api.put(`/settings/${key}`, { value, description }),
 };
 
 export default api;

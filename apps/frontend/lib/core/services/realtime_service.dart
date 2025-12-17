@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../config/app_config.dart';
 import 'http_client_service.dart';
 
@@ -8,7 +8,7 @@ import 'http_client_service.dart';
 /// Maneja notificaciones de cambios de estado premium y otras actualizaciones
 class RealtimeService {
   static RealtimeService? _instance;
-  IO.Socket? _socket;
+  io.Socket? _socket;
   bool _isConnecting = false;
   bool _isConnected = false;
   Timer? _reconnectTimer;
@@ -76,9 +76,9 @@ class RealtimeService {
 
       // Crear conexión Socket.io
       // Nota: El namespace '/realtime' se especifica en la URL
-      _socket = IO.io(
+      _socket = io.io(
         fullUrl, // URL completa con namespace
-        IO.OptionBuilder()
+        io.OptionBuilder()
             .setTransports(['websocket', 'polling'])
             .setAuth({'token': token})
             .setQuery({'token': token})

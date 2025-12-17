@@ -63,7 +63,8 @@ class ArtistNameWithBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     // Debug: Verificar si isVerified es true
     if (isVerified) {
-      debugPrint('✅ [ArtistNameWithBadge] Mostrando badge para: $artistName');
+      // Log removido para reducir ruido en consola
+      // debugPrint('✅ [ArtistNameWithBadge] Mostrando badge para: $artistName');
     }
     
     if (!isVerified) {

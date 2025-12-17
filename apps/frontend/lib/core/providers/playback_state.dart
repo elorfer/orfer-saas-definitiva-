@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import '../models/song_model.dart';
+import '../../features/ads/models/audio_ad_model.dart';
 
 /// Modo de repetición del reproductor
 enum RepeatMode {
@@ -38,6 +39,9 @@ class PlaybackState {
   final bool isProcessingPlayPause;
   final bool isProcessingNext;
   final bool isProcessingPrevious;
+  // Estado de anuncios
+  final AudioAd? currentAd;
+  final bool isPlayingAd;
 
   const PlaybackState({
     this.playbackMode = PlaybackMode.none,
@@ -59,6 +63,8 @@ class PlaybackState {
     this.isProcessingPlayPause = false,
     this.isProcessingNext = false,
     this.isProcessingPrevious = false,
+    this.currentAd,
+    this.isPlayingAd = false,
   });
 
   /// Calcular progreso de 0.0 a 1.0
@@ -96,12 +102,18 @@ class PlaybackState {
     bool? isProcessingPlayPause,
     bool? isProcessingNext,
     bool? isProcessingPrevious,
+    AudioAd? currentAd,
+    bool? isPlayingAd,
+    // ✅ FIX CRÍTICO: Flags para permitir establecer null explícitamente
+    bool clearCurrentAd = false,
+    bool clearCurrentSong = false,
+    bool clearLastConfirmedSong = false,
   }) {
     return PlaybackState(
       playbackMode: playbackMode ?? this.playbackMode,
       currentQueue: currentQueue ?? this.currentQueue,
-      currentSong: currentSong ?? this.currentSong,
-      lastConfirmedSong: lastConfirmedSong ?? this.lastConfirmedSong,
+      currentSong: clearCurrentSong ? null : (currentSong ?? this.currentSong),
+      lastConfirmedSong: clearLastConfirmedSong ? null : (lastConfirmedSong ?? this.lastConfirmedSong),
       isPlaying: isPlaying ?? this.isPlaying,
       isBuffering: isBuffering ?? this.isBuffering,
       currentPosition: currentPosition ?? this.currentPosition,
@@ -117,6 +129,9 @@ class PlaybackState {
       isProcessingPlayPause: isProcessingPlayPause ?? this.isProcessingPlayPause,
       isProcessingNext: isProcessingNext ?? this.isProcessingNext,
       isProcessingPrevious: isProcessingPrevious ?? this.isProcessingPrevious,
+      // ✅ FIX CRÍTICO: Usar flag para permitir establecer null explícitamente
+      currentAd: clearCurrentAd ? null : (currentAd ?? this.currentAd),
+      isPlayingAd: isPlayingAd ?? this.isPlayingAd,
     );
   }
 
@@ -142,11 +157,14 @@ class PlaybackState {
         other.shouldStartAlgorithmAfterQueue == shouldStartAlgorithmAfterQueue &&
         other.isProcessingPlayPause == isProcessingPlayPause &&
         other.isProcessingNext == isProcessingNext &&
-        other.isProcessingPrevious == isProcessingPrevious;
+        other.isProcessingPrevious == isProcessingPrevious &&
+        other.currentAd?.id == currentAd?.id &&
+        other.isPlayingAd == isPlayingAd;
   }
 
   @override
   int get hashCode {
+    // Combinar algunos valores para no exceder el límite de 20 argumentos de Object.hash
     return Object.hash(
       playbackMode,
       currentQueue.length,
@@ -167,6 +185,7 @@ class PlaybackState {
       isProcessingPlayPause,
       isProcessingNext,
       isProcessingPrevious,
+      Object.hash(currentAd?.id, isPlayingAd), // Combinar campos de anuncios
     );
   }
 

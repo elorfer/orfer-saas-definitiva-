@@ -381,131 +381,178 @@ class AudioService {
     }
   }
 
-  /// 🛡️ Deduplicación suave: Elimina canciones duplicadas sin destruir el reproductor
-  /// Usa removeAt en lugar de loadNewQueue para mantener el pipeline activo
+  /// ⚡ INYECCIÓN INSTANTÁNEA: Insertar canción en cualquier posición de la cola
   /// 
-  /// [duplicateIndices]: Lista de índices (ordenados descendente) a eliminar
+  /// Similar a insertSongAtStart pero permite insertar en cualquier índice.
+  /// Útil para insertar anuncios después de la canción actual sin interrumpir la reproducción.
   /// 
-  /// Retorna true si la eliminación fue exitosa, false si no hay cola activa
-  Future<bool> removeDuplicates(List<int> duplicateIndices) async {
+  /// Esta es la forma más rápida de insertar contenido en la cola cuando ya hay una reproduciendo.
+  /// Usa flush/start optimizado en lugar de Release/Init lento.
+  /// 
+  /// [source]: AudioSource de la nueva canción/anuncio a insertar
+  /// [index]: Índice donde insertar (0 = inicio, currentIndex + 1 = después de la actual)
+  /// 
+  /// Retorna true si la inyección fue exitosa, false si no hay cola activa
+  Future<bool> insertSongAtIndex(AudioSource source, int index) async {
     try {
-      AppLogger.warning('[AudioService] 🛡️ removeDuplicates llamado con ${duplicateIndices.length} índices: $duplicateIndices');
-      
       final currentSource = player.audioSource;
-      AppLogger.warning('[AudioService] 🛡️ Tipo de audioSource: ${currentSource.runtimeType}');
       
       // Solo funciona si ya hay un ConcatenatingAudioSource activo
       if (currentSource is! ConcatenatingAudioSource) {
-        AppLogger.warning('[AudioService] 🛡️ ❌ No hay cola activa para eliminación suave (tipo: ${currentSource.runtimeType})');
+        AppLogger.info('[AudioService] No hay cola activa para inyección instantánea en índice $index');
         return false;
       }
 
-      if (duplicateIndices.isEmpty) {
-        AppLogger.debug('[AudioService] 🛡️ No hay índices duplicados para eliminar');
+      // Validar que el índice sea válido
+      if (index < 0 || index > currentSource.length) {
+        AppLogger.warning('[AudioService] Índice $index inválido (cola tiene ${currentSource.length} elementos)');
+        return false;
+      }
+
+      AppLogger.info('[AudioService] ⚡ Inyección instantánea: insertando en índice $index');
+      
+      // 🔄 CRÍTICO: Guardar estado de reproducción ANTES de insertar
+      // seek() puede pausar el reproductor automáticamente
+      final wasPlaying = player.playing;
+      final currentIndex = player.currentIndex ?? 0;
+      
+      // Insertar la nueva canción/anuncio en el índice especificado
+      await currentSource.insert(index, source);
+      
+      // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice su sequenceState después de insertar
+      // ⚡ OPTIMIZACIÓN: Delay mínimo (15ms) para reducir latencia mientras permitimos que just_audio actualice
+      await Future.delayed(const Duration(milliseconds: 15));
+      
+      // Si insertamos después de la canción actual y queremos reproducir el anuncio inmediatamente
+      if (index == currentIndex + 1 && wasPlaying) {
+        // ⚡ OPTIMIZACIÓN: Usar seek() con index para saltar directamente al anuncio
+        // Esto usa flush/start optimizado, no Release/Init lento
+        try {
+          await player.seek(Duration.zero, index: index);
+          AppLogger.debug('[AudioService] ⚡ Seek directo al índice $index completado');
+          
+          // 🔄 CRÍTICO: Reanudar reproducción si estaba reproduciendo antes
+          // seek() puede pausar el reproductor, necesitamos reanudarlo
+          if (wasPlaying && !player.playing) {
+            await player.play();
+            AppLogger.info('[AudioService] ▶️ Reproducción reanudada después de inserción en índice $index');
+          }
+        } catch (e) {
+          // Fallback: si seek con index no funciona, continuar con la reproducción actual
+          AppLogger.warning('[AudioService] ⚠️ Seek con index falló, continuando reproducción actual: $e');
+          // No hacer nada, la canción actual seguirá reproduciéndose y el anuncio estará en la cola
+        }
+      }
+      // Si insertamos en otra posición, no cambiar la reproducción actual
+      // El contenido quedará en la cola para reproducirse después
+      
+      AppLogger.info('[AudioService] ✅ Inyección instantánea en índice $index completada');
+      return true;
+    } catch (e, stackTrace) {
+      AppLogger.error('[AudioService] ❌ Error en inyección instantánea en índice $index: $e', stackTrace);
+      return false;
+    }
+  }
+
+  /// 🛡️ Eliminar ítems de la cola en los índices especificados
+  /// 
+  /// [indices]: Lista de índices a eliminar
+  /// 
+  /// Retorna true si la eliminación fue exitosa
+  Future<bool> removeQueueItemsAt(List<int> indices) async {
+    try {
+      AppLogger.warning('[AudioService] 🛡️ removeQueueItemsAt llamado con ${indices.length} índices: $indices');
+      
+      final currentSource = player.audioSource;
+      
+      // Solo funciona si ya hay un ConcatenatingAudioSource activo
+      if (currentSource is! ConcatenatingAudioSource) {
+        AppLogger.warning('[AudioService] 🛡️ ❌ No hay cola activa para eliminación (tipo: ${currentSource.runtimeType})');
+        return false;
+      }
+
+      if (indices.isEmpty) {
         return true; // No hay nada que eliminar
       }
       
       // 🛡️ PROTECCIÓN ADICIONAL: Verificar que los índices sean válidos
-      final validIndices = duplicateIndices.where((idx) => idx >= 0 && idx < currentSource.length).toList();
+      final validIndices = indices.where((idx) => idx >= 0 && idx < currentSource.length).toList();
       if (validIndices.isEmpty) {
         AppLogger.warning('[AudioService] 🛡️ ❌ Ningún índice es válido para eliminación (cola tiene ${currentSource.length} elementos)');
         return false;
       }
       
-      if (validIndices.length != duplicateIndices.length) {
-        AppLogger.warning('[AudioService] 🛡️ ⚠️ Algunos índices no son válidos: ${duplicateIndices.length} solicitados, ${validIndices.length} válidos');
-      }
-
-      AppLogger.warning('[AudioService] 🛡️ Eliminación suave: removiendo ${validIndices.length} duplicados (de ${duplicateIndices.length} solicitados)');
-      
       // 🔄 CRÍTICO: Guardar estado de reproducción ANTES de remover
       final wasPlaying = player.playing;
       final currentPosition = player.position;
-      AppLogger.warning('[AudioService] 🛡️ Estado guardado: wasPlaying=$wasPlaying, position=${currentPosition.inSeconds}s');
       
       // 🛡️ PROTECCIÓN: Verificar que el reproductor no esté en un estado inestable
       final playerState = player.playerState;
       if (playerState.processingState == ProcessingState.loading ||
           playerState.processingState == ProcessingState.buffering) {
         // Esperar a que el reproductor se estabilice antes de modificar la cola
-        AppLogger.warning('[AudioService] 🛡️ Reproductor en estado ${playerState.processingState}, esperando estabilización...');
         await Future.delayed(const Duration(milliseconds: 100));
       }
       
       // Ordenar índices descendente para evitar desplazamientos incorrectos
       final sortedIndices = List<int>.from(validIndices)..sort((a, b) => b.compareTo(a));
-      AppLogger.warning('[AudioService] 🛡️ Índices ordenados (descendente): $sortedIndices');
       
-      // 🛡️ PROTECCIÓN CONTRA CONCURRENCIA: Remover uno por uno con delays para evitar conflictos
-      // El error "Cannot fire new event" ocurre cuando múltiples operaciones modifican la cola simultáneamente
+      // 🛡️ PROTECCIÓN CONTRA CONCURRENCIA: Remover uno por uno con delays
       int successfullyRemoved = 0;
       for (final index in sortedIndices) {
         try {
-          // Verificar que el índice sigue siendo válido (puede cambiar después de remover anteriores)
-          final currentLength = currentSource.length;
-          if (index < currentLength && index >= 0) {
-            AppLogger.warning('[AudioService] 🛡️ Removiendo índice $index (cola tiene $currentLength elementos)...');
-            
-            // 🔄 CRÍTICO: Pequeño delay entre cada removeAt para permitir que just_audio procese
-            // Esto evita el error "Cannot fire new event"
-            // ⚡ OPTIMIZACIÓN: Reducido de 30ms a 20ms para mayor velocidad
+          // Verificar que el índice sigue siendo válido
+          if (index < currentSource.length && index >= 0) {
+            // 🔄 CRÍTICO: Pequeño delay entre cada removeAt
             if (successfullyRemoved > 0) {
               await Future.delayed(const Duration(milliseconds: 20));
             }
             
             await currentSource.removeAt(index);
             successfullyRemoved++;
-            AppLogger.warning('[AudioService] 🛡️ ✅ Índice $index removido exitosamente ($successfullyRemoved/${sortedIndices.length})');
-          } else {
-            AppLogger.warning('[AudioService] 🛡️ ⚠️ Índice $index inválido (cola tiene $currentLength elementos, saltando...)');
           }
         } catch (e, stackTrace) {
-          // Si falla una eliminación, registrar pero continuar con las demás
           AppLogger.error('[AudioService] ⚠️ Error al remover índice $index: $e', stackTrace);
-          // Continuar con el siguiente índice en lugar de fallar completamente
         }
       }
       
       if (successfullyRemoved == 0) {
-        AppLogger.error('[AudioService] ❌ No se pudo remover ningún duplicado (${sortedIndices.length} intentos fallidos)');
         return false;
       }
       
-      if (successfullyRemoved < duplicateIndices.length) {
-        AppLogger.info('[AudioService] ⚠️ Solo se removieron $successfullyRemoved de ${duplicateIndices.length} duplicados');
-      }
-      
-      // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice su sequenceState después de todas las eliminaciones
-      await Future.delayed(const Duration(milliseconds: 50)); // Reducido de 100ms a 50ms
+      // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice
+      await Future.delayed(const Duration(milliseconds: 50));
       
       // ⚡ OPTIMIZACIÓN: Solo restaurar posición si ha cambiado significativamente (>1 segundo)
-      // Esto evita seeks innecesarios que causan pausas perceptibles
       final newPosition = player.position;
       final positionDiff = (currentPosition - newPosition).abs();
       
       if (positionDiff > const Duration(seconds: 1)) {
         try {
           await player.seek(currentPosition);
-          AppLogger.debug('[AudioService] ⚡ Posición restaurada después de eliminación (diff: ${positionDiff.inMilliseconds}ms)');
-        } catch (_) {
-          // Ignorar si no se puede restaurar
-        }
-      } else {
-        AppLogger.debug('[AudioService] ⚡ Posición no requiere restauración (diff: ${positionDiff.inMilliseconds}ms)');
+        } catch (_) {}
       }
       
       // 🔄 CRÍTICO: Reanudar reproducción si estaba reproduciendo antes
       if (wasPlaying && !player.playing) {
         await player.play();
-        AppLogger.info('[AudioService] ▶️ Reproducción reanudada después de eliminación suave');
       }
       
-      AppLogger.info('[AudioService] ✅ Eliminación suave completada');
       return true;
     } catch (e, stackTrace) {
-      AppLogger.error('[AudioService] ❌ Error en eliminación suave: $e', stackTrace);
+      AppLogger.error('[AudioService] ❌ Error en removeQueueItemsAt: $e', stackTrace);
       return false;
     }
+  }
+
+  /// 🛡️ Deduplicación suave: Elimina canciones duplicadas sin destruir el reproductor
+  /// Usa removeQueueItemsAt para mantener el pipeline activo
+  /// 
+  /// [duplicateIndices]: Lista de índices (ordenados descendente) a eliminar
+  /// 
+  /// Retorna true si la eliminación fue exitosa, false si no hay cola activa
+  Future<bool> removeDuplicates(List<int> duplicateIndices) async {
+    return removeQueueItemsAt(duplicateIndices);
   }
 
   /// Verificar si hay una cola activa (ConcatenatingAudioSource)

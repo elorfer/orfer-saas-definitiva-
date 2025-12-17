@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,12 +28,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   bool get wantKeepAlive => true; // Mantener estado al cambiar de pestaña
 
   // Header fijo visible siempre
-
-  @override
-  void initState() {
-    super.initState();
-    // OPTIMIZACIÓN: Logging removido para mejor rendimiento
-  }
 
   @override
   void dispose() {
@@ -228,7 +221,7 @@ class _HomeHeader extends ConsumerWidget {
                     ),
                     child: Center(
                       child: Text(
-                        _getInitialsFromFirstName(userFirstName ?? 'Usuario'),
+                        _getInitialsFromFirstName(userFirstName),
                         style: AppTextStyles.titleMedium.copyWith(
                           color: Colors.white,
                         ),
@@ -249,7 +242,7 @@ class _HomeHeader extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      userFirstName ?? 'Usuario',
+                      userFirstName,
                       style: AppTextStyles.userName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

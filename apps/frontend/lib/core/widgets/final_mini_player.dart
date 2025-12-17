@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/unified_audio_provider_fixed.dart';
+import '../services/player_navigation_service.dart';
 import '../theme/neumorphism_theme.dart';
-import '../utils/logger.dart';
 import 'mini_player_components.dart';
 
 /// Mini reproductor final - Diseño neumórfico con funcionalidad perfecta
@@ -22,10 +21,16 @@ class FinalMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ⚡ OPTIMIZACIÓN: Solo escuchar currentSong, los demás widgets escuchan sus propias partes
-    final currentSong = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.currentSong),
-    );
+    // ✅ ÚNICA FUENTE DE VERDAD: Usar el provider que siempre devuelve la canción que realmente se está reproduciendo
+    final currentSong = ref.watch(realCurrentSongProvider);
+    final playbackState = ref.watch(unifiedAudioProviderFixed);
+    final isPlayingAd = playbackState.isPlayingAd;
+    
+    // ✅ FIX: Si hay un anuncio reproduciéndose, no mostrar el mini reproductor de canción
+    // El AdsMiniPlayer se mostrará en su lugar
+    if (isPlayingAd) {
+      return const SizedBox.shrink();
+    }
     
     // Si no hay canción, no mostrar nada
     if (currentSong == null) {
@@ -38,19 +43,11 @@ class FinalMiniPlayer extends ConsumerWidget {
       builder: (builderContext) {
         return GestureDetector(
           onTap: onTap ?? () {
-            try {
-              final audioState = ref.read(unifiedAudioProviderFixed);
-              if (audioState.currentSong != null && !audioState.isPlayerExpanded) {
-                // Marcar expansión y navegar de inmediato para reducir latencia percibida
-                ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                if (builderContext.mounted) {
-                  // Navegar sin animación extra para reducir latencia
-                  builderContext.go('/player');
-                }
-              }
-            } catch (e) {
-              AppLogger.error('[FinalMiniPlayer] Error al abrir reproductor: $e');
-            }
+            // ✅ MEJOR PRÁCTICA: Usar servicio centralizado para navegación
+            PlayerNavigationService.openFullPlayer(
+              context: builderContext,
+              ref: ref,
+            );
           },
           child: Container(
         height: 72, // Altura ajustada para incluir la barra de progreso
