@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/song_model.dart';
-import '../models/audio_ad_model.dart';
 import '../services/audio_service.dart';
 import '../services/intelligent_featured_service.dart';
 import '../services/home_service.dart';
@@ -74,7 +73,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   bool _isCompletingAd = false; // ✅ PROTECCIÓN CRÍTICA: Flag para evitar procesamiento duplicado de finalización de anuncio
   bool _preventiveAdTriggered = false; // ✅ PROTECCIÓN: Flag para evitar múltiples triggers de pausa preventiva
   String? _lastSongIdWithAd; // ✅ PROTECCIÓN: ID de la última canción que tuvo un anuncio (evita duplicados)
-  int _adFrequencyFromAdmin = 0; // Frecuencia de anuncios cargada desde el admin
+  int _songsPlayedCount = 0; // Contador de canciones reproducidas
+  int _adFrequencyFromAdmin = 3; // Frecuencia de anuncios cargada desde el admin (default 3)
+  bool _isTransitioningFromAd = false; // Flag para evitar reseteos de posición durante transición
   
   // Prefetch para transición playlist -> algoritmo (evitar espera al terminar última canción)
   List<Song>? _prefetchedInitialSongs;
@@ -174,7 +175,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   @override
   PlaybackState build() {
     // Inicializar logger
-    AppLogger.init();
+    // Inicializar logger
+    // AppLogger.init(); // Eliminado: método no existe
     
     // Cargar frecuencia de anuncios en segundo plano
     _loadAdFrequency();
@@ -223,98 +225,117 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         final currentIndex = sequenceState.currentIndex;
         final currentSource = sequenceState.currentSource;
         
-        // ✅ FIX CRÍTICO: Verificar PRIMERO si hay una canción reproduciéndose y limpiar estado del anuncio
-        // Esto debe hacerse ANTES de cualquier verificación de protección para asegurar que el estado se limpie
-        // inmediatamente cuando el anuncio termina y el reproductor avanza a una canción
-        // PERO solo si realmente hay una canción reproduciéndose (no durante inserción de anuncio)
-        if (currentSource != null && currentSource.tag is Song && (state.isPlayingAd || state.currentAd != null)) {
+        // 🛡️ ANTI-LOOP GUARD: Evitar procesamiento si estamos en medio de completar un anuncio
+        // Esto previene el bucle donde el anuncio se re-detecta mientras se está limpiando
+        if (_isCompletingAd) {
+          AppLogger.debug('[PlaybackNotifier] 🛡️ ANTI-LOOP: Ignorando evento de stream mientras se completa anuncio');
+          return;
+        }
+        
+        // 🛡️ THE EXIT GUARD (Regla 1): PRIMERO verificar si el anuncio terminó
+        // Esta verificación debe ejecutarse ANTES que cualquier otra lógica
+        // para garantizar una transición limpia Anuncio -> Canción
+        if (currentSource != null && currentSource.tag is Song && (state.isPlayingAd || state.currentAd != null || _isInsertingAd)) {
           final songAtCurrentIndex = currentSource.tag as Song;
           
-          // ✅ FIX CRÍTICO: Verificar que realmente estamos en el índice de la canción (no durante inserción)
+          // Verificar que realmente estamos en el índice de la canción
           final sequence = sequenceState.sequence;
           final isAtSongIndex = currentIndex != null && 
                                currentIndex >= 0 && 
                                currentIndex < sequence.length &&
                                sequence[currentIndex].tag is Song;
           
-          // Solo limpiar si realmente estamos en una canción (no durante inserción de anuncio)
-          // ✅ FIX CRÍTICO: NO limpiar si estamos en proceso de pausa preventiva O inserción de anuncio O completando anuncio
-          // porque el reproductor puede avanzar temporalmente antes de que se reproduzca el anuncio
-          // o porque el manejo de finalización del anuncio ya está en proceso
-          if (isAtSongIndex && !_preventiveAdTriggered && !_isInsertingAd && !_isHandlingAdInsertion && !_isCompletingAd) {
-            AppLogger.warning('[PlaybackNotifier] 🛑 LIMPIEZA EN STREAM: Hay canción reproduciéndose (${songAtCurrentIndex.title}) pero estado tiene anuncio, limpiando INMEDIATAMENTE');
-            
-            
-            // Limpiar flags si están activos (el anuncio ya terminó)
-            if (_isHandlingAdInsertion || _isInsertingAd || _isCompletingAd) {
-              AppLogger.warning('[PlaybackNotifier] 🧹 Limpiando flags de inserción porque el anuncio ya terminó');
-              _isHandlingAdInsertion = false;
-              _isInsertingAd = false;
-              _isCompletingAd = false;
+          // 🛡️ FIX: Verificar que el anuncio realmente terminó antes de activar EXIT GUARD
+          // Esto evita que la transición ocurra antes de tiempo por pre-buffering
+          bool adReallyFinished = true;
+          if (state.isPlayingAd && state.currentAd != null && state.totalDuration.inSeconds > 0) {
+            final adPosition = _service?.player.position ?? Duration.zero;
+            final adDuration = state.totalDuration;
+            // El anuncio NO ha terminado si la posición está lejos del final (< 90%)
+            final progressPercent = adPosition.inMilliseconds / adDuration.inMilliseconds;
+            if (progressPercent < 0.90) {
+              adReallyFinished = false;
+              AppLogger.debug('[PlaybackNotifier] 🛡️ EXIT GUARD DIFERIDO: Anuncio aún en progreso (${(progressPercent * 100).toStringAsFixed(0)}%)');
             }
+          }
+          
+          if (isAtSongIndex && adReallyFinished) {
+            // 🚨 EXIT GUARD: Limpiar TODOS los flags de publicidad INMEDIATAMENTE
+            AppLogger.info('[PlaybackNotifier] 🛡️ EXIT GUARD: Anuncio terminó, limpiando estado de publicidad...');
             
-            // 🛑 FORCE CLEAR: Obtener duración de la nueva canción INMEDIATAMENTE del reproductor
-            // Esto evita que la barra de progreso muestre la duración del anuncio por unos segundos
+            // Paso 1: Limpiar flags de instancia PRIMERO
+            _isInsertingAd = false;
+            _isHandlingAdInsertion = false;
+            _isCompletingAd = false;
+            _preventiveAdTriggered = false;
+            
+            // Paso 2: Obtener datos de la nueva canción
             final newSongDuration = currentSource.duration ?? 
                                    (songAtCurrentIndex.duration != null 
                                      ? Duration(seconds: songAtCurrentIndex.duration!) 
                                      : Duration.zero);
             final newSongPosition = _service?.player.position ?? Duration.zero;
             
-            // ✅ FIX CRÍTICO: SIEMPRE actualizar currentSong y lastConfirmedSong con la canción actual del reproductor
-            // Esto asegura que la UI muestre la canción correcta inmediatamente después del anuncio
-            // No usar ?? porque puede mantener la canción anterior si ya estaba establecida
+            // Paso 3: Actualizar estado con TODOS los campos limpios
             state = state.copyWith(
               isPlayingAd: false,
               clearCurrentAd: true,
-              // ✅ FIX CRÍTICO: SIEMPRE actualizar con la canción actual del reproductor
+              isInsertingAd: false,
               currentSong: songAtCurrentIndex,
               lastConfirmedSong: songAtCurrentIndex,
-              // 🛑 FORCE CLEAR: Resetear posición y duración INMEDIATAMENTE para evitar "State Lag"
               currentPosition: newSongPosition,
               totalDuration: newSongDuration.inMilliseconds > 0 ? newSongDuration : Duration.zero,
             );
-            AppLogger.info('[PlaybackNotifier] ✅ Estado limpiado y canción actualizada: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}, currentSong=${state.currentSong?.id ?? "null"}');
-            AppLogger.info('[PlaybackNotifier] 🛑 [FORCE CLEAR] Duración reseteada: ${newSongDuration.inSeconds}s (posición: ${newSongPosition.inSeconds}s)');
             
-            // Sincronizar inmediatamente después de limpiar para actualizar duración y posición
+            AppLogger.info('[PlaybackNotifier] 🛡️ EXIT GUARD COMPLETO: isPlayingAd=false, currentAd=null, isInsertingAd=false, canción=${songAtCurrentIndex.title}');
+            
+            // Paso 4: Sincronizar y terminar - NO procesar más lógica
             _syncQueueWithAudioService(sequenceState, forceSync: true);
-            return; // No continuar con el procesamiento normal si limpiamos el estado
+            return;
           }
         }
         
-        // 🧹 LIMPIEZA AUTOMÁTICA DE ANUNCIOS HUÉRFANOS: Eliminar anuncios que ya fueron saltados
-        // Esto previene que anuncios "huérfanos" bloqueen futuras inserciones
-        // ✅ FIX CRÍTICO: Usar microtask para diferir la eliminación fuera del ciclo del stream listener
-        // Esto evita el error "Cannot fire new event. Controller is already firing an event"
-        // ✅ PROTECCIÓN: NO eliminar anuncios que están justo antes del índice actual si acabamos de completar un anuncio
-        // Esto evita eliminar anuncios que simplemente terminaron de reproducirse normalmente
-        if (_service != null && currentIndex != null && _adInsertionManager != null && !_isRemovingOrphanedAd && !_isCompletingAd) {
-          final sequenceState = _service!.player.sequenceState;
-          // ✅ FIX CRÍTICO: Solo buscar anuncios huérfanos que están MUY antes del índice actual (más de 1 posición)
-          // Los anuncios que están justo antes (índice actual - 1) probablemente acaban de terminar de reproducirse
-          // y se eliminarán automáticamente en _handleAdCompletion
-          for (int i = 0; i < currentIndex - 1 && i < sequenceState.sequence.length; i++) {
-            final source = sequenceState.sequence[i];
-            if (source.tag is AudioAd) {
-              final orphanedAd = source.tag as AudioAd;
-              final orphanedIndex = i; // Capturar el índice antes de diferir
-              AppLogger.warning('[PlaybackNotifier] 🧹 [STREAM] Detectado anuncio huérfano en índice $orphanedIndex (actual: $currentIndex): ${orphanedAd.title} - Programando eliminación...');
-              
-              // ✅ FIX CRÍTICO: Diferir la eliminación usando un microtask para evitar conflictos con el stream
+        // ═══════════════════════════════════════════════════════════════════
+        // 📢 DETECCIÓN DE ANUNCIO (SIMPLIFICADO)
+        // ═══════════════════════════════════════════════════════════════════
+        if (currentSource != null && currentSource.tag is AudioAd) {
+          final ad = currentSource.tag as AudioAd;
+          
+          // IDEMPOTENCIA: Si ya estamos mostrando este anuncio, no hacer nada
+          if (state.currentAd?.id == ad.id && state.isPlayingAd) return;
+          
+          // Actualizar estado solo si es un anuncio diferente
+          if (!state.isPlayingAd || state.currentAd?.id != ad.id) {
+            _isInsertingAd = false;
+            final currentPos = _service?.player.position ?? Duration.zero;
+            
+            state = state.copyWith(
+              isPlayingAd: true,
+              currentAd: ad,
+              isInsertingAd: false,
+              currentPosition: currentPos.inMilliseconds > 0 ? currentPos : Duration.zero,
+              totalDuration: ad.duration,
+            );
+            AppLogger.info('[PlaybackNotifier] 📢 Anuncio activo: ${ad.title}');
+          }
+          return;
+        }
+        
+        // 🧹 LIMPIEZA DE ANUNCIOS HUÉRFANOS (diferida)
+        if (_service != null && currentIndex != null && _adInsertionManager != null && 
+            !_isRemovingOrphanedAd && !_isCompletingAd && currentIndex > 1) {
+          final seq = _service!.player.sequenceState.sequence;
+          for (int i = 0; i < currentIndex - 1 && i < seq.length; i++) {
+            if (seq[i].tag is AudioAd) {
               _isRemovingOrphanedAd = true;
+              final idx = i;
               Future.microtask(() async {
                 try {
-                  await _adInsertionManager!.removeAdAt(orphanedIndex);
-                  AppLogger.info('[PlaybackNotifier] 🧹 [STREAM] Anuncio huérfano eliminado exitosamente del índice $orphanedIndex');
-                } catch (e) {
-                  AppLogger.error('[PlaybackNotifier] Error al eliminar anuncio huérfano: $e');
-                } finally {
+                  await _adInsertionManager!.removeAdAt(idx);
+                } catch (_) {} finally {
                   _isRemovingOrphanedAd = false;
                 }
               });
-              
-              // Después de programar la eliminación, salir del loop
               break;
             }
           }
@@ -353,349 +374,113 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           final ad = currentSource.tag as AudioAd;
           final isPlaying = _service?.player.playing ?? false;
           
-          // ✅ FIX CRÍTICO: Verificar también que el ID del anuncio coincide
-          final adIdMatches = (sequence[currentIndex].tag as AudioAd).id == ad.id;
+          // Verificar que realmente estamos en el anuncio correcto
+          if (!isAtAdIndex || currentSource != sequence[currentIndex]) return;
           
-          if (!adIdMatches) {
-            AppLogger.warning('[PlaybackNotifier] ⚠️ Stream detectó anuncio pero el ID no coincide, omitiendo actualización');
-            return;
-          }
-          
-          // ✅ FIX CRÍTICO: Verificar también que el currentSource coincide con el índice actual
-          // Esto asegura que realmente estamos reproduciendo el anuncio, no solo que está en la cola
-          final sourceMatchesIndex = currentSource == sequenceState.sequence[currentIndex];
-          
-          AppLogger.info('[PlaybackNotifier] 🔍 Verificación de anuncio: índice=$currentIndex, isAtAdIndex=$isAtAdIndex, sourceMatchesIndex=$sourceMatchesIndex, currentSourceTag=${currentSource.tag.runtimeType}');
-          
-          // ✅ FIX CRÍTICO: Solo actualizar estado si realmente estamos en el índice del anuncio Y el source coincide
-          // Esto previene que se active el estado del anuncio cuando se presiona play durante una canción
-          if (!isAtAdIndex || !sourceMatchesIndex) {
-            AppLogger.warning('[PlaybackNotifier] ⚠️ Stream detectó anuncio pero no estamos en su índice o el source no coincide (índice actual: $currentIndex, isAtAdIndex: $isAtAdIndex, sourceMatchesIndex: $sourceMatchesIndex), omitiendo actualización');
-            return; // No actualizar estado si no estamos realmente en el anuncio
-          }
-          
-          // ✅ OPTIMIZACIÓN: Actualizar estado inmediatamente cuando se detecta el anuncio
-          // Esto asegura que la UI responda al instante sin retrasos
+          // Solo actualizar si es un anuncio diferente al actual
           if (!state.isPlayingAd || state.currentAd?.id != ad.id) {
-            // #region agent log
-            AppLogger.debugLog('playback_notifier.dart:199', 'Ad detected in stream', {'adId': ad.id, 'isPlaying': isPlaying, 'isInsertingAd': _isInsertingAd, 'currentIndex': currentIndex}, 'D');
-            // #endregion
-            AppLogger.info('[PlaybackNotifier] 📢 Anuncio detectado en stream: ${ad.title} (reproduciendo: $isPlaying, índice: $currentIndex)');
-            
-            // Registrar timestamp de inicio del anuncio
             _adStartTime = DateTime.now();
+            _isInsertingAd = false;
             
-            // ✅ OPTIMIZACIÓN: Obtener posición y duración inmediatamente
-            final initialPosition = _service?.player.position ?? Duration.zero;
+            final initialPos = _service?.player.position ?? Duration.zero;
             final duration = currentSource.duration ?? ad.duration;
             
-            // ✅ OPTIMIZACIÓN: Actualizar estado inmediatamente con todos los datos
             state = state.copyWith(
               isPlayingAd: true,
               currentAd: ad,
               clearCurrentSong: true,
               clearLastConfirmedSong: true,
               totalDuration: duration.inMilliseconds > 0 ? duration : ad.duration,
-              currentPosition: initialPosition,
+              currentPosition: initialPos,
+              isInsertingAd: false,
             );
             
-            _adStartTime ??= DateTime.now();
-            
-            // ✅ OPTIMIZACIÓN: Solo reproducir si no está reproduciendo y no estamos insertando
-            // Eliminar delays innecesarios - confiar en que _insertAdInQueue ya manejó la reproducción
-            if (!isPlaying && _service != null && !_isInsertingAd && !_isHandlingAdInsertion) {
-              // ✅ OPTIMIZACIÓN: Verificación rápida sin delay
+            // Auto-play si no está reproduciendo
+            if (!isPlaying && _service != null && !_isHandlingAdInsertion) {
               Future.microtask(() async {
-                if (_service != null && !_service!.player.playing && !_isInsertingAd && !_isHandlingAdInsertion) {
-                  final checkState = _service!.player.sequenceState;
-                  final checkSource = checkState.currentSource;
-                  if (checkSource?.tag is AudioAd && (checkSource!.tag as AudioAd).id == ad.id) {
-                    try {
-                      await _service!.play();
-                      // ✅ OPTIMIZACIÓN: Actualizar posición inmediatamente después de play
-                      final afterPlayPosition = _service!.player.position;
-                      if (afterPlayPosition.inMilliseconds > 0) {
-                        state = state.copyWith(
-                          currentPosition: afterPlayPosition,
-                        );
-                      }
-                      AppLogger.info('[PlaybackNotifier] ▶️ Reproducción iniciada para anuncio desde stream listener');
-                    } catch (e) {
-                      AppLogger.warning('[PlaybackNotifier] Error al iniciar reproducción del anuncio: $e');
-                    }
+                if (_service != null && !_service!.player.playing) {
+                  final src = _service!.player.sequenceState.currentSource;
+                  if (src?.tag is AudioAd && (src!.tag as AudioAd).id == ad.id) {
+                    try { await _service!.play(); } catch (_) {}
                   }
                 }
               });
             }
           }
           
-          // ✅ OPTIMIZACIÓN: Actualizar posición en tiempo real sin delays
-          // Esto asegura que la barra de progreso se mueva suavemente
-          final duration = currentSource.duration ?? ad.duration;
-          final currentPosition = _service?.player.position ?? Duration.zero;
-          
-          // ✅ OPTIMIZACIÓN: Solo actualizar si la posición cambió significativamente
-          // Esto reduce rebuilds innecesarios pero mantiene la barra fluida
-          final lastPosition = state.currentPosition;
-          final positionDiff = (currentPosition.inMilliseconds - lastPosition.inMilliseconds).abs();
-          
-          // Actualizar si la diferencia es mayor a 100ms o si es la primera actualización
-          if (positionDiff > 100 || lastPosition.inMilliseconds == 0) {
-            state = state.copyWith(
-              isPlayingAd: true,
-              currentAd: ad,
-              totalDuration: duration.inMilliseconds > 0 ? duration : ad.duration,
-              currentPosition: currentPosition,
-            );
+          // Actualizar posición solo si cambió significativamente (>100ms)
+          final pos = _service?.player.position ?? Duration.zero;
+          if ((pos.inMilliseconds - state.currentPosition.inMilliseconds).abs() > 100) {
+            state = state.copyWith(currentPosition: pos);
           }
           
-          // No procesar más lógica de canciones cuando es un anuncio
           return;
         }
         
-        // Si estábamos reproduciendo un anuncio pero ahora no, manejar finalización
-        // ✅ PROTECCIÓN: No procesar si estamos insertando un anuncio o ya estamos completando uno
-        // #region agent log
-        AppLogger.debugLog('playback_notifier.dart:258', 'Ad completion check', {
-          'isPlayingAd': state.isPlayingAd,
-          'currentSourceTag': currentSource?.tag.runtimeType.toString(),
-          'isAd': currentSource?.tag is AudioAd,
-          'isInsertingAd': _isInsertingAd,
-          'isCompletingAd': _isCompletingAd,
-          'willHandleCompletion': state.isPlayingAd && currentSource != null && currentSource.tag is! AudioAd && !_isInsertingAd && !_isCompletingAd
-        }, 'F');
-        // #endregion
-        if (state.isPlayingAd && 
-            currentSource != null && 
-            currentSource.tag is! AudioAd &&
-            !_isInsertingAd &&
-            !_isCompletingAd) { // ✅ FIX CRÍTICO: Proteger contra procesamiento duplicado
+        // ═══════════════════════════════════════════════════════════════════
+        // 📢 FINALIZACIÓN DE ANUNCIO (SIMPLIFICADO)
+        // ═══════════════════════════════════════════════════════════════════
+        if (state.isPlayingAd && currentSource != null && 
+            currentSource.tag is! AudioAd && !_isInsertingAd && !_isCompletingAd) {
           final completedAd = state.currentAd;
           if (completedAd != null) {
-            // #region agent log
-            AppLogger.debugLog('playback_notifier.dart:264', 'Ad completion detected', {'completedAdId': completedAd.id}, 'F');
-            // #endregion
-            AppLogger.info('[PlaybackNotifier] 📢 Anuncio terminado, continuando con música');
-            // El anuncio terminó naturalmente (no fue saltado)
-            
-            // ✅ FIX CRÍTICO: Marcar que estamos completando el anuncio para evitar procesamiento duplicado
             _isCompletingAd = true;
+            _isTransitioningFromAd = true;
             
-            // ✅ FIX CRÍTICO: Limpiar estado del anuncio INMEDIATAMENTE antes de cualquier otra lógica
-            // Esto evita que otros listeners procesen el evento como si fuera una canción
-            // Usar clearCurrentAd: true para forzar el reset a null
-            AppLogger.info('[PlaybackNotifier] 🛑 RESETEO INMEDIATO: isPlayingAd=false, currentAd=null');
-            
-            // 🛑 FORCE CLEAR: Obtener duración de la nueva canción INMEDIATAMENTE del reproductor
-            // Esto evita que la barra de progreso muestre la duración del anuncio por unos segundos
-            // currentSource no puede ser null aquí porque ya verificamos que currentSource != null arriba
-            final newSongDuration = currentSource.duration ?? Duration.zero;
-            final newSongPosition = _service!.player.position;
-            
-            // Si currentSource es una canción, obtener su duración
+            // Obtener info de la canción siguiente
             Song? newSong;
-            Duration? songDuration;
+            Duration songDuration = currentSource.duration ?? Duration.zero;
             if (currentSource.tag is Song) {
               newSong = currentSource.tag as Song;
               songDuration = newSong.duration != null 
-                ? Duration(seconds: newSong.duration!) 
-                : (newSongDuration.inMilliseconds > 0 ? newSongDuration : Duration.zero);
+                  ? Duration(seconds: newSong.duration!) 
+                  : songDuration;
             }
             
-            // ✅ FIX CRÍTICO: Limpiar el estado múltiples veces para asegurar que se propague
-            // 🛑 FORCE CLEAR: Resetear posición y duración INMEDIATAMENTE
-            state = state.copyWith(
-              isPlayingAd: false,
-              clearCurrentAd: true, // ✅ FIX CRÍTICO: Forzar reset a null
-              currentPosition: newSongPosition, // 🛑 FORCE CLEAR: Resetear posición inmediatamente
-              totalDuration: songDuration ?? newSongDuration, // 🛑 FORCE CLEAR: Usar duración de la nueva canción
-              currentSong: newSong ?? state.currentSong, // Actualizar canción si está disponible
-            );
-            
-            // ✅ FIX CRÍTICO: Forzar una segunda actualización para asegurar que Riverpod propague el cambio
+            // Limpiar estado del anuncio
             state = state.copyWith(
               isPlayingAd: false,
               clearCurrentAd: true,
-              currentPosition: newSongPosition, // 🛑 FORCE CLEAR: Mantener posición reseteada
-              totalDuration: songDuration ?? newSongDuration, // 🛑 FORCE CLEAR: Mantener duración correcta
+              currentPosition: _service!.player.position,
+              totalDuration: songDuration,
+              currentSong: newSong ?? state.currentSong,
             );
             
-            AppLogger.info('[PlaybackNotifier] 🛑 [FORCE CLEAR] Estado reseteado: posición=${newSongPosition.inSeconds}s, duración=${(songDuration ?? newSongDuration).inSeconds}s');
-            
-            AppLogger.info('[PlaybackNotifier] ✅ Estado después del reset: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
-            
-            // ✅ FIX CRÍTICO: Verificar una vez más que el estado se limpió correctamente
-            if (state.isPlayingAd || state.currentAd != null) {
-              AppLogger.error('[PlaybackNotifier] ❌ ERROR: El estado del anuncio NO se limpió correctamente después del reset');
-              AppLogger.error('[PlaybackNotifier] ❌ Estado actual: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
-              // Intentar limpiar de nuevo
-              state = state.copyWith(
-                isPlayingAd: false,
-                clearCurrentAd: true,
-              );
-            }
-            
-            // ✅ FIX CRÍTICO: Manejar finalización del anuncio y sincronizar INMEDIATAMENTE
-            // Esto asegura que la UI muestre la canción correcta sin delay
-            _handleAdCompletion(completedAd, false).then((_) async {
-              // ✅ FIX CRÍTICO: Sincronizar inmediatamente la canción actual después de limpiar el anuncio
-              // Esto asegura que la UI muestre la carátula correcta de la canción siguiente
-              if (_service != null) {
-                // Obtener el estado actualizado del reproductor inmediatamente
-                final updatedSequenceState = _service!.player.sequenceState;
-                final updatedSource = updatedSequenceState.currentSource;
-                
-                // Si el reproductor ya avanzó a una canción, actualizar estado INMEDIATAMENTE con duración correcta
-                if (updatedSource != null && updatedSource.tag is Song) {
-                  final nextSong = updatedSource.tag as Song;
-                  AppLogger.info('[PlaybackNotifier] 📢 Reproductor ya avanzó a canción: ${nextSong.title}, actualizando estado INMEDIATAMENTE');
-                  AppLogger.info('[PlaybackNotifier] 🔍 Estado antes de actualizar: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}, currentSong=${state.currentSong?.id ?? "null"}');
-                  
-                  // ✅ FIX CRÍTICO: Obtener duración de la canción INMEDIATAMENTE antes de actualizar estado
-                  final currentPos = _service!.player.position;
-                  final songDuration = updatedSource.duration ?? 
-                                       (nextSong.duration != null ? Duration(seconds: nextSong.duration!) : null) ??
-                                       Duration.zero;
-                  
-                  AppLogger.info('[PlaybackNotifier] 🎵 Duración de canción obtenida INMEDIATAMENTE: ${songDuration.inSeconds}s (source: ${updatedSource.duration?.inSeconds ?? "null"}, model: ${nextSong.duration ?? "null"})');
-                  
-                  // ✅ FIX CRÍTICO: Actualizar estado INMEDIATAMENTE con duración de la canción, no del anuncio
-                  // Esto asegura que la barra de progreso muestre la duración correcta desde el inicio
-                  state = state.copyWith(
-                    isPlayingAd: false,
-                    clearCurrentAd: true,
-                    currentSong: nextSong,
-                    lastConfirmedSong: nextSong,
-                    // ✅ CRÍTICO: Usar songDuration, nunca state.totalDuration que podría ser del anuncio
-                    totalDuration: songDuration,
-                    currentPosition: currentPos.inMilliseconds > 0 ? currentPos : Duration.zero,
-                  );
-                  
-                  AppLogger.info('[PlaybackNotifier] ✅ Estado actualizado INMEDIATAMENTE: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}, totalDuration=${state.totalDuration.inSeconds}s');
-                  
-                  // ✅ FIX CRÍTICO: Limpiar timestamp ANTES de sincronizar para permitir actualizaciones inmediatas
-                  _lastAdCompletionTime = null;
-                  
-                  // ✅ FIX CRÍTICO: Sincronizar después de actualizar estado para confirmar valores
-                  _syncQueueWithAudioService(updatedSequenceState, forceSync: true);
-                  
-                  // ✅ FIX CRÍTICO: Verificar que el estado se limpió correctamente
-                  AppLogger.info('[PlaybackNotifier] 🔍 Estado después de sincronizar: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}, currentSong=${state.currentSong?.id ?? "null"}');
-                  
-                  // ✅ FIX CRÍTICO: Si el estado aún tiene anuncio después de sincronizar, limpiarlo de nuevo
-                  if (state.isPlayingAd || state.currentAd != null) {
-                    AppLogger.error('[PlaybackNotifier] ❌ ERROR CRÍTICO: Estado aún tiene anuncio después de sincronizar, limpiando de nuevo');
-                    state = state.copyWith(
-                      isPlayingAd: false,
-                      clearCurrentAd: true,
-                    );
-                    // Forzar otra sincronización después de limpiar
-                    _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
-                  }
-                  
-                  // Limpiar timestamp de finalización para permitir actualizaciones normales
-                  _lastAdCompletionTime = null;
-                  
-                  // Asegurar que la reproducción continúe
-                  if (!_service!.player.playing) {
-                    await _service!.play();
-                    AppLogger.info('[PlaybackNotifier] ▶️ Reproducción reanudada después del anuncio');
-                  }
-                } else if (_service!.player.hasNext) {
-                  // Si no avanzó automáticamente, avanzar manualmente
-                  AppLogger.info('[PlaybackNotifier] 📢 Avanzando manualmente a siguiente canción después del anuncio');
-                  try {
-                    await _service!.next();
-                    // ✅ FIX CRÍTICO: Sincronizar inmediatamente después del avance sin delays largos
-                    if (_service != null) {
-                      _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
-                      // Limpiar timestamp de finalización para permitir actualizaciones normales
-                      _lastAdCompletionTime = null;
-                      // Asegurar que la reproducción continúe
-                      if (!_service!.player.playing) {
-                        await _service!.play();
-                      }
-                    }
-                  } catch (e) {
-                    AppLogger.warning('[PlaybackNotifier] Error al avanzar después del anuncio: $e');
-                  }
-                } else {
-                  // No hay siguiente canción, solo sincronizar el estado actual
-                  AppLogger.info('[PlaybackNotifier] 📢 No hay siguiente canción, sincronizando estado actual');
-                  _syncQueueWithAudioService(updatedSequenceState, forceSync: true);
-                  // Limpiar timestamp de finalización
-                  _lastAdCompletionTime = null;
-                }
-              }
-            }).catchError((e) {
-              AppLogger.error('[PlaybackNotifier] Error al manejar finalización de anuncio: $e');
-              // Asegurar que el flag se resetee incluso si hay error
+            // Manejar finalización en background
+            _handleAdCompletion(completedAd, false).whenComplete(() {
               _isCompletingAd = false;
-            }).whenComplete(() {
-              // ✅ FIX CRÍTICO: Resetear flag después de completar el manejo del anuncio
-              _isCompletingAd = false;
+              Future.delayed(const Duration(milliseconds: 300), () {
+                _isTransitioningFromAd = false;
+              });
             });
             
-            // ✅ FIX CRÍTICO: Hacer return aquí para evitar procesar la lógica de canción mientras se maneja el anuncio
-            // Esto evita que se procese dos veces y que el estado se desincronice
+            AppLogger.info('[PlaybackNotifier] 📢 Anuncio completado: ${completedAd.title}');
             return;
           }
         }
         
-        // 🛑 FIX CRÍTICO: Verificar y corregir inconsistencia de estado ANTES de procesar la canción
-        // Si hay una canción reproduciéndose pero isPlayingAd es true, corregirlo inmediatamente
-        // ✅ FIX CRÍTICO: Esta verificación debe ser LO PRIMERO para evitar que el anuncio se muestre por encima
-        // #region agent log
-        AppLogger.debugLog('playback_notifier.dart:384', 'State inconsistency check', {
-          'currentSourceTag': currentSource?.tag.runtimeType.toString(),
-          'isSong': currentSource?.tag is Song,
-          'isPlayingAd': state.isPlayingAd,
-          'currentAdId': state.currentAd?.id,
-          'willClearAd': currentSource != null && currentSource.tag is Song && (state.isPlayingAd || state.currentAd != null)
-        }, 'F');
-        // #endregion
-        if (currentSource != null && currentSource.tag is Song && (state.isPlayingAd || state.currentAd != null)) {
-          final nextSong = currentSource.tag as Song;
-          AppLogger.warning('[PlaybackNotifier] 🛑 CORRECCIÓN INMEDIATA: Hay canción reproduciéndose (${nextSong.title}) pero estado tiene anuncio activo');
-          AppLogger.warning('[PlaybackNotifier] 🛑 Limpiando estado de anuncio: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔄 CORRECCIÓN DE ESTADO INCONSISTENTE
+        // ═══════════════════════════════════════════════════════════════════
+        if (currentSource != null && currentSource.tag is! AudioAd && 
+            (state.isPlayingAd || state.currentAd != null)) {
+          // Obtener info de la canción
+          Song? song;
+          Duration duration = currentSource.duration ?? Duration.zero;
+          if (currentSource.tag is Song) {
+            song = currentSource.tag as Song;
+            duration = song.duration != null ? Duration(seconds: song.duration!) : duration;
+          }
           
-          // ✅ FIX CRÍTICO: Obtener duración de la canción INMEDIATAMENTE
-          final currentPos = _service?.player.position ?? Duration.zero;
-          final songDuration = currentSource.duration ?? 
-                               (nextSong.duration != null ? Duration(seconds: nextSong.duration!) : null) ??
-                               Duration.zero;
-          
-          // ✅ FIX CRÍTICO: Limpiar INMEDIATAMENTE el estado del anuncio Y actualizar con la canción correcta
-          // Esto previene que el widget muestre el anuncio por encima de la canción
-          // Y asegura que la barra de carga muestre la duración correcta desde el inicio
           state = state.copyWith(
             isPlayingAd: false,
-            clearCurrentAd: true, // ✅ FIX CRÍTICO: Forzar reset a null
-            currentSong: nextSong,
-            lastConfirmedSong: nextSong,
-            // ✅ FIX CRÍTICO: Actualizar totalDuration y currentPosition INMEDIATAMENTE con valores de la canción
-            totalDuration: songDuration,
-            currentPosition: currentPos.inMilliseconds > 0 ? currentPos : Duration.zero,
+            clearCurrentAd: true,
+            currentSong: song ?? state.currentSong,
+            lastConfirmedSong: song ?? state.lastConfirmedSong,
+            totalDuration: duration,
+            currentPosition: _service?.player.position ?? Duration.zero,
           );
-          // Limpiar timestamp de finalización para permitir actualizaciones normales
           _lastAdCompletionTime = null;
-          // #region agent log
-          AppLogger.debugLog('playback_notifier.dart:397', 'AFTER clear ad state', {'isPlayingAd': state.isPlayingAd, 'currentAdId': state.currentAd?.id, 'totalDuration': state.totalDuration.inSeconds}, 'F');
-          // #endregion
-          AppLogger.info('[PlaybackNotifier] ✅ Estado corregido: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}, totalDuration=${state.totalDuration.inSeconds}s');
-        }
-        
-        // ✅ FIX CRÍTICO ADICIONAL: Verificar también si NO hay anuncio reproduciéndose pero el estado dice que sí
-        // Esto corrige casos donde el estado se desincronizó
-        if (currentSource != null && currentSource.tag is! AudioAd && (state.isPlayingAd || state.currentAd != null)) {
-          AppLogger.warning('[PlaybackNotifier] 🛑 CORRECCIÓN ADICIONAL: No hay anuncio reproduciéndose pero estado dice que sí');
-          state = state.copyWith(
-            isPlayingAd: false,
-            clearCurrentAd: true, // ✅ FIX CRÍTICO: Forzar reset a null
-          );
-          // Limpiar timestamp de finalización para permitir actualizaciones normales
-          _lastAdCompletionTime = null;
-          AppLogger.info('[PlaybackNotifier] ✅ Estado corregido adicionalmente: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
         }
         
         // ✅ FIX CRÍTICO: Obtener la canción directamente del tag del reproductor, no de la cola por índice
@@ -951,6 +736,18 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           }
         }
         
+        // 3. Suscribirse a la duración total
+    _subscriptions.add(
+      service.durationStream.listen((duration) {
+        // 🛡️ PROXY METADATA: Ignorar actualizaciones de duración si estamos en un anuncio
+        // El player puede enviar la duración de la siguiente canción mientras pre-carga
+        if (state.isPlayingAd) return;
+        
+        if (duration != null) {
+          state = state.copyWith(totalDuration: duration);
+        }
+      }),
+    );    
         // 🎯 FASE 1: Registrar canción reproducida en servicio centralizado
         ref.read(playbackSessionProvider.notifier).registerPlayedSong(currentSong.id);
         
@@ -994,6 +791,26 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     // 3. Suscribirse a la posición (progreso)
     _subscriptions.add(
       service.positionStream.listen((position) {
+        // 🛡️ FIX: Protección contra posiciones inválidas durante transición a anuncio
+        // Cuando cambiamos a un anuncio, el stream puede emitir brevemente la posición
+        // de la canción anterior. Ignorar posiciones > 1 segundo si estamos en un anuncio
+        // y la duración total del anuncio es corta (típicamente < 60 segundos)
+        if (state.isPlayingAd && state.totalDuration.inSeconds < 120) {
+          // Si la posición es mayor que la duración del anuncio, es de la canción anterior
+          if (position.inMilliseconds > state.totalDuration.inMilliseconds + 1000) {
+            AppLogger.debug('[PlaybackNotifier] 🛡️ Ignorando posición inválida durante anuncio: ${position.inSeconds}s > ${state.totalDuration.inSeconds}s');
+            return; // Ignorar esta posición
+          }
+          
+        }
+        
+        // 🛑 FIX: Si estamos en transición desde anuncio, ignorar posiciones muy bajas
+        // que podrían hacer que la UI muestre el anuncio "reiniciándose"
+        if (_isTransitioningFromAd && position.inMilliseconds < 500) {
+          AppLogger.debug('[PlaybackNotifier] 🛡️ Ignorando posición baja durante transición desde anuncio: ${position.inMilliseconds}ms');
+          return;
+        }
+        
         // ✅ FIX CRÍTICO: Actualizar posición siempre, incluso durante anuncios
         // Esto asegura que la barra de progreso del anuncio se actualice correctamente
         state = state.copyWith(currentPosition: position);
@@ -1179,7 +996,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       state = state.copyWith(
         isLoading: true,
         playbackMode: PlaybackMode.fixedQueue,
-        currentQueue: playlist,
         contextId: contextId,
         shouldStartAlgorithmAfterQueue: state.shouldStartAlgorithmAfterQueue,
       );
@@ -3911,10 +3727,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       
       // ✅ OPTIMIZACIÓN: Liberar flag inmediatamente después de insertar
       _isInsertingAd = false;
+      state = state.copyWith(isInsertingAd: false); // ✅ Sincronizar estado
       
-      // 🎯 FRECUENCIA DE ANUNCIOS: Resetear contador tras inserción exitosa
-      _songsPlayedCount = 0;
-      AppLogger.info('[PlaybackNotifier] 📢 [FRECUENCIA] Contador reseteado a 0 tras inserción exitosa');
+      // 🎯 FRECUENCIA DE ANUNCIOS: El contador NO se resetea aquí.
+      // Se reseteará solo cuando el anuncio se complete en _handleAdCompletion
+      // Esto asegura que si el usuario cierra la app antes de ver el anuncio, el contador se mantenga
+      AppLogger.info('[PlaybackNotifier] 📢 [FRECUENCIA] Anuncio insertado. Contador se reseteará al completar reproducción.');
       
       AppLogger.info('[PlaybackNotifier] ✅ Flag _isInsertingAd liberado');
       
@@ -3929,41 +3747,44 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         clearCurrentAd: true,
       );
       _isInsertingAd = false;
+      state = state.copyWith(isInsertingAd: false); // ✅ Sincronizar estado
     }
   }
 
   /// Manejar finalización de anuncio (completado o saltado)
   /// 🛑 CRÍTICO: Esta función DEBE resetear isPlayingAd: false SIEMPRE, incluso si hay errores
+  /// 🛑 FIX: Simplificado para evitar actualizaciones de estado duplicadas que causan el efecto de "reinicio"
   Future<void> _handleAdCompletion(AudioAd ad, bool wasSkipped) async {
-    // ✅ FIX CRÍTICO: Resetear estado INMEDIATAMENTE al inicio para garantizar que la UI reaccione
-    // Esto se ejecuta ANTES de cualquier lógica que pueda fallar
-    // Si el reset ya se hizo en el listener, esto lo confirma; si no, lo hace aquí
+    // 🛑 FIX: Solo actualizar si el estado aún no fue limpiado por el listener
+    // Esto evita actualizaciones duplicadas que causan flickering en la UI
     if (state.isPlayingAd || state.currentAd != null) {
-      // 🛑 FORCE CLEAR: Obtener duración de la nueva canción INMEDIATAMENTE del reproductor
-      final currentSource = _service?.player.sequenceState.currentSource;
-      final newSongDuration = currentSource?.duration ?? Duration.zero;
-      final newSongPosition = _service?.player.position ?? Duration.zero;
+      AppLogger.info('[PlaybackNotifier] 🛑 _handleAdCompletion: Estado aún tiene anuncio, limpiando...');
       
-      // Si currentSource es una canción, obtener su duración
+      // 🛑 FIX: Obtener información de la canción actual SIN actualizar posición
+      // La posición ya fue manejada correctamente en el listener
+      final currentSource = _service?.player.sequenceState.currentSource;
+      
       Song? newSong;
       Duration? songDuration;
       if (currentSource?.tag is Song) {
         newSong = currentSource!.tag as Song;
+        final sourceDuration = currentSource.duration ?? Duration.zero;
         songDuration = newSong.duration != null 
           ? Duration(seconds: newSong.duration!) 
-          : (newSongDuration.inMilliseconds > 0 ? newSongDuration : Duration.zero);
+          : (sourceDuration.inMilliseconds > 0 ? sourceDuration : Duration.zero);
       }
       
-      AppLogger.info('[PlaybackNotifier] 🛑 RESETEO CRÍTICO: isPlayingAd -> false en _handleAdCompletion');
+      // 🛑 FIX: NO actualizar currentPosition aquí - ya fue manejada en el listener
+      // Solo limpiar el estado del anuncio y actualizar la canción/duración
       state = state.copyWith(
         isPlayingAd: false,
-        clearCurrentAd: true, // ✅ FIX CRÍTICO: Forzar reset a null
-        currentPosition: newSongPosition, // 🛑 FORCE CLEAR: Resetear posición inmediatamente
-        totalDuration: songDuration ?? newSongDuration, // 🛑 FORCE CLEAR: Usar duración de la nueva canción
-        currentSong: newSong ?? state.currentSong, // Actualizar canción si está disponible
+        clearCurrentAd: true,
+        currentSong: newSong ?? state.currentSong,
+        totalDuration: songDuration ?? state.totalDuration,
       );
-      AppLogger.info('[PlaybackNotifier] ✅ Estado después del reset inicial: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
-      AppLogger.info('[PlaybackNotifier] 🛑 [FORCE CLEAR] Duración reseteada en _handleAdCompletion: ${(songDuration ?? newSongDuration).inSeconds}s (posición: ${newSongPosition.inSeconds}s)');
+      AppLogger.info('[PlaybackNotifier] ✅ Estado limpiado en _handleAdCompletion (sin actualizar posición)');
+    } else {
+      AppLogger.info('[PlaybackNotifier] 🛑 _handleAdCompletion: Estado ya fue limpiado por listener, solo registrando...');
     }
     
     try {
@@ -3993,218 +3814,42 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         AppLogger.warning('[PlaybackNotifier] Error al loguear anuncio (no crítico): $logError');
       }
       
-      // 3. ✅ FIX CRÍTICO: Confirmar reset de estado (por si acaso)
-      // Esto asegura que los widgets detecten el cambio y muestren la canción correcta
-      // IMPORTANTE: Limpiar también lastConfirmedSong si estaba relacionado con el anuncio
-      // ✅ FIX: No resetear duración y posición si hay una canción actual válida
-      // Esto evita que los tiempos cambien cuando se presiona play después del anuncio
-      final shouldPreserveTiming = state.currentSong != null;
-      if (state.isPlayingAd || state.currentAd != null) {
-        AppLogger.warning('[PlaybackNotifier] 🛑 ADVERTENCIA: Estado aún tiene anuncio activo, forzando reset');
-        state = state.copyWith(
-          isPlayingAd: false,
-          clearCurrentAd: true, // ✅ FIX CRÍTICO: Forzar reset a null
-          // ✅ FIX: Solo resetear duración y posición si no hay canción actual
-          // Si hay canción actual, mantener los valores para evitar cambios de tiempos
-          totalDuration: shouldPreserveTiming ? state.totalDuration : Duration.zero,
-          currentPosition: shouldPreserveTiming ? state.currentPosition : Duration.zero,
-        );
-        AppLogger.info('[PlaybackNotifier] ✅ Estado después del reset de confirmación: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
-      }
+      // 3. 🛑 FIX SIMPLIFICADO: Solo resetear contador y sincronizar UNA vez
+      // El estado del anuncio ya fue limpiado arriba o en el listener
+      _songsPlayedCount = 0;
+      AppLogger.info('[PlaybackNotifier] 📢 [FRECUENCIA] Anuncio completado/saltado. Contador reseteado a 0.');
       
-      // 4. ✅ FIX CRÍTICO: Sincronizar inmediatamente después de limpiar el estado del anuncio
-      // Esto asegura que currentSong se actualice correctamente
+      // 4. Sincronizar UNA sola vez si el servicio está disponible
       if (_service != null) {
-        // Obtener el estado actual del reproductor
         final sequenceState = _service!.player.sequenceState;
-        final currentSource = sequenceState.currentSource;
+        _syncQueueWithAudioService(sequenceState, forceSync: true);
         
-        // Si el reproductor ya avanzó a una canción, sincronizar y continuar reproducción INMEDIATAMENTE
-        if (currentSource != null && currentSource.tag is Song) {
-          final nextSong = currentSource.tag as Song;
-          AppLogger.info('[PlaybackNotifier] 📢 Reproductor ya avanzó a canción después del anuncio: ${nextSong.title}');
-          
-          // ✅ FIX CRÍTICO: Limpiar estado del anuncio INMEDIATAMENTE antes de cualquier otra cosa
-          // Esto asegura que la barra de carga se actualice inmediatamente con los valores de la canción
-          if (state.isPlayingAd || state.currentAd != null) {
-            final currentPos = _service!.player.position;
-            // ✅ FIX CRÍTICO: Obtener duración de la canción con múltiples fallbacks para asegurar que SIEMPRE sea la duración correcta
-            // Prioridad: 1) currentSource.duration, 2) nextSong.duration del modelo, 3) Duration.zero (nunca usar state.totalDuration que podría ser del anuncio)
-            final songDuration = currentSource.duration ?? 
-                                 (nextSong.duration != null ? Duration(seconds: nextSong.duration!) : null) ??
-                                 Duration.zero;
-            
-            AppLogger.info('[PlaybackNotifier] 🛑 Limpiando estado del anuncio INMEDIATAMENTE y actualizando barra de carga');
-            AppLogger.info('[PlaybackNotifier] 🎵 Duración de canción obtenida: ${songDuration.inSeconds}s (source: ${currentSource.duration?.inSeconds ?? "null"}, model: ${nextSong.duration ?? "null"})');
-            state = state.copyWith(
-              isPlayingAd: false,
-              clearCurrentAd: true,
-              currentSong: nextSong,
-              lastConfirmedSong: nextSong,
-              // ✅ FIX CRÍTICO: SIEMPRE usar songDuration, nunca state.totalDuration que podría ser del anuncio
-              totalDuration: songDuration,
-              currentPosition: currentPos.inMilliseconds > 0 ? currentPos : Duration.zero,
-            );
-            AppLogger.info('[PlaybackNotifier] ✅ Estado limpiado: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}, totalDuration=${state.totalDuration.inSeconds}s');
-          }
-          
-          // ✅ FIX CRÍTICO: Limpiar timestamp ANTES de sincronizar para permitir actualizaciones inmediatas
-          _lastAdCompletionTime = null;
-          
-          // ✅ FIX CRÍTICO: Sincronizar inmediatamente para actualizar currentSong SIN DELAYS
-          // PERO solo si no acabamos de limpiar el estado del anuncio (para evitar actualizaciones duplicadas)
-          // Si ya limpiamos el estado arriba, la duración y posición ya están correctas
-          if (!(state.isPlayingAd || state.currentAd != null)) {
-            // Solo sincronizar si el estado ya está limpio para evitar sobrescribir la duración correcta
-            _syncQueueWithAudioService(sequenceState, forceSync: true);
-          } else {
-            // Si aún hay estado de anuncio, sincronizar para limpiarlo
-            _syncQueueWithAudioService(sequenceState, forceSync: true);
-          }
-          
-          // ✅ FIX CRÍTICO: Asegurar que la reproducción continúe
-          if (!_service!.player.playing) {
-            await _service!.play();
-            AppLogger.info('[PlaybackNotifier] ▶️ Reproducción reanudada después del anuncio');
-          }
-        } else {
-          // Si no avanzó automáticamente, sincronizar de todos modos
-          _syncQueueWithAudioService(sequenceState, forceSync: true);
-          
-          // ✅ FIX CRÍTICO: Verificar inmediatamente si avanzó (sin delay largo)
-          // El reproductor debería avanzar automáticamente cuando el anuncio termina
-          if (!wasSkipped) {
-            // Usar un delay muy corto solo para dar tiempo al reproductor de avanzar
-            await Future.delayed(const Duration(milliseconds: 50));
-            if (_service != null) {
-              final updatedSequenceState = _service!.player.sequenceState;
-              final updatedSource = updatedSequenceState.currentSource;
-              
-              // Si ahora hay una canción, sincronizar y continuar reproducción INMEDIATAMENTE
-              if (updatedSource != null && updatedSource.tag is Song) {
-                final nextSong = updatedSource.tag as Song;
-                AppLogger.info('[PlaybackNotifier] 📢 Canción detectada después del delay corto: ${nextSong.title}');
-                
-                // ✅ FIX CRÍTICO: Limpiar estado del anuncio INMEDIATAMENTE antes de sincronizar
-                // Esto asegura que la barra de carga se actualice inmediatamente con los valores de la canción
-                if (state.isPlayingAd || state.currentAd != null) {
-                  final currentPos = _service!.player.position;
-                  // ✅ FIX CRÍTICO: Obtener duración de la canción con múltiples fallbacks para asegurar que SIEMPRE sea la duración correcta
-                  // Prioridad: 1) updatedSource.duration, 2) nextSong.duration del modelo, 3) Duration.zero (nunca usar state.totalDuration que podría ser del anuncio)
-                  final songDuration = updatedSource.duration ?? 
-                                       (nextSong.duration != null ? Duration(seconds: nextSong.duration!) : null) ??
-                                       Duration.zero;
-                  
-                  AppLogger.info('[PlaybackNotifier] 🛑 Limpiando estado del anuncio INMEDIATAMENTE y actualizando barra de carga');
-                  AppLogger.info('[PlaybackNotifier] 🎵 Duración de canción obtenida: ${songDuration.inSeconds}s (source: ${updatedSource.duration?.inSeconds ?? "null"}, model: ${nextSong.duration ?? "null"})');
-                  state = state.copyWith(
-                    isPlayingAd: false,
-                    clearCurrentAd: true,
-                    currentSong: nextSong,
-                    lastConfirmedSong: nextSong,
-                    // ✅ FIX CRÍTICO: SIEMPRE usar songDuration, nunca state.totalDuration que podría ser del anuncio
-                    totalDuration: songDuration,
-                    currentPosition: currentPos.inMilliseconds > 0 ? currentPos : Duration.zero,
-                  );
-                  AppLogger.info('[PlaybackNotifier] ✅ Estado limpiado: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}, totalDuration=${state.totalDuration.inSeconds}s');
-                }
-                
-                // ✅ FIX CRÍTICO: Limpiar timestamp ANTES de sincronizar para permitir actualizaciones inmediatas
-                _lastAdCompletionTime = null;
-                _syncQueueWithAudioService(updatedSequenceState, forceSync: true);
-                if (!_service!.player.playing) {
-                  await _service!.play();
-                  AppLogger.info('[PlaybackNotifier] ▶️ Reproducción reanudada después del delay corto');
-                }
-              } else {
-                // ✅ FIX: Limpiar timestamp incluso si no hay canción todavía para permitir actualizaciones futuras
-                _lastAdCompletionTime = null;
-                _syncQueueWithAudioService(updatedSequenceState, forceSync: true);
-              }
-              AppLogger.debug('[PlaybackNotifier] Estado sincronizado después del anuncio');
-            }
-          } else {
-            // ✅ FIX: Si fue saltado, limpiar timestamp inmediatamente para permitir actualizaciones
-            _lastAdCompletionTime = null;
-          }
+        // Asegurar que la reproducción continúe
+        if (!_service!.player.playing && !wasSkipped) {
+          await _service!.play();
+          AppLogger.info('[PlaybackNotifier] ▶️ Reproducción reanudada después del anuncio');
         }
       }
       
-      // 5. Actualizar tracking
-      // ✅ FIX CRÍTICO: Solo establecer _lastAdCompletionTime si NO se limpió arriba
-      // Si ya se detectó una canción y se limpió, no volver a establecer para evitar bloquear actualizaciones
-      // Esto asegura que la barra de carga se actualice inmediatamente después del segundo anuncio
-      if (_lastAdCompletionTime == null) {
-        // Solo establecer si aún no se limpió (para casos donde no se detectó canción inmediatamente)
-        _lastAdCompletionTime = DateTime.now();
-        AppLogger.info('[PlaybackNotifier] 📢 Timestamp de finalización establecido: $_lastAdCompletionTime');
-      } else {
-        AppLogger.info('[PlaybackNotifier] 📢 Timestamp de finalización ya limpiado, no reestableciendo');
-      }
+      // 5. Limpiar tracking
       _adStartTime = null;
+      _lastAdCompletionTime = null;
       
       AppLogger.info('[PlaybackNotifier] ✅ Anuncio completado: ${ad.title} (${wasSkipped ? 'saltado' : 'completo'})');
     } catch (e, stackTrace) {
       AppLogger.error('[PlaybackNotifier] Error al manejar finalización de anuncio: $e', stackTrace);
-      // ✅ FIX CRÍTICO: Limpiar estado SIEMPRE, incluso si hay error
-      // Esto es crítico para que la UI se actualice correctamente
+      // Limpiar estado de emergencia
       if (state.isPlayingAd || state.currentAd != null) {
-        AppLogger.warning('[PlaybackNotifier] 🛑 RESETEO DE EMERGENCIA: Limpiando estado de anuncio después de error');
-        state = state.copyWith(
-          isPlayingAd: false,
-          clearCurrentAd: true, // ✅ FIX CRÍTICO: Forzar reset a null
-        );
-        AppLogger.info('[PlaybackNotifier] ✅ Estado después del reset de emergencia: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
+        state = state.copyWith(isPlayingAd: false, clearCurrentAd: true);
       }
       _adStartTime = null;
-      _lastAdCompletionTime = DateTime.now(); // ✅ Marcar timestamp incluso si falla
-    } finally {
-      // ✅ FIX CRÍTICO: Garantizar reset final en finally para asegurar que siempre se ejecute
-      // Esto es la última línea de defensa para asegurar que isPlayingAd sea false
-      if (state.isPlayingAd || state.currentAd != null) {
-        AppLogger.warning('[PlaybackNotifier] 🛑 RESETEO FINAL EN FINALLY: Forzando limpieza de estado de anuncio');
-        
-        // ✅ FIX CRÍTICO: Si hay una canción reproduciéndose, actualizar con su duración correcta
-        if (_service != null) {
-          final sequenceState = _service!.player.sequenceState;
-          final currentSource = sequenceState.currentSource;
-          
-          if (currentSource != null && currentSource.tag is Song) {
-            final song = currentSource.tag as Song;
-            final currentPos = _service!.player.position;
-            final songDuration = currentSource.duration ?? 
-                               (song.duration != null ? Duration(seconds: song.duration!) : null) ??
-                               Duration.zero;
-            
-            state = state.copyWith(
-              isPlayingAd: false,
-              clearCurrentAd: true,
-              currentSong: song,
-              lastConfirmedSong: song,
-              totalDuration: songDuration,
-              currentPosition: currentPos.inMilliseconds > 0 ? currentPos : Duration.zero,
-            );
-            AppLogger.info('[PlaybackNotifier] ✅ Estado limpiado en finally con duración de canción: totalDuration=${songDuration.inSeconds}s');
-          } else {
-            state = state.copyWith(
-              isPlayingAd: false,
-              clearCurrentAd: true,
-            );
-          }
-        } else {
-          state = state.copyWith(
-            isPlayingAd: false,
-            clearCurrentAd: true,
-          );
-        }
-        
-        AppLogger.info('[PlaybackNotifier] ✅ Estado después del reset final: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
-      }
-      
-      // ✅ FIX CRÍTICO: Limpiar timestamp en finally para asegurar que siempre se limpie
       _lastAdCompletionTime = null;
-      
-      AppLogger.debug('[PlaybackNotifier] ✅ Estado final verificado: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
+    } finally {
+      // Garantizar limpieza final
+      if (state.isPlayingAd || state.currentAd != null) {
+        state = state.copyWith(isPlayingAd: false, clearCurrentAd: true);
+      }
+      _lastAdCompletionTime = null;
     }
   }
 
@@ -4477,6 +4122,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   /// Si estamos en una cola fija y llegamos al final, activa Radio Infinita automáticamente
   /// 🎯 DETECCIÓN MANUAL: En modo algoritmo, fuerza recarga inmediata si quedan pocas canciones
   Future<void> next() async {
+    // 🛑 UI POLISH: Desactivar botón 'Siguiente' durante anuncios
+    if (state.isPlayingAd) {
+        AppLogger.info('[PlaybackNotifier] 🚫 Botón Siguiente desactivado durante reproducción de anuncio');
+        return;
+    }
+
     final now = DateTime.now();
     if (now.difference(_lastControlTap) < _controlDebounce) return;
     _lastControlTap = now;
@@ -4484,9 +4135,64 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     _activateTransitionShield(); // 🛡️ Activar escudo al presionar siguiente
     state = state.copyWith(isProcessingNext: true);
 
-    // 🧹 LIMPIEZA AGRESIVA: Eliminar anuncios huérfanos antes de saltar
-    // Esto asegura que el siguiente item sea una canción
-    await _cleanupOrphanedAds();
+    // 🧹 LIMPIEZA CONDICIONAL (Política Estricta):
+    // Si la canción ya pasó el 50%, NO limpiar anuncios (el usuario debe verlos/saltarlos).
+    // Si es antes del 50%, limpiar anuncios huérfanos.
+    final currentPos = _service?.player.position ?? Duration.zero;
+    final totalDur = _service?.player.duration ?? state.totalDuration;
+    
+    if (totalDur.inSeconds > 0 && currentPos.inSeconds < totalDur.inSeconds * 0.5) {
+       AppLogger.info('[PlaybackNotifier] ⏭️ Salto antes del 50% (${currentPos.inSeconds}/${totalDur.inSeconds}s). Limpiando anuncios...');
+       await _cleanupOrphanedAds();
+    } else {
+       AppLogger.info('[PlaybackNotifier] ⏭️ Salto después del 50% (${currentPos.inSeconds}/${totalDur.inSeconds}s). Manteniendo anuncios (Política Estricta).');
+       
+       // 🛡️ FIX RACE CONDITION: Verificar si hay un anuncio en la SIGUIENTE posición
+       // y pre-cargar su información ANTES de que el reproductor avance
+       // Esto garantiza que la UI muestre el anuncio ANTES de que cambie el audio
+       final sequenceState = service.player.sequenceState;
+       final currentIndex = sequenceState.currentIndex ?? 0;
+       final nextIndex = currentIndex + 1;
+       
+       AudioAd? nextAd;
+       if (nextIndex < sequenceState.sequence.length) {
+         final nextSource = sequenceState.sequence[nextIndex];
+         if (nextSource.tag is AudioAd) {
+           nextAd = nextSource.tag as AudioAd;
+           AppLogger.info('[PlaybackNotifier] 🛡️ [PRE-LOAD] Anuncio detectado en siguiente posición: ${nextAd.title}');
+         }
+       }
+       
+       // 🛡️ ATOMIC SYNC: Pre-cargar información del anuncio en el estado ANTES de avanzar
+       // Esto elimina el race condition visual donde la UI mostraba brevemente la siguiente canción
+       if (nextAd != null) {
+         // Establecer flags antes de pre-cargar
+         _isInsertingAd = true;
+         _isTransitioningFromAd = false;
+         
+         state = state.copyWith(
+           isInsertingAd: true,
+           isPlayingAd: true,
+           currentAd: nextAd,
+           currentPosition: Duration.zero,
+           totalDuration: nextAd.duration,
+           // Limpiar información de canción para evitar parpadeos
+           clearCurrentSong: true,
+           clearLastConfirmedSong: true,
+         );
+         AppLogger.info('[PlaybackNotifier] 🛡️ [PRE-LOAD] Estado del anuncio pre-cargado: ${nextAd.title}');
+         
+         // 🛑 FIX CRÍTICO: Registrar timestamp de inicio del anuncio
+         _adStartTime = DateTime.now();
+       } else {
+         // No hay anuncio en la siguiente posición, solo marcar isInsertingAd
+         state = state.copyWith(isInsertingAd: true);
+       }
+       
+       // 🛑 ATOMIC SYNC: Esperar a que el frame se pinte antes de tocar el audio
+       // Esto garantiza que el usuario VEA la carátula del anuncio antes de ESCUCHAR el cambio
+       await WidgetsBinding.instance.endOfFrame;
+    }
 
     if (state.playbackMode == PlaybackMode.fixedQueue && state.shouldStartAlgorithmAfterQueue) {
       // Verificar si estamos en la última canción de la cola
@@ -4623,11 +4329,30 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       if (service.player.hasNext) {
         await service.next();
         
+        // 🛑 FIX: Limpiar flag _isInsertingAd después de avanzar
+        _isInsertingAd = false;
+        
         // ⚡ SINCRONIZACIÓN INMEDIATA: Forzar actualización del estado después de cambio manual
-        // Esto evita que la UI muestre la carátula anterior mientras el audio ya cambió
+        // 🛑 FIX: NO sincronizar si hay un anuncio pre-cargado - evita resetear posición
         await Future.delayed(const Duration(milliseconds: 50)); // Pequeño delay para que just_audio actualice
-        _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
-        AppLogger.debug('[PlaybackNotifier] ⚡ Estado sincronizado inmediatamente después de next()');
+        
+        // Verificar si acabamos de entrar a un anuncio
+        final afterNextSource = service.player.sequenceState.currentSource;
+        final isNowPlayingAd = afterNextSource?.tag is AudioAd;
+        
+        if (isNowPlayingAd && state.isPlayingAd) {
+          // Si estamos en un anuncio, NO sincronizar para evitar sobrescribir el estado
+          // Solo actualizar la posición si avanzó correctamente
+          final currentPos = service.player.position;
+          if (currentPos.inMilliseconds > 0) {
+            state = state.copyWith(currentPosition: currentPos);
+          }
+          AppLogger.info('[PlaybackNotifier] 🛡️ Anuncio detectado después de next(), manteniendo estado pre-cargado');
+        } else {
+          // Si NO es un anuncio, sincronizar normalmente
+          _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+          AppLogger.debug('[PlaybackNotifier] ⚡ Estado sincronizado inmediatamente después de next()');
+        }
       } else {
         AppLogger.info('[PlaybackNotifier] ℹ️ No hay siguiente canción disponible');
         
@@ -4827,11 +4552,16 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
     }
     
+    // 🛡️ FILTRO DE EVALUACIÓN (Regla 2): Verificación de seguridad ANTES de cualquier lógica de anuncios
+    // Si hay un anuncio en curso o terminando, NO evaluar inserción de nuevos anuncios
+    if (state.isPlayingAd || _isInsertingAd || state.currentAd != null || _isCompletingAd) {
+      // Hay un anuncio activo o en proceso, no evaluar nada
+      return;
+    }
+    
     if (duration.inSeconds > 0 && 
         position.inSeconds >= duration.inSeconds * 0.5 && // ✅ 50% de la canción
         position.inSeconds < duration.inSeconds * 0.6 && // ✅ Solo una vez entre 50% y 60%
-        !state.isPlayingAd &&
-        !_isInsertingAd &&
         !_isHandlingAdInsertion &&
         canInsertAfterSkip && // ✅ PROTECCIÓN: No insertar si hubo salto manual reciente
         isOrganicReach &&    // 🎯 TRIGGER 50%: Solo insertar si llegó orgánicamente
@@ -4851,17 +4581,29 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final currentSource = sequenceState.currentSource;
       String? triggerId;
       
-      AppLogger.debug('[PlaybackNotifier] 🔍 CheckTransition: index=${sequenceState.currentIndex}, tagType=${currentSource?.tag.runtimeType}, isSong=${currentSource?.tag is Song}');
-      
       if (currentSource?.tag is Song) {
         final currentSong = currentSource!.tag as Song;
         triggerId = currentSong.id;
         if (_lastSongIdWithAd == triggerId) {
           return; // Esta canción ya fue procesada (ya sea que tuvo anuncio o contó para la frecuencia)
         }
+      } else if (currentSource?.tag is AudioAd) {
+        // ✅ FIX CRÍTICO: Si el tag es un AudioAd, aceptarlo y actualizar la UI
+        final ad = currentSource!.tag as AudioAd;
+        AppLogger.info('[PlaybackNotifier] 🛡️ Es un AudioAd (${ad.title}), voy a mostrar la info de Struky.');
+        
+        // Sincronizar UI con el anuncio
+        if (!state.isPlayingAd || state.currentAd?.id != ad.id) {
+           state = state.copyWith(
+             isPlayingAd: true,
+             currentAd: ad,
+           );
+           // Notificar a los listeners para que la UI se actualice
+           // Nota: state = state.copyWith ya notifica, pero aseguramos
+        }
+        return; // Ya estamos en un anuncio, no insertar otro
       } else {
-        AppLogger.debug('[PlaybackNotifier] 🔍 CheckTransition: Tag no es Song, es ${currentSource?.tag.runtimeType} - Cancelando inserción');
-        return; // 🛑 CRÍTICO: Si no es una canción (es un anuncio, etc.), NO intentar insertar otro anuncio
+        return; // 🛑 CRÍTICO: Si no es canción ni anuncio, ignorar
       }
       
       // 🎯 FRECUENCIA DE ANUNCIOS: Lógica de contador
@@ -4887,6 +4629,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
       
       _isInsertingAd = true; // ✅ CRÍTICO: Establecer ANTES de la llamada asíncrona
+      state = state.copyWith(isInsertingAd: true); // ✅ Sincronizar estado para blindaje de UI
       AppLogger.info('[PlaybackNotifier] 🎯 [PROXY SOURCE] Insertando anuncio en cola al 50% de la canción (posición: ${position.inSeconds}s/${duration.inSeconds}s)');
       
       // ✅ CRÍTICO: Usar try-finally para asegurar que el flag se libere SIEMPRE
@@ -4897,6 +4640,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }).catchError((e) {
         AppLogger.error('[PlaybackNotifier] 🎯 [PROXY SOURCE] Error al insertar anuncio: $e');
         _isInsertingAd = false; // Liberar flag si hay error
+        state = state.copyWith(isInsertingAd: false); // ✅ Sincronizar estado
       });
       
       return; // No continuar con preparación normal
@@ -4962,10 +4706,31 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
   /// 🔄 SINCRONIZAR COLA CON AUDIO SERVICE
   /// Valida y sincroniza state.currentQueue con la cola real de just_audio
-  /// Previene race conditions y desincronizaciones
+  /// Sincronizar estado de la cola con el servicio de audio
   void _syncQueueWithAudioService(SequenceState? sequenceState, {bool forceSync = false}) {
-    if (sequenceState == null) {
-      return; // No hay estado
+    if (_service == null) return;
+    
+    // 🛡️ PROXY METADATA: Si estamos reproduciendo un anuncio, FORZAR metadata del anuncio
+    // Esto evita que la UI muestre la duración/posición de la siguiente canción (pre-buffering)
+    if (state.isPlayingAd && state.currentAd != null) {
+      final ad = state.currentAd!;
+      final adDuration = Duration(seconds: ad.duration.inSeconds);
+      
+      // Calcular posición del anuncio (clamped a su duración)
+      // Nota: El player.position podría estar reportando 0 si ya saltó a la siguiente canción
+      // pero visualmente queremos mantener el estado del anuncio hasta que se limpie explícitamente
+      var currentPos = _service!.player.position;
+      if (currentPos > adDuration) currentPos = adDuration;
+      
+      state = state.copyWith(
+        // Mantener currentSong anterior (no actualizar con la siguiente)
+        totalDuration: adDuration,
+        currentPosition: currentPos,
+        // Asegurar que flags de UI sigan apuntando al anuncio
+        isPlayingAd: true,
+        currentAd: ad,
+      );
+      return; // 🛑 STOP: No procesar metadata del player (que podría ser de la siguiente canción)
     }
 
     // 🛡️ PROTECCIÓN: Ignorar sincronización automática durante reemplazo de cola
@@ -4978,12 +4743,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     // Esto evita que se cambie la carátula cuando se presiona play/pause durante un anuncio
     // ✅ FIX CRÍTICO: Con forceSync, SIEMPRE verificar si realmente hay un anuncio reproduciéndose
     // Si forceSync es true, verificar el estado real del reproductor, no solo el estado de la UI
-    final currentSource = sequenceState.currentSource;
+    final currentSource = sequenceState?.currentSource;
     final isActuallyPlayingAd = currentSource != null && currentSource.tag is AudioAd;
     
     if (!forceSync && state.isPlayingAd && isActuallyPlayingAd) {
       // Solo sincronizar la cola, pero no currentSong cuando realmente hay un anuncio reproduciéndose
-      final audioSources = sequenceState.sequence;
+      final audioSources = sequenceState?.sequence ?? [];
       final songsFromAudio = <Song>[];
       for (final source in audioSources) {
         if (source.tag is Song) {
@@ -5010,7 +4775,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     }
 
     try {
-      final audioSources = sequenceState.sequence;
+      final audioSources = sequenceState?.sequence ?? [];
       if (audioSources.isEmpty) {
         // Si la cola de audio está vacía pero el estado tiene canciones, limpiar
         // Solo si no estamos en medio de una operación de reemplazo
@@ -5070,7 +4835,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
               // ✅ Sincronización Incremental: Solo actualizar la cola sin log de "desincronización"
               // Esto es normal cuando se inserta un anuncio
               state = state.copyWith(currentQueue: songsFromAudio);
-              AppLogger.debug('[PlaybackNotifier] 🔄 Sincronización incremental (inserción de anuncio): ${stateCount} → ${audioCount} canciones');
+              AppLogger.debug('[PlaybackNotifier] 🔄 Sincronización incremental (inserción de anuncio): $stateCount → $audioCount canciones');
             } else {
               // Sincronización completa para diferencias mayores o cuando no hay inserción de anuncio
               AppLogger.warning('[PlaybackNotifier] ⚠️ Desincronización de IDs detectada (audio: $audioCount, estado: $stateCount), sincronizando...');
@@ -5082,7 +4847,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
 
       // Actualizar currentSong desde la cola real, conservando la actual hasta que el índice cambie
-      final currentIdx = sequenceState.currentIndex;
+      final currentIdx = sequenceState?.currentIndex;
       final currentSongId = state.currentSong?.id;
 
       // 🔒 Bloqueo crítico: mientras inicia algoritmo, ignorar índices distintos de 0
@@ -5101,7 +4866,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       if (currentIdx != null && currentIdx >= 0 && currentIdx < songsFromAudio.length) {
         // ✅ PROTECCIÓN CRÍTICA: Verificar que no hay un anuncio reproduciéndose antes de actualizar currentSong
         // Esto evita que se cambie la carátula cuando se presiona play/pause durante o después de un anuncio
-        final currentSourceForCheck = sequenceState.currentSource;
+        final currentSourceForCheck = sequenceState?.currentSource;
         final isCurrentlyPlayingAd = currentSourceForCheck != null && currentSourceForCheck.tag is AudioAd;
         
         // ✅ PROTECCIÓN: No actualizar currentSong si hay un anuncio reproduciéndose
@@ -5126,7 +4891,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         // ✅ FUENTE DE VERDAD REAL: Obtener la canción directamente del tag del reproductor
         // Igual que el stream listener, para garantizar consistencia
         Song? songAtIdx;
-        final currentSource = sequenceState.currentSource;
+        final currentSource = sequenceState?.currentSource;
         if (currentSource != null && currentSource.tag is Song) {
           // ✅ PRIORIDAD: Usar el tag del reproductor como fuente de verdad
           songAtIdx = currentSource.tag as Song;
@@ -5184,8 +4949,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           return;
         }
         
+        
         final currentPos = service.player.position;
-        final currentDuration = sequenceState.currentSource?.duration ??
+        final currentDuration = sequenceState?.currentSource?.duration ??
             (songAtIdx.duration != null ? Duration(seconds: songAtIdx.duration!) : null);
         final playerState = service.player.playerState;
         final processingState = playerState.processingState;

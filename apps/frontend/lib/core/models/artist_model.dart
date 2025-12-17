@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'artist_model.g.dart';
@@ -48,14 +47,7 @@ class Artist {
   Map<String, dynamic> toJson() => _$ArtistToJson(this);
 
   String get displayName => stageName ?? 'Artista Desconocido';
-  bool get isVerifiedValue {
-    final result = isVerified ?? verificationStatus;
-    // Debug: Verificar valores de verificación
-    if (kDebugMode && (stageName?.contains('ORFER') ?? false)) {
-      debugPrint('🔍 [Artist] $stageName: isVerified=$isVerified, verificationStatus=$verificationStatus, isVerifiedValue=$result');
-    }
-    return result;
-  }
+  bool get isVerifiedValue => isVerified ?? verificationStatus;
 
   String? getSocialLink(String platform) => socialLinks?[platform];
 }

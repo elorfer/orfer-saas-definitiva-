@@ -42,6 +42,7 @@ class PlaybackState {
   // Estado de anuncios
   final AudioAd? currentAd;
   final bool isPlayingAd;
+  final bool isInsertingAd; // ✅ FIX: Flag para blindaje de carátula durante inserción
 
   const PlaybackState({
     this.playbackMode = PlaybackMode.none,
@@ -65,6 +66,7 @@ class PlaybackState {
     this.isProcessingPrevious = false,
     this.currentAd,
     this.isPlayingAd = false,
+    this.isInsertingAd = false,
   });
 
   /// Calcular progreso de 0.0 a 1.0
@@ -78,6 +80,38 @@ class PlaybackState {
 
   /// Verificar si hay una canción cargada
   bool get hasSong => currentSong != null;
+
+  /// 🛡️ BLINDAJE DE CARÁTULA: Getter prioritario para la URL de la portada
+  /// Si hay un anuncio reproduciéndose O insertándose, devuelve estrictamente la imagen del anuncio.
+  /// Esto evita el "spoiler visual" de la siguiente canción durante la transición.
+  String? get currentCoverUrl {
+    // Si estamos insertando un anuncio, intentamos mostrar su carátula si ya la tenemos
+    if (isInsertingAd && currentAd != null) {
+      return currentAd!.coverImageUrl;
+    }
+    if (isPlayingAd && currentAd != null) {
+      return currentAd!.coverImageUrl;
+    }
+    return currentSong?.coverArtUrl;
+  }
+
+  /// 🛡️ DICTATOR GETTER: Título prioritario
+  /// Si hay anuncio, devuelve el título del anuncio.
+  String? get currentTitle {
+    if ((isPlayingAd || isInsertingAd) && currentAd != null) {
+      return currentAd!.title;
+    }
+    return currentSong?.title;
+  }
+
+  /// 🛡️ DICTATOR GETTER: Artista prioritario
+  /// Si hay anuncio, devuelve el nombre del anunciante o "Publicidad".
+  String? get currentArtist {
+    if ((isPlayingAd || isInsertingAd) && currentAd != null) {
+      return currentAd!.advertiserName;
+    }
+    return currentSong?.artist?.stageName;
+  }
 
   /// Verificar si se puede reproducir
   bool get canPlay => hasSong && !isLoading;
@@ -104,6 +138,7 @@ class PlaybackState {
     bool? isProcessingPrevious,
     AudioAd? currentAd,
     bool? isPlayingAd,
+    bool? isInsertingAd,
     // ✅ FIX CRÍTICO: Flags para permitir establecer null explícitamente
     bool clearCurrentAd = false,
     bool clearCurrentSong = false,
@@ -132,6 +167,7 @@ class PlaybackState {
       // ✅ FIX CRÍTICO: Usar flag para permitir establecer null explícitamente
       currentAd: clearCurrentAd ? null : (currentAd ?? this.currentAd),
       isPlayingAd: isPlayingAd ?? this.isPlayingAd,
+      isInsertingAd: isInsertingAd ?? this.isInsertingAd,
     );
   }
 
@@ -159,7 +195,8 @@ class PlaybackState {
         other.isProcessingNext == isProcessingNext &&
         other.isProcessingPrevious == isProcessingPrevious &&
         other.currentAd?.id == currentAd?.id &&
-        other.isPlayingAd == isPlayingAd;
+        other.isPlayingAd == isPlayingAd &&
+        other.isInsertingAd == isInsertingAd;
   }
 
   @override
@@ -185,7 +222,7 @@ class PlaybackState {
       isProcessingPlayPause,
       isProcessingNext,
       isProcessingPrevious,
-      Object.hash(currentAd?.id, isPlayingAd), // Combinar campos de anuncios
+      Object.hash(currentAd?.id, isPlayingAd, isInsertingAd), // Combinar campos de anuncios
     );
   }
 
