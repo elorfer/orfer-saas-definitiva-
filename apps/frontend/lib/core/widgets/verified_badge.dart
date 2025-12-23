@@ -44,6 +44,7 @@ class ArtistNameWithBadge extends StatelessWidget {
   final bool isVerified;
   final TextStyle? textStyle;
   final double badgeSize;
+  final Color? badgeColor;
   final MainAxisAlignment alignment;
   final int? maxLines;
   final TextOverflow? overflow;
@@ -54,6 +55,7 @@ class ArtistNameWithBadge extends StatelessWidget {
     required this.isVerified,
     this.textStyle,
     this.badgeSize = 16.0,
+    this.badgeColor,
     this.alignment = MainAxisAlignment.start,
     this.maxLines,
     this.overflow,
@@ -94,6 +96,7 @@ class ArtistNameWithBadge extends StatelessWidget {
           height: badgeSize + 2,
           child: VerifiedBadge(
             size: badgeSize,
+            color: badgeColor,
             showTooltip: true,
           ),
         ),

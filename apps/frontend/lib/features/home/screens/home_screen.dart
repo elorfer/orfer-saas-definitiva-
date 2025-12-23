@@ -1,11 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/providers/intelligent_featured_provider.dart';
-import '../../../core/widgets/premium_profile_drawer.dart';
+import '../../../core/widgets/ultra_light_profile_drawer.dart';
+import '../../../core/utils/intersection_observer.dart';
+import '../../../core/utils/url_normalizer.dart';
+import '../../../core/services/http_cache_service.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../widgets/featured_artists_section.dart';
@@ -23,7 +26,64 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen>
-    with AutomaticKeepAliveClientMixin {
+  with AutomaticKeepAliveClientMixin {
+  bool _isLoaded = false;
+  Timer? _visibilityDebounce;
+  double? _cachedStatusBarHeight;
+  
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // 🚀 Cachear statusBarHeight en initState para evitar MediaQuery en build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _cachedStatusBarHeight = MediaQuery.paddingOf(context).top;
+      }
+    });
+    
+    if (!_isLoaded) {
+      // Solo cargar datos si no se han cargado antes
+      Future.microtask(() async {
+        final homeState = ref.read(homeStateProvider);
+        if (homeState.isEmpty) {
+          await ref.read(homeStateProvider.notifier).loadHomeData();
+        }
+        
+        ref.read(intelligentFeaturedProvider.notifier)
+            .refreshIntelligentRecommendations()
+            .catchError((_) {});
+        _isLoaded = true;
+
+        // 🚀 Precarga completamente async sin bloquear
+        ImageCacheManager.ensureInitialized().then((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            try {
+              final featuredArtists = ref.read(featuredArtistsProvider);
+              final featuredSongs = ref.read(intelligentFeaturedSongsProvider);
+              final List<String?> imageUrls = [];
+              for (final fa in featuredArtists) {
+                final raw = fa.artist.profilePhotoUrl ?? fa.imageUrl;
+                imageUrls.add(UrlNormalizer.normalizeImageUrl(raw));
+              }
+              for (final fs in featuredSongs) {
+                imageUrls.add(UrlNormalizer.normalizeImageUrl(fs.song.coverArtUrl));
+              }
+              LazyImageLoader.precacheInitialImages(
+                imageUrls: imageUrls,
+                context: context,
+                count: 6,
+              );
+            } catch (e) {
+              // Silenciar errores de precache
+            }
+          });
+        });
+      });
+    }
+  }
   @override
   bool get wantKeepAlive => true; // Mantener estado al cambiar de pestaña
 
@@ -31,6 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   void dispose() {
+    _visibilityDebounce?.cancel();
     super.dispose();
   }
   
@@ -40,130 +101,116 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // 🚀 OPTIMIZACIÓN: Eliminar logging del build para mejor rendimiento
-    // El logging se mueve fuera del build para evitar trabajo en el hilo principal
+    // 🚀 OPTIMIZACIÓN: Usar statusBarHeight cacheado para evitar MediaQuery en cada build
+    final statusBarHeight = _cachedStatusBarHeight ?? MediaQuery.paddingOf(context).top;
     
-    // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
-    final mediaQuery = MediaQuery.of(context);
-    final statusBarHeight = mediaQuery.padding.top;
-    
-    final widget = RepaintBoundary(
-      child: Scaffold(
+    // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
+    return Scaffold(
         key: const ValueKey('home_screen_scaffold'),
         backgroundColor: Colors.transparent,
-        drawer: const PremiumProfileDrawer(), // 🔥 Drawer lateral desde la izquierda
-        drawerEdgeDragWidth: 20, // ⚡ Ancho de arrastre reducido para mejor control
-        drawerEnableOpenDragGesture: true, // ⚡ Habilitar arrastre para abrir
+        drawer: const UltraLightProfileDrawer(),
+        drawerEdgeDragWidth: 20,
+        drawerEnableOpenDragGesture: true,
         body: AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark.copyWith(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness: Brightness.dark,
             statusBarBrightness: Brightness.light,
           ),
-          child: Container(
-            key: const ValueKey('home_screen_container'),
-            decoration: const BoxDecoration(
-              gradient: NeumorphismTheme.backgroundGradient,
-            ),
-            child: RefreshIndicator(
-              onRefresh: () async {
-                final isLoading = ref.read(
-                  homeStateProvider.select((state) => state.isLoading),
-                );
-                if (isLoading) {
-                  return;
-                }
-                // Refrescar perfil del usuario para actualizar estado premium
-                ref.read(authStateProvider.notifier).refreshProfile().catchError((_) {});
-                final homeNotifier = ref.read(homeStateProvider.notifier);
-                await homeNotifier.refresh();
-                ref.read(intelligentFeaturedProvider.notifier)
-                    .refreshIntelligentRecommendations()
-                    .catchError((_) {});
-              },
-              color: Colors.white,
-              backgroundColor: NeumorphismTheme.coffeeMedium,
-              child: CustomScrollView(
-                key: const PageStorageKey<String>('home_screen_scroll'),
-                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
-                cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
-                slivers: [
-                  // ⚡ Header scrolleable (avatar, bienvenido, nombre, logo)
-                  SliverPadding(
-                    padding: EdgeInsets.only(
-                      top: statusBarHeight + 16.0, // Espacio para status bar
-                      left: 24.0,
-                      right: 24.0,
+          child: Stack(
+            children: [
+              // 🚀 CAPA 0: Fondo fijo con gradiente (Isolado para el Raster)
+              const Positioned.fill(
+                child: RepaintBoundary(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: NeumorphismTheme.backgroundGradient,
                     ),
-                    sliver: SliverToBoxAdapter(
-                      child: _HomeHeader(
-                        key: const ValueKey('home_header'),
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  // ⚡ Mensaje destacado (notificaciones) ahora en el scroll junto al contenido
-                  // ⚡ OPTIMIZACIÓN: Usar select para observar solo isActive y message
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    sliver: SliverToBoxAdapter(
-                      child: Consumer(
-                        builder: (context, ref, _) {
-                          // ⚡ OPTIMIZACIÓN: Observar solo los campos necesarios
-                          final homeMessage = ref.watch(
-                            homeMessageProvider.select((msg) => 
-                              msg != null && msg.isActive ? msg : null)
-                          );
-                          if (homeMessage == null) {
-                            return const SizedBox.shrink();
-                          }
-                          return RepaintBoundary(
-                            child: HomeMessageBanner(
-                              message: homeMessage.message,
-                              updatedAt: homeMessage.updatedAt,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                      // Compositores destacados
-                      SliverToBoxAdapter(
-                        child: RepaintBoundary(
-                          child: FeaturedArtistsSection(key: const ValueKey('artists')),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                        child: SizedBox(height: 48),
-                      ),
-                      // Canciones destacadas inteligentes
-                      SliverToBoxAdapter(
-                        child: RepaintBoundary(
-                          child: IntelligentFeaturedSongsSection(key: const ValueKey('intelligent_songs')),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                        child: SizedBox(height: 48),
-                      ),
-                      // Playlists destacadas (más arriba)
-                      SliverToBoxAdapter(
-                        child: RepaintBoundary(
-                          child: FeaturedPlaylistsSection(key: const ValueKey('playlists')),
-                        ),
-                      ),
-                      const SliverToBoxAdapter(
-                        child: SizedBox(height: 180), // Espacio para el mini reproductor
-                      ),
-                    ],
                   ),
                 ),
-          ),
+              ),
+              
+              // 🚀 CAPA 1: Contenido scrolleable
+              RepaintBoundary(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    final isLoading = ref.read(
+                      homeStateProvider.select((state) => state.isLoading),
+                    );
+                    if (isLoading) return;
+                    ref.read(authStateProvider.notifier).refreshProfile().catchError((_) {});
+                    final homeNotifier = ref.read(homeStateProvider.notifier);
+                    await homeNotifier.refresh();
+                    ref.read(intelligentFeaturedProvider.notifier)
+                        .refreshIntelligentRecommendations()
+                        .catchError((_) {});
+                  },
+                  color: Colors.white,
+                  backgroundColor: NeumorphismTheme.coffeeMedium,
+                  child: SafeArea(
+                    child: CustomScrollView(
+                      key: const PageStorageKey<String>('home_screen_scroll'),
+                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                      cacheExtent: 250, // 🚀 Ajustado para balancear memoria y fluidez
+                      slivers: <Widget>[
+                    SliverPadding(
+                      padding: EdgeInsets.only(
+                        top: statusBarHeight + 16.0,
+                        left: 24.0,
+                        right: 24.0,
+                      ),
+                      sliver: SliverToBoxAdapter(
+                        child: _HomeHeader(key: const ValueKey('home_header')),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      sliver: SliverToBoxAdapter(
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            final homeMessage = ref.watch(
+                              homeMessageProvider.select((msg) => msg != null && msg.isActive ? msg : null),
+                            );
+                            if (homeMessage == null) return const SizedBox.shrink();
+                            return RepaintBoundary(
+                              child: HomeMessageBanner(
+                                message: homeMessage.message,
+                                updatedAt: homeMessage.updatedAt,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 6)),
+                    SliverToBoxAdapter(
+                      child: const RepaintBoundary(
+                        child: FeaturedArtistsSection(key: ValueKey('artists')),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                    SliverToBoxAdapter(
+                      child: const RepaintBoundary(
+                        child: IntelligentFeaturedSongsSection(key: ValueKey('intelligent_songs')),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 48)),
+                    SliverToBoxAdapter(
+                      child: const RepaintBoundary(
+                        child: FeaturedPlaylistsSection(key: ValueKey('playlists')),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                  ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-    );
-    // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
-    return widget;
+    ); 
   }
   
   // OPTIMIZACIÓN: Método de logging removido para mejor rendimiento
@@ -198,32 +245,20 @@ class _HomeHeader extends ConsumerWidget {
                     Scaffold.of(context).openDrawer();
                   },
                   borderRadius: const BorderRadius.all(Radius.circular(28)),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          NeumorphismTheme.coffeeMedium,
-                          NeumorphismTheme.coffeeDark,
-                        ],
+                  child: RepaintBoundary(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: NeumorphismTheme.coffeeMedium,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        _getInitialsFromFirstName(userFirstName),
-                        style: AppTextStyles.titleMedium.copyWith(
-                          color: Colors.white,
+                      child: Center(
+                        child: Text(
+                          _getInitialsFromFirstName(userFirstName),
+                          style: AppTextStyles.titleMedium.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -251,9 +286,8 @@ class _HomeHeader extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              // Logo - Tamaño aumentado con RepaintBoundary para mejor rendimiento
-              RepaintBoundary(
-                child: Image.asset(
+              // Logo - Tamaño aumentado con caché optimizado
+              Image.asset(
                   'assets/images/logo.webp',
                   width: 90,
                   height: 90,
@@ -261,37 +295,29 @@ class _HomeHeader extends ConsumerWidget {
                   cacheHeight: 180,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
-                    try {
-                      return Image.asset(
-                        'assets/images/logo.webp',
-                        width: 90,
-                        height: 90,
-                        fit: BoxFit.contain,
-                      );
-                    } catch (e) {
-                      return Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.music_note,
-                          color: NeumorphismTheme.coffeeDark,
-                          size: 48,
-                        ),
-                      );
-                    }
+                    return Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3EBE3), // 🚀 Sólido
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.music_note,
+                        color: NeumorphismTheme.coffeeDark,
+                        size: 40,
+                      ),
+                    );
                   },
                 ),
-              ),
+
             ],
           ),
     );
   }
 
   Widget _buildHeaderSkeleton() {
+    // ✅ OPTIMIZACIÓN: Skeleton estático sin animaciones pesadas de Shimmer
     return Row(
       children: [
         Container(
@@ -299,34 +325,7 @@ class _HomeHeader extends ConsumerWidget {
           height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                NeumorphismTheme.coffeeMedium,
-                NeumorphismTheme.coffeeDark,
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Shimmer.fromColors(
-            baseColor: NeumorphismTheme.shimmerBaseColor,
-            highlightColor: NeumorphismTheme.shimmerHighlightColor,
-            period: const Duration(milliseconds: 1200),
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: NeumorphismTheme.shimmerContentColor,
-              ),
-            ),
+            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
           ),
         ),
         const SizedBox(width: 16),
@@ -334,31 +333,21 @@ class _HomeHeader extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Shimmer.fromColors(
-                baseColor: NeumorphismTheme.shimmerBaseColor,
-                highlightColor: NeumorphismTheme.shimmerHighlightColor,
-                period: const Duration(milliseconds: 1200),
-                child: Container(
-                  height: 16,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    color: NeumorphismTheme.shimmerContentColor,
-                    borderRadius: const BorderRadius.all(Radius.circular(4)),
-                  ),
+              Container(
+                height: 16,
+                width: 100,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDED1C4), // 🚀 Sólido
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
                 ),
               ),
-              const SizedBox(height: 2),
-              Shimmer.fromColors(
-                baseColor: NeumorphismTheme.shimmerBaseColor,
-                highlightColor: NeumorphismTheme.shimmerHighlightColor,
-                period: const Duration(milliseconds: 1200),
-                child: Container(
-                  height: 20,
-                  width: 150,
-                  decoration: BoxDecoration(
-                    color: NeumorphismTheme.shimmerContentColor,
-                    borderRadius: const BorderRadius.all(Radius.circular(4)),
-                  ),
+              const SizedBox(height: 6),
+              Container(
+                height: 20,
+                width: 150,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDED1C4), // 🚀 Sólido
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
                 ),
               ),
             ],
@@ -368,8 +357,8 @@ class _HomeHeader extends ConsumerWidget {
     );
   }
 
-  String _getInitialsFromFirstName(String firstName) {
-    if (firstName.isEmpty) return 'U';
+  String _getInitialsFromFirstName(String? firstName) {
+    if (firstName == null || firstName.isEmpty) return 'U';
     return firstName[0].toUpperCase();
   }
 }
