@@ -5,6 +5,7 @@ import '../utils/logger.dart';
 import '../utils/error_handler.dart';
 import '../utils/response_parser.dart';
 import '../utils/data_normalizer.dart';
+import '../utils/url_normalizer.dart';
 
 /// Servicio para gestionar favoritos del usuario
 class FavoritesService {
@@ -107,14 +108,21 @@ class FavoritesService {
           return [];
         }
 
-        return ResponseParser.parseList<Song>(
-          data: songsData,
-          parser: (json) {
-            // Normalizar los datos antes de parsearlos
-            final normalized = DataNormalizer.normalizeSong(json);
-            return Song.fromJson(normalized);
-          },
-        );
+        // Normalizar todas las entradas primero
+        final normalizedList = songsData.map((json) => DataNormalizer.normalizeSong(Map<String, dynamic>.from(json as Map))).toList();
+
+        try {
+          return await Song.parseList(normalizedList);
+        } catch (_) {
+          // Fallback: parse individualmente
+          final parsed = <Song>[];
+          for (final n in normalizedList) {
+            try {
+              parsed.add(Song.fromJson(n));
+            } catch (_) {}
+          }
+          return parsed;
+        }
       }
 
       // Si llegamos aquí, el status no es 2xx
@@ -163,6 +171,48 @@ class FavoritesService {
     } catch (e) {
       AppLogger.error('[FavoritesService] Error en isFavorite: $e');
       return false;
+    }
+  }
+
+  /// Obtener una canción por ID
+  /// Útil para agregar la canción completa a la lista de favoritos después de un toggle
+  Future<Song?> getSongById(String songId) async {
+    try {
+      await initialize();
+      
+      AppLogger.debug('[FavoritesService] Obteniendo canción por ID: $songId');
+      final response = await _dio.get('/public/songs/$songId');
+      
+      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          // Normalizar los datos antes de parsearlos
+          final normalized = DataNormalizer.normalizeSong(data);
+          
+          // Normalizar URL de portada
+          final rawCoverUrl = normalized['cover_art_url'] as String?;
+          final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
+          if (normalizedCoverUrl != null) {
+            normalized['cover_art_url'] = normalizedCoverUrl;
+            normalized['coverArtUrl'] = normalizedCoverUrl;
+          }
+          
+          // Normalizar URL del archivo de audio
+          final rawFileUrl = normalized['file_url'] as String?;
+          if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
+            final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
+            normalized['file_url'] = normalizedFileUrl;
+            normalized['fileUrl'] = normalizedFileUrl;
+          }
+          
+          return await Song.parse(normalized);
+        }
+      }
+      
+      return null;
+    } catch (e, stackTrace) {
+      AppLogger.error('[FavoritesService] Error en getSongById: $e', stackTrace);
+      return null; // Retornar null en caso de error para no bloquear el flujo
     }
   }
 }

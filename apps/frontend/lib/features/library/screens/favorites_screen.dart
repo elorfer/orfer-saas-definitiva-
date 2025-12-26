@@ -286,24 +286,17 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                   return Transform.scale(
                     scale: value,
                     child: Container(
-                      width: 120,
-                      height: 120,
+                      width: 100, // ⚡ GAMA BAJA: Reducido
+                      height: 100,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.red.shade100,
-                            Colors.red.shade200,
-                          ],
-                        ),
+                        color: Colors.red.shade100, // ⚡ GAMA BAJA: Sin gradient
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.favorite_border,
-                        size: 64,
+                        size: 48, // ⚡ GAMA BAJA: Reducido
                         color: Colors.red.shade400,
-                      ), // No puede ser const porque usa Colors.red.shade400 que es dinámico
+                      ),
                     ),
                   );
                 },
@@ -327,7 +320,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
 
     return CustomScrollView(
       controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache basado en visibilidad
-      cacheExtent: 400, // ✅ Optimizado para mejor rendimiento
+      cacheExtent: 200, // ⚡ GAMA BAJA: Reducido para menos uso de memoria
       physics: const BouncingScrollPhysics(
         parent: AlwaysScrollableScrollPhysics(),
       ), // ✅ Scroll estilo iPhone (igual que Home)
@@ -337,53 +330,25 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         SliverToBoxAdapter(
           child: Container(
             margin: const EdgeInsets.all(16.0),
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(20.0), // ⚡ GAMA BAJA: Reducido
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                  NeumorphismTheme.coffeeDark.withValues(alpha: 0.1),
-                ],
-              ),
-              borderRadius: const BorderRadius.all(Radius.circular(24)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15), // ⚡ GAMA BAJA: Sin gradient ni boxShadow
+              borderRadius: const BorderRadius.all(Radius.circular(20)),
             ),
             child: Row(
               children: [
-                // Icono de corazón grande
+                // ⚡ GAMA BAJA: Icono simplificado sin gradient ni sombra
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.red.shade400,
-                        Colors.red.shade600,
-                      ],
-                    ),
+                    color: Colors.red.shade500, // ⚡ Sin gradient
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withValues(alpha: 0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
                   ),
                   child: const Icon(
                     Icons.favorite,
                     color: Colors.white,
-                    size: 32,
+                    size: 28,
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -491,30 +456,10 @@ class _FavoriteSongItem extends ConsumerWidget {
         : null;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // ✅ Reducido de 6 a 4
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.surface.withValues(alpha: 0.8),
-            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-          ],
-        ),
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(-2, -2),
-          ),
-        ],
+        color: NeumorphismTheme.surface.withValues(alpha: 0.6), // ⚡ GAMA BAJA: Sin gradient ni boxShadow
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
       ),
       child: Material(
           color: Colors.transparent,
@@ -551,17 +496,8 @@ class _FavoriteSongItem extends ConsumerWidget {
                       minHeight: 56,
                       maxHeight: 56,
                     ),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: const BorderRadius.all(Radius.circular(8)), // ✅ Más cuadrado (reducido de 12 a 8)
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                          spreadRadius: 0,
-                        ),
-                      ],
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(8)), // ⚡ GAMA BAJA: Sin boxShadow
                     ),
                     child: ClipRRect(
                       borderRadius: const BorderRadius.all(Radius.circular(8)), // ✅ Más cuadrado (reducido de 12 a 8)
@@ -580,20 +516,11 @@ class _FavoriteSongItem extends ConsumerWidget {
                                 skipFade: true, // Sin fade para mejor rendimiento
                               )
                             : Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      NeumorphismTheme.coffeeMedium,
-                                      NeumorphismTheme.coffeeDark,
-                                    ],
-                                  ),
-                                ),
+                                color: NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
                                 child: const Icon(
                                   Icons.music_note,
                                   color: Colors.white,
-                                  size: 24, // ✅ Reducido de 28 a 24
+                                  size: 24,
                                 ),
                               ),
                       ),
@@ -638,32 +565,18 @@ class _FavoriteSongItem extends ConsumerWidget {
                   // Botón de favorito (ya está en favoritos, pero lo mostramos)
                   FavoriteButton(
                     songId: song.id,
+                    song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
                     iconColor: Colors.red,
                     iconSize: 20, // ✅ Reducido de 22 a 20
                   ),
                   const SizedBox(width: 6), // ✅ Reducido de 8 a 6
                   // Botón de información (navega a detalles de la canción)
                   Container(
-                    width: 40, // ✅ Reducido de 44 a 40
-                    height: 40, // ✅ Reducido de 44 a 40
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          NeumorphismTheme.coffeeMedium,
-                          NeumorphismTheme.coffeeDark,
-                        ],
-                      ),
+                    width: 36, // ⚡ GAMA BAJA: Reducido
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: NeumorphismTheme.coffeeMedium, // ⚡ Sin gradient ni boxShadow
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                          spreadRadius: 0,
-                        ),
-                      ],
                     ),
                     child: Material(
                       color: Colors.transparent,

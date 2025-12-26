@@ -36,7 +36,15 @@ class RealtimeService {
     
     // Construir URL del WebSocket (Socket.io usa el mismo host/puerto)
     // El namespace /realtime se agregará en la conexión
-    final wsUrl = '${uri.scheme}://${uri.host}:${uri.port}';
+    
+    // ✅ FIX: No incluir puerto si es el estándar (80/443) para evitar problemas con socket_io_client
+    // que a veces transforma :80 en :0 erróneamente.
+    final isStandardPort = (uri.scheme == 'http' && uri.port == 80) || 
+                          (uri.scheme == 'https' && uri.port == 443);
+                          
+    final wsUrl = isStandardPort 
+        ? '${uri.scheme}://${uri.host}' 
+        : '${uri.scheme}://${uri.host}:${uri.port}';
     
     if (kDebugMode) {
       debugPrint('🔌 WebSocket URL base: $wsUrl');
@@ -87,7 +95,7 @@ class RealtimeService {
             .setReconnectionAttempts(5)
             .setReconnectionDelay(1000)
             .setReconnectionDelayMax(5000)
-            .setTimeout(20000)
+            .setTimeout(30000) // ⏱️ Aumentado a 30 segundos para consistencia con HTTP
             .build(),
       );
 

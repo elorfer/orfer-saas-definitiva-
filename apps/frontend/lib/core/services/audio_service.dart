@@ -1,13 +1,107 @@
 import 'dart:async';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:audio_session/audio_session.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../utils/logger.dart';
 
-/// Servicio de audio único y limpio
-/// Wrapper singleton para just_audio con una única instancia de AudioPlayer
+/// ═══════════════════════════════════════════════════════════════════════════
+/// 🎵 AUDIO SERVICE PROFESIONAL
+/// ═══════════════════════════════════════════════════════════════════════════
+/// 
+/// Características profesionales:
+/// - Gapless Playback con ConcatenatingAudioSource
+/// - AudioSession: ducking, interrupciones, foco de audio
+/// - Stream de posición suavizado (sin parpadeo)
+/// - Persistencia de estado (resume playback)
+/// - Buffer inteligente con precarga al 80%
+/// ═══════════════════════════════════════════════════════════════════════════
+
 class AudioService {
   // Instancia única del reproductor
   final AudioPlayer player = AudioPlayer();
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🎛️ AUDIO SESSION - Manejo de foco e interrupciones
+  // ═══════════════════════════════════════════════════════════════════════
+  AudioSession? _audioSession;
+  bool _wasPlayingBeforeInterruption = false;
+  double _volumeBeforeDucking = 1.0;
+  final List<StreamSubscription> _sessionSubscriptions = [];
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // � GLOBAL POSITION NOTIFIER - Single Source of Truth
+  // ═══════════════════════════════════════════════════════════════════════
+  /// ValueNotifier global - más rápido que Stream para UI
+  /// Ambos widgets (Mini y Extendido) escuchan el mismo notifier
+  final ValueNotifier<Duration> globalPosition = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> globalDuration = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> globalBuffered = ValueNotifier(Duration.zero);
+  
+  /// Timestamp de última actualización (para recalcular tras background)
+  DateTime _lastPositionUpdate = DateTime.now();
+  bool _wasPlayingWhenBackgrounded = false;
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🎚️ STREAM DE POSICIÓN SUAVIZADO (legacy, aún usado por algunos widgets)
+  // ═══════════════════════════════════════════════════════════════════════
+  Timer? _smoothPositionTimer;
+  Duration _smoothPosition = Duration.zero;
+  Duration _targetPosition = Duration.zero;
+  Duration _lastEmittedPosition = Duration.zero; // Para distinct
+  final _smoothPositionController = StreamController<Duration>.broadcast();
+  StreamSubscription? _positionSub;
+  static const _smoothUpdateInterval = Duration(milliseconds: 50); // 20 FPS
+  static const _smoothInterpolationFactor = 0.15;
+  
+  // 🛡️ SEEKING GUARD: Bloqueo durante seek
+  bool _isSeeking = false;
+  Timer? _seekingGuardTimer;
+  Duration? _userSeekPosition; // Posición del usuario durante seek
+  static const _seekingGuardDuration = Duration(milliseconds: 500);
+  
+  // 🔄 TRACK CHANGE DETECTION: Para resetear seekbar
+  int? _lastKnownIndex;
+  StreamSubscription? _indexChangeSub;
+  bool _trackJustChanged = false; // Permite emitir Duration.zero
+  bool _zeroJumpMode = false; // 🎯 ZERO-JUMP: Deshabilita interpolación durante cambio de track
+  
+  /// 📍 PERSISTENT STATE: Última posición conocida (para valor inicial de UI)
+  /// Esto evita el salto visual al reabrir la pantalla del reproductor
+  Duration get lastKnownPosition => _lastEmittedPosition;
+  
+  /// 📍 Verificar si hay una posición válida guardada en memoria
+  bool get hasValidPosition => _lastEmittedPosition > Duration.zero;
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // 💾 PERSISTENCIA DE ESTADO
+  // ═══════════════════════════════════════════════════════════════════════
+  Box<dynamic>? _persistenceBox;
+  static const _persistenceBoxName = 'audio_playback_state';
+  Timer? _persistenceDebouncer;
+  bool _persistenceBlockedAfterSeek = false; // Bloquear persistencia después de seek
+  static const _persistenceDelayAfterSeek = Duration(seconds: 2); // Delay post-seek
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // ⚡ SKIP INSTANTÁNEO - Debounce de ráfaga y UI optimista
+  // ═══════════════════════════════════════════════════════════════════════
+  Timer? _skipDebounceTimer;
+  int _pendingSkipCount = 0;
+  bool _isSkipping = false;
+  static const _skipDebounceDelay = Duration(milliseconds: 150); // Esperar 150ms para ráfagas
+  DateTime _lastSkipRequest = DateTime.now();
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // 📥 PRECARGA INTELIGENTE
+  // ═══════════════════════════════════════════════════════════════════════
+  Timer? _preloadMonitorTimer;
+  bool _isPreloading = false;
+  final Set<String> _preloadedSongIds = {};
+  static const _preloadThreshold = 0.80; // Precargar al 80%
+
+  /// Stream de posición suavizado (para Seekbar sin parpadeo)
+  Stream<Duration> get smoothPositionStream => _smoothPositionController.stream;
 
   /// Stream de estado de reproducción (playing/paused)
   Stream<bool> get isPlayingStream => player.playingStream;
@@ -21,20 +115,575 @@ class AudioService {
   /// Stream del estado de la secuencia (para obtener la canción actual)
   Stream<SequenceState?> get sequenceStateStream => player.sequenceStateStream;
 
+  /// Stream del índice actual (Master Key para sincronización)
+  Stream<int?> get currentIndexStream => player.currentIndexStream;
+
   /// Stream del estado del reproductor (para buffering, etc.)
   Stream<PlayerState> get playerStateStream => player.playerStateStream;
+  
+  /// Stream de posición buffered
+  Stream<Duration> get bufferedPositionStream => player.bufferedPositionStream;
 
   /// 🛡️ GUARD ANTI-LOOP: Verificar si hay error en el reproductor
-  /// En just_audio, los errores se detectan cuando processingState es idle inesperadamente
   bool get hasError {
     try {
       final playerState = player.playerState;
-      // Si está idle pero debería estar reproduciendo, puede haber un error
       return playerState.processingState == ProcessingState.idle;
     } catch (e) {
       return false;
     }
   }
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🚀 INICIALIZACIÓN PROFESIONAL
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /// Inicializar características profesionales
+  /// Llamar después de crear el servicio
+  Future<void> initProfessionalFeatures() async {
+    await _initAudioSession();
+    await _initPersistence();
+    _initSmoothPositionStream();
+    _startPreloadMonitor();
+    AppLogger.info('[AudioService] ✅ Características profesionales inicializadas');
+  }
+  
+  /// Configurar AudioSession para manejo de foco e interrupciones
+  Future<void> _initAudioSession() async {
+    try {
+      _audioSession = await AudioSession.instance;
+      
+      await _audioSession!.configure(const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playback,
+        avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.duckOthers,
+        avAudioSessionMode: AVAudioSessionMode.defaultMode,
+        avAudioSessionRouteSharingPolicy: AVAudioSessionRouteSharingPolicy.defaultPolicy,
+        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.music,
+          usage: AndroidAudioUsage.media,
+        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: false, // Control manual del ducking
+      ));
+
+      // Escuchar interrupciones (llamadas, notificaciones)
+      _sessionSubscriptions.add(
+        _audioSession!.interruptionEventStream.listen(_handleInterruption),
+      );
+
+      // Escuchar cambios de dispositivo (auriculares desconectados)
+      _sessionSubscriptions.add(
+        _audioSession!.becomingNoisyEventStream.listen((_) {
+          AppLogger.info('[AudioService] 🎧 Auriculares desconectados, pausando...');
+          pause();
+        }),
+      );
+
+      AppLogger.info('[AudioService] 🎛️ AudioSession configurado correctamente');
+    } catch (e) {
+      AppLogger.error('[AudioService] Error configurando AudioSession: $e');
+    }
+  }
+
+  /// Manejar interrupciones de audio
+  void _handleInterruption(AudioInterruptionEvent event) {
+    AppLogger.info('[AudioService] 🔔 Interrupción: ${event.type}, begin=${event.begin}');
+
+    if (event.begin) {
+      // Interrupción comenzó
+      switch (event.type) {
+        case AudioInterruptionType.duck:
+          // Bajar volumen (ducking) - notificaciones
+          _volumeBeforeDucking = player.volume;
+          player.setVolume(_volumeBeforeDucking * 0.3);
+          AppLogger.info('[AudioService] 🔉 Ducking activado (volumen al 30%)');
+          break;
+          
+        case AudioInterruptionType.pause:
+          // Pausar (llamada entrante, etc.)
+          _wasPlayingBeforeInterruption = player.playing;
+          if (_wasPlayingBeforeInterruption) {
+            pause();
+            AppLogger.info('[AudioService] ⏸️ Pausado por interrupción (llamada/etc)');
+          }
+          break;
+          
+        case AudioInterruptionType.unknown:
+          // Interrupción desconocida, pausar por seguridad
+          _wasPlayingBeforeInterruption = player.playing;
+          if (_wasPlayingBeforeInterruption) {
+            pause();
+          }
+          break;
+      }
+    } else {
+      // Interrupción terminó
+      switch (event.type) {
+        case AudioInterruptionType.duck:
+          // Restaurar volumen
+          player.setVolume(_volumeBeforeDucking);
+          AppLogger.info('[AudioService] 🔊 Ducking desactivado (volumen restaurado)');
+          break;
+          
+        case AudioInterruptionType.pause:
+        case AudioInterruptionType.unknown:
+          // Reanudar si estaba reproduciendo
+          if (_wasPlayingBeforeInterruption) {
+            play();
+            AppLogger.info('[AudioService] ▶️ Reanudado después de interrupción');
+          }
+          break;
+      }
+    }
+  }
+  
+  /// Inicializar stream de posición suavizado
+  void _initSmoothPositionStream() {
+    // 🔄 TRACK CHANGE: Escuchar cambios de índice para resetear seekbar
+    _indexChangeSub = player.currentIndexStream.listen((newIndex) {
+      // ✅ FIX: También disparar reset cuando _lastKnownIndex es null (primer cambio de sesión)
+      if (newIndex != null && (newIndex != _lastKnownIndex || _lastKnownIndex == null)) {
+        _onTrackChanged(newIndex);
+      }
+      _lastKnownIndex = newIndex;
+    });
+    
+    // Escuchar posición real del player
+    _positionSub = player.positionStream.listen((position) {
+      // 🛡️ SEEKING GUARD: Ignorar posiciones del motor durante seek
+      if (_isSeeking) return;
+      // 🎯 ZERO-JUMP: Ignorar posiciones durante cambio de track
+      if (_zeroJumpMode) return;
+      _targetPosition = position;
+    });
+
+    // Timer de interpolación suave (20 FPS)
+    _smoothPositionTimer = Timer.periodic(_smoothUpdateInterval, (_) {
+      if (_smoothPositionController.isClosed) return;
+      
+      // 🎯 ZERO-JUMP: Durante cambio de track, no hacer nada
+      if (_zeroJumpMode) return;
+      
+      // 🛡️ SEEKING GUARD: Durante seek, usar posición del usuario
+      if (_isSeeking && _userSeekPosition != null) {
+        _emitIfDistinct(_userSeekPosition!);
+        return;
+      }
+
+      final diff = _targetPosition.inMilliseconds - _smoothPosition.inMilliseconds;
+      
+      if (diff.abs() < 100) {
+        // Muy cerca, usar posición exacta
+        _smoothPosition = _targetPosition;
+      } else if (diff.abs() > 2000) {
+        // Seek detectado (salto grande), ir directo
+        _smoothPosition = _targetPosition;
+      } else {
+        // Interpolación suave
+        final increment = (diff * _smoothInterpolationFactor).round();
+        _smoothPosition = Duration(
+          milliseconds: _smoothPosition.inMilliseconds + increment,
+        );
+      }
+      
+      // 🎯 DISTINCT: No emitir valores menores si está playing (evita retrocesos)
+      // ✅ FIX: Permitir "retroceso" si es al inicio de la canción (track change o seek to 0)
+      if (player.playing && 
+          _smoothPosition < _lastEmittedPosition && 
+          !_trackJustChanged &&
+          _smoothPosition.inMilliseconds > 1000) { // Solo bloquear si estamos avanzados (>1s)
+        // No emitir retroceso involuntario durante playback
+        return;
+      }
+
+      _emitIfDistinct(_smoothPosition);
+    });
+    
+    AppLogger.info('[AudioService] 🎚️ Stream de posición suavizado inicializado');
+  }
+  
+  /// Emitir solo si es diferente (distinct)
+  void _emitIfDistinct(Duration position) {
+    // 🔄 TRACK CHANGE: Siempre permitir Duration.zero si cambió de track
+    if (_trackJustChanged && position == Duration.zero) {
+      _updateAllPositionSources(position);
+      _trackJustChanged = false; // Reset flag después de emitir
+      return;
+    }
+    
+    // Solo emitir si hay diferencia significativa (>50ms)
+    final diffFromLast = (position.inMilliseconds - _lastEmittedPosition.inMilliseconds).abs();
+    if (diffFromLast > 50) {
+      _updateAllPositionSources(position);
+    }
+  }
+  
+  /// 🌐 Actualizar TODAS las fuentes de posición (Single Source of Truth)
+  void _updateAllPositionSources(Duration position) {
+    _lastEmittedPosition = position;
+    _lastPositionUpdate = DateTime.now();
+    
+    // Actualizar ValueNotifiers (para UI sincronizada)
+    globalPosition.value = position;
+    
+    // Actualizar Stream (legacy)
+    if (!_smoothPositionController.isClosed) {
+      _smoothPositionController.add(position);
+    }
+    
+    // Actualizar duración y buffer si cambiaron
+    final duration = player.duration;
+    if (duration != null && duration != globalDuration.value) {
+      globalDuration.value = duration;
+    }
+    
+    final buffered = player.bufferedPosition;
+    if ((buffered.inMilliseconds - globalBuffered.value.inMilliseconds).abs() > 100) {
+      globalBuffered.value = buffered;
+    }
+  }
+  
+  /// 🔄 TRACK CHANGE: Resetear estado al cambiar de canción
+  void _onTrackChanged(int newIndex) {
+    AppLogger.debug('[AudioService] 🔄 Track changed: $_lastKnownIndex -> $newIndex');
+    
+    // Si `Zero-Jump` ya fue activado por la ruta optimista
+    // (via `_resetPositionForTrackChange`), evitamos hacer un hard-reset
+    // doble que provoca el salto visual. En ese caso confirmamos el cambio
+    // de track y actualizamos la duración, pero omitimos resets agresivos.
+    if (_trackJustChanged) {
+      _trackJustChanged = false;
+      AppLogger.debug('[AudioService] Zero-Jump confirmado: omitiendo reset agresivo en _onTrackChanged');
+
+      // Actualizar duración si está disponible
+      Future.microtask(() {
+        final newDuration = player.duration;
+        if (newDuration != null) {
+          globalDuration.value = newDuration;
+        }
+      });
+
+      // Cancelar persistencia pendiente de la canción anterior
+      _persistenceDebouncer?.cancel();
+      _persistenceBlockedAfterSeek = false;
+
+      return;
+    }
+
+    // Si no venimos del camino optimista, aplicar el reset tradicional
+    // (esto mantiene compatibilidad con eventos de cambio originados
+    // directamente por el reproductor)
+    
+    // 🎯 ZERO-JUMP: Activar modo salto seco (sin interpolación)
+    _zeroJumpMode = true;
+
+    // 1. HARD RESET INMEDIATO: Forzar todos los valores a cero ANTES de cualquier otra cosa
+    _isSeeking = false;
+    _seekingGuardTimer?.cancel();
+    _userSeekPosition = Duration.zero;
+    _smoothPosition = Duration.zero;
+    _targetPosition = Duration.zero;
+    _lastEmittedPosition = Duration.zero;
+
+    // 2. HARD RESET ValueNotifiers (síncrono, sin esperar tick)
+    globalPosition.value = Duration.zero;
+    globalBuffered.value = Duration.zero;
+    _lastPositionUpdate = DateTime.now();
+
+    // 3. Marcar que el track cambió (permite emitir Duration.zero)
+    _trackJustChanged = true;
+
+    // 4. STREAM DRAIN: Limpiar cualquier valor residual del stream
+    // Emitir Duration.zero inmediatamente al Stream
+    if (!_smoothPositionController.isClosed) {
+      _smoothPositionController.add(Duration.zero);
+    }
+
+    // 5. Actualizar duración de la nueva canción (puede tardar un poco)
+    Future.microtask(() {
+      final newDuration = player.duration;
+      if (newDuration != null) {
+        globalDuration.value = newDuration;
+      }
+    });
+
+    // 6. Cancelar persistencia pendiente de la canción anterior
+    _persistenceDebouncer?.cancel();
+    _persistenceBlockedAfterSeek = false;
+
+    // 7. Desactivar ZERO-JUMP después de 200ms (permitir interpolación normal)
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _zeroJumpMode = false;
+    });
+
+    AppLogger.info('[AudioService] 🎚️ Seekbar reseteado a 0:00 (Zero-Jump)');
+  }
+  
+  /// Forzar actualización de posición suavizada (para seek)
+  void forceSmoothPositionUpdate(Duration position) {
+    _smoothPosition = position;
+    _targetPosition = position;
+    _lastEmittedPosition = position;
+    _userSeekPosition = position;
+    
+    // Actualizar ValueNotifier inmediatamente
+    globalPosition.value = position;
+    _lastPositionUpdate = DateTime.now();
+    
+    if (!_smoothPositionController.isClosed) {
+      _smoothPositionController.add(position);
+    }
+  }
+  
+  /// 🛡️ SEEKING GUARD: Iniciar bloqueo de seek
+  void startSeekingGuard(Duration userPosition) {
+    _isSeeking = true;
+    _userSeekPosition = userPosition;
+    _persistenceBlockedAfterSeek = true;
+    _seekingGuardTimer?.cancel();
+    AppLogger.debug('[AudioService] 🛡️ Seeking guard activado @ ${userPosition.inSeconds}s');
+  }
+  
+  /// 🛡️ SEEKING GUARD: Finalizar bloqueo de seek (con delay)
+  void endSeekingGuard(Duration finalPosition) {
+    _userSeekPosition = finalPosition;
+    _smoothPosition = finalPosition;
+    _targetPosition = finalPosition;
+    _lastEmittedPosition = finalPosition;
+    
+    // Actualizar ValueNotifier inmediatamente
+    globalPosition.value = finalPosition;
+    _lastPositionUpdate = DateTime.now();
+    
+    // Emitir posición final al stream (legacy)
+    if (!_smoothPositionController.isClosed) {
+      _smoothPositionController.add(finalPosition);
+    }
+    
+    // Mantener guard activo 500ms más para evitar flicker del stream
+    _seekingGuardTimer?.cancel();
+    _seekingGuardTimer = Timer(_seekingGuardDuration, () {
+      _isSeeking = false;
+      _userSeekPosition = null;
+      AppLogger.debug('[AudioService] 🛡️ Seeking guard desactivado');
+    });
+    
+    // Desbloquear persistencia después de delay
+    Timer(_persistenceDelayAfterSeek, () {
+      _persistenceBlockedAfterSeek = false;
+    });
+  }
+  
+  /// Verificar si está en modo seeking
+  bool get isSeeking => _isSeeking;
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🔄 BACKGROUND SYNC - Recalcular posición tras volver del background
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /// Notificar que la app entró en background
+  void onAppPaused() {
+    _wasPlayingWhenBackgrounded = player.playing;
+    _lastPositionUpdate = DateTime.now();
+    AppLogger.debug('[AudioService] 📱 App en background, playing=$_wasPlayingWhenBackgrounded');
+  }
+  
+  /// Notificar que la app volvió del background - recalcular posición
+  void onAppResumed() {
+    if (!_wasPlayingWhenBackgrounded) return;
+    
+    final now = DateTime.now();
+    final elapsed = now.difference(_lastPositionUpdate);
+    
+    if (elapsed.inSeconds < 1) return; // No hacer nada si pasó poco tiempo
+    
+    // Usar playbackEvent.updatePosition para posición exacta
+    final currentPosition = player.position;
+    final duration = player.duration;
+    
+    if (duration != null && currentPosition < duration) {
+      // Recalcular posición basada en tiempo transcurrido si está reproduciendo
+      Duration calculatedPosition;
+      if (player.playing) {
+        calculatedPosition = currentPosition;
+      } else {
+        // Si está pausado, usar la posición guardada
+        calculatedPosition = Duration(
+          milliseconds: _lastEmittedPosition.inMilliseconds + elapsed.inMilliseconds,
+        );
+        // Clamp al máximo
+        if (calculatedPosition > duration) {
+          calculatedPosition = duration;
+        }
+      }
+      
+      // Actualizar todas las fuentes
+      _smoothPosition = currentPosition;
+      _targetPosition = currentPosition;
+      _updateAllPositionSources(currentPosition);
+      
+      AppLogger.debug('[AudioService] 📱 App resumed, synced to ${currentPosition.inSeconds}s');
+    }
+    
+    _lastPositionUpdate = now;
+  }
+  
+  /// 🤝 INSTANT HAND-OFF: Obtener estado actual para traspaso entre widgets
+  /// Usado cuando el Mini Player se cierra para abrir el Extendido
+  ({Duration position, Duration duration, Duration buffered, bool isPlaying}) getInstantState() {
+    return (
+      position: globalPosition.value,
+      duration: globalDuration.value,
+      buffered: globalBuffered.value,
+      isPlaying: player.playing,
+    );
+  }
+  
+  /// Inicializar persistencia con Hive
+  Future<void> _initPersistence() async {
+    try {
+      if (!Hive.isBoxOpen(_persistenceBoxName)) {
+        _persistenceBox = await Hive.openBox(_persistenceBoxName);
+      } else {
+        _persistenceBox = Hive.box(_persistenceBoxName);
+      }
+      AppLogger.info('[AudioService] 💾 Persistencia inicializada');
+    } catch (e) {
+      AppLogger.error('[AudioService] Error inicializando persistencia: $e');
+    }
+  }
+  
+  /// Guardar estado de reproducción (debounced)
+  /// ⚠️ No guarda si hay seek reciente (evita guardar posición inestable)
+  void schedulePersistence(String? songId, int positionMs, List<String> queueIds, int currentIndex) {
+    // 🛡️ DEBOUNCE POST-SEEK: No guardar si hubo seek reciente
+    if (_persistenceBlockedAfterSeek) {
+      AppLogger.debug('[AudioService] 💾 Persistencia bloqueada (seek reciente)');
+      return;
+    }
+    
+    _persistenceDebouncer?.cancel();
+    _persistenceDebouncer = Timer(const Duration(seconds: 3), () {
+      // Verificar de nuevo antes de persistir
+      if (_persistenceBlockedAfterSeek || _isSeeking) {
+        AppLogger.debug('[AudioService] 💾 Persistencia cancelada (estado inestable)');
+        return;
+      }
+      _persistState(songId, positionMs, queueIds, currentIndex);
+    });
+  }
+  
+  Future<void> _persistState(String? songId, int positionMs, List<String> queueIds, int currentIndex) async {
+    if (_persistenceBox == null || songId == null) return;
+
+    try {
+      await _persistenceBox!.put('playback_state', {
+        'songId': songId,
+        'positionMs': positionMs,
+        'queueIds': queueIds,
+        'currentIndex': currentIndex,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      AppLogger.debug('[AudioService] 💾 Estado persistido: $songId @ ${positionMs}ms');
+    } catch (e) {
+      AppLogger.error('[AudioService] Error persistiendo estado: $e');
+    }
+  }
+  
+  /// Obtener estado persistido
+  /// 🎯 SYNC EN RESUME: Solo devuelve estado si el player está detenido
+  Future<Map<String, dynamic>?> getPersistedState({bool forceGet = false}) async {
+    if (_persistenceBox == null) return null;
+    
+    // 🛡️ SYNC EN RESUME: Si el audio ya está reproduciendo, ignorar persistencia
+    // Esto evita saltos hacia atrás al minimizar/maximizar
+    if (!forceGet && player.playing) {
+      AppLogger.debug('[AudioService] 💾 Ignorando estado persistido (audio activo)');
+      return null;
+    }
+
+    try {
+      final data = _persistenceBox!.get('playback_state');
+      if (data == null) return null;
+
+      final map = Map<String, dynamic>.from(data as Map);
+      final timestamp = DateTime.tryParse(map['timestamp'] as String? ?? '');
+      
+      // Válido por 7 días
+      if (timestamp != null && DateTime.now().difference(timestamp).inDays < 7) {
+        return map;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error('[AudioService] Error leyendo estado persistido: $e');
+      return null;
+    }
+  }
+  
+  /// Limpiar estado persistido
+  Future<void> clearPersistedState() async {
+    try {
+      await _persistenceBox?.delete('playback_state');
+    } catch (e) {
+      AppLogger.error('[AudioService] Error limpiando estado persistido: $e');
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════════════
+  // 📥 PRECARGA INTELIGENTE
+  // ═══════════════════════════════════════════════════════════════════════
+  
+  /// Iniciar monitor de precarga
+  void _startPreloadMonitor() {
+    _preloadMonitorTimer?.cancel();
+    _preloadMonitorTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) => _checkPreloadConditions(),
+    );
+  }
+  
+  /// Verificar condiciones de precarga
+  void _checkPreloadConditions() {
+    if (_isPreloading || !player.playing) return;
+    
+    final duration = player.duration;
+    final position = player.position;
+    if (duration == null || duration.inMilliseconds == 0) return;
+
+    final progress = position.inMilliseconds / duration.inMilliseconds;
+    
+    // Si estamos al 80% o más, notificar para precarga
+    if (progress >= _preloadThreshold) {
+      _notifyPreloadNeeded();
+    }
+  }
+  
+  /// Callback para notificar que se necesita precarga
+  void Function()? onPreloadNeeded;
+  
+  void _notifyPreloadNeeded() {
+    if (_isPreloading) return;
+    _isPreloading = true;
+    
+    onPreloadNeeded?.call();
+    
+    // Reset después de 5 segundos
+    Future.delayed(const Duration(seconds: 5), () {
+      _isPreloading = false;
+    });
+  }
+  
+  /// Marcar canción como precargada
+  void markAsPreloaded(String songId) {
+    _preloadedSongIds.add(songId);
+  }
+  
+  /// Verificar si canción ya fue precargada
+  bool isPreloaded(String songId) => _preloadedSongIds.contains(songId);
+  
+  /// Limpiar caché de precargas
+  void clearPreloadCache() => _preloadedSongIds.clear();
 
   /// Cargar una nueva cola de canciones
   /// 
@@ -208,10 +857,12 @@ class AudioService {
     }
   }
 
-  /// Buscar posición
+  /// Buscar posición (con actualización del stream suavizado)
   Future<void> seek(Duration position) async {
     try {
       await player.seek(position);
+      // 🎚️ Actualizar inmediatamente el stream suavizado para evitar salto visual
+      forceSmoothPositionUpdate(position);
       AppLogger.info('[AudioService] Buscando a: ${position.inSeconds}s');
     } catch (e) {
       AppLogger.error('[AudioService] Error al buscar: $e');
@@ -219,8 +870,18 @@ class AudioService {
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // ⚡ SKIP INSTANTÁNEO - Transiciones de track profesionales
+  // ═══════════════════════════════════════════════════════════════════════
+  
   /// ⚡ TRANSICIÓN INSTANTÁNEA: Siguiente canción optimizado
+  /// - UI Optimista: Resetea posición ANTES de esperar al reproductor
+  /// - Debounce de ráfaga: Si se presiona 5 veces rápido, salta directo al final
+  /// - Sin fade-out: Corte limpio de audio
   Future<void> next() async {
+    // ⚡ UI OPTIMISTA: Resetear posición INMEDIATAMENTE (antes de await)
+    _resetPositionForTrackChange();
+    
     try {
       if (player.hasNext) {
         // ⚡ CRÍTICO: seekToNext() es más rápido que stop() + play()
@@ -237,13 +898,110 @@ class AudioService {
       rethrow;
     }
   }
+  
+  /// ⚡ SKIP CON DEBOUNCE: Para ráfagas de clics rápidos
+  /// Si el usuario presiona 'Siguiente' múltiples veces rápido, 
+  /// salta directamente a la canción N sin cargar las intermedias
+  Future<void> nextWithDebounce({int skipCount = 1}) async {
+    final now = DateTime.now();
+    
+    // Acumular skips si están en ráfaga (menos de 150ms entre clics)
+    if (now.difference(_lastSkipRequest) < _skipDebounceDelay) {
+      _pendingSkipCount += skipCount;
+      _skipDebounceTimer?.cancel();
+      
+      // Esperar un poco más por si vienen más clics
+      _skipDebounceTimer = Timer(_skipDebounceDelay, () async {
+        await _executeAccumulatedSkips();
+      });
+      
+      AppLogger.debug('[AudioService] ⚡ Skip acumulado: $_pendingSkipCount total');
+    } else {
+      // Primer clic o clic después del debounce - ejecutar inmediatamente
+      _pendingSkipCount = skipCount;
+      await _executeAccumulatedSkips();
+    }
+    
+    _lastSkipRequest = now;
+  }
+  
+  /// Ejecutar los skips acumulados de una sola vez
+  Future<void> _executeAccumulatedSkips() async {
+    if (_isSkipping || _pendingSkipCount <= 0) return;
+    _isSkipping = true;
+    
+    final skipsToExecute = _pendingSkipCount;
+    _pendingSkipCount = 0;
+    _skipDebounceTimer?.cancel();
+    
+    // ⚡ UI OPTIMISTA: Resetear posición INMEDIATAMENTE
+    _resetPositionForTrackChange();
+    
+    try {
+      final sequenceState = player.sequenceState;
+      final currentIndex = sequenceState.currentIndex ?? 0;
+      final targetIndex = currentIndex + skipsToExecute;
+      final maxIndex = sequenceState.sequence.length - 1;
+      
+      if (targetIndex <= maxIndex) {
+        // Saltar directamente al índice objetivo (sin cargar intermedias)
+        AppLogger.info('[AudioService] ⚡ Saltando $skipsToExecute canciones: índice $currentIndex → $targetIndex');
+        await player.seek(Duration.zero, index: targetIndex);
+        await player.play();
+      } else if (player.hasNext) {
+        // Si el objetivo excede la cola, ir a la última
+        AppLogger.info('[AudioService] ⚡ Skip a última canción disponible');
+        await player.seek(Duration.zero, index: maxIndex);
+        await player.play();
+      }
+    } catch (e) {
+      AppLogger.error('[AudioService] Error en skip acumulado: $e');
+    } finally {
+      _isSkipping = false;
+    }
+  }
+  
+  /// ⚡ Resetear posición para cambio de track (UI Optimista)
+  /// ✅ FIX CRÍTICO: Ahora hace hard-reset INMEDIATO de ValueNotifiers
+  void _resetPositionForTrackChange() {
+    // Activar modo Zero-Jump para deshabilitar interpolación
+    _zeroJumpMode = true;
+    _trackJustChanged = true;
 
-  /// Canción anterior
+    // ✅ FIX CRÍTICO: Hard-reset INMEDIATO de todos los estados de posición
+    // Esto asegura que la UI muestre 0:00 instantáneamente al cambiar de canción
+    _smoothPosition = Duration.zero;
+    _targetPosition = Duration.zero;
+    _lastEmittedPosition = Duration.zero;
+    _userSeekPosition = null;
+    
+    // ✅ Actualizar ValueNotifier INMEDIATAMENTE (la UI escucha este valor)
+    globalPosition.value = Duration.zero;
+    _lastPositionUpdate = DateTime.now();
+    
+    // ✅ Emitir también al stream legacy para widgets que lo usen
+    if (!_smoothPositionController.isClosed) {
+      _smoothPositionController.add(Duration.zero);
+    }
+
+    // Desactivar Zero-Jump después de 200ms (permitir interpolación normal)
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _zeroJumpMode = false;
+    });
+
+    AppLogger.debug('[AudioService] ⚡ Zero-Jump + Hard-reset inmediato aplicado');
+  }
+
+  /// ⚡ Canción anterior optimizada
   Future<void> previous() async {
+    // ⚡ UI OPTIMISTA: Resetear posición INMEDIATAMENTE
+    _resetPositionForTrackChange();
+    
     try {
       if (player.hasPrevious) {
         await player.seekToPrevious();
-        AppLogger.info('[AudioService] Canción anterior');
+        await player.play();
+        AppLogger.info('[AudioService] ⚡ Transición instantánea a canción anterior');
       } else {
         // Si no hay anterior, volver al inicio
         await player.seek(Duration.zero);
@@ -303,6 +1061,39 @@ class AudioService {
       }
     } catch (e) {
       AppLogger.error('[AudioService] Error al agregar a la cola: $e');
+      rethrow;
+    }
+  }
+
+  /// 🎛️ VIBE SELECTOR: Limpiar la cola futura desde un índice específico
+  /// 
+  /// Útil cuando el usuario cambia de género/modo en el Vibe Selector.
+  /// Elimina todas las canciones después del índice especificado.
+  /// 
+  /// [fromIndex]: Índice desde el cual empezar a eliminar (inclusive)
+  Future<void> clearFutureQueue({required int fromIndex}) async {
+    try {
+      final currentSource = player.audioSource;
+      if (currentSource is ConcatenatingAudioSource) {
+        final totalLength = currentSource.length;
+        
+        if (fromIndex >= totalLength) {
+          AppLogger.debug('[AudioService] 🎛️ clearFutureQueue: No hay canciones para eliminar (fromIndex=$fromIndex >= length=$totalLength)');
+          return;
+        }
+
+        // Eliminar desde el final hacia fromIndex para evitar problemas de índices
+        final itemsToRemove = totalLength - fromIndex;
+        for (int i = totalLength - 1; i >= fromIndex; i--) {
+          await currentSource.removeAt(i);
+        }
+        
+        AppLogger.info('[AudioService] 🎛️ clearFutureQueue: Eliminadas $itemsToRemove canciones futuras');
+      } else {
+        AppLogger.warning('[AudioService] 🎛️ clearFutureQueue: No hay ConcatenatingAudioSource activo');
+      }
+    } catch (e) {
+      AppLogger.error('[AudioService] 🎛️ Error en clearFutureQueue: $e');
       rethrow;
     }
   }
@@ -567,8 +1358,31 @@ class AudioService {
   /// Liberar recursos
   Future<void> dispose() async {
     try {
+      // Cancelar timers
+      _smoothPositionTimer?.cancel();
+      _preloadMonitorTimer?.cancel();
+      _persistenceDebouncer?.cancel();
+      _seekingGuardTimer?.cancel(); // 🛡️ Timer del seeking guard
+      
+      // Cancelar suscripciones
+      await _positionSub?.cancel();
+      await _indexChangeSub?.cancel(); // 🔄 Suscripción de cambio de índice
+      for (final sub in _sessionSubscriptions) {
+        await sub.cancel();
+      }
+      _sessionSubscriptions.clear();
+      
+      // Cerrar stream controller
+      await _smoothPositionController.close();
+      
+      // Desactivar sesión de audio
+      try {
+        await _audioSession?.setActive(false);
+      } catch (_) {}
+      
+      // Liberar player
       await player.dispose();
-      AppLogger.info('[AudioService] Recursos liberados');
+      AppLogger.info('[AudioService] 🧹 Recursos liberados correctamente');
     } catch (e) {
       AppLogger.error('[AudioService] Error al liberar recursos: $e');
     }
@@ -580,10 +1394,87 @@ class AudioService {
 final audioServiceProvider = Provider<AudioService>((ref) {
   final service = AudioService();
   
+  // 🚀 Inicializar características profesionales
+  Future.microtask(() async {
+    await service.initProfessionalFeatures();
+  });
+  
   // Limpieza nativa al morir el Provider
   ref.onDispose(() {
     service.dispose();
   });
   
   return service;
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔌 PROVIDERS ADICIONALES PARA UI
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// 🌐 GLOBAL POSITION NOTIFIER PROVIDER: Single Source of Truth
+/// Más rápido que Stream, ambos widgets (Mini y Extendido) lo escuchan
+final globalPositionNotifierProvider = Provider<ValueNotifier<Duration>>((ref) {
+  final service = ref.watch(audioServiceProvider);
+  return service.globalPosition;
+});
+
+/// 🌐 GLOBAL DURATION NOTIFIER PROVIDER
+final globalDurationNotifierProvider = Provider<ValueNotifier<Duration>>((ref) {
+  final service = ref.watch(audioServiceProvider);
+  return service.globalDuration;
+});
+
+/// 🌐 GLOBAL BUFFERED NOTIFIER PROVIDER
+final globalBufferedNotifierProvider = Provider<ValueNotifier<Duration>>((ref) {
+  final service = ref.watch(audioServiceProvider);
+  return service.globalBuffered;
+});
+
+/// 📍 PERSISTENT STATE PROVIDER: Última posición conocida en memoria
+/// Usado como valor inicial del Seekbar para evitar saltos visuales
+final lastKnownPositionProvider = Provider<Duration>((ref) {
+  final service = ref.watch(audioServiceProvider);
+  return service.lastKnownPosition;
+});
+
+/// Provider del stream de posición suavizado (para Seekbar sin parpadeo)
+final smoothAudioPositionProvider = StreamProvider<Duration>((ref) {
+  final service = ref.watch(audioServiceProvider);
+  return service.smoothPositionStream;
+});
+
+/// Provider del stream de posición buffered
+final bufferedPositionProvider = StreamProvider<Duration>((ref) {
+  final service = ref.watch(audioServiceProvider);
+  return service.bufferedPositionStream;
+});
+
+/// Provider del progreso de reproducción (0.0 - 1.0)
+final playbackProgressProvider = Provider<double>((ref) {
+  final positionAsync = ref.watch(smoothAudioPositionProvider);
+  final service = ref.watch(audioServiceProvider);
+  final duration = service.player.duration;
+  
+  if (duration == null || duration.inMilliseconds == 0) return 0.0;
+  
+  return positionAsync.when(
+    data: (position) => (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0),
+    loading: () => 0.0,
+    error: (_, __) => 0.0,
+  );
+});
+
+/// Provider del progreso de buffer (0.0 - 1.0)
+final bufferProgressProvider = Provider<double>((ref) {
+  final bufferedAsync = ref.watch(bufferedPositionProvider);
+  final service = ref.watch(audioServiceProvider);
+  final duration = service.player.duration;
+  
+  if (duration == null || duration.inMilliseconds == 0) return 0.0;
+  
+  return bufferedAsync.when(
+    data: (buffered) => (buffered.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0),
+    loading: () => 0.0,
+    error: (_, __) => 0.0,
+  );
 });

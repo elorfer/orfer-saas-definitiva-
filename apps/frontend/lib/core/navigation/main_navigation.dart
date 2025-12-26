@@ -48,9 +48,11 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
     // ✅ OPTIMIZACIÓN: Solo escuchar cambios necesarios
-    final playbackState = ref.watch(unifiedAudioProviderFixed);
-    final currentSong = playbackState.currentSong;
-    final isPlayingAd = playbackState.isPlayingAd;
+    // ✅ FIX MINI PLAYER: Usar realCurrentSongProvider para consistencia con FinalMiniPlayer
+    final currentSong = ref.watch(realCurrentSongProvider);
+    final isPlayingAd = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
+    );
     
     // ✅ Usar valores cacheados - NUNCA recalcular
     final navBarHeight = _cachedNavBarHeight ?? 80.0;
@@ -80,35 +82,40 @@ class _MainNavigationState extends ConsumerState<MainNavigation>
             ),
           ),
           
-          // 📢 Mini Player de Anuncios (prioridad sobre el mini player normal)
-          if (isPlayingAd)
+          // 📢 Mini Player con transición suave entre anuncio y canción
+          if (isPlayingAd || currentSong != null)
             Positioned(
               bottom: navBarHeight,
               left: 0,
               right: 0,
               child: RepaintBoundary(
-                child: AdsMiniPlayer(
-                  // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
-                  onTap: () => PlayerNavigationService.openFullPlayer(
-                    context: context,
-                    ref: ref,
-                  ),
-                ),
-              ),
-            )
-          // Mini Player normal (solo cuando no hay anuncio)
-          else if (currentSong != null)
-            Positioned(
-              bottom: navBarHeight, // Ajustado para la nueva altura de barra
-              left: 0,
-              right: 0,
-              child: RepaintBoundary(
-                child: FinalMiniPlayer(
-                  // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
-                  onTap: () => PlayerNavigationService.openFullPlayer(
-                    context: context,
-                    ref: ref,
-                  ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  },
+                  // 🆕 FIX PARPADEO: Keys simplificadas que solo distinguen anuncio vs canción
+                  // Esto evita reconstrucciones innecesarias cuando cambia el ID
+                  child: isPlayingAd
+                      ? AdsMiniPlayer(
+                          key: const ValueKey('ad_mini_player'),
+                          onTap: () => PlayerNavigationService.openFullPlayer(
+                            context: context,
+                            ref: ref,
+                          ),
+                        )
+                      : FinalMiniPlayer(
+                          key: const ValueKey('song_mini_player'),
+                          onTap: () => PlayerNavigationService.openFullPlayer(
+                            context: context,
+                            ref: ref,
+                          ),
+                        ),
                 ),
               ),
             ),

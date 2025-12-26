@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/song_model.dart';
 import '../utils/url_normalizer.dart';
+import 'http_cache_service.dart';
 
 class ImagePreloaderService {
   static final ImagePreloaderService _instance = ImagePreloaderService._internal();
@@ -46,10 +47,11 @@ class ImagePreloaderService {
         CachedNetworkImageProvider(
           normalizedUrl,
           cacheKey: normalizedUrl,
+          cacheManager: AlbumArtCacheManager.instance, // ✅ Cache manager con persistencia de 90 días
           // Headers optimizados para carga rápida
           headers: const {
             'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
-            'Cache-Control': 'max-age=86400', // Cache por 24 horas
+            'Cache-Control': 'max-age=7776000', // ✅ 90 días en segundos
           },
         ),
         context,
@@ -88,6 +90,7 @@ class ImagePreloaderService {
         CachedNetworkImageProvider(
           normalizedUrl,
           cacheKey: normalizedUrl,
+          cacheManager: AlbumArtCacheManager.instance, // ✅ Cache manager con persistencia de 90 días
         ),
         context,
       );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/url_normalizer.dart';
 import '../theme/neumorphism_theme.dart';
+import '../services/http_cache_service.dart';
 
 /// Widget optimizado para fondo de reproductor con precarga y transiciones suaves
 /// Elimina parpadeos al cambiar de canción
@@ -77,7 +78,10 @@ class _OptimizedBackgroundImageState extends State<OptimizedBackgroundImage> {
 
     // Precargar imagen antes de mostrarla
     try {
-      final imageProvider = CachedNetworkImageProvider(normalizedUrl);
+      final imageProvider = CachedNetworkImageProvider(
+        normalizedUrl,
+        cacheManager: AlbumArtCacheManager.instance, // ✅ Cache manager con persistencia de 90 días
+      );
       
       // Precargar la imagen
       await precacheImage(imageProvider, context);
@@ -108,8 +112,12 @@ class _OptimizedBackgroundImageState extends State<OptimizedBackgroundImage> {
         switchInCurve: Curves.easeInOut,
         switchOutCurve: Curves.easeInOut,
         transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
+          final offsetAnimation = Tween<Offset>(
+            begin: const Offset(0, 0.02),
+            end: Offset.zero,
+          ).animate(animation);
+          return SlideTransition(
+            position: offsetAnimation,
             child: child,
           );
         },
@@ -138,6 +146,7 @@ class _OptimizedBackgroundImageState extends State<OptimizedBackgroundImage> {
       child: CachedNetworkImage(
         key: ValueKey(imageUrl),
         imageUrl: imageUrl,
+        cacheManager: AlbumArtCacheManager.instance, // ✅ Cache manager con persistencia de 90 días
         fit: widget.fit,
         fadeInDuration: Duration.zero, // Ya precargada
         fadeOutDuration: Duration.zero,

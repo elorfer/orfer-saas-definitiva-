@@ -118,14 +118,18 @@ class SpotifyPageTransitions {
 /// Helper para crear CustomTransitionPage optimizado
 /// go_router mantiene el estado automáticamente usando las keys
 CustomTransitionPage<T> createCustomTransitionPage<T>({
-  required LocalKey key,
+  LocalKey? key,
   required Widget child,
   required Widget Function(BuildContext, Animation<double>, Animation<double>, Widget) transitionsBuilder,
   Duration transitionDuration = const Duration(milliseconds: 200),
   Duration reverseTransitionDuration = const Duration(milliseconds: 150),
 }) {
+  // NOTE: Avoid forcing manual page keys here to prevent duplicate key
+  // reservations across multiple navigators. GoRouter provides stable
+  // page identity; omitting explicit keys prevents the '!keyReservation.contains(key)'
+  // assertion when multiple navigators are active.
   return CustomTransitionPage<T>(
-    key: key,
+    // Intentionally not setting the key to avoid duplicate reservations
     child: child,
     transitionsBuilder: transitionsBuilder,
     transitionDuration: transitionDuration,
@@ -136,11 +140,11 @@ CustomTransitionPage<T> createCustomTransitionPage<T>({
 /// Helper para crear NoTransitionPage optimizado
 /// go_router mantiene el estado automáticamente usando las keys
 NoTransitionPage<T> createNoTransitionPage<T>({
-  required LocalKey key,
+  LocalKey? key,
   required Widget child,
 }) {
+  // See note in createCustomTransitionPage: avoid setting explicit keys
   return NoTransitionPage<T>(
-    key: key,
     child: child,
   );
 }

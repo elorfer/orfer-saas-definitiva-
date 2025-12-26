@@ -126,6 +126,7 @@ class HomeState {
 }
 
 /// Notifier para manejar el estado de la pantalla de inicio
+/// 🔥 OPTIMIZACIÓN: Usa keepAlive para persistir datos entre cambios de pestaña
 class HomeNotifier extends Notifier<HomeState> {
   late final HomeService _homeService;
   static const String _cacheKey = 'home_state_cache_v1';
@@ -137,19 +138,35 @@ class HomeNotifier extends Notifier<HomeState> {
 
   @override
   HomeState build() {
+    // 🔥 CRÍTICO: keepAlive para evitar destrucción al cambiar de pestaña
+    // Esto evita llamadas innecesarias al backend y mantiene el estado
+    ref.keepAlive();
+    
     _homeService = ref.read(homeServiceProvider);
-    // Inicializar de forma asíncrona y rehidratar desde disco antes de ir a red
-    Future.microtask(() async {
-      await _loadFromCacheIfNeeded();
-      await _initialize();
+    // ✅ FIX PARPADEO: Cargar cache primero (síncrono) para mostrar datos inmediatamente
+    // Solo inicializar si no hay datos ya cargados
+    _loadFromCacheIfNeeded().then((hasValidCache) {
+      // ✅ FIX: Solo inicializar si no hay cache válido
+      // Esto evita recargar datos cuando ya están en memoria o cache
+      if (!hasValidCache) {
+        _initialize();
+      }
     });
-    return const HomeState(isLoading: true);
+    // ⚡ FIX PARPADEO: Retornar estado sin loading para evitar skeleton innecesario
+    // El loading se activa solo durante refresh manual (pull-to-refresh)
+    return const HomeState(isLoading: false);
   }
 
   /// Inicializar el servicio y cargar datos
   Future<void> _initialize() async {
     try {
-      await _homeService.initialize();
+      // ✅ OPTIMIZACIÓN: No esperar initialize() - se inicializa lazy cuando se necesita
+      // El httpClient se inicializa automáticamente en la primera llamada
+      // Esto ahorra tiempo en el startup
+      _homeService.initialize().catchError((_) {
+        // Si falla, continuar de todas formas - se inicializará cuando se necesite
+      });
+      // Cargar datos (el servicio se inicializará lazy si es necesario)
       await loadHomeData();
     } catch (e) {
       state = state.copyWith(
@@ -170,55 +187,61 @@ class HomeNotifier extends Notifier<HomeState> {
       // _writeDebugLog('home_provider.dart:152', 'loadHomeData started', {'forceRefresh': forceRefresh}, 'C');
       // #endregion
       
-      // Mantener datos actuales para evitar parpadeos; solo marcar loading
-      state = state.copyWith(isLoading: true, error: null);
+      // ⚡ FIX PARPADEO: Solo mostrar loading si no hay datos actuales
+      // Si ya hay datos, mantenerlos visibles durante la recarga
+      final hasExistingData = !state.isEmpty;
+      if (!hasExistingData) {
+        state = state.copyWith(isLoading: true, error: null);
+      } else {
+        // Solo limpiar error, mantener isLoading: false para evitar parpadeo
+        state = state.copyWith(error: null);
+      }
 
-      // 🔥 FIX: Carga progresiva - cargar primero lo que el usuario ve primero
-      // Fase 1: Cargar datos críticos (lo que aparece primero en pantalla)
+      // ✅ OPTIMIZACIÓN: Carga progresiva ultra-rápida - solo lo mínimo esencial
+      // Fase 1: Cargar SOLO lo que aparece primero en pantalla (artistas)
       List<FeaturedArtist> featuredArtists = [];
-      List<FeaturedSong> featuredSongs = [];
-      HomeMessage? homeMessage;
       
-      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
-      // #region agent log
-      // final phase1StartTime = DateTime.now().millisecondsSinceEpoch;
-      // #endregion
+      // ✅ OPTIMIZACIÓN: Cargar solo artistas primero (lo que se ve primero)
+      try {
+        featuredArtists = await _homeService.getFeaturedArtists(limit: 6, forceRefresh: forceRefresh);
+      } catch (_) {
+        featuredArtists = [];
+      }
       
-      // Cargar solo lo esencial primero (artistas y canciones destacadas)
-      await Future.wait([
-        _homeService.getFeaturedArtists(limit: 6, forceRefresh: forceRefresh).then((value) => featuredArtists = value).catchError((_) => <FeaturedArtist>[]),
-        _homeService.getFeaturedSongs(limit: 20, forceRefresh: forceRefresh).then((value) => featuredSongs = value).catchError((_) => <FeaturedSong>[]),
-        _homeService.getHomeMessage(forceRefresh: forceRefresh).then((value) => homeMessage = value).catchError((_) => null),
-      ]);
-      
-      // Actualizar estado con datos críticos inmediatamente
+      // ✅ OPTIMIZACIÓN: Actualizar estado inmediatamente con artistas para mostrar algo rápido
       state = state.copyWith(
         featuredArtists: featuredArtists,
-        featuredSongs: featuredSongs,
-        homeMessage: homeMessage,
-      );
-      
-      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
-      // #region agent log
-      // final phase1EndTime = DateTime.now().millisecondsSinceEpoch;
-      // _writeDebugLog('home_provider.dart:177', 'Phase 1 (critical) completed', {'duration': phase1EndTime - phase1StartTime}, 'C');
-      // #endregion
-      
-      // Fase 2: Cargar datos secundarios (playlists y otros) de forma asíncrona
-      List<FeaturedPlaylist> featuredPlaylists = [];
-      List<Song> popularSongs = [];
-      List<Artist> topArtists = [];
-      
-      // Marcar como inicializado con datos críticos ya cargados
-      state = state.copyWith(
         isLoading: false,
         isInitialized: true,
       );
       
-      // Guardar cache inicial con datos críticos (con throttle)
-      await _saveToCacheThrottled(state);
+      // ✅ OPTIMIZACIÓN: Guardar cache rápido con artistas (aunque no haya más datos aún)
+      _saveToCacheThrottled(state);
       
-      // Cargar el resto en paralelo de forma asíncrona (sin bloquear)
+      // Fase 2: Cargar canciones destacadas y mensaje (aparecen después en el scroll)
+      List<FeaturedSong> featuredSongs = [];
+      HomeMessage? homeMessage;
+      
+      Future.wait([
+        _homeService.getFeaturedSongs(limit: 20, forceRefresh: forceRefresh).then((value) => featuredSongs = value).catchError((_) => <FeaturedSong>[]),
+        _homeService.getHomeMessage(forceRefresh: forceRefresh).then((value) => homeMessage = value).catchError((_) => null),
+      ]).then((_) {
+        // Actualizar estado con canciones y mensaje cuando estén listos
+        state = state.copyWith(
+          featuredSongs: featuredSongs,
+          homeMessage: homeMessage,
+        );
+        _saveToCacheThrottled(state);
+      });
+      
+      // ✅ OPTIMIZACIÓN: Fase 3 - Cargar datos secundarios (playlists, popular, top) solo cuando sean necesarios
+      // Estos datos se cargan de forma lazy cuando el usuario hace scroll hacia abajo
+      // Por ahora, los cargamos en background pero con menor prioridad
+      List<FeaturedPlaylist> featuredPlaylists = [];
+      List<Song> popularSongs = [];
+      List<Artist> topArtists = [];
+      
+      // Cargar el resto en paralelo de forma asíncrona (sin bloquear, baja prioridad)
       Future.wait([
         _homeService.getFeaturedPlaylists(limit: 6).then((value) => featuredPlaylists = value).catchError((_) => <FeaturedPlaylist>[]),
         _homeService.getPopularSongs(limit: 10).then((value) => popularSongs = value).catchError((_) => <Song>[]),
@@ -250,8 +273,14 @@ class HomeNotifier extends Notifier<HomeState> {
   }
 
   /// Refrescar datos (forzar refresh sin caché)
+  /// ⚡ FIX PARPADEO: Solo este método muestra loading (pull-to-refresh explícito)
   Future<void> refresh() async {
+    // Mostrar loading solo en refresh explícito del usuario
+    state = state.copyWith(isLoading: true);
     await loadHomeData(forceRefresh: true);
+    // Asegurar que las playlists se refrescan también durante el pull-to-refresh
+    // Llamamos explícitamente para forzar actualización inmediata de la sección
+    await loadFeaturedPlaylists();
   }
 
   /// Cargar solo artistas destacados
@@ -292,35 +321,101 @@ class HomeNotifier extends Notifier<HomeState> {
     state = state.copyWith(error: null);
   }
 
-  Future<void> _loadFromCacheIfNeeded() async {
-    if (_hasLoadedCache) return;
+  /// ✅ OPTIMIZACIÓN: Cargar cache de forma más eficiente y rápida
+  /// Retorna true si se cargó cache válido, false si no había cache o expiró
+  Future<bool> _loadFromCacheIfNeeded() async {
+    if (_hasLoadedCache) {
+      // Si ya hay estado inicializado, retornar true (hay datos)
+      return state.isInitialized && !state.isEmpty;
+    }
     _hasLoadedCache = true;
+    
     try {
       final prefs = await SharedPreferences.getInstance();
       final cachedJson = prefs.getString(_cacheKey);
-      if (cachedJson == null || cachedJson.isEmpty) return;
+      
+      if (cachedJson == null || cachedJson.isEmpty) {
+        // Si no hay cache, retornar false (no hay datos)
+        return false;
+      }
 
       final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
       final timestampStr = decoded['timestamp'] as String?;
-      if (timestampStr == null) return;
+      
+      if (timestampStr == null) {
+        // Cache inválido, retornar false
+        return false;
+      }
 
       final timestamp = DateTime.tryParse(timestampStr);
-      if (timestamp == null) return;
+      if (timestamp == null) {
+        // Cache inválido, retornar false
+        return false;
+      }
 
       final isExpired = DateTime.now().difference(timestamp) > _cacheTtl;
-      if (isExpired) return;
+      if (isExpired) {
+        // Cache expirado, retornar false
+        return false;
+      }
 
-      final cachedState =
-          HomeState.fromJson(Map<String, dynamic>.from(decoded));
-      if (cachedState != null && (cachedState.isEmpty == false)) {
+      final decodedMap = Map<String, dynamic>.from(decoded);
+
+      // Parse popular songs in an isolate to avoid blocking the UI thread
+      final popularSongsJson = (decodedMap['popularSongs'] as List<dynamic>?) ?? [];
+      List<Song> popularSongs = [];
+      try {
+        popularSongs = await Song.parseList(popularSongsJson);
+      } catch (_) {
+        // Fallback synchronous parse
+        popularSongs = (popularSongsJson)
+            .map((e) => Song.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+      }
+
+      final cachedState = HomeState(
+        featuredArtists: (decodedMap['featuredArtists'] as List<dynamic>?)
+                ?.map((e) => FeaturedArtist.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        featuredSongs: (decodedMap['featuredSongs'] as List<dynamic>?)
+                ?.map((e) => FeaturedSong.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        featuredPlaylists: (decodedMap['featuredPlaylists'] as List<dynamic>?)
+                ?.map((e) => FeaturedPlaylist.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        popularSongs: popularSongs,
+        topArtists: (decodedMap['topArtists'] as List<dynamic>?)
+                ?.map((e) => Artist.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList() ??
+            const [],
+        homeMessage: decodedMap['homeMessage'] != null
+            ? HomeMessage.fromJson(Map<String, dynamic>.from(decodedMap['homeMessage'] as Map))
+            : null,
+        isLoading: decodedMap['isLoading'] as bool? ?? false,
+        error: decodedMap['error'] as String?,
+        isInitialized: decodedMap['isInitialized'] as bool? ?? false,
+      );
+
+      if (!cachedState.isEmpty) {
+        // ✅ OPTIMIZACIÓN: Mostrar cache inmediatamente (sin isLoading para evitar skeleton)
         state = cachedState.copyWith(
           isLoading: false,
           error: null,
           isInitialized: true,
         );
+        // ✅ FIX: No recargar datos automáticamente si ya hay cache válido
+        // Solo recargar si el usuario hace pull-to-refresh
+        return true; // Cache válido cargado
+      } else {
+        // Cache inválido, retornar false
+        return false;
       }
     } catch (_) {
-      // Si falla la lectura, continuamos sin cache
+      // Si falla la lectura, retornar false
+      return false;
     }
   }
 

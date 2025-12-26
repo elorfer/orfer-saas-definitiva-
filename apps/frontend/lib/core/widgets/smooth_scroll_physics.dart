@@ -26,6 +26,7 @@ class SmoothScrollPhysics extends ClampingScrollPhysics {
     double velocity,
   ) {
     // Si la velocidad es muy baja, no crear simulación (detener inmediatamente)
+    final tolerance = toleranceFor(position);
     if (velocity.abs() < tolerance.velocity) {
       return null;
     }

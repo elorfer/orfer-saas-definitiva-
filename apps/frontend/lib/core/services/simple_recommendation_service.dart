@@ -55,7 +55,7 @@ class SimpleRecommendationService {
             return null;
           }
           
-          final song = Song.fromJson(songData);
+          final song = await Song.parse(songData);
           AppLogger.info('[SimpleRecommendation] ✅ ÉXITO: Siguiente canción encontrada');
           AppLogger.info('[SimpleRecommendation] 🎵 Título: ${song.title}');
           AppLogger.info('[SimpleRecommendation] 🏷️ Géneros de la recomendación: ${song.genres?.join(', ') ?? 'ninguno'}');

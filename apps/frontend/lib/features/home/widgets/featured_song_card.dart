@@ -1,46 +1,23 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/number_formatter.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/widgets/play_button_card.dart';
 import '../../../core/services/audio_cache_service.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/verified_badge.dart';
+import '../../../core/providers/unified_audio_provider_fixed.dart';
 
 /// 🚀 TARJETA OPTIMIZADA DE CANCIÓN DESTACADA
 /// Implementa optimizaciones de rendimiento:
 /// - Const constructors donde sea posible
 /// - Widgets inmutables para mejor caché
 /// - Lazy loading de imágenes
-class FeaturedSongCard extends ConsumerWidget {
+class FeaturedSongCard extends ConsumerStatefulWidget {
   final FeaturedSong featuredSong;
   final VoidCallback? onTap;
   final bool precacheAudio;
-
-  // Estilos cacheados para evitar recrearlos por ítem
-  static final TextStyle _titleStyle = GoogleFonts.inter(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-    color: NeumorphismTheme.textPrimary,
-    letterSpacing: -0.3,
-  );
-
-  static final TextStyle _artistStyle = GoogleFonts.inter(
-    fontSize: 13,
-    color: NeumorphismTheme.textSecondary,
-    fontWeight: FontWeight.w400,
-  );
-
-  static final TextStyle _metaStyle = GoogleFonts.inter(
-    fontSize: 12,
-    color: NeumorphismTheme.textSecondary.withValues(alpha: 0.8),
-    fontWeight: FontWeight.w500,
-    height: 1.0,
-  );
 
   const FeaturedSongCard({
     super.key,
@@ -50,159 +27,166 @@ class FeaturedSongCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final song = featuredSong.song;
+  ConsumerState<FeaturedSongCard> createState() => _FeaturedSongCardState();
+}
 
-    // ⚡ Precarga de audio opcional (solo cuando se indique desde la sección)
-    if (precacheAudio && song.fileUrl != null && song.fileUrl!.isNotEmpty) {
+class _FeaturedSongCardState extends ConsumerState<FeaturedSongCard> {
+  static const TextStyle _titleStyle = TextStyle(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.3,
+  );
+
+  static const TextStyle _metaStyle = TextStyle(
+    fontSize: 12,
+    color: Color(0xCC8B7A6A),
+    fontWeight: FontWeight.w500,
+    height: 1.0,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _handlePrecache();
+  }
+
+  void _handlePrecache() {
+    final song = widget.featuredSong.song;
+    if (widget.precacheAudio && song.fileUrl != null && song.fileUrl!.isNotEmpty) {
       final normalizedUrl = UrlNormalizer.normalizeUrl(song.fileUrl!);
-      // Precargar en background sin bloquear UI
       AudioCacheManager.precacheAudio(normalizedUrl);
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle artistStyle = Theme.of(context)
+        .textTheme
+        .bodyMedium
+        ?.copyWith(fontSize: 13, fontWeight: FontWeight.w400, color: NeumorphismTheme.textSecondary) ??
+      const TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: Color(0xFF756860));
+    final song = widget.featuredSong.song;
+
+    // Granularidad: solo repintar el botón de play si cambia el estado de reproducción de esta canción
+    final isPlaying = ref.watch(
+      unifiedAudioProviderFixed.select(
+        (s) => s.currentSong?.id == song.id && s.isPlaying,
+      ),
+    );
     return RepaintBoundary(
       child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: NeumorphismTheme.surface.withValues(alpha: 0.6),
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
-        border: Border.all(
-          color: NeumorphismTheme.accent.withValues(alpha: 0.1),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: NeumorphismTheme.accent.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          border: Border.all(
+            color: NeumorphismTheme.accent.withValues(alpha: 0.08),
+            width: 1,
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            if (onTap != null) {
-              onTap!();
-            }
-          },
-          borderRadius: const BorderRadius.all(Radius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Portada de la canción
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(12)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () {
+              if (widget.onTap != null) {
+                widget.onTap!();
+              }
+            },
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
+                      child: OptimizedImage(
+                        imageUrl: song.coverArtUrl,
+                        fit: BoxFit.cover,
+                        width: 56,
+                        height: 56,
+                        borderRadius: 12,
+                        placeholderColor: NeumorphismTheme.accentLight,
+                        maxCacheWidth: 140,
+                        maxCacheHeight: 140,
+                        skipFade: true,
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.all(Radius.circular(12)),
-                    child: OptimizedImage(
-                      imageUrl: song.coverArtUrl,
-                      fit: BoxFit.cover,
-                      width: 56,
-                      height: 56,
-                      borderRadius: 12,
-                      placeholderColor: NeumorphismTheme.accentLight,
-                      maxCacheWidth: 200,
-                      maxCacheHeight: 200,
-                      skipFade: true,
                     ),
                   ),
-                ),
-                
-                const SizedBox(width: 16),
-                
-                // Información de la canción
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        song.title ?? 'Canción Sin Título',
-                        style: _titleStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      
-                      const SizedBox(height: 4),
-                      
-                      // Nombre del artista con badge de verificación
-                      if (song.artist != null)
-                        ArtistNameWithBadge(
-                          artistName: _getArtistName(song),
-                          isVerified: song.artist!.isVerifiedValue,
-                          textStyle: _artistStyle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          badgeSize: 12.0,
-                        )
-                      else
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          _getArtistName(song),
-                          style: _artistStyle,
+                          song.title ?? 'Canción Sin Título',
+                          style: _titleStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      
-                      const SizedBox(height: 4),
-                      
-                      // Mostrar streams y duración - Siempre visible (incluyendo 0)
-                      Builder(
-                        builder: (context) {
-                          // DEBUG: Verificar valor
-                          if (kDebugMode && song.totalStreams > 0) {
-                            debugPrint('[FeaturedSongCard] ${song.title}: totalStreams=${song.totalStreams}');
-                          }
-                          
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              const Icon(
-                                Icons.play_arrow_rounded,
-                                size: 16,
-                                color: NeumorphismTheme.accent,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${NumberFormatter.format(song.totalStreams)} • ${song.durationFormatted}',
-                                style: _metaStyle,
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        if (song.artist != null)
+                          ArtistNameWithBadge(
+                            artistName: _getArtistName(song),
+                            isVerified: song.artist!.isVerifiedValue,
+                            textStyle: artistStyle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            badgeSize: 12.0,
+                          )
+                        else
+                          Text(
+                            _getArtistName(song),
+                            style: artistStyle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        const SizedBox(height: 4),
+                        Builder(
+                          builder: (context) {
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                const Icon(
+                                  Icons.play_arrow_rounded,
+                                  size: 16,
+                                  color: NeumorphismTheme.accent,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${NumberFormatter.format(song.totalStreams)} • ${song.durationFormatted}',
+                                  style: _metaStyle,
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // ⚡ Botón de play optimizado (solo actualiza ícono)
-                PlayButtonCard(
-                  song: song,
-                  size: 40,
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  // Botón de play granular
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: isPlaying
+                        ? Icon(Icons.pause_rounded, color: NeumorphismTheme.accent, size: 32)
+                        : Icon(Icons.play_arrow_rounded, color: NeumorphismTheme.accent, size: 32),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-      ),
     );
   }
-
 
   String _getArtistName(Song song) {
     if (song.artist != null) {

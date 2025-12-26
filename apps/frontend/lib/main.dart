@@ -94,7 +94,7 @@ class _VintageMusicAppState extends ConsumerState<VintageMusicApp> {
     } catch (_) {}
     
     try {
-      await ImageCacheManager.ensureInitialized();
+      await AlbumArtCacheManager.ensureInitialized();
     } catch (_) {}
   }
 

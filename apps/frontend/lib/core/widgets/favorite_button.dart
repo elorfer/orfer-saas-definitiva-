@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/favorites_provider.dart';
+import '../models/song_model.dart';
 import '../utils/logger.dart';
 
 /// Botón de favorito optimizado con animación sencilla y eficiente
 /// Animación simple de escala tipo "bounce" rápido
 class FavoriteButton extends ConsumerStatefulWidget {
   final String songId;
+  final Song? song; // ✅ Opcional: datos completos de la canción para actualizar lista de favoritos inmediatamente
   final bool? isFavorite; // Opcional: si se proporciona, se usa este valor inicial
   final Color? iconColor;
   final double? iconSize;
@@ -15,6 +17,7 @@ class FavoriteButton extends ConsumerStatefulWidget {
   const FavoriteButton({
     super.key,
     required this.songId,
+    this.song,
     this.isFavorite,
     this.iconColor,
     this.iconSize,
@@ -68,12 +71,20 @@ class _FavoriteButtonState extends ConsumerState<FavoriteButton>
     });
 
     try {
-      // 🆕 Animación simple: escala hacia arriba y luego vuelve
-      await _scaleController.forward();
-      await _scaleController.reverse();
-
-      // Toggle en el provider
-      await ref.read(favoritesProvider.notifier).toggleFavorite(widget.songId);
+      // ✅ OPTIMIZACIÓN: Toggle INMEDIATAMENTE (optimistic update primero)
+      // Esto hace que la UI responda instantáneamente
+      // ✅ CRÍTICO: Pasar los datos de la canción si están disponibles para actualizar lista inmediatamente
+      final toggleFuture = ref.read(favoritesProvider.notifier).toggleFavorite(
+        widget.songId,
+        songData: widget.song,
+      );
+      
+      // ✅ OPTIMIZACIÓN: Ejecutar animación en paralelo (no bloquear)
+      // La animación es solo visual, no necesita esperar
+      _scaleController.forward().then((_) => _scaleController.reverse());
+      
+      // Esperar a que el toggle complete (pero la UI ya se actualizó)
+      await toggleFuture;
 
       // Callback opcional
       widget.onToggle?.call();

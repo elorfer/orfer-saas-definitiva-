@@ -15,7 +15,7 @@ class SimpleSongPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentSong = ref.watch(currentSongProviderFixed);
+    final currentSong = ref.watch(realCurrentSongProvider);
     final isPlaying = ref.watch(isPlayingProviderFixed);
 
     return Card(

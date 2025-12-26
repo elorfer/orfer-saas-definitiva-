@@ -196,8 +196,17 @@ class HomeService {
           options: options,
         ),
       );
+      // Depuración: imprimir solo status y tamaño de body (sin volcar el contenido)
+      try {
+        final status = response.statusCode;
+        final body = response.data;
+        final bodyStr = body is String ? body : body.toString();
+        debugPrint('🔍 [HomeService] GET $url status=$status bodyLen=${bodyStr.length}');
+        // NOTA: Evitamos imprimir el contenido del body en modo profile/release
+        // porque volcar JSON grande en la consola bloquea el hilo UI.
+      } catch (_) {}
 
-        if (ResponseParser.isSuccess(response)) {
+      if (ResponseParser.isSuccess(response)) {
           // Usar ResponseParser para extraer la lista
           final data = ResponseParser.extractList(response, listKey: 'songs');
           
@@ -208,52 +217,51 @@ class HomeService {
           // Validar y parsear usando ResponseParser y DataNormalizer
           final validData = ResponseParser.validateList(data);
           
-          final parsedSongs = ResponseParser.parseList<FeaturedSong>(
-            data: validData,
-            parser: (songData) {
-              // CORRECCIÓN CRÍTICA: Asegurar que fileUrl se mapee correctamente
-              if (songData['fileUrl'] != null && songData['file_url'] == null) {
-                songData['file_url'] = songData['fileUrl'];
-              }
-              
-              // Usar DataNormalizer para normalizar la canción
-              final normalizedSong = DataNormalizer.normalizeSong(songData);
-              
-              // CORRECCIÓN ADICIONAL: Si aún no hay file_url, usar fileUrl original
-              if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') && 
-                  songData['fileUrl'] != null) {
-                normalizedSong['file_url'] = songData['fileUrl'];
-                normalizedSong['fileUrl'] = songData['fileUrl'];
-              }
-              
-              // Normalizar URL de portada
-              final rawCoverUrl = normalizedSong['cover_art_url'] as String?;
-              final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
-              if (normalizedCoverUrl != null) {
-                normalizedSong['cover_art_url'] = normalizedCoverUrl;
-              }
-              
-              // IMPORTANTE: También normalizar URL del archivo de audio
-              final rawFileUrl = normalizedSong['file_url'] as String?;
-              if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
-                final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
-                normalizedSong['file_url'] = normalizedFileUrl;
-                normalizedSong['fileUrl'] = normalizedFileUrl; // También mantener camelCase
-              }
-              
-              final song = Song.fromJson(normalizedSong);
-              
-              final featuredSong = FeaturedSong(
-                song: song,
-                featuredReason: 'Destacada por el administrador',
-                rank: validData.indexOf(songData) + 1,
-              );
-              
-              return featuredSong;
-            },
-            logErrors: false,
-          );
-          
+          // Primero normalizar todas las entradas en memoria (rápido)
+          final normalizedList = <Map<String, dynamic>>[];
+          for (int i = 0; i < validData.length; i++) {
+            final songData = Map<String, dynamic>.from(validData[i]);
+
+            if (songData['fileUrl'] != null && songData['file_url'] == null) {
+              songData['file_url'] = songData['fileUrl'];
+            }
+
+            final normalizedSong = DataNormalizer.normalizeSong(songData);
+
+            if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') &&
+                songData['fileUrl'] != null) {
+              normalizedSong['file_url'] = songData['fileUrl'];
+              normalizedSong['fileUrl'] = songData['fileUrl'];
+            }
+
+            final rawCoverUrl = normalizedSong['cover_art_url'] as String?;
+            final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
+            if (normalizedCoverUrl != null) {
+              normalizedSong['cover_art_url'] = normalizedCoverUrl;
+            }
+
+            final rawFileUrl = normalizedSong['file_url'] as String?;
+            if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
+              final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
+              normalizedSong['file_url'] = normalizedFileUrl;
+              normalizedSong['fileUrl'] = normalizedFileUrl;
+            }
+
+            normalizedList.add(normalizedSong);
+          }
+
+          // Parsear todas las canciones en un isolate para no bloquear el UI thread
+          final songs = await Song.parseList(normalizedList);
+
+          final parsedSongs = <FeaturedSong>[];
+          for (int i = 0; i < songs.length; i++) {
+            parsedSongs.add(FeaturedSong(
+              song: songs[i],
+              featuredReason: 'Destacada por el administrador',
+              rank: i + 1,
+            ));
+          }
+
           return parsedSongs;
       } else {
         return [];
@@ -360,7 +368,7 @@ class HomeService {
           normalizedSong['cover_art_url'] = normalizedCoverUrl;
         }
         
-        final song = Song.fromJson(normalizedSong);
+        final song = await Song.parse(normalizedSong);
         return song;
       } else {
         return null;
@@ -395,14 +403,21 @@ class HomeService {
           return [];
         }
         
-        return ResponseParser.parseList<Song>(
-          data: validData,
-          parser: (json) {
-            final normalized = DataNormalizer.normalizeSong(json);
-            return Song.fromJson(normalized);
-          },
-          logErrors: false,
-        );
+        final normalizedList = validData
+            .map((json) => DataNormalizer.normalizeSong(Map<String, dynamic>.from(json as Map)))
+            .toList();
+
+        try {
+          return await Song.parseList(normalizedList);
+        } catch (_) {
+          final parsed = <Song>[];
+          for (final n in normalizedList) {
+            try {
+              parsed.add(Song.fromJson(n));
+            } catch (_) {}
+          }
+          return parsed;
+        }
       } else {
         // Error silencioso - el endpoint puede no estar disponible (500, etc.)
         return [];

@@ -17,7 +17,7 @@ export class GenresService {
   constructor(
     @InjectRepository(Genre)
     private readonly genreRepository: Repository<Genre>,
-  ) {}
+  ) { }
 
   /**
    * Obtiene todos los géneros con paginación
@@ -92,16 +92,19 @@ export class GenresService {
    * @throws ConflictException si el género ya existe
    */
   async create(createGenreDto: CreateGenreDto): Promise<Genre> {
+    // ⚡ NORMALIZACIÓN: Forzar minúsculas
+    const normalizedName = createGenreDto.name.trim().toLowerCase();
+
     // Verificar si el género ya existe (el nombre debe ser único)
-    const existingGenre = await this.findByName(createGenreDto.name);
-    
+    const existingGenre = await this.findByName(normalizedName);
+
     if (existingGenre) {
-      throw new ConflictException(`El género "${createGenreDto.name}" ya existe`);
+      throw new ConflictException(`El género "${normalizedName}" ya existe`);
     }
 
     try {
       const genre = this.genreRepository.create({
-        name: createGenreDto.name.trim(),
+        name: normalizedName,
         description: createGenreDto.description?.trim(),
         colorHex: createGenreDto.colorHex?.trim(),
         imageUrl: createGenreDto.imageUrl?.trim(),
@@ -109,16 +112,16 @@ export class GenresService {
 
       const savedGenre = await this.genreRepository.save(genre);
       this.logger.log(`Género creado exitosamente: ${savedGenre.name} (ID: ${savedGenre.id})`);
-      
+
       return savedGenre;
     } catch (error) {
       this.logger.error(`Error al crear género: ${error.message}`, error.stack);
-      
+
       // Si es un error de constraint único de PostgreSQL
       if (error.code === '23505') {
         throw new ConflictException(`El género "${createGenreDto.name}" ya existe`);
       }
-      
+
       throw new BadRequestException(`Error al crear género: ${error.message}`);
     }
   }
@@ -135,17 +138,18 @@ export class GenresService {
     const genre = await this.findOne(id);
 
     // Si se está actualizando el nombre, verificar que no exista otro género con ese nombre
-    if (updateGenreDto.name && updateGenreDto.name.trim() !== genre.name) {
-      const existingGenre = await this.findByName(updateGenreDto.name.trim());
-      
+    if (updateGenreDto.name && updateGenreDto.name.trim().toLowerCase() !== genre.name) {
+      const normalizedName = updateGenreDto.name.trim().toLowerCase();
+      const existingGenre = await this.findByName(normalizedName);
+
       if (existingGenre && existingGenre.id !== id) {
-        throw new ConflictException(`El género "${updateGenreDto.name}" ya existe`);
+        throw new ConflictException(`El género "${normalizedName}" ya existe`);
       }
     }
 
     // Actualizar campos proporcionados
     if (updateGenreDto.name !== undefined) {
-      genre.name = updateGenreDto.name.trim();
+      genre.name = updateGenreDto.name.trim().toLowerCase();
     }
     if (updateGenreDto.description !== undefined) {
       genre.description = updateGenreDto.description?.trim() || null;
@@ -160,16 +164,16 @@ export class GenresService {
     try {
       const updatedGenre = await this.genreRepository.save(genre);
       this.logger.log(`Género actualizado exitosamente: ${updatedGenre.name} (ID: ${updatedGenre.id})`);
-      
+
       return updatedGenre;
     } catch (error) {
       this.logger.error(`Error al actualizar género: ${error.message}`, error.stack);
-      
+
       // Si es un error de constraint único de PostgreSQL
       if (error.code === '23505') {
         throw new ConflictException(`El género "${updateGenreDto.name}" ya existe`);
       }
-      
+
       throw new BadRequestException(`Error al actualizar género: ${error.message}`);
     }
   }
@@ -197,7 +201,7 @@ export class GenresService {
     try {
       await this.genreRepository.remove(genre);
       this.logger.log(`Género eliminado exitosamente: ${genre.name} (ID: ${id})`);
-      
+
       return {
         message: `Género "${genre.name}" eliminado exitosamente`,
         genre,
@@ -221,12 +225,12 @@ export class GenresService {
       .orderBy('genre.name', 'ASC')
       .limit(limit)
       .getMany();
-    
+
     // Log para debug - verificar que imageUrl se esté devolviendo
     if (genres.length > 0) {
       this.logger.debug(`[GenresService.search] Encontrados ${genres.length} géneros. Primer género: ${JSON.stringify({ id: genres[0].id, name: genres[0].name, imageUrl: genres[0].imageUrl })}`);
     }
-    
+
     return genres;
   }
 }

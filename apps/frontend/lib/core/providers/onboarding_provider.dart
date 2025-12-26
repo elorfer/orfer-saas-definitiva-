@@ -13,13 +13,16 @@ class OnboardingNotifier extends Notifier<bool> {
   static const String _onboardingKeyPrefix = 'onboarding_completed_';
   static const String _lastUserIdKey = 'onboarding_last_user_id';
   bool _isInitialized = false;
-
+  
   @override
   bool build() {
-    // ✅ FIX: Verificar estado inicial de forma asíncrona sin bloquear
-    // No usar ref.listen() durante build() para evitar problemas de ciclo de vida
+    // ✅ OPTIMIZACIÓN: Inicializar con true para evitar mostrar onboarding mientras se verifica
+    // El estado se actualizará cuando se complete la verificación asíncrona
+    // Si el usuario realmente necesita ver onboarding, se mostrará después de verificar
     if (!_isInitialized) {
       _isInitialized = true;
+      
+      // Configurar listener y verificar estado de forma asíncrona
       Future.microtask(() async {
         try {
           // Escuchar cambios en el usuario autenticado para verificar onboarding
@@ -30,26 +33,27 @@ class OnboardingNotifier extends Notifier<bool> {
               if (next.isAuthenticated && next.user != null) {
                 _checkOnboardingStatusForUser(next.user!.id);
               } else if (!next.isAuthenticated) {
-                // Si se desautenticó, resetear estado
-                state = false;
+                // Si se desautenticó, marcar como completado (no mostrar onboarding sin usuario)
+                state = true;
               }
             },
           );
           
-          // Verificar estado inicial
+          // Verificar estado inicial de forma asíncrona
           await _checkOnboardingStatus();
         } catch (e) {
           if (kDebugMode) {
             debugPrint('⚠️ [OnboardingProvider] Error durante inicialización: $e');
           }
-          // Si hay error durante la inicialización, asumir que no se completó
-          state = false;
+          // Si hay error, mantener como completado para no mostrar onboarding innecesariamente
+          state = true;
         }
       });
     }
     
-    // Retornar false inicialmente hasta que se verifique el estado real
-    return false;
+    // ✅ OPTIMIZACIÓN: Retornar true por defecto para evitar mostrar onboarding prematuramente
+    // Si el usuario realmente no completó el onboarding, se actualizará a false después de verificar
+    return true;
   }
 
   /// Verificar si el onboarding ya fue completado para el usuario actual
@@ -57,14 +61,19 @@ class OnboardingNotifier extends Notifier<bool> {
     try {
       final authState = ref.read(authStateProvider);
       if (authState.isAuthenticated && authState.user != null) {
+        // ✅ OPTIMIZACIÓN: Verificar inmediatamente para evitar mostrar onboarding prematuramente
         await _checkOnboardingStatusForUser(authState.user!.id);
       } else {
         // Si no hay usuario autenticado, no mostrar onboarding
         state = true; // Marcar como completado para no mostrar onboarding sin usuario
       }
     } catch (e) {
-      // Si hay error, asumir que no se completó para mostrar onboarding
-      state = false;
+      if (kDebugMode) {
+        debugPrint('⚠️ [OnboardingProvider] Error en _checkOnboardingStatus: $e');
+      }
+      // ✅ OPTIMIZACIÓN: Si hay error, asumir que está completado para evitar mostrar onboarding
+      // Es mejor errar del lado de no mostrar onboarding que mostrarlo innecesariamente
+      state = true;
     }
   }
 
@@ -92,7 +101,9 @@ class OnboardingNotifier extends Notifier<bool> {
         // Guardar el nuevo userId
         await prefs.setString(_lastUserIdKey, userId);
         
-        // Establecer el estado según si ya completó o no
+        // ✅ OPTIMIZACIÓN: Establecer el estado según si ya completó o no
+        // Si completed es false (no completó), mostrar onboarding
+        // Si completed es true (ya completó), no mostrar onboarding
         state = completed;
         return;
       }
@@ -105,13 +116,17 @@ class OnboardingNotifier extends Notifier<bool> {
         debugPrint('🔍 [OnboardingProvider] Mismo usuario. Estado de onboarding: $completed');
       }
       
-      state = completed;
+      // ✅ OPTIMIZACIÓN: Actualizar estado solo si cambió para evitar rebuilds innecesarios
+      if (state != completed) {
+        state = completed;
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('⚠️ [OnboardingProvider] Error verificando estado: $e');
       }
-      // Si hay error, asumir que no se completó para mostrar onboarding
-      state = false;
+      // ✅ OPTIMIZACIÓN: Si hay error, asumir que está completado para evitar mostrar onboarding
+      // Es mejor errar del lado de no mostrar onboarding que mostrarlo innecesariamente
+      state = true;
     }
   }
 

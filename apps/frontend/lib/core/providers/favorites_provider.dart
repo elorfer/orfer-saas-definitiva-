@@ -119,11 +119,11 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
   }
 
   /// Toggle de favorito (optimistic update)
-  Future<void> toggleFavorite(String songId) async {
+  Future<void> toggleFavorite(String songId, {Song? songData}) async {
     try {
       final wasFavorite = state.isFavorite(songId);
       
-      // Optimistic update: actualizar UI inmediatamente
+      // ✅ OPTIMIZACIÓN: Optimistic update INMEDIATAMENTE - actualizar UI sin esperar
       if (wasFavorite) {
         // Remover de favoritos
         final newFavorites = state.favorites.where((song) => song.id != songId).toList();
@@ -133,28 +133,57 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
           favoriteIds: newFavoriteIds,
         );
       } else {
-        // Agregar a favoritos (necesitamos la canción completa)
-        // Por ahora solo agregamos el ID, luego se actualizará cuando se recargue
+        // Agregar a favoritos
         final newFavoriteIds = Set<String>.from(state.favoriteIds)..add(songId);
-        state = state.copyWith(favoriteIds: newFavoriteIds);
+        final newFavorites = List<Song>.from(state.favorites);
+        
+        // ✅ CRÍTICO: Si tenemos los datos de la canción, agregarla a la lista completa
+        // Esto asegura que aparezca inmediatamente en la pantalla de favoritos
+        if (songData != null && !newFavorites.any((s) => s.id == songId)) {
+          newFavorites.add(songData);
+        }
+        
+        state = state.copyWith(
+          favorites: newFavorites,
+          favoriteIds: newFavoriteIds,
+        );
       }
 
-      // Llamar al backend
+      // ✅ OPTIMIZACIÓN: Llamar al backend en background (no bloquear UI)
+      // La UI ya se actualizó optimísticamente
       final isNowFavorite = await _service!.toggleFavorite(songId);
       
       // 🚨 CRÍTICO: Verificar si el provider sigue montado después del await
       if (!ref.mounted) return;
 
-      // Si el backend confirma, actualizar estado final
+      // ✅ OPTIMIZACIÓN: Solo recargar si hay discrepancia (no siempre)
+      // Si el backend confirma el cambio, no necesitamos recargar todo
       if (isNowFavorite != wasFavorite) {
         // El estado ya está actualizado optimísticamente
-        // Si necesitamos recargar la lista completa, lo hacemos aquí
-        if (isNowFavorite) {
-          // Recargar para obtener la canción completa
-          await _loadFavorites();
+        
+        // ✅ CRÍTICO: Si agregamos un favorito y no tenemos la canción completa en la lista,
+        // intentar obtenerla para que aparezca en la pantalla de favoritos sin refrescar
+        if (isNowFavorite && songData == null && !state.favorites.any((s) => s.id == songId)) {
+          // Si no pasaron los datos de la canción y no está en la lista, intentar obtenerla
+          // Esto solo es necesario para que aparezca en la pantalla de favoritos
+          // Si falla, no importa - la próxima vez que se refresque aparecerá
+          try {
+            final fetchedSong = await _service!.getSongById(songId);
+            if (fetchedSong != null && ref.mounted) {
+              // Agregar la canción a la lista si todavía no está
+              if (!state.favorites.any((s) => s.id == songId)) {
+                final updatedFavorites = List<Song>.from(state.favorites)..add(fetchedSong);
+                state = state.copyWith(favorites: updatedFavorites);
+              }
+            }
+          } catch (e) {
+            // Ignorar errores - la canción aparecerá cuando se refresque la lista
+            AppLogger.debug('[FavoritesNotifier] No se pudo obtener canción por ID después de toggle: $e');
+          }
         }
       } else {
-        // Si hay discrepancia, revertir y recargar
+        // Si hay discrepancia (raro), revertir y recargar
+        AppLogger.warning('[FavoritesNotifier] Discrepancia detectada, recargando lista completa');
         await _loadFavorites();
       }
     } catch (e, stackTrace) {
@@ -163,8 +192,22 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
       // 🚨 CRÍTICO: Verificar si el provider sigue montado antes de revertir
       if (!ref.mounted) return;
       
-      // Revertir optimistic update en caso de error
-      await _loadFavorites();
+      // ✅ OPTIMIZACIÓN: Revertir solo el cambio optimista, no recargar toda la lista
+      // Recargar toda la lista es muy lento - solo revertir el cambio local
+      final currentWasFavorite = state.isFavorite(songId);
+      if (currentWasFavorite) {
+        // Si ahora es favorito pero falló, removerlo
+        final newFavoriteIds = Set<String>.from(state.favoriteIds)..remove(songId);
+        final newFavorites = state.favorites.where((song) => song.id != songId).toList();
+        state = state.copyWith(
+          favorites: newFavorites,
+          favoriteIds: newFavoriteIds,
+        );
+      } else {
+        // Si ahora NO es favorito pero falló, agregarlo de vuelta
+        final newFavoriteIds = Set<String>.from(state.favoriteIds)..add(songId);
+        state = state.copyWith(favoriteIds: newFavoriteIds);
+      }
       
       // Re-lanzar el error para que el UI pueda manejarlo
       rethrow;

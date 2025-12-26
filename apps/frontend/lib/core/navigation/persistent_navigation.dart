@@ -43,7 +43,8 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
     if (_cachedBottomPadding == null) {
       final mediaQuery = MediaQuery.of(context);
       _cachedBottomPadding = mediaQuery.padding.bottom;
-      _cachedNavBarHeight = 80.0 + _cachedBottomPadding!;
+      // Evitar alturas fraccionadas que pueden causar un overflow por 1px
+      _cachedNavBarHeight = (80.0 + _cachedBottomPadding!).ceilToDouble();
     }
   }
 

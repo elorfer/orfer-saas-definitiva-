@@ -45,15 +45,9 @@ class NeumorphismTheme {
   /// Sombras "Soft UI" - Sutiles y difusas
   static List<BoxShadow> get softShadow => [
     BoxShadow(
-      color: Color(0x0A000000), // 4% opacidad
-      offset: const Offset(0, 4),
-      blurRadius: 16,
-      spreadRadius: 0,
-    ),
-    BoxShadow(
-      color: Color(0x05000000), // 2% opacidad
+      color: const Color(0x08000000), // Sombra ultra-fina
       offset: const Offset(0, 2),
-      blurRadius: 8,
+      blurRadius: 4,
       spreadRadius: 0,
     ),
   ];
@@ -61,13 +55,7 @@ class NeumorphismTheme {
   /// Sombra para elementos flotantes (Player, Dialogs)
   static List<BoxShadow> get floatingShadow => [
     BoxShadow(
-      color: Color(0x1A5D4037), // 10% opacidad café oscuro
-      offset: const Offset(0, 20),
-      blurRadius: 40,
-      spreadRadius: -10,
-    ),
-    BoxShadow(
-      color: Color(0x0D000000), // 5% opacidad
+      color: const Color(0x125D4037),
       offset: const Offset(0, 10),
       blurRadius: 20,
       spreadRadius: -5,
@@ -100,8 +88,11 @@ class NeumorphismTheme {
   static BoxDecoration get cardDecoration {
     return BoxDecoration(
       color: surface,
-      borderRadius: const BorderRadius.all(Radius.circular(20)),
-      boxShadow: softShadow,
+      borderRadius: const BorderRadius.all(Radius.circular(16)), // Más compacto
+      border: Border.all(
+        color: const Color(0x0D000000),
+        width: 1,
+      ),
     );
   }
 

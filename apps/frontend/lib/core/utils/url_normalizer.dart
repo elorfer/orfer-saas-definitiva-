@@ -7,7 +7,12 @@ import 'logger.dart';
 class UrlNormalizer {
   // OPTIMIZACIÓN: Cache simple para URLs normalizadas (evita recalcular en cada build)
   static final Map<String, String> _urlCache = {};
+  static final Map<String, String> _fileUrlCache = {}; // Cache para archivos de audio/otros
   static const int _maxCacheSize = 100; // Limitar tamaño del cache
+  
+  // ✅ OPTIMIZACIÓN: Cachear la IP correcta para evitar recalculaciones
+  static String? _cachedCorrectIp;
+  static String? _cachedBaseUrl;
 
   /// Normaliza una URL de imagen para que funcione correctamente en todas las plataformas
   /// 
@@ -36,7 +41,23 @@ class UrlNormalizer {
         // Cache corrupto, limpiarlo y recalcular
         _urlCache.remove(cleanUrl);
       } else {
-        return cached;
+        // ✅ OPTIMIZADO: Validar IP solo si es necesario (red local)
+        // Usar cache de IP correcta para evitar recalculaciones
+        final correctIp = _getCorrectIp();
+        if (correctIp != null) {
+          // Solo validar IP si la URL del cache contiene una IP de red local
+          final cachedIpMatch = RegExp(r'192\.168\.\d+\.\d+').firstMatch(cached);
+          if (cachedIpMatch != null && cachedIpMatch.group(0) != correctIp) {
+            // IP incorrecta en cache, limpiar y recalcular
+            _urlCache.remove(cleanUrl);
+          } else {
+            // Cache válido, retornar
+            return cached;
+          }
+        } else {
+          // No es IP de red local o no se puede determinar, usar cache
+          return cached;
+        }
       }
     }
 
@@ -82,11 +103,9 @@ class UrlNormalizer {
     final baseUrl = ApiConfig.baseUrl;
     String cleanBaseUrl = baseUrl.replaceAll('/api/v1', '').replaceAll(RegExp(r'/$'), '');
     
-    // Solo convertir localhost a 10.0.2.2 si la URL base también es localhost
-    // Si la URL base ya tiene una IP de red, mantenerla
-    if (cleanBaseUrl.contains('localhost') || cleanBaseUrl.contains('127.0.0.1')) {
-      cleanBaseUrl = cleanBaseUrl.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
-    }
+    // No forzar conversión localhost -> 10.0.2.2 aquí; la resolución entre
+    // localhost/10.0.2.2 la gestiona `_applyBaseNormalization` según la
+    // configuración activa (`ApiConfig.baseUrl`). Mantener `cleanBaseUrl` tal cual.
 
     // Si es una ruta relativa que empieza con /uploads, construir URL completa
     if (imageUrl.startsWith('/uploads/')) {
@@ -131,7 +150,9 @@ class UrlNormalizer {
       throw Exception('[UrlNormalizer] URL vacía o nula');
     }
 
-    // Validar formato básico de URL (sin logs verbosos)
+    // ✅ OPTIMIZACIÓN: Verificar cache primero
+    final cached = _fileUrlCache[url];
+    if (cached != null) return cached;
 
     // Si ya es una URL completa (http:// o https://), normalizarla para el emulador
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -148,6 +169,13 @@ class UrlNormalizer {
         if (uri.host.isEmpty) {
           throw Exception('[UrlNormalizer] URL sin host válido: $normalized');
         }
+        
+        // ✅ OPTIMIZACIÓN: Guardar en cache
+        if (_fileUrlCache.length >= _maxCacheSize) {
+          _fileUrlCache.remove(_fileUrlCache.keys.first);
+        }
+        _fileUrlCache[url] = normalized;
+        
         return normalized;
       } catch (e) {
         AppLogger.error('[UrlNormalizer] Error al parsear URL: $normalized - $e');
@@ -159,11 +187,9 @@ class UrlNormalizer {
     final baseUrl = ApiConfig.baseUrl;
     String cleanBaseUrl = baseUrl.replaceAll('/api/v1', '').replaceAll(RegExp(r'/$'), '');
     
-    // Solo convertir localhost a 10.0.2.2 si la URL base también es localhost
-    // Si la URL base ya tiene una IP de red, mantenerla
-    if (cleanBaseUrl.contains('localhost') || cleanBaseUrl.contains('127.0.0.1')) {
-      cleanBaseUrl = cleanBaseUrl.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
-    }
+    // No forzar conversión localhost -> 10.0.2.2 aquí; la resolución entre
+    // localhost/10.0.2.2 la gestiona `_applyBaseNormalization` según la
+    // configuración activa (`ApiConfig.baseUrl`). Mantener `cleanBaseUrl` tal cual.
 
     // Construir URL completa
     String finalUrl;
@@ -176,14 +202,13 @@ class UrlNormalizer {
       finalUrl = '$cleanBaseUrl/$url';
     }
     
-    // Sin logs verbosos - solo errores
-    
-    // Validar URL final
     try {
-      final uri = Uri.parse(finalUrl);
-      if (uri.host.isEmpty) {
-        throw Exception('[UrlNormalizer] URL construida sin host válido: $finalUrl');
+      // ✅ OPTIMIZACIÓN: Guardar en cache
+      if (_fileUrlCache.length >= _maxCacheSize) {
+        _fileUrlCache.remove(_fileUrlCache.keys.first);
       }
+      _fileUrlCache[url] = finalUrl;
+      
       return finalUrl;
     } catch (e) {
       AppLogger.error('[UrlNormalizer] Error al validar URL construida: $finalUrl - $e');
@@ -198,25 +223,49 @@ class UrlNormalizer {
     final baseUrl = ApiConfig.baseUrl;
     final cleanBaseUrl = baseUrl.replaceAll('/api/v1', '').replaceAll(RegExp(r'/$'), '');
     
-    // Solo convertir localhost a 10.0.2.2 si la URL base también es localhost
-    // Si la URL base ya tiene una IP de red, mantenerla
-    if (cleanBaseUrl.contains('localhost') || cleanBaseUrl.contains('127.0.0.1')) {
-      // Solo convertir si la URL también contiene localhost
+    // ✅ OPTIMIZADO: Usar IP cacheada en lugar de recalcular
+    final correctIp = _getCorrectIp();
+    
+    // Si `baseUrl` apunta explícitamente a 10.0.2.2 (emulador), convertir cualquier
+    // aparición de localhost/127.0.0.1 en la URL hacia 10.0.2.2.
+    if (cleanBaseUrl.contains('10.0.2.2')) {
       if (normalized.contains('localhost') || normalized.contains('127.0.0.1')) {
         normalized = normalized.replaceAll('localhost', '10.0.2.2').replaceAll('127.0.0.1', '10.0.2.2');
       }
-    } else if (cleanBaseUrl.contains('192.168.')) {
-      // Si la baseUrl tiene una IP de red local, reemplazar localhost con esa IP
-      final ipMatch = RegExp(r'192\.168\.\d+\.\d+').firstMatch(cleanBaseUrl);
-      if (ipMatch != null && (normalized.contains('localhost') || normalized.contains('127.0.0.1'))) {
-        final ip = ipMatch.group(0);
-        normalized = normalized.replaceAll('localhost', ip!).replaceAll('127.0.0.1', ip);
+    }
+
+    // Si se detectó una IP de red local válida, reemplazar IPs antiguas (192.168.x.x)
+    // por la IP actual y ajustar 10.0.2.2/localhost según la base configurada.
+    if (correctIp != null) {
+      final ipPattern = RegExp(r'192\.168\.\d+\.\d+');
+      normalized = normalized.replaceAllMapped(ipPattern, (match) => correctIp);
+
+      // Si la base está configurada como localhost (adb reverse), convertir 10.0.2.2 -> localhost
+      if (cleanBaseUrl.contains('localhost')) {
+        if (normalized.contains('10.0.2.2')) {
+          normalized = normalized.replaceAll('10.0.2.2', 'localhost');
+        }
+      }
+
+      // Si la base está configurada con IP LAN, convertir localhost -> correctIp
+      if (cleanBaseUrl.contains('192.168.')) {
+        if (normalized.contains('localhost') || normalized.contains('127.0.0.1')) {
+          normalized = normalized.replaceAll('localhost', correctIp).replaceAll('127.0.0.1', correctIp);
+        }
       }
     }
     
     // Corregir puerto si viene con 3000 (debe ser 3001)
     if (normalized.contains(':3000/') || normalized.endsWith(':3000')) {
       normalized = normalized.replaceAll(':3000/', ':3001/').replaceAll(':3000', ':3001');
+    }
+
+    // ✅ FIX CRÍTICO: Si la URL tiene una IP local antigua (192.168.x.x) y NO estamos usando esa IP,
+    // reemplazar la IP antigua con el dominio actual (sea PROD o 10.0.2.2).
+    if (normalized.contains('192.168.') && !cleanBaseUrl.contains('192.168.')) {
+        final ipPattern = RegExp(r'http://192\.168\.\d+\.\d+(:\d+)?');
+        // Reemplazar la IP antigua con la base URL actual
+        normalized = normalized.replaceAllMapped(ipPattern, (match) => cleanBaseUrl);
     }
     
     return normalized;
@@ -247,6 +296,37 @@ class UrlNormalizer {
   /// Limpia el cache de URLs (útil para testing o cuando cambia la configuración)
   static void clearCache() {
     _urlCache.clear();
+    _fileUrlCache.clear();
+    _cachedCorrectIp = null;
+    _cachedBaseUrl = null;
+  }
+  
+  /// ✅ OPTIMIZACIÓN: Obtener la IP correcta con cache
+  static String? _getCorrectIp() {
+    final baseUrl = ApiConfig.baseUrl;
+    
+    // Si la baseUrl cambió, invalidar el cache
+    if (_cachedBaseUrl != baseUrl) {
+      _cachedBaseUrl = baseUrl;
+      _cachedCorrectIp = null;
+    }
+    
+    // Si ya está cacheado, retornar
+    if (_cachedCorrectIp != null) {
+      return _cachedCorrectIp;
+    }
+    
+    // Calcular IP correcta
+    final cleanBaseUrl = baseUrl.replaceAll('/api/v1', '').replaceAll(RegExp(r'/$'), '');
+    if (cleanBaseUrl.contains('192.168.')) {
+      final correctIpMatch = RegExp(r'192\.168\.\d+\.\d+').firstMatch(cleanBaseUrl);
+      if (correctIpMatch != null) {
+        _cachedCorrectIp = correctIpMatch.group(0);
+        return _cachedCorrectIp;
+      }
+    }
+    
+    return null;
   }
   
   /// Limpia URLs duplicadas del cache (útil para corregir cache corrupto)

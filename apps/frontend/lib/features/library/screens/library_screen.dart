@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 // OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
 import '../../../core/models/song_model.dart';
@@ -9,6 +8,18 @@ import '../../../core/providers/follow_provider.dart';
 import '../../../core/providers/play_history_provider.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
+import '../../../core/utils/url_normalizer.dart';
+import '../../../core/widgets/optimized_image.dart';
+
+/// ✅ OPTIMIZACIÓN: Provider derivado para memoizar recentHistory
+/// Evita recalcular la lista en cada build
+final _recentHistoryProvider = Provider<List<Song>>((ref) {
+  final history = ref.watch(playHistoryProvider);
+  if (history.length <= 8) {
+    return history.reversed.toList();
+  }
+  return history.reversed.take(8).toList();
+});
 
 /// LibraryScreen optimizado con AutomaticKeepAliveClientMixin
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -26,14 +37,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   @override
   void initState() {
     super.initState();
-    // 🔥 OPTIMIZACIÓN: Carga diferida - solo cargar cuando la pantalla esté visible
-    // Usar un delay para no bloquear el build inicial
+    // ✅ OPTIMIZACIÓN: Cargar inmediatamente sin delay innecesario
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          ref.read(followProvider.notifier).ensureLoaded();
-        }
-      });
+      if (mounted) {
+        ref.read(followProvider.notifier).ensureLoaded();
+      }
     });
   }
 
@@ -41,20 +49,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // 🔥 OPTIMIZACIÓN: Usar select para escuchar solo cambios necesarios
-    // Cachear valores para evitar recálculos en cada build
+    // ✅ OPTIMIZACIÓN: Usar select para escuchar solo cambios necesarios
     final favoritesCount = ref.watch(
       favoritesProvider.select((state) => state.favorites.length),
     );
     final historyCount = ref.watch(
       playHistoryProvider.select((state) => state.length),
     );
-    // 🔥 OPTIMIZACIÓN: Solo tomar las primeras 8 canciones una vez
-    final recentHistory = ref.watch(
-      playHistoryProvider.select(
-        (state) => state.length > 8 ? state.reversed.take(8).toList() : state.reversed.toList(),
-      ),
-    );
+    // ✅ OPTIMIZACIÓN: Memoizar recentHistory usando un provider derivado
+    final recentHistory = ref.watch(_recentHistoryProvider);
     final followedArtistsCount = ref.watch(
       followProvider.select((state) => state.followedArtistIds.length),
     );
@@ -72,42 +75,63 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         child: SafeArea(
           child: CustomScrollView(
             physics: const SmoothScrollPhysics(),
-            cacheExtent: 400, // 🔥 OPTIMIZACIÓN: Cache de scroll para mejor rendimiento
+            cacheExtent: 200, // ✅ OPTIMIZACIÓN: Reducido de 400 a 200 para mejor rendimiento
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 72),
                 sliver: SliverList(
-                  delegate: SliverChildListDelegate(
-                    [
-                      _buildHeader(
-                        favoritesCount: favoritesCount,
-                        historyCount: historyCount,
-                      ),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle('Actividad reciente'),
-                      const SizedBox(height: 12),
-                      _buildRecentActivity(recentHistory),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle('Categorías'),
-                      const SizedBox(height: 12),
-                      _buildCategories(
-                        context,
-                        favoritesCount: favoritesCount,
-                        followedArtistsCount: followedArtistsCount,
-                        isLoadingFollowed: isLoadingFollowed,
-                        historyCount: historyCount,
-                      ),
-                      const SizedBox(height: 24),
-                      _buildFeaturedCard(favoritesCount),
-                      const SizedBox(height: 24),
-                      _buildMetrics(
-                        historyCount: historyCount,
-                        favoritesCount: favoritesCount,
-                        followedArtistsCount: followedArtistsCount,
-                      ),
-                      // Espacio extra al final para permitir scroll cómodo
-                      const SizedBox(height: 120),
-                    ],
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      // ✅ OPTIMIZACIÓN: Construir widgets de forma lazy
+                      switch (index) {
+                        case 0:
+                          return _buildHeader(
+                            favoritesCount: favoritesCount,
+                            historyCount: historyCount,
+                          );
+                        case 1:
+                          return const SizedBox(height: 24);
+                        case 2:
+                          return _buildSectionTitle('Actividad reciente');
+                        case 3:
+                          return const SizedBox(height: 12);
+                        case 4:
+                          return _buildRecentActivity(recentHistory);
+                        case 5:
+                          return const SizedBox(height: 24);
+                        case 6:
+                          return _buildSectionTitle('Categorías');
+                        case 7:
+                          return const SizedBox(height: 12);
+                        case 8:
+                          return _buildCategories(
+                            context,
+                            favoritesCount: favoritesCount,
+                            followedArtistsCount: followedArtistsCount,
+                            isLoadingFollowed: isLoadingFollowed,
+                            historyCount: historyCount,
+                          );
+                        case 9:
+                          return const SizedBox(height: 24);
+                        case 10:
+                          return _buildFeaturedCard(favoritesCount);
+                        case 11:
+                          return const SizedBox(height: 24);
+                        case 12:
+                          return _buildMetrics(
+                            historyCount: historyCount,
+                            favoritesCount: favoritesCount,
+                            followedArtistsCount: followedArtistsCount,
+                          );
+                        case 13:
+                          return const SizedBox(height: 120);
+                        default:
+                          return const SizedBox.shrink();
+                      }
+                    },
+                    childCount: 14, // Total de widgets
+                    addAutomaticKeepAlives: false,
+                    addRepaintBoundaries: false,
                   ),
                 ),
               ),
@@ -201,11 +225,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
           borderRadius: const BorderRadius.all(Radius.circular(20)),
           boxShadow: NeumorphismTheme.softShadow,
         ),
-        child: Center(
+        child: const Center(
           child: Text(
             'Cuando reproduzcas música, aparecerá aquí',
-            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-            style: const TextStyle(
+            style: TextStyle(
               color: NeumorphismTheme.textSecondary,
               fontSize: 15,
             ),
@@ -219,29 +242,36 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
+        cacheExtent: 200, // ✅ OPTIMIZACIÓN: Cache reducido para mejor rendimiento
         itemCount: recentHistory.length,
         separatorBuilder: (_, __) => const SizedBox(width: 14),
         itemBuilder: (context, index) {
           final song = recentHistory[index];
-          return _buildRecentCard(song);
+          return RepaintBoundary(
+            key: ValueKey('recent_${song.id}'),
+            child: _buildRecentCard(song),
+          );
         },
       ),
     );
   }
 
   Widget _buildRecentCard(Song song) {
-    final cover = song.coverArtUrl;
-    return RepaintBoundary(
-      child: Container(
-        width: 126,
-        decoration: BoxDecoration(
-          color: NeumorphismTheme.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(18)),
-          boxShadow: NeumorphismTheme.softShadow,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    // ✅ OPTIMIZADO: Normalizar URL de imagen una sola vez
+    final cover = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
+        ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
+        : null;
+    
+    return Container(
+      width: 126,
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.surface,
+        borderRadius: const BorderRadius.all(Radius.circular(18)),
+        boxShadow: NeumorphismTheme.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(18),
@@ -251,18 +281,23 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 height: 96,
                 width: double.infinity,
                 child: cover != null && cover.isNotEmpty
-                    ? CachedNetworkImage(
+                    ? OptimizedImage(
                         imageUrl: cover,
+                        width: double.infinity,
+                        height: 96,
                         fit: BoxFit.cover,
-                        // 🔥 OPTIMIZACIÓN: Cache de imágenes con tamaños específicos
-                        memCacheWidth: 252, // 2x el tamaño de visualización (126 * 2)
-                        memCacheHeight: 192, // 2x el tamaño de visualización (96 * 2)
-                        placeholder: (context, _) => Container(
+                        maxCacheWidth: 252, // 2x el tamaño de visualización (126 * 2)
+                        maxCacheHeight: 192, // 2x el tamaño de visualización (96 * 2)
+                        isLargeCover: false,
+                        useThumbnail: true,
+                        skipFade: true, // Sin fade para mejor rendimiento
+                        lazyLoad: false, // Cargar inmediatamente (no hay scroll horizontal largo)
+                        placeholder: Container(
                           decoration: const BoxDecoration(
                             gradient: NeumorphismTheme.imagePlaceholderGradient,
                           ),
                         ),
-                        errorWidget: (context, _, __) => Container(
+                        errorWidget: Container(
                           decoration: const BoxDecoration(
                             gradient: NeumorphismTheme.imagePlaceholderGradient,
                           ),
@@ -317,7 +352,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -328,48 +362,36 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     required bool isLoadingFollowed,
     required int historyCount,
   }) {
-    final cards = [
-      {
-        'icon': Icons.favorite_rounded,
-        'label': 'Canciones favoritas',
-        'value': '$favoritesCount',
-        'onTap': () => context.push('/favorites'),
-      },
-      {
-        'icon': Icons.playlist_play_rounded,
-        'label': 'Mis playlists',
-        'value': '0',
-        'onTap': () => context.push('/playlists'),
-      },
-      {
-        'icon': Icons.person_rounded,
-        'label': 'Artistas seguidos',
-        'value': isLoadingFollowed
-            ? '...'
-            : '$followedArtistsCount',
-        'onTap': () => context.push('/followed-artists'),
-      },
-      {
-        'icon': Icons.history_rounded,
-        'label': 'Recientes',
-        'value': '$historyCount',
-        'onTap': () => context.push('/recently-played'),
-      },
-    ];
-
+    // ✅ OPTIMIZACIÓN: Usar const para valores que no cambian
     return Wrap(
       spacing: 12,
       runSpacing: 12,
-      children: cards
-          .map(
-            (item) => _CategoryCard(
-              icon: item['icon'] as IconData,
-              label: item['label'] as String,
-              value: item['value'] as String,
-              onTap: item['onTap'] as VoidCallback,
-            ),
-          )
-          .toList(),
+      children: [
+        _CategoryCard(
+          icon: Icons.favorite_rounded,
+          label: 'Canciones favoritas',
+          value: '$favoritesCount',
+          onTap: () => context.push('/favorites'),
+        ),
+        _CategoryCard(
+          icon: Icons.playlist_play_rounded,
+          label: 'Mis playlists',
+          value: '0',
+          onTap: () => context.push('/playlists'),
+        ),
+        _CategoryCard(
+          icon: Icons.person_rounded,
+          label: 'Artistas seguidos',
+          value: isLoadingFollowed ? '...' : '$followedArtistsCount',
+          onTap: () => context.push('/followed-artists'),
+        ),
+        _CategoryCard(
+          icon: Icons.history_rounded,
+          label: 'Recientes',
+          value: '$historyCount',
+          onTap: () => context.push('/recently-played'),
+        ),
+      ],
     );
   }
 
@@ -473,6 +495,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   }
 }
 
+/// ✅ OPTIMIZADO: CategoryCard con RepaintBoundary para evitar rebuilds innecesarios
 class _CategoryCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -488,9 +511,10 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
         width: (MediaQuery.of(context).size.width - 24 * 2 - 12) / 2,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
@@ -542,11 +566,13 @@ class _CategoryCard extends StatelessWidget {
             ),
           ],
         ),
+        ),
       ),
     );
   }
 }
 
+/// ✅ OPTIMIZADO: MetricCard con RepaintBoundary para evitar rebuilds innecesarios
 class _MetricCard extends StatelessWidget {
   final String value;
   final String label;
@@ -560,14 +586,15 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: NeumorphismTheme.surface,
-        borderRadius: const BorderRadius.all(Radius.circular(18)),
-        boxShadow: NeumorphismTheme.softShadow,
-      ),
-      child: Column(
+    return RepaintBoundary(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(18)),
+          boxShadow: NeumorphismTheme.softShadow,
+        ),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -608,6 +635,7 @@ class _MetricCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
       ),
     );
   }

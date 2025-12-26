@@ -102,26 +102,91 @@ class HttpCacheService {
   }
 }
 
-/// CacheManager personalizado para imágenes
-class ImageCacheManager {
-  static final CacheManager _instance = CacheManager(
-    Config(
-      'image_cache',
-      stalePeriod: const Duration(days: 30), // Imágenes válidas por 30 días
-      maxNrOfCacheObjects: 500, // Máximo 500 imágenes en caché
-      repo: JsonCacheInfoRepository(databaseName: 'image_cache'),
-      fileService: HttpFileService(),
-    ),
-  );
+/// CacheManager personalizado para imágenes de carátulas de álbumes
+/// Configurado para persistir en disco incluso después de reiniciar la app
+class AlbumArtCacheManager {
+  static CacheManager? _instance;
+  static bool _isInitialized = false;
+  
+  /// Inicializa el cache manager con configuración optimizada para persistencia
+  static Future<void> ensureInitialized() async {
+    if (_isInitialized && _instance != null) return;
+    
+    try {
+      _instance = CacheManager(
+        Config(
+          'album_covers_cache', // Clave única para carátulas
+          stalePeriod: const Duration(days: 90), // ✅ Carátulas válidas por 90 días (3 meses)
+          maxNrOfCacheObjects: 1000, // ✅ Máximo 1000 carátulas en caché
+          repo: JsonCacheInfoRepository(databaseName: 'album_covers_cache_db'),
+          fileService: HttpFileService(),
+        ),
+      );
+      _isInitialized = true;
+    } catch (e) {
+      // Fallback a configuración básica si falla
+      _instance = CacheManager(
+        Config(
+          'album_covers_cache',
+          stalePeriod: const Duration(days: 90),
+          maxNrOfCacheObjects: 1000,
+        ),
+      );
+      _isInitialized = true;
+    }
+  }
 
-  static CacheManager get instance => _instance;
+  static CacheManager get instance {
+    if (_instance == null) {
+      // Inicializar síncronamente con configuración por defecto
+      _instance = CacheManager(
+        Config(
+          'album_covers_cache',
+          stalePeriod: const Duration(days: 90),
+          maxNrOfCacheObjects: 1000,
+          repo: JsonCacheInfoRepository(databaseName: 'album_covers_cache_db'),
+          fileService: HttpFileService(),
+        ),
+      );
+      _isInitialized = true;
+    }
+    return _instance!;
+  }
 
-  /// Precachear imagen
+  /// Precachear imagen de carátula
   static Future<void> precache(String url) async {
     try {
-      await _instance.getSingleFile(url);
+      await instance.getSingleFile(url);
     } catch (e) {
       // Ignorar errores de precache
+    }
+  }
+  
+  /// Verificar si una imagen está en caché
+  static Future<bool> isInCache(String url) async {
+    try {
+      final fileInfo = await instance.getFileFromCache(url);
+      return fileInfo != null;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  /// Obtener imagen del caché (null si no existe)
+  static Future<FileInfo?> getFromCache(String url) async {
+    try {
+      return await instance.getFileFromCache(url);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  /// Limpiar caché de imágenes antiguas
+  static Future<void> clearOldCache() async {
+    try {
+      await instance.emptyCache();
+    } catch (e) {
+      // Ignorar errores
     }
   }
 }

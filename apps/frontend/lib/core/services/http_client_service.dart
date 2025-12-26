@@ -30,6 +30,16 @@ class HttpClientService {
   // ✅ DEDUPLICACIÓN DE REQUESTS: Map<clave, Future>
   // Evita múltiples peticiones idénticas simultáneas
   final Map<String, Future<Response>> _pendingRequests = {};
+  
+  // ⚡ OPTIMIZACIÓN: Variables para throttling de logs
+  DateTime? _lastReuseLogTime;
+  String? _lastReusedRequestKey;
+  static const Duration _reuseLogThrottle = Duration(seconds: 3); // Throttle de 3 segundos para logs de reutilización
+  
+  // ⚡ OPTIMIZACIÓN: Throttling para errores de conexión masivos
+  DateTime? _lastConnectionErrorLogTime;
+  int _connectionErrorCount = 0;
+  static const Duration _connectionErrorLogThrottle = Duration(seconds: 10); // Solo loggear errores de conexión cada 10 segundos cuando hay muchos
 
   /// Obtener la instancia de Dio (singleton con lazy initialization)
   Dio get dio {
@@ -192,21 +202,56 @@ class HttpClientService {
           // Verificar si es un error que debe reintentarse
           final shouldRetry = _shouldRetry(error, currentRetryCount, maxRetries);
 
-          // Log del error para debugging (solo en el primer intento para evitar spam)
-          if (currentRetryCount == 0) {
+          // ⚡ OPTIMIZACIÓN: Detectar errores de conexión masivos y reducir logs
+          final isConnectionError = error.type == DioExceptionType.connectionError || 
+              error.type == DioExceptionType.connectionTimeout;
+          
+          if (isConnectionError) {
+            _connectionErrorCount++;
+            final now = DateTime.now();
+            final shouldLogConnectionError = _lastConnectionErrorLogTime == null ||
+                now.difference(_lastConnectionErrorLogTime!) > _connectionErrorLogThrottle;
+            
+            // Limpiar requests pendientes si hay muchos errores de conexión (probablemente no hay conexión)
+            if (_connectionErrorCount > 5 && _pendingRequests.isNotEmpty) {
+              final clearedCount = _pendingRequests.length;
+              _pendingRequests.clear();
+              if (shouldLogConnectionError) {
+                AppLogger.warning(
+                  '[HttpClientService] ⚠️ Múltiples errores de conexión detectados ($_connectionErrorCount). Limpiando $clearedCount requests pendientes.',
+                );
+              }
+            }
+            
+            // Solo loggear errores de conexión ocasionalmente para evitar spam
+            if (shouldLogConnectionError && currentRetryCount == 0) {
+              _lastConnectionErrorLogTime = now;
+              AppLogger.warning(
+                '[HttpClientService] Error de conexión en ${requestOptions.method} ${requestOptions.path}. Verifica que el backend esté corriendo y accesible en ${ApiConfig.baseUrl}',
+              );
+              if (_connectionErrorCount > 1) {
+                AppLogger.warning(
+                  '[HttpClientService] Total de errores de conexión recientes: $_connectionErrorCount',
+                );
+              }
+            } else if (currentRetryCount == 0) {
+              // Silenciar logs cuando hay muchos errores de conexión
+              // Solo loggear el mensaje de error sin detalles adicionales
+            }
+          } else {
+            // Resetear contador si el error no es de conexión
+            _connectionErrorCount = 0;
+            _lastConnectionErrorLogTime = null;
+          }
+
+          // Log del error para debugging (solo en el primer intento y si no es error de conexión masivo)
+          if (currentRetryCount == 0 && (!isConnectionError || _connectionErrorCount <= 1)) {
             AppLogger.warning(
               '[HttpClientService] Error en petición ${requestOptions.method} ${requestOptions.path}: ${error.type} - ${error.message}',
             );
             if (error.response != null) {
               AppLogger.warning(
                 '[HttpClientService] Status code: ${error.response?.statusCode}',
-              );
-            }
-            // Log adicional para errores de conexión
-            if (error.type == DioExceptionType.connectionError || 
-                error.type == DioExceptionType.connectionTimeout) {
-              AppLogger.warning(
-                '[HttpClientService] Error de conexión. Verifica que el backend esté corriendo y accesible.',
               );
             }
           }
@@ -220,9 +265,12 @@ class HttpClientService {
               ),
             );
 
-            AppLogger.debug(
-              '[HttpClientService] Reintentando petición (intento ${currentRetryCount + 1}/$maxRetries) después de ${delay.inMilliseconds}ms',
-            );
+            // ⚡ OPTIMIZACIÓN: Solo loggear el primer y último reintento para evitar spam
+            if (currentRetryCount == 0 || currentRetryCount == maxRetries - 1) {
+              AppLogger.debug(
+                '[HttpClientService] Reintentando petición (intento ${currentRetryCount + 1}/$maxRetries) después de ${delay.inMilliseconds}ms',
+              );
+            }
 
             // Esperar antes de reintentar
             await Future.delayed(delay);
@@ -268,7 +316,15 @@ class HttpClientService {
             
             if (pendingRequest != null) {
               // Ya existe una petición idéntica en curso, reutilizar su Future
-              AppLogger.debug('[HttpClientService] Reutilizando request pendiente: $requestKey');
+              // ⚡ OPTIMIZACIÓN: Solo loggear ocasionalmente para evitar spam
+              final shouldLogReuse = _lastReusedRequestKey != requestKey || 
+                                     _lastReuseLogTime == null ||
+                                     DateTime.now().difference(_lastReuseLogTime!) > _reuseLogThrottle;
+              if (shouldLogReuse) {
+                _lastReusedRequestKey = requestKey;
+                _lastReuseLogTime = DateTime.now();
+                AppLogger.debug('[HttpClientService] Reutilizando request pendiente: $requestKey');
+              }
               try {
                 // ✅ OPTIMIZACIÓN: Timeout para requests pendientes (evita esperas infinitas)
                 final response = await pendingRequest.timeout(
@@ -292,9 +348,19 @@ class HttpClientService {
             // Crear nueva petición y guardarla en cache
             final requestFuture = _dio!.fetch(options).then((response) {
               _pendingRequests.remove(requestKey);
+              // Resetear contador de errores de conexión si hay una respuesta exitosa
+              if (_connectionErrorCount > 0) {
+                resetConnectionErrorCount();
+              }
               return response;
             }).catchError((error) {
               _pendingRequests.remove(requestKey);
+              // Si es un error de conexión, incrementar contador
+              if (error is DioException && 
+                  (error.type == DioExceptionType.connectionError || 
+                   error.type == DioExceptionType.connectionTimeout)) {
+                _connectionErrorCount++;
+              }
               throw error;
             });
             
@@ -376,7 +442,15 @@ class HttpClientService {
     _isInitialized = false;
     _dio = null;
     _pendingRequests.clear(); // Limpiar requests pendientes
+    _connectionErrorCount = 0; // Resetear contador de errores de conexión
+    _lastConnectionErrorLogTime = null;
     await initialize();
+  }
+  
+  /// Resetear contador de errores de conexión (útil cuando se detecta que la conexión se restableció)
+  void resetConnectionErrorCount() {
+    _connectionErrorCount = 0;
+    _lastConnectionErrorLogTime = null;
   }
 
   /// ✅ DEDUPLICACIÓN: Generar clave única para un request

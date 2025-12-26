@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
@@ -37,10 +36,10 @@ class FeaturedSongsSection extends ConsumerWidget {
             children: [
               Text(
                 'Canciones Destacadas',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF3D2E20),
+                  color: Color(0xFF3D2E20),
                   decoration: TextDecoration.none,
                 ),
               ),
@@ -54,10 +53,11 @@ class FeaturedSongsSection extends ConsumerWidget {
                 ),
                 child: Text(
                   'Ver todas',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontSize: 14,
                     color: NeumorphismTheme.accentDark, // ✅ Marrón oscuro del tema
                     decoration: TextDecoration.none,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -96,10 +96,11 @@ class FeaturedSongsSection extends ConsumerWidget {
               },
               child: Text(
                 'Ver ${featuredSongs.length - 4} canciones más',
-                style: GoogleFonts.inter(
+                style: const TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: Color(0xFF8B7A6A),
                   decoration: TextDecoration.none,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -118,10 +119,10 @@ class FeaturedSongsSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
             'Canciones Destacadas',
-            style: GoogleFonts.inter(
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF3D2E20),
+              color: Color(0xFF3D2E20),
               decoration: TextDecoration.none,
             ),
           ),
@@ -137,18 +138,18 @@ class FeaturedSongsSection extends ConsumerWidget {
                 child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEEE4DA), // 🚀 Sólido
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
               child: Row(
                 children: [
                   Container(
                     width: 56,
                     height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF3EBE3), // 🚀 Sólido
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
                     ),
                     child: const Center(
                       child: CircularProgressIndicator(
@@ -165,18 +166,18 @@ class FeaturedSongsSection extends ConsumerWidget {
                         Container(
                           height: 16,
                           width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: const BorderRadius.all(Radius.circular(8)),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF3EBE3), // 🚀 Sólido
+                            borderRadius: BorderRadius.all(Radius.circular(8)),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           height: 12,
                           width: 120,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            borderRadius: const BorderRadius.all(Radius.circular(6)),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEEE4DA), // 🚀 Sólido
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
                           ),
                         ),
                       ],
@@ -185,9 +186,9 @@ class FeaturedSongsSection extends ConsumerWidget {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: const BorderRadius.all(Radius.circular(20)),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF3EBE3), // 🚀 Sólido
+                      borderRadius: BorderRadius.all(Radius.circular(20)),
                     ),
                   ),
                 ],
@@ -210,10 +211,10 @@ class FeaturedSongsSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
             'Canciones Destacadas',
-            style: GoogleFonts.inter(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF3D2E20),
+              color: Color(0xFF3D2E20),
               decoration: TextDecoration.none,
             ),
           ),
@@ -223,9 +224,9 @@ class FeaturedSongsSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE4D6C8).withValues(alpha: 0.6),
-              borderRadius: const BorderRadius.all(Radius.circular(12)),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEEE4DA), // 🚀 Sólido
+              borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
             child: Center(
               child: Column(
@@ -238,18 +239,19 @@ class FeaturedSongsSection extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     'No hay canciones destacadas',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: const Color(0xFF3D2E20),
+                      color: Color(0xFF3D2E20),
                       decoration: TextDecoration.none,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Descubre nueva música más tarde',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: const Color(0xFF8B7A6A),
+                      color: Color(0xFF8B7A6A),
                       decoration: TextDecoration.none,
                     ),
                   ),

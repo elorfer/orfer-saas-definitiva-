@@ -141,6 +141,7 @@ export class PublicSongsController {
   @ApiQuery({ name: 'count', required: false, type: Number, description: 'Número de recomendaciones (default: 4, max: 20)' })
   @ApiQuery({ name: 'userId', required: false, type: String, description: 'ID del usuario para personalización' })
   @ApiQuery({ name: 'genres', required: false, type: [String], description: 'Géneros de la canción semilla' })
+  @ApiQuery({ name: 'genreId', required: false, type: String, description: '🎛️ ID del género específico para filtrar (Vibe Selector)' })
   @ApiQuery({ name: 'excludeIds', required: false, type: String, description: 'IDs separados por coma para excluir' })
   @ApiResponse({ status: 200, description: 'Lista de canciones recomendadas generadas en batch' })
   @ApiResponse({ status: 400, description: 'Parámetros inválidos' })
@@ -149,10 +150,11 @@ export class PublicSongsController {
     @Query('count', new DefaultValuePipe(4), ParseIntPipe) count: number = 4,
     @Query('userId') userId?: string,
     @Query('genres') genres?: string | string[],
+    @Query('genreId') genreId?: string, // 🎛️ Género específico del Vibe Selector
     @Query('excludeIds') excludeIds?: string,
   ) {
     const startTime = Date.now();
-    this.logger.log(`🚀 [BATCH API] Generando ${count} recomendaciones para semilla: ${seed}`);
+    this.logger.log(`🚀 [BATCH API] Generando ${count} recomendaciones para semilla: ${seed}${genreId ? `, género: ${genreId}` : ''}`);
     
     // Validar count
     const validCount = Math.min(Math.max(1, count), 20); // Entre 1 y 20
@@ -169,13 +171,14 @@ export class PublicSongsController {
     
     this.logger.log(`🚫 [BATCH API] ExcludeIds recibidos: ${excludeIdsArray.length} IDs - ${excludeIdsArray.slice(0, 5).map(id => id.substring(0, 8)).join(', ')}${excludeIdsArray.length > 5 ? '...' : ''}`);
     
-    // Llamar al servicio de recomendaciones
-    const recommendations = await this.recommendationService.generatePlaylistBatch(
+    // 🎛️ VIBE SELECTOR: Llamar al servicio con genreId si está presente
+    const batchResult = await this.recommendationService.generatePlaylistBatch(
       seed,
       validCount,
       userId,
       genresArray,
-      excludeIdsArray
+      excludeIdsArray,
+      genreId, // 🎛️ Pasar genreId al servicio
     );
     
     // ✅ NOTA: El Service ya valida correctamente usando effectiveExcludeIds (reducidos por exclusión adaptativa)
@@ -183,9 +186,15 @@ export class PublicSongsController {
     // El Service garantiza que las recomendaciones no estén en los effectiveExcludeIds que realmente se usaron
     
     // Convertir a DTOs
-    const songsDto = recommendations.map(song => SongMapper.toDto(song));
+    const songsDto = batchResult.songs.map(song => SongMapper.toDto(song));
     
     const processingTime = Date.now() - startTime;
+    
+    // 🎛️ VIBE SELECTOR: Loguear si hubo cambio a MIX
+    if (batchResult.vibeChangedToMix) {
+      this.logger.warn(`🎛️ [BATCH API] ⚠️ VIBE CAMBIÓ A MIX: Se agotaron las canciones de "${batchResult.originalGenre}"`);
+    }
+    
     this.logger.log(`✅ [BATCH API] Completado en ${processingTime}ms: ${songsDto.length}/${validCount} recomendaciones válidas`);
     
     return {
@@ -195,6 +204,9 @@ export class PublicSongsController {
       seed: seed,
       processingTime,
       algorithm: 'spotify-style-batch-v1',
+      // 🎛️ VIBE SELECTOR: Notificar al frontend si cambió a MIX
+      vibeChangedToMix: batchResult.vibeChangedToMix,
+      originalGenre: batchResult.originalGenre,
     };
   }
 

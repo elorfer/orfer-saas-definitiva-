@@ -34,6 +34,10 @@ class AdInsertionManager {
       
       // 2. Insertar en la cola
       final currentSource = player.audioSource;
+      // ignore: deprecated_member_use
+      // ConcatenatingAudioSource está deprecado pero la nueva API setAudioSources
+      // no está disponible en la versión actual de just_audio. Se migrará cuando
+      // se actualice el paquete a una versión que soporte la nueva API.
       if (currentSource is! ConcatenatingAudioSource) {
         AppLogger.warning('[AdInsertionManager] No hay cola activa');
         return false;
@@ -99,6 +103,10 @@ class AdInsertionManager {
     try {
       final player = audioService.player;
       final currentSource = player.audioSource;
+      // ignore: deprecated_member_use
+      // ConcatenatingAudioSource está deprecado pero la nueva API setAudioSources
+      // no está disponible en la versión actual de just_audio. Se migrará cuando
+      // se actualice el paquete a una versión que soporte la nueva API.
       if (currentSource is! ConcatenatingAudioSource) {
         AppLogger.warning('[AdInsertionManager] No hay cola activa para eliminar anuncio');
         return false;

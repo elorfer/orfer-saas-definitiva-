@@ -1,11 +1,11 @@
 import 'dart:async'; // ✅ Para Timer
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart'; // ✅ Para ScrollDirection
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/play_history_provider.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/models/song_model.dart';
-import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/utils/intersection_observer.dart';
 import '../../../core/widgets/optimized_image.dart';
@@ -41,11 +41,26 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
     // 🔥 OPTIMIZACIÓN: ScrollController para precache dinámico
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
-    
-    // Precargar imágenes después del primer frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _precacheInitialImages();
-    });
+    // Inicializar cache desde el provider una sola vez y suscribirse a cambios
+    final initialHistory = ref.read(playHistoryProvider);
+    _cachedImageUrls = initialHistory
+        .reversed
+        .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
+        .where((url) => url != null && url.isNotEmpty)
+        .cast<String>()
+        .toList();
+    _cachedSongsCount = initialHistory.length;
+
+    if (_cachedImageUrls.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        LazyImageLoader.precacheInitialImages(
+          imageUrls: _cachedImageUrls,
+          context: context,
+          count: 10,
+        );
+      });
+    }
   }
   
   @override
@@ -58,36 +73,6 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
     super.dispose();
   }
   
-  /// 🔥 OPTIMIZACIÓN: Precargar imágenes iniciales usando LazyImageLoader (como en Home)
-  void _precacheInitialImages() {
-    if (!mounted) return;
-    
-    try {
-      final recentSongs = ref.read(playHistoryProvider.notifier).getRecentHistory(limit: 50);
-      
-      // ✅ OPTIMIZACIÓN: Cachear URLs para evitar recálculos en _onScroll
-      _cachedImageUrls = recentSongs
-          .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
-          .where((url) => url != null && url.isNotEmpty)
-          .cast<String>()
-          .toList();
-      
-      _cachedSongsCount = recentSongs.length;
-      
-      // Precachear primeras 10 imágenes visibles
-      if (_cachedImageUrls.isNotEmpty) {
-        LazyImageLoader.precacheInitialImages(
-          imageUrls: _cachedImageUrls,
-          context: context,
-          count: 10,
-        );
-      }
-    } catch (e) {
-      // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
-      debugPrint('[RecentlyPlayedScreen] Error en _precacheInitialImages: $e');
-    }
-  }
-  
   /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles cuando el usuario hace scroll (como en Home)
   /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
   void _onScroll() {
@@ -96,21 +81,28 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
     // ✅ OPTIMIZACIÓN: Cancelar timer anterior si existe
     _scrollDebounceTimer?.cancel();
     
-    // ✅ OPTIMIZACIÓN: Debounce de 300ms para evitar ejecuciones excesivas
-    _scrollDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+    // ✅ OPTIMIZACIÓN: Debounce más ajustado para mejor respuesta sin jank
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 250), () {
       if (!mounted || !_scrollController.hasClients) return;
       
       try {
+        // Ejecutar precarga solo cuando el usuario se desplaza hacia adelante
+        final direction = _scrollController.position.userScrollDirection;
+        if (direction != ScrollDirection.forward) {
+          return; // Evitar trabajo en rebotes/retrocesos
+        }
+        
         // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer del provider cada vez
         if (_cachedImageUrls.isEmpty) {
           // Si no hay cache, actualizar desde el provider (solo una vez)
-          final recentSongs = ref.read(playHistoryProvider.notifier).getRecentHistory(limit: 50);
-          _cachedImageUrls = recentSongs
+          final history = ref.read(playHistoryProvider);
+          _cachedImageUrls = history
+              .reversed
               .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
               .where((url) => url != null && url.isNotEmpty)
               .cast<String>()
               .toList();
-          _cachedSongsCount = recentSongs.length;
+          _cachedSongsCount = history.length;
         }
         
         // Precachear imágenes visibles basado en posición del scroll (IntersectionObserver)
@@ -121,7 +113,7 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
             itemCount: _cachedSongsCount,
             imageUrls: _cachedImageUrls,
             context: context,
-            precacheCount: 5, // Precachear 5 items antes y después del viewport
+            precacheCount: 3, // Precachear menos items para bajar memoria
           );
         }
       } catch (e) {
@@ -135,19 +127,34 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
-    final recentSongs = ref.watch(playHistoryProvider.notifier).getRecentHistory(limit: 50);
-    
-    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambien los datos
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _cachedImageUrls = recentSongs
-            .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
-            .where((url) => url != null && url.isNotEmpty)
-            .cast<String>()
-            .toList();
-        _cachedSongsCount = recentSongs.length;
-      }
+    // Observar cambios en el historial para mantener cache/precarga
+    final history = ref.read(playHistoryProvider);
+    final recentSongs = List<Song>.from(history.reversed).take(50).toList();
+
+    // Escuchar cambios en el historial aquí (permitido en build) y mantener cache/precarga
+    ref.listen<List<Song>>(playHistoryProvider, (previous, next) {
+      _cachedImageUrls = next
+          .reversed
+          .map((song) => UrlNormalizer.normalizeImageUrl(song.coverArtUrl))
+          .where((url) => url != null && url.isNotEmpty)
+          .cast<String>()
+          .toList();
+      _cachedSongsCount = next.length;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _cachedImageUrls.isEmpty) return;
+        try {
+          LazyImageLoader.precacheInitialImages(
+            imageUrls: _cachedImageUrls,
+            context: context,
+            count: 10,
+          );
+        } catch (e) {
+          debugPrint('[RecentlyPlayedScreen] Error precaching after listen: $e');
+        }
+      });
     });
+    
 
     // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
     return RepaintBoundary(
@@ -193,8 +200,8 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
             )
           : CustomScrollView(
               controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
-              // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
-              cacheExtent: 400, // Reducido de 500 a 400 para mejor rendimiento
+              // 🔥 OPTIMIZADO: cacheExtent reducido aún más para dispositivos de gama baja
+              cacheExtent: 300,
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ), // ✅ Scroll estilo iPhone (igual que Home)
@@ -214,67 +221,13 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
                             key: ValueKey('recent_item_${song.id}'),
                             song: song,
                             index: index,
-                            onTap: () async {
-                              // ✅ Tocar la tarjeta = reproducir (igual que el botón play)
-                              try {
-                                // Validar que la canción tenga URL válida
-                                if (song.fileUrl == null || song.fileUrl!.isEmpty) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
-                                        backgroundColor: Colors.red,
-                                        duration: const Duration(seconds: 3),
-                                      ),
-                                    );
-                                  }
-                                  return;
-                                }
-                                await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(song, useAlgorithm: true);
-                              } catch (e, stackTrace) {
-                                debugPrint('❌ [RecentlyPlayedScreen] Error al reproducir canción: $e');
-                                debugPrint('Stack trace: $stackTrace');
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
-                                      backgroundColor: Colors.red,
-                                      duration: const Duration(seconds: 4),
-                                    ),
-                                  );
-                                }
-                              }
+                            onTap: () {
+                              // ✅ Navegar a la pantalla de detalle de la canción
+                              context.push('/song/${song.id}', extra: song);
                             },
-                            onPlay: () async {
-                              // ✅ CRÍTICO: useAlgorithm = true desactiva fixed queue automáticamente
-                              try {
-                                // Validar que la canción tenga URL válida
-                                if (song.fileUrl == null || song.fileUrl!.isEmpty) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Error: La canción "${song.title ?? 'Sin título'}" no tiene URL de archivo'),
-                                        backgroundColor: Colors.red,
-                                        duration: const Duration(seconds: 3),
-                                      ),
-                                    );
-                                  }
-                                  return;
-                                }
-                                await ref.read(unifiedAudioProviderFixed.notifier).playFromCard(song, useAlgorithm: true);
-                              } catch (e, stackTrace) {
-                                debugPrint('❌ [RecentlyPlayedScreen] Error al reproducir canción: $e');
-                                debugPrint('Stack trace: $stackTrace');
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error al reproducir "${song.title ?? 'la canción'}": ${e.toString()}'),
-                                      backgroundColor: Colors.red,
-                                      duration: const Duration(seconds: 4),
-                                    ),
-                                  );
-                                }
-                              }
+                            onPlay: () {
+                              // ✅ Navegar a la pantalla de detalle de la canción
+                              context.push('/song/${song.id}', extra: song);
                             },
                           ),
                         );
@@ -302,7 +255,7 @@ class _SongHistoryItem extends ConsumerWidget {
   final Song song;
   final int index;
   final VoidCallback onTap;
-  final Future<void> Function()? onPlay;
+  final VoidCallback? onPlay;
 
   const _SongHistoryItem({
     super.key,
@@ -320,8 +273,8 @@ class _SongHistoryItem extends ConsumerWidget {
     // ✅ OPTIMIZACIÓN: Variables eliminadas ya que el botón play siempre inicia nueva reproducción
     // (no necesita verificar si es la canción actual o si está reproduciéndose)
 
-    // ✅ OPTIMIZACIÓN: Usar URL normalizada (ya está en cache si se precargó)
-    final coverUrl = UrlNormalizer.normalizeImageUrl(song.coverArtUrl);
+    // ✅ OPTIMIZACIÓN: Usar URL directamente, OptimizedImage se encarga de normalizarla
+    final coverUrl = song.coverArtUrl;
 
     return Opacity(
       opacity: isAvailable ? 1.0 : 0.5, // Reducir opacidad si no está disponible
@@ -382,8 +335,7 @@ class _SongHistoryItem extends ConsumerWidget {
                               maxCacheHeight: 112,
                               useThumbnail: true, // Usar thumbnails cuando estén disponibles
                               skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
-                              lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
-                              visibilityThreshold: 0.1, // Cargar cuando 10% visible
+                              lazyLoad: false, // ✅ DESACTIVADO: SliverChildBuilderDelegate ya maneja lazy loading
                             )
                           : Container(
                               width: 56, // ✅ Reducido de 64 a 56

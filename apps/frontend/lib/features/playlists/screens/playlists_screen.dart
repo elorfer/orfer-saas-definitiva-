@@ -60,14 +60,14 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
 
     try {
       final nextPage = _currentPage + 1;
-      // Acumular playlists de todas las páginas
-      final allPlaylistsAsync = ref.read(
-        playlistsProvider((page: 1, limit: nextPage * _pageSize)),
+      // ✅ OPTIMIZACIÓN: Cargar solo la página siguiente, no todas desde el inicio
+      final nextPageAsync = ref.read(
+        playlistsProvider((page: nextPage, limit: _pageSize)),
       );
       
-      await allPlaylistsAsync.when(
-        data: (playlists) async {
-          if (playlists.length < nextPage * _pageSize) {
+      await nextPageAsync.when(
+        data: (newPlaylists) async {
+          if (newPlaylists.isEmpty || newPlaylists.length < _pageSize) {
             setState(() {
               _hasMore = false;
             });
@@ -75,10 +75,15 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
             setState(() {
               _currentPage = nextPage;
             });
+            // No necesitamos invalidar - el build() ya combina todas las páginas
           }
         },
         loading: () {},
-        error: (_, __) {},
+        error: (_, __) {
+          setState(() {
+            _hasMore = false;
+          });
+        },
       );
     } finally {
       if (mounted) {
@@ -93,10 +98,29 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
-    // Acumular todas las playlists de todas las páginas
-    final allPlaylistsAsync = ref.watch(
-      playlistsProvider((page: 1, limit: _currentPage * _pageSize)),
+    // ✅ OPTIMIZACIÓN: Cargar solo la primera página inicialmente
+    // Las páginas adicionales se cargan mediante _loadMore() y se combinan localmente
+    final firstPageAsync = ref.watch(
+      playlistsProvider((page: 1, limit: _pageSize)),
     );
+    
+    // ✅ OPTIMIZACIÓN: Combinar todas las páginas cargadas eficientemente
+    List<Playlist> allPlaylists = [];
+    
+    // Leer la primera página (ya está siendo watched)
+    if (firstPageAsync.hasValue) {
+      allPlaylists.addAll(firstPageAsync.value ?? []);
+    }
+    
+    // Si hay más páginas cargadas, leerlas también (sin watch para evitar rebuilds innecesarios)
+    if (_currentPage > 1) {
+      for (int page = 2; page <= _currentPage; page++) {
+        final pageAsync = ref.read(playlistsProvider((page: page, limit: _pageSize)));
+        if (pageAsync.hasValue && pageAsync.value != null && pageAsync.value!.isNotEmpty) {
+          allPlaylists.addAll(pageAsync.value!);
+        }
+      }
+    }
 
     return Scaffold(
       key: const ValueKey('playlists_scaffold'), // Key estable para evitar rebuilds
@@ -121,9 +145,9 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
       ),
       body: SafeArea(
         bottom: true,
-        child: allPlaylistsAsync.when(
-          data: (playlists) {
-            if (playlists.isEmpty) {
+        child: firstPageAsync.when(
+          data: (_) {
+            if (allPlaylists.isEmpty) {
               return _buildEmptyState();
             }
 
@@ -152,14 +176,14 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          if (index >= playlists.length) {
+                          if (index >= allPlaylists.length) {
                             return _isLoadingMore
                                 ? RepaintBoundary(
                                     child: _buildShimmerCard(),
                                   )
                                 : null;
                           }
-                          final playlist = playlists[index];
+                          final playlist = allPlaylists[index];
                           return RepaintBoundary(
                             child: _PlaylistCard(
                               key: ValueKey('playlist_${playlist.id}'), // Key estable para optimización
@@ -170,7 +194,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
                             ),
                           );
                         },
-                        childCount: playlists.length + (_isLoadingMore ? 4 : 0),
+                        childCount: allPlaylists.length + (_isLoadingMore ? 4 : 0),
                         // 🔥 OPTIMIZACIONES PARA GRANDES VOLÚMENES:
                         addAutomaticKeepAlives: false, // No mantener vivos items fuera de la vista (ahorra memoria)
                         addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual (evita duplicación)

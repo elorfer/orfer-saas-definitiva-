@@ -47,8 +47,10 @@ class FollowState {
 }
 
 /// Provider para el estado de seguimiento de artistas
-/// ⚡ OPTIMIZACIÓN: autoDispose para liberar memoria cuando no hay listeners
-final followProvider = NotifierProvider.autoDispose<FollowNotifier, FollowState>(() {
+/// ⚠️ CRÍTICO: NO usar autoDispose para mantener estado consistente entre pantallas
+/// Cambiar a autoDispose causaría que cada pantalla tenga su propia instancia del estado
+/// Esto impide que los cambios se reflejen en todas las pantallas simultáneamente
+final followProvider = NotifierProvider<FollowNotifier, FollowState>(() {
   return FollowNotifier();
 });
 
@@ -171,9 +173,20 @@ class FollowNotifier extends Notifier<FollowState> {
         if (!updatedArtists.any((a) => a.id == artistId)) {
           updatedArtists.add(artist);
         }
+        // ✅ CRÍTICO: Asegurar que el estado se actualice correctamente con el nuevo artista
         state = FollowState(
-          followedArtistIds: Set<String>.from(state.followedArtistIds),
+          followedArtistIds: Set<String>.from(newSet), // ✅ Usar newSet que ya incluye el artistId
           followedArtists: updatedArtists,
+          isLoading: state.isLoading,
+          lastLoaded: state.lastLoaded,
+          error: null,
+        );
+      } else {
+        // ✅ CRÍTICO: Si no viene el artista en la respuesta, asegurar que al menos el ID esté en el set
+        // Esto previene que el estado quede inconsistente
+        state = FollowState(
+          followedArtistIds: Set<String>.from(newSet), // ✅ Usar newSet que ya incluye el artistId
+          followedArtists: List<ArtistLite>.from(state.followedArtists), // Mantener lista existente
           isLoading: state.isLoading,
           lastLoaded: state.lastLoaded,
           error: null,

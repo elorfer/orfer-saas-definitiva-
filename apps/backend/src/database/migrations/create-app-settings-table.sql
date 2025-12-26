@@ -31,3 +31,12 @@ COMMENT ON COLUMN app_settings.value IS 'Valor numérico de la configuración';
 COMMENT ON COLUMN app_settings.description IS 'Descripción de la configuración para documentación';
 
 
+
+
+
+
+
+
+
+
+

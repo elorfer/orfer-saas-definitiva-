@@ -49,22 +49,29 @@ class SongDetailService {
           return [];
         }
         
-        return ResponseParser.parseList<Song>(
-          data: validData,
-          parser: (json) {
-            final normalized = DataNormalizer.normalizeSong(json);
-            
-            // Normalizar URL de portada
-            final rawCoverUrl = normalized['cover_art_url'] as String?;
-            final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
-            if (normalizedCoverUrl != null) {
-              normalized['cover_art_url'] = normalizedCoverUrl;
-            }
-            
-            return Song.fromJson(normalized);
-          },
-          logErrors: true,
-        );
+        final normalizedList = validData
+            .map((json) => DataNormalizer.normalizeSong(Map<String, dynamic>.from(json as Map)))
+            .toList();
+
+        for (final n in normalizedList) {
+          final rawCoverUrl = n['cover_art_url'] as String?;
+          final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
+          if (normalizedCoverUrl != null) {
+            n['cover_art_url'] = normalizedCoverUrl;
+          }
+        }
+
+        try {
+          return await Song.parseList(normalizedList);
+        } catch (_) {
+          final parsed = <Song>[];
+          for (final n in normalizedList) {
+            try {
+              parsed.add(Song.fromJson(n));
+            } catch (_) {}
+          }
+          return parsed;
+        }
       } else {
         return [];
       }
@@ -132,7 +139,7 @@ class SongDetailService {
             debugPrint('⚠️ [SONG DETAIL SERVICE] No hay datos de artista en la respuesta');
           }
           
-          return Song.fromJson(normalized);
+          return await Song.parse(normalized);
         }
       }
       return null;

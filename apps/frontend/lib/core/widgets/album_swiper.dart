@@ -57,6 +57,7 @@ class _AlbumCoverImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (song.coverArtUrl == null || song.coverArtUrl!.isEmpty) {
       return Container(
+        key: ValueKey('placeholder_${song.id}'),
         color: Colors.grey[800],
         child: const Center(
           child: Icon(Icons.music_note, color: Colors.white70, size: 80),
@@ -65,20 +66,36 @@ class _AlbumCoverImage extends StatelessWidget {
     }
 
     return CachedNetworkImage(
-      // El key por ID puede adelantar el build de la siguiente carátula y causar flash.
-      // Usamos un key fijo para que solo cambie cuando el widget padre cambie el child.
-      key: const ValueKey('album_cover_image'),
+      // ✅ FIX: Usar key único por canción para forzar actualización cuando cambia la canción
+      key: ValueKey('album_cover_${song.id}_${song.coverArtUrl}'),
       imageUrl: song.coverArtUrl!,
       fit: BoxFit.cover,
-      fadeInDuration: Duration.zero,
+      fadeInDuration: const Duration(milliseconds: 200),
       fadeOutDuration: Duration.zero,
+      // ✅ FIX: Usar useOldImageOnUrlChange para evitar mostrar imagen anterior durante la carga
+      useOldImageOnUrlChange: false,
       placeholder: (context, url) => Container(
-        color: Colors.grey[800],
-        child: const Center(
-          child: CircularProgressIndicator(),
+        key: ValueKey('placeholder_${song.id}'),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.grey[850] ?? Colors.grey[800]!,
+              Colors.grey[900] ?? Colors.grey[800]!,
+            ],
+          ),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.music_note_rounded,
+            color: Colors.white.withValues(alpha: 0.3),
+            size: 60,
+          ),
         ),
       ),
       errorWidget: (context, url, error) => Container(
+        key: ValueKey('error_${song.id}'),
         color: Colors.grey[800],
         child: const Center(
           child: Icon(Icons.music_note, color: Colors.white70, size: 80),

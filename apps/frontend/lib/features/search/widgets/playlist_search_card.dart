@@ -22,77 +22,48 @@ class PlaylistSearchCard extends StatelessWidget {
 
     return RepaintBoundary(
       child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // ⚡ GAMA BAJA: Reducido
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.surface.withValues(alpha: 0.8),
-            NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
-          ],
-        ),
-        borderRadius: const BorderRadius.all(Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-            spreadRadius: 0,
-          ),
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(-2, -2),
-          ),
-        ],
+        // ⚡ GAMA BAJA: Color sólido en lugar de gradiente + sombras
+        color: NeumorphismTheme.surface.withValues(alpha: 0.6),
+        borderRadius: const BorderRadius.all(Radius.circular(16)), // ⚡ Reducido de 20
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          borderRadius: const BorderRadius.all(Radius.circular(16)), // ⚡ Reducido
           onTap: () {
             context.push('/playlist/${playlist.id}');
           },
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // ⚡ Reducido
             child: Row(
               children: [
                 // Portada
                 Container(
-                    width: 64,
-                    height: 64,
+                    width: 56, // ⚡ GAMA BAJA: Reducido de 64
+                    height: 56,
                     constraints: const BoxConstraints(
-                      minWidth: 64,
-                      maxWidth: 64,
-                      minHeight: 64,
-                      maxHeight: 64,
+                      minWidth: 56,
+                      maxWidth: 56,
+                      minHeight: 56,
+                      maxHeight: 56,
                     ),
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.all(Radius.circular(16)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
+                    // ⚡ GAMA BAJA: Sin boxShadow
                     child: ClipRRect(
-                      borderRadius: const BorderRadius.all(Radius.circular(16)),
+                      borderRadius: const BorderRadius.all(Radius.circular(12)), // ⚡ Reducido
                       clipBehavior: Clip.antiAlias,
                       child: coverUrl != null
                           ? OptimizedImage(
                               imageUrl: coverUrl,
                               fit: BoxFit.cover,
-                              width: 64,
-                              height: 64,
-                              maxCacheWidth: 128, // 2x el tamaño de visualización
-                              maxCacheHeight: 128,
-                              lazyLoad: true, // ✅ Lazy loading con IntersectionObserver
-                              visibilityThreshold: 0.1, // Cargar cuando 10% visible
-                              skipFade: true, // Sin fade para mejor rendimiento
+                              width: 56,
+                              height: 56,
+                              maxCacheWidth: 112, // ⚡ Reducido
+                              maxCacheHeight: 112,
+                              lazyLoad: true,
+                              visibilityThreshold: 0.1,
+                              skipFade: true,
                             )
                           : Container(
                               decoration: const BoxDecoration(
@@ -101,7 +72,7 @@ class PlaylistSearchCard extends StatelessWidget {
                               child: const Icon(
                                 Icons.playlist_play,
                                 color: Colors.white,
-                                size: 28,
+                                size: 24,
                               ),
                             ),
                     ),

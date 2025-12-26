@@ -113,28 +113,27 @@ async function bootstrap() {
   }));
   // app.use(compression.default());
 
-  // CORS
+  // CORS: durante desarrollo forzamos permissive CORS para diagnóstico remoto desde el teléfono
   app.enableCors({
-    origin: isProduction
-      ? true // En producción, permitir todos los orígenes (necesario para apps móviles)
-      : [
-          'http://localhost:3000', // Admin panel (puerto alternativo)
-          'http://localhost:3001', // Backend y Admin panel
-          'http://localhost:3002', // Admin panel (puerto alternativo)
-          'http://localhost:8080', // Flutter web
-          'http://localhost:8081', // Flutter web alternativo
-          'http://localhost:8082', // Flutter web alternativo
-          'http://127.0.0.1:3000', // Admin panel localhost alternativo
-          'http://127.0.0.1:3001', // Backend localhost
-          'http://127.0.0.1:3002', // Admin panel localhost
-          'http://127.0.0.1:8080', // Flutter web localhost alternativo
-          'http://127.0.0.1:8081', // Flutter web localhost alternativo
-          'http://10.0.2.2:3001', // Android emulator
-          'http://10.0.2.2:8080', // Android emulator Flutter
-        ],
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  });
+
+  // Middleware de diagnóstico: log de headers Host/Origin para entender desde dónde llega la petición
+  app.use((req: any, res: any, next: any) => {
+    try {
+      const hostHeader = req.headers?.host || 'unknown-host';
+      const originHeader = req.headers?.origin || req.headers?.referer || 'unknown-origin';
+      // Solo mostrar este log en desarrollo/diagnóstico para evitar spam en producción
+      if (!isProduction) {
+        logger.debug(`[HTTP] Host: ${hostHeader} | Origin: ${originHeader}`);
+      }
+    } catch (e) {
+      // no-op
+    }
+    next();
   });
 
   // Validación global

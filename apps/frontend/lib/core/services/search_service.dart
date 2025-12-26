@@ -134,7 +134,7 @@ class SearchService {
       final artistsList = artistsData.map((json) => Artist.fromJson(json)).toList();
 
       // Filtrar canciones por coincidencia en título o géneros
-      final songsList = songsData.map((json) => Song.fromJson(json)).toList();
+      final songsList = await Song.parseList(songsData);
       
       // Si encontramos un género, también buscar canciones que tengan ese género en el array genres
       final genreNameToMatch = matchedGenre?.name.toLowerCase();
@@ -366,7 +366,7 @@ class SearchService {
           .map((item) => DataNormalizer.normalizeSong(item as Map<String, dynamic>))
           .toList();
 
-      final songs = songsData.map((json) => Song.fromJson(json)).toList();
+      final songs = await Song.parseList(songsData);
       
       // Extraer artistas únicos de las canciones
       final artistsMap = <String, Artist>{};
@@ -467,11 +467,11 @@ class SearchService {
 
       // ⚡ OPTIMIZACIÓN: Procesar datos de forma más eficiente
       final songsData = songsList
-          .where((item) => item is Map<String, dynamic>) // Filtrar items inválidos
-          .map((item) => DataNormalizer.normalizeSong(item as Map<String, dynamic>))
+          .whereType<Map<String, dynamic>>() // Filtrar items inválidos
+          .map((item) => DataNormalizer.normalizeSong(item))
           .toList();
 
-      return songsData.map((json) => Song.fromJson(json)).toList();
+      return await Song.parseList(songsData);
     } on DioException catch (e) {
       ErrorHandler.handleDioError(e, context: 'SearchService.getTopSongs');
       throw Exception('Error de conexión: ${e.message}');
@@ -507,8 +507,8 @@ class SearchService {
       final data = response.data as Map<String, dynamic>;
       // ⚡ OPTIMIZACIÓN: Procesar datos de forma más eficiente
       final genresData = (data['genres'] as List<dynamic>?)
-              ?.where((item) => item is Map<String, dynamic>) // Filtrar items inválidos
-              .map((item) => DataNormalizer.normalizeGenre(item as Map<String, dynamic>))
+              ?.whereType<Map<String, dynamic>>() // Filtrar items inválidos
+              .map((item) => DataNormalizer.normalizeGenre(item))
               .toList() ??
           [];
 

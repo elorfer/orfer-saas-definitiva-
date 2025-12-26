@@ -1,3 +1,4 @@
+import '../../features/privacy/privacy_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,9 +11,10 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/playlists/screens/playlists_screen.dart';
 import '../../features/playlists/screens/playlist_detail_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/home/screens/home_screen_v2.dart';
 import '../../features/home/screens/featured_songs_screen.dart';
 import '../../features/search/screens/search_screen.dart';
-import '../../features/library/screens/library_screen.dart';
+import '../../features/library/screens/library_screen_v2.dart';
 import '../../features/library/screens/favorites_screen.dart';
 import '../../features/library/screens/recently_played_screen.dart';
 import '../../features/library/screens/followed_artists_screen.dart';
@@ -22,6 +24,7 @@ import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../core/providers/onboarding_provider.dart';
 import '../../features/artists/pages/artist_page.dart';
 import '../../features/artists/models/artist.dart';
+import '../../features/artists/screens/featured_artists_full_screen.dart';
 import '../../features/player/screens/full_player_screen.dart';
 import '../../features/song_detail/screens/song_detail_screen.dart';
 import '../../core/models/song_model.dart';
@@ -100,6 +103,17 @@ class GoRouterNotifier extends ChangeNotifier {
   }
 
   List<RouteBase> get routes => [
+                // Privacy Policy
+                GoRoute(
+                  path: '/privacy',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const PrivacyScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                  ),
+                ),
         // Splash - sin transición
         GoRoute(
           path: '/splash',
@@ -188,8 +202,26 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/home',
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
-                    key: const PageStorageKey('home_screen'),
+                    key: state.pageKey,
                     child: const HomeScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: '/home-v2',
+                  pageBuilder: (context, state) => createNoTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const HomeScreenV2(),
+                  ),
+                ),
+                // Compositores - subruta de Home (evita crear navigator separado)
+                GoRoute(
+                  path: '/compositores',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: FeaturedArtistsFullScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
                   ),
                 ),
                 // Featured Songs - subruta de Home
@@ -226,7 +258,7 @@ class GoRouterNotifier extends ChangeNotifier {
                     }
                     
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('song_detail_${song.id}'),
+                      key: state.pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
                       child: SongDetailScreen(song: song),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -240,7 +272,7 @@ class GoRouterNotifier extends ChangeNotifier {
                   pageBuilder: (context, state) {
                     final playlistId = state.pathParameters['id'] ?? '';
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('playlist_detail_$playlistId'),
+                      key: state.pageKey,
                       child: PlaylistDetailScreen(playlistId: playlistId),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -268,7 +300,7 @@ class GoRouterNotifier extends ChangeNotifier {
                       );
                     }
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('artist_page_${artistLite.id}'),
+                      key: state.pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
                       child: ArtistPage(artist: artistLite),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -285,7 +317,7 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/search',
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
-                    key: const PageStorageKey('search_screen'),
+                    key: state.pageKey,
                     child: const SearchScreen(),
                   ),
                 ),
@@ -312,7 +344,7 @@ class GoRouterNotifier extends ChangeNotifier {
                     }
                     
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('song_detail_${song.id}'),
+                      key: state.pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
                       child: SongDetailScreen(song: song),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -326,7 +358,7 @@ class GoRouterNotifier extends ChangeNotifier {
                   pageBuilder: (context, state) {
                     final playlistId = state.pathParameters['id'] ?? '';
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('playlist_detail_$playlistId'),
+                      key: state.pageKey,
                       child: PlaylistDetailScreen(playlistId: playlistId),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -354,7 +386,7 @@ class GoRouterNotifier extends ChangeNotifier {
                       );
                     }
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('artist_page_${artistLite.id}'),
+                      key: state.pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
                       child: ArtistPage(artist: artistLite),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -371,7 +403,7 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/library',
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
-                    key: const PageStorageKey('library_screen'),
+                    key: state.pageKey,
                     child: const LibraryScreen(),
                   ),
                 ),
@@ -442,7 +474,7 @@ class GoRouterNotifier extends ChangeNotifier {
                     }
                     
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('song_detail_${song.id}'),
+                      key: state.pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
                       child: SongDetailScreen(song: song),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -456,7 +488,7 @@ class GoRouterNotifier extends ChangeNotifier {
                   pageBuilder: (context, state) {
                     final playlistId = state.pathParameters['id'] ?? '';
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('playlist_detail_$playlistId'),
+                      key: state.pageKey,
                       child: PlaylistDetailScreen(playlistId: playlistId),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -484,7 +516,7 @@ class GoRouterNotifier extends ChangeNotifier {
                       );
                     }
                     return createCustomTransitionPage<void>(
-                      key: PageStorageKey<String>('artist_page_${artistLite.id}'),
+                      key: state.pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
                       child: ArtistPage(artist: artistLite),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
@@ -502,7 +534,7 @@ class GoRouterNotifier extends ChangeNotifier {
                   path: '/premium',
                   name: 'premium',
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
-                    key: const PageStorageKey('premium_screen'),
+                    key: state.pageKey,
                     child: const PremiumRouterScreen(),
                   ),
                 ),
@@ -514,7 +546,7 @@ class GoRouterNotifier extends ChangeNotifier {
         GoRoute(
           path: '/premium/activated',
           pageBuilder: (context, state) => createCustomTransitionPage<void>(
-            key: const PageStorageKey('premium_activated_screen'),
+            key: state.pageKey,
             child: const PremiumActivatedScreen(),
             transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
             transitionDuration: const Duration(milliseconds: 300),

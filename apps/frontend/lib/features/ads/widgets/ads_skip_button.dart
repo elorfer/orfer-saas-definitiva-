@@ -33,6 +33,23 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
   }
 
   @override
+  void didUpdateWidget(AdsSkipButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // ✅ FIX: Si cambió el anuncio, resetear el countdown
+    if (oldWidget.ad.id != widget.ad.id || 
+        oldWidget.ad.skipAfterSeconds != widget.ad.skipAfterSeconds) {
+      _countdownTimer?.cancel();
+      _remainingSeconds = widget.ad.skipAfterSeconds;
+      _canSkip = _remainingSeconds <= 0;
+      if (_canSkip) {
+        // Ya se puede saltar, no iniciar timer
+        return;
+      }
+      _startCountdown();
+    }
+  }
+
+  @override
   void dispose() {
     _countdownTimer?.cancel();
     super.dispose();
@@ -79,14 +96,14 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
       color: Colors.transparent,
       child: InkWell(
         onTap: _canSkip ? _handleSkip : null,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.all(Radius.circular(20)),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: _canSkip
                 ? NeumorphismTheme.coffeeMedium
                 : NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
             border: Border.all(
               color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
               width: 1,

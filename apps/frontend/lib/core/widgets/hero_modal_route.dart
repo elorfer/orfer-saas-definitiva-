@@ -62,10 +62,7 @@ class HeroModalRoute<T> extends PageRoute<T> {
         begin: const Offset(0.0, 1.0),
         end: Offset.zero,
       ).animate(curvedAnimation),
-      child: FadeTransition(
-        opacity: curvedAnimation,
-        child: child,
-      ),
+      child: child,
     );
   }
 

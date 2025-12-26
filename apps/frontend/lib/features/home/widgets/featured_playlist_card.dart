@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/playlist_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/theme/neumorphism_theme.dart';
@@ -9,26 +8,26 @@ class FeaturedPlaylistCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   // Estilos cacheados
-  static final TextStyle _titleStyle = GoogleFonts.inter(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-    color: NeumorphismTheme.textPrimary,
-    letterSpacing: -0.3,
-  );
-  static final TextStyle _userStyle = GoogleFonts.inter(
+  // Estilos constantes para evitar resolución dinámica de GoogleFonts en cada frame
+  static const TextStyle _userStyle = TextStyle(
     fontSize: 13,
+    height: 1.2,
     color: NeumorphismTheme.textSecondary,
     fontWeight: FontWeight.w400,
+    decoration: TextDecoration.none,
   );
-  static final TextStyle _tracksStyle = GoogleFonts.inter(
+  static const TextStyle _tracksStyle = TextStyle(
     fontSize: 12,
     color: NeumorphismTheme.textSecondary,
     fontWeight: FontWeight.w500,
+    decoration: TextDecoration.none,
   );
-  static final TextStyle _badgeStyle = GoogleFonts.inter(
+  static const TextStyle _badgeStyle = TextStyle(
     fontSize: 11,
+    height: 1.0,
     color: NeumorphismTheme.accent,
     fontWeight: FontWeight.w600,
+    decoration: TextDecoration.none,
   );
 
   const FeaturedPlaylistCard({
@@ -48,53 +47,39 @@ class FeaturedPlaylistCard extends StatelessWidget {
         margin: const EdgeInsets.only(right: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // ✅ Usar solo el espacio necesario
           children: [
             // Imagen de la playlist
             Container(
               width: 160,
               height: 160,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(Radius.circular(16)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+                // ⚡ GAMA BAJA: Sin boxShadow para mejor rendimiento
               ),
               child: ClipRRect(
                 borderRadius: const BorderRadius.all(Radius.circular(16)),
-              child: OptimizedImage(
-                imageUrl: playlist.coverArtUrl,
-                fit: BoxFit.cover,
-                width: 160,
-                height: 160,
-                borderRadius: 16,
-                placeholderColor: NeumorphismTheme.accentLight,
-                maxCacheWidth: 280, // 🔥 Ajuste fino: 280px suficiente para 160px físicos
-                maxCacheHeight: 280,
-                skipFade: true, // 🔥 Sin fade para mejor rendimiento
-              ),
+                child: OptimizedImage(
+                  imageUrl: playlist.coverArtUrl,
+                  fit: BoxFit.cover,
+                  width: 160,
+                  height: 160,
+                  borderRadius: 16,
+                  placeholderColor: NeumorphismTheme.accentLight,
+                  maxCacheWidth: 240, // ⚡ GAMA BAJA: Punto dulce para 160px widgets
+                  maxCacheHeight: 240,
+                  skipFade: true, // 🔥 Sin fade para mejor rendimiento
+                ),
               ),
             ),
-            
-            const SizedBox(height: 12),
-            
-            // Nombre de la playlist
-            Text(
-              (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
-              style: _titleStyle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            
             const SizedBox(height: 4),
             
             // Información adicional
             SizedBox(
               width: 160, // ✅ Ancho fijo para evitar overflow
+              height: 16, // ✅ Altura fija para controlar overflow
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center, // ✅ Centrar verticalmente
                 children: [
                   if (playlist.user != null) ...[
                     Expanded(
@@ -130,10 +115,11 @@ class FeaturedPlaylistCard extends StatelessWidget {
             
             // Badge destacada
             if (featuredPlaylist.featuredReason != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 6), // ✅ Reducido de 8 a 6 para evitar overflow
               Container(
                 width: 160, // ✅ Ancho fijo para evitar overflow
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                constraints: const BoxConstraints(maxHeight: 22), // ✅ Limitar altura máxima
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2), // ✅ Reducido aún más
                 decoration: BoxDecoration(
                   color: NeumorphismTheme.accent.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.all(Radius.circular(8)),
@@ -147,7 +133,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                   children: [
                     const Icon(
                       Icons.star_rounded,
-                      size: 14,
+                      size: 13, // ✅ Reducido de 14 a 13 para evitar overflow
                       color: NeumorphismTheme.accent,
                     ),
                     const SizedBox(width: 4),

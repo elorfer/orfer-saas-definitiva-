@@ -28,6 +28,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module';
 import { AppMessagesModule } from './modules/app-messages/app-messages.module';
 import { AdsModule } from './modules/ads/ads.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { DiscoveryModule } from './modules/discovery/discovery.module';
 import { entities } from './database/entities';
 
 // Configuración de la base de datos
@@ -221,6 +222,7 @@ import { dataSourceOptions } from './database/data-source';
     AppMessagesModule,
     AdsModule,
     SettingsModule,
+    DiscoveryModule,
   ],
 })
 export class AppModule {}

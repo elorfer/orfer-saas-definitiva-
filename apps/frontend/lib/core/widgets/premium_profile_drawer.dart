@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
@@ -90,57 +89,29 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                   
                   const SizedBox(height: 24),
                   
-                  // ⚡ OPTIMIZADO: Tarjeta de perfil compacta con sombra reducida
+                  // ⚡ GAMA BAJA: Tarjeta de perfil simplificada
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          NeumorphismTheme.coffeeMedium.withValues(alpha: 0.12),
-                          NeumorphismTheme.coffeeDark.withValues(alpha: 0.06),
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.all(Radius.circular(20)),
-                      boxShadow: [
-                        // ⚡ OPTIMIZACIÓN: Reducir blurRadius para mejor rendimiento
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 8, // Reducido de 16 a 8
-                          offset: const Offset(0, 3), // Reducido de 6 a 3
-                        ),
-                      ],
+                      // ⚡ GAMA BAJA: Color sólido en lugar de gradiente + sombra
+                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+                      borderRadius: const BorderRadius.all(Radius.circular(16)),
                     ),
                     child: Column(
                       children: [
-                        // Avatar más pequeño
+                        // Avatar simplificado
                         Container(
-                          width: 70, // 🔥 Tamaño reducido
-                          height: 70,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                NeumorphismTheme.coffeeMedium,
-                                NeumorphismTheme.coffeeDark,
-                              ],
-                            ),
+                          width: 60, // ⚡ GAMA BAJA: Reducido
+                          height: 60,
+                          decoration: const BoxDecoration(
+                            // ⚡ GAMA BAJA: Color sólido sin sombra
+                            color: NeumorphismTheme.coffeeMedium,
                             shape: BoxShape.circle,
-                            boxShadow: [
-                              // ⚡ OPTIMIZACIÓN: Reducir sombra del avatar
-                              BoxShadow(
-                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.25),
-                                blurRadius: 8, // Reducido de 12 a 8
-                                offset: const Offset(0, 2), // Reducido de 4 a 2
-                              ),
-                            ],
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.person_rounded,
-                            size: 35, // 🔥 Icono reducido
+                            size: 30,
                             color: Colors.white,
                           ),
                         ),
@@ -149,8 +120,8 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                         // Nombre del usuario
                         Text(
                           userName,
-                          style: GoogleFonts.inter(
-                            fontSize: 18, // 🔥 Tamaño reducido
+                          style: const TextStyle(
+                            fontSize: 16, // ⚡ GAMA BAJA
                             fontWeight: FontWeight.bold,
                             color: NeumorphismTheme.textPrimary,
                             letterSpacing: -0.2,
@@ -164,8 +135,8 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                         // Email del usuario
                         Text(
                           userEmail,
-                          style: GoogleFonts.inter(
-                            fontSize: 13, // 🔥 Tamaño reducido
+                          style: const TextStyle(
+                            fontSize: 12, // ⚡ GAMA BAJA
                             color: NeumorphismTheme.textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
@@ -200,8 +171,8 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                               const SizedBox(width: 4),
                               Text(
                                 userRole,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11, // 🔥 Tamaño reducido
+                                style: const TextStyle(
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: NeumorphismTheme.coffeeMedium,
                                   letterSpacing: 0.2,
@@ -216,13 +187,13 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                   
                   const SizedBox(height: 24),
                   
-                  // 🔥 Sección de configuración con título
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                  // ⚡ GAMA BAJA: Sección de configuración
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
                     child: Text(
                       'Configuración',
-                      style: GoogleFonts.inter(
-                        fontSize: 16, // 🔥 Tamaño reducido
+                      style: TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: NeumorphismTheme.textPrimary,
                         letterSpacing: -0.2,
@@ -285,8 +256,8 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                               const SizedBox(width: 8),
                               Text(
                                 'Cerrar Sesión',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14, // 🔥 Tamaño reducido
+                                style: const TextStyle(
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.red,
                                   letterSpacing: 0.1,
@@ -315,49 +286,43 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
     required String title,
     required VoidCallback onTap,
   }) {
-    // ⚡ OPTIMIZACIÓN: Reducir sombras para mejor rendimiento
+    // ⚡ GAMA BAJA: Sin sombra para mejor rendimiento
     return Container(
       decoration: BoxDecoration(
-        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 4, // Reducido de 8 a 4
-            offset: const Offset(0, 1), // Reducido de 2 a 1
-          ),
-        ],
+        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.5),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+        // ⚡ GAMA BAJA: Sin boxShadow
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          borderRadius: const BorderRadius.all(Radius.circular(12)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // 🔥 Padding reducido
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
-                // Icono con fondo más pequeño
+                // Icono simplificado
                 Container(
-                  width: 36, // 🔥 Tamaño reducido
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.12),
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
                   ),
                   child: Icon(
                     icon,
                     color: NeumorphismTheme.coffeeMedium,
-                    size: 18, // 🔥 Icono reducido
+                    size: 16,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 // Título
                 Expanded(
                   child: Text(
                     title,
-                    style: GoogleFonts.inter(
-                      fontSize: 14, // 🔥 Tamaño reducido
+                    style: const TextStyle(
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: NeumorphismTheme.textPrimary,
                       letterSpacing: -0.1,
@@ -366,11 +331,11 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // Chevron más pequeño
+                // Chevron
                 Icon(
                   Icons.chevron_right_rounded,
                   color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                  size: 20, // 🔥 Tamaño reducido
+                  size: 18,
                 ),
               ],
             ),
@@ -383,41 +348,36 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
   /// Widget para mostrar el estado de suscripción
   Widget _buildSubscriptionStatus(bool isPremium) {
     if (isPremium) {
-      // Usuario Premium - Mensaje en verde
+      // Usuario Premium - Mensaje en verde simplificado
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.green.withValues(alpha: 0.15),
-          borderRadius: const BorderRadius.all(Radius.circular(20)),
-          border: Border.all(
-            color: Colors.green.withValues(alpha: 0.4),
-            width: 1.5,
-          ),
+          color: Colors.green.withValues(alpha: 0.12),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
         ),
         child: Column(
           children: [
             Icon(
               Icons.verified_rounded,
               color: Colors.green[700],
-              size: 32,
+              size: 28,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
-              'Eres un usuario premium activo',
-              style: GoogleFonts.inter(
-                fontSize: 16,
+              'Eres usuario premium',
+              style: TextStyle(
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.green[800],
-                letterSpacing: -0.2,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Disfruta de música única en el mundo',
-              style: GoogleFonts.inter(
-                fontSize: 13,
+              'Disfruta de música única',
+              style: TextStyle(
+                fontSize: 12,
                 color: Colors.green[700],
                 fontWeight: FontWeight.w500,
               ),
@@ -427,76 +387,62 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
         ),
       );
     } else {
-      // Usuario NO Premium - Botón para actualizar
+      // Usuario NO Premium - Botón simplificado
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              NeumorphismTheme.coffeeMedium,
-              NeumorphismTheme.coffeeDark,
-            ],
-          ),
-          borderRadius: const BorderRadius.all(Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          // ⚡ GAMA BAJA: Color sólido sin gradiente ni sombra
+          color: NeumorphismTheme.coffeeMedium,
+          borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
         child: Column(
           children: [
-            Icon(
+            const Icon(
               Icons.star_rounded,
               color: Colors.white,
-              size: 32,
+              size: 28,
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Estado de Suscripción',
-              style: GoogleFonts.inter(
-                fontSize: 18,
+            const SizedBox(height: 10),
+            const Text(
+              'Actualiza a Premium',
+              style: TextStyle(
+                fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-                letterSpacing: -0.3,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Actualiza a Premium para disfrutar de música sin límites',
-              style: GoogleFonts.inter(
-                fontSize: 13,
+              'Música sin límites',
+              style: TextStyle(
+                fontSize: 12,
                 color: Colors.white.withValues(alpha: 0.9),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
-              height: 40,
-              decoration: BoxDecoration(
+              height: 36,
+              decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
-                    Navigator.of(context).pop(); // Cerrar drawer
-                    context.go('/premium'); // Navegar a pantalla premium
+                    Navigator.of(context).pop();
+                    context.go('/premium');
                   },
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
-                  child: Center(
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  child: const Center(
                     child: Text(
-                      'Actualizar Premium',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
+                      'Ver planes',
+                      style: TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: NeumorphismTheme.coffeeDark,
                       ),
@@ -511,4 +457,3 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
     }
   }
 }
-

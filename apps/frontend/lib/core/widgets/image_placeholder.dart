@@ -27,7 +27,7 @@ class ImagePlaceholder extends StatelessWidget {
     this.isCircular = false,
   });
 
-  /// Placeholder para artistas (gradiente vintage)
+  /// Placeholder para artistas (color sólido - GAMA BAJA)
   const ImagePlaceholder.artist({
     super.key,
     this.width,
@@ -35,31 +35,25 @@ class ImagePlaceholder extends StatelessWidget {
     this.borderRadius,
   })  : icon = Icons.person,
         iconColor = Colors.white,
-        backgroundColor = null,
-        gradientColors = const [
-          Color(0xFFF2740B),
-          Color(0xFFE35A01),
-        ],
+        backgroundColor = NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
+        gradientColors = null,
         showShimmer = false,
         isCircular = false;
 
-  /// Placeholder para artistas redondos (gradiente vintage circular)
+  /// Placeholder para artistas redondos (color sólido - GAMA BAJA)
   const ImagePlaceholder.artistRound({
     super.key,
     this.width,
     this.height,
   })  : icon = Icons.person,
         iconColor = Colors.white,
-        backgroundColor = null,
-        gradientColors = const [
-          Color(0xFFF2740B),
-          Color(0xFFE35A01),
-        ],
+        backgroundColor = NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
+        gradientColors = null,
         borderRadius = null,
         showShimmer = false,
         isCircular = true;
 
-  /// Placeholder para canciones (gradiente púrpura)
+  /// Placeholder para canciones (color sólido - GAMA BAJA)
   const ImagePlaceholder.song({
     super.key,
     this.width,
@@ -67,15 +61,12 @@ class ImagePlaceholder extends StatelessWidget {
     this.borderRadius,
   })  : icon = Icons.music_note,
         iconColor = Colors.white70,
-        backgroundColor = null,
-        gradientColors = const [
-          NeumorphismTheme.coffeeMedium,
-          NeumorphismTheme.coffeeDark,
-        ],
+        backgroundColor = NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
+        gradientColors = null,
         showShimmer = false,
         isCircular = false;
 
-  /// Placeholder con shimmer effect para loading
+  /// Placeholder con loading (color sólido - GAMA BAJA, sin shimmer)
   const ImagePlaceholder.shimmer({
     super.key,
     this.width,
@@ -83,13 +74,10 @@ class ImagePlaceholder extends StatelessWidget {
     this.borderRadius,
     List<Color>? gradientColors,
   })  : icon = Icons.image,
-        iconColor = Colors.white,
-        backgroundColor = null,
-        gradientColors = gradientColors ?? const [
-          NeumorphismTheme.coffeeMedium,
-          NeumorphismTheme.coffeeDark,
-        ],
-        showShimmer = true,
+        iconColor = Colors.white54,
+        backgroundColor = NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
+        gradientColors = null,
+        showShimmer = false, // ⚡ GAMA BAJA: Sin shimmer
         isCircular = false;
 
   @override
@@ -110,10 +98,12 @@ class ImagePlaceholder extends StatelessWidget {
           borderRadius: !isCircular && borderRadius != null ? BorderRadius.circular(borderRadius!) : null,
         ),
         child: showShimmer
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 2,
+            ? Center(
+                // ✅ OPTIMIZACIÓN: Icono estático en lugar de CircularProgressIndicator pesado
+                child: Icon(
+                  icon,
+                  color: (iconColor ?? Colors.white).withValues(alpha: 0.5),
+                  size: (width != null && width! < 100) ? 32 : 40,
                 ),
               )
             : Center(
@@ -128,17 +118,16 @@ class ImagePlaceholder extends StatelessWidget {
       child = Container(
         width: width,
         height: height,
-        color: backgroundColor ?? Colors.grey.shade300,
-        decoration: borderRadius != null
-            ? BoxDecoration(
-                color: backgroundColor ?? Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(borderRadius!),
-              )
-            : null,
+        // ⚡ FIX: No usar color y decoration juntos - usar solo decoration
+        decoration: BoxDecoration(
+          color: backgroundColor ?? NeumorphismTheme.coffeeMedium,
+          shape: isCircular ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: !isCircular && borderRadius != null ? BorderRadius.circular(borderRadius!) : null,
+        ),
         child: Center(
           child: Icon(
             icon,
-            color: iconColor ?? Colors.grey,
+            color: iconColor ?? Colors.white,
             size: (width != null && width! < 100) ? 32 : 40,
           ),
         ),

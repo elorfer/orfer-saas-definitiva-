@@ -274,10 +274,9 @@ class _ArtistTile extends StatelessWidget {
     // Solo mostramos un indicador estático o dejamos que la imagen sea el centro.
     // Esto evita que todos los tiles se rebuilden cuando cambia la canción.
 
-    return RepaintBoundary(
-      child: GestureDetector(
-        onTap: () => GoRouter.of(context).push('/artist/${featuredArtist.artist.id}'),
-        child: Column(
+    return GestureDetector(
+      onTap: () => GoRouter.of(context).push('/artist/${featuredArtist.artist.id}'),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             OptimizedImage(
@@ -304,7 +303,6 @@ class _ArtistTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

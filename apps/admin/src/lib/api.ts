@@ -209,6 +209,9 @@ export const apiClient = {
   
   getSong: (id: string) => api.get(`/songs/${id}`),
   
+  getSongsByGenre: (genreId: string, page = 1, limit = 50) =>
+    api.get(`/songs/genre/${genreId}?page=${page}&limit=${limit}`),
+  
   getTopSongsByPlays: (limit = 10) => api.get(`/songs/top?limit=${limit}`),
   
   uploadSong: (

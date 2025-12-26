@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import 'package:just_audio/just_audio.dart';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../providers/playback_state.dart';
 import '../models/song_model.dart';
@@ -15,6 +15,8 @@ import 'favorite_button.dart';
 import 'album_swiper.dart';
 import 'persistent_artwork_background.dart';
 import 'verified_badge.dart';
+import 'smooth_seekbar.dart'; // 🎚️ NUEVO: Seekbar suavizado sin parpadeo
+// import 'vibe_selector_widget.dart'; // 🎛️ VIBE SELECTOR (no usado actualmente)
 import '../../features/ads/models/audio_ad_model.dart';
 import '../../features/ads/widgets/ads_skip_button.dart';
 import '../../features/ads/widgets/ad_duration_counter.dart';
@@ -182,16 +184,8 @@ class _AlbumCoverWidgetState extends State<_AlbumCoverWidget> {
   Widget _buildPlaceholder() {
     return Container(
       key: const ValueKey('placeholder'),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-            NeumorphismTheme.coffeeDark.withValues(alpha: 0.4),
-          ],
-        ),
-      ),
+      // ⚡ FIX: Fondo transparente para evitar "black card"
+      color: Colors.transparent, 
       child: const Center(
         child: Icon(Icons.music_note, color: Colors.white30, size: 80),
       ),
@@ -229,80 +223,65 @@ class _ProfessionalAudioPlayerState
 
   @override
   Widget build(BuildContext context) {
-    try {
-      // ✅ ÚNICA FUENTE DE VERDAD: Usar el mismo provider que el mini reproductor
-      // Esto garantiza que ambos reproductores muestren exactamente la misma información
-      final currentSong = ref.watch(realCurrentSongProvider);
-      
-      // ✅ OPTIMIZACIÓN: Usar select() para reducir rebuilds innecesarios
-      // Solo reconstruir cuando cambien los valores relevantes, no cuando cambie cualquier parte del estado
-      final isPlayingAd = ref.watch(
-        unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
-      );
-      final currentAd = ref.watch(
-        unifiedAudioProviderFixed.select((state) => state.currentAd),
-      );
-      final isPlaying = ref.watch(
-        unifiedAudioProviderFixed.select((state) => state.isPlaying),
-      );
-      
-      // ✅ OPTIMIZACIÓN: Solo leer audioService cuando realmente necesitemos verificar el anuncio
-      // No usar watch() porque sequenceState cambia constantemente y causa rebuilds masivos
-      AudioSource? realCurrentSource;
-      if (isPlayingAd || currentAd != null) {
-        // Solo acceder al audioService si hay un anuncio para verificar
-        final audioService = ref.read(audioServiceProvider);
-        realCurrentSource = audioService.player.sequenceState.currentSource;
-      }
-      
-      if (realCurrentSource != null && realCurrentSource is IndexedAudioSource && realCurrentSource.tag is AudioAd) {
-        final realCurrentAd = realCurrentSource.tag as AudioAd;
+    // 🛡️ MIRROR PATTERN: Escuchar directamente al motor de audio
+    // Esto garantiza actualizaciones instantáneas en auto-advance
+    final audioService = ref.watch(audioServiceProvider);
+    
+    return StreamBuilder<SequenceState?>(
+      stream: audioService.player.sequenceStateStream,
+      builder: (context, snapshot) {
+        // 1. Obtener datos del Stream (Fuente de Verdad Instantánea)
+        final sequenceState = snapshot.data;
+        final currentSource = sequenceState?.currentSource;
+        Song? streamSong;
+        AudioAd? streamAd;
         
-        // Si hay un anuncio reproduciéndose, mostrar el anuncio
-        if (isPlayingAd && currentAd != null && currentAd.id == realCurrentAd.id) {
-          return _StaticPlayerUI(
-            key: ValueKey('player_ui_ad_${currentAd.id}'),
-            song: null,
-            ad: currentAd,
-            isPlaying: isPlaying,
-          );
-        } else if (isPlayingAd && currentAd == null) {
-          // Si el estado dice que hay anuncio pero no tiene el objeto, usar el del reproductor
-          return _StaticPlayerUI(
-            key: ValueKey('player_ui_ad_${realCurrentAd.id}'),
-            song: null,
-            ad: realCurrentAd,
-            isPlaying: isPlaying,
-          );
+        if (currentSource != null) {
+          if (currentSource.tag is Song) {
+            streamSong = currentSource.tag as Song;
+          } else if (currentSource.tag is AudioAd) {
+            streamAd = currentSource.tag as AudioAd;
+          }
+        }
+        
+        try {
+          // 2. Obtener datos de Riverpod (Gestión de Estado)
+          final playbackState = ref.watch(unifiedAudioProviderFixed);
+          final isPlaying = playbackState.isPlaying;
+          
+          // 3. Fusión de Inteligencia:
+          // Priorizar el Stream para el contenido (qué se muestra)
+          // Usar Riverpod para el estado de control (play/pause, shuffle, etc)
+          final finalSong = streamSong ?? playbackState.currentSong;
+          final finalAd = streamAd ?? playbackState.currentAd;
+          
+          // Lógica de visualización (prioridad a anuncios)
+          final showAd = finalAd != null; // Si el stream dice ad, es ad.
+          
+          if (showAd) {
+             return _StaticPlayerUI(
+                song: null,
+                ad: finalAd,
+                isPlaying: isPlaying,
+             );
+          }
+          
+          if (finalSong != null) {
+             return _StaticPlayerUI(
+                song: finalSong,
+                ad: null,
+                isPlaying: isPlaying,
+             );
+          }
+          
+          return const SizedBox.shrink();
+
+        } catch (e, stackTrace) {
+          AppLogger.error('[ProfessionalAudioPlayer] Error en build: $e', stackTrace);
+          return const SizedBox.shrink();
         }
       }
-      
-      // ✅ LÓGICA SIMPLIFICADA: Si hay anuncio en el estado, mostrar anuncio
-      if (isPlayingAd && currentAd != null) {
-        return _StaticPlayerUI(
-          key: ValueKey('player_ui_ad_${currentAd.id}'),
-          song: null,
-          ad: currentAd,
-          isPlaying: isPlaying,
-        );
-      }
-      
-      // ✅ LÓGICA SIMPLIFICADA: Si hay canción (del provider único), mostrar canción
-      if (currentSong != null) {
-        return _StaticPlayerUI(
-          key: ValueKey('player_ui_${currentSong.id}'),
-          song: currentSong,
-          ad: null,
-          isPlaying: isPlaying,
-        );
-      }
-      
-      // Si no hay canción ni anuncio, no mostrar nada
-      return const SizedBox.shrink();
-    } catch (e, stackTrace) {
-      AppLogger.error('[ProfessionalAudioPlayer] Error en build: $e', stackTrace);
-      return const SizedBox.shrink();
-    }
+    );
   }
 }
 
@@ -315,7 +294,6 @@ class _StaticPlayerUI extends ConsumerStatefulWidget {
   final bool isPlaying;
 
   const _StaticPlayerUI({
-    super.key,
     this.song,
     this.ad,
     required this.isPlaying,
@@ -339,7 +317,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
   static final TextStyle _artistStyle = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: Colors.white.withValues(alpha: 0.9),
+    color: Colors.white.withValues(alpha: 0.5), // ✅ Opacidad aumentada
     letterSpacing: -0.3,
   );
   // Estilos para anuncios
@@ -454,12 +432,12 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 48, bottom: 12), // Espacio superior para no interferir con botón de contraer
                     child: Center(
-                      child: isPlayingAd && currentAd != null
+                          child: isPlayingAd && currentAd != null
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                               decoration: BoxDecoration(
                                 color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: const BorderRadius.all(Radius.circular(12)),
                               ),
                               child: Text(
                                 "ANUNCIO",
@@ -487,22 +465,38 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                 const SizedBox(height: 8), // Espacio antes del cover
                 
                 // ✅ FASE 5: Carátula del anuncio o de la canción según corresponda
+                // ✅ FIX: Usar AnimatedSwitcher para transición suave y evitar parpadeo
                 Center(
-                  child: isPlayingAd && currentAd != null
-                      ? _AdCoverWidget(ad: currentAd)
-                      : currentSong != null
-                          ? AlbumSwiper(
-                              currentSong: currentSong,
-                              onSwipe: (direction) {
-                                final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
-                                if (direction == SwipeDirection.left) {
-                                  audioNotifier.next();
-                                } else {
-                                  audioNotifier.previous();
-                                }
-                              },
-                            )
-                          : const SizedBox.shrink(),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: child,
+                      );
+                    },
+                    child: isPlayingAd && currentAd != null
+                        ? _AdCoverWidget(
+                            key: ValueKey('ad_cover_${currentAd.id}'),
+                            ad: currentAd,
+                          )
+                        : currentSong != null
+                            ? AlbumSwiper(
+                                key: ValueKey('album_swiper_${currentSong.id}'),
+                                currentSong: currentSong,
+                                onSwipe: (direction) {
+                                  final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
+                                  if (direction == SwipeDirection.left) {
+                                    audioNotifier.next();
+                                  } else {
+                                    audioNotifier.previous();
+                                  }
+                                },
+                              )
+                            : Container(key: const ValueKey('empty_cover')),
+                  ),
                 ),
                 
                 const SizedBox(height: 20), // Espacio para alinear título con corazón
@@ -524,14 +518,44 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // ✅ FASE 5: Mostrar título del anuncio o de la canción
-                                  Text(
-                                    isPlayingAd && currentAd != null
-                                        ? currentAd.title
-                                        : currentSong?.title ?? 'Sin título',
-                                    style: isPlayingAd ? _adTitleStyle : _titleStyle,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                                  // ✅ NUEVO: Agregar etiqueta "AD" al lado del título del anuncio
+                                  isPlayingAd && currentAd != null
+                                      ? Row(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                currentAd.title,
+                                                style: _adTitleStyle,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.8),
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'AD',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Text(
+                                          currentSong?.title ?? 'Sin título',
+                                          style: _titleStyle,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                   const SizedBox(height: 4),
                                   // ✅ FASE 5: Mostrar anunciante o artista según corresponda
                                   isPlayingAd && currentAd != null
@@ -564,6 +588,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                 : currentSong != null
                                     ? FavoriteButton(
                                         songId: currentSong.id,
+                                        song: currentSong, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
                                         iconColor: Colors.white,
                                         iconSize: 28,
                                       )
@@ -591,89 +616,103 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                           );
                           
                           return RepaintBoundary(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                // Botón Shuffle - con estado visual
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final isShuffled = ref.watch(
-                                      unifiedAudioProviderFixed.select((state) => state.isShuffled),
-                                    );
-                                    return RepaintBoundary(
-                                      child: IconButton(
-                                        icon: Icon(
-                                          Icons.shuffle_rounded,
-                                          color: isShuffled 
-                                            ? NeumorphismTheme.coffeeMedium 
-                                            : Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7),
-                                          size: 24,
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Flexible(
+                                      fit: FlexFit.loose,
+                                      child: RepaintBoundary(
+                                        child: Consumer(
+                                          builder: (context, ref, child) {
+                                            final isShuffled = ref.watch(
+                                              unifiedAudioProviderFixed.select((state) => state.isShuffled),
+                                            );
+                                            return IconButton(
+                                              icon: Icon(
+                                                Icons.shuffle_rounded,
+                                                color: isShuffled 
+                                                  ? NeumorphismTheme.coffeeMedium 
+                                                  : Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7),
+                                                size: 24,
+                                              ),
+                                              onPressed: isPlayingAd ? null : () {
+                                                ref.read(unifiedAudioProviderFixed.notifier).toggleShuffle();
+                                              },
+                                            );
+                                          },
                                         ),
-                                        onPressed: isPlayingAd ? null : () {
-                                          ref.read(unifiedAudioProviderFixed.notifier).toggleShuffle();
+                                      ),
+                                    ),
+                                    Flexible(
+                                      fit: FlexFit.loose,
+                                      child: _AsyncIconButton(
+                                        icon: Icons.skip_previous_rounded,
+                                        size: 42,
+                                        isLocked: isPlayingAd,
+                                        onTap: () async {
+                                          await ref.read(unifiedAudioProviderFixed.notifier).previous();
                                         },
                                       ),
-                                    );
-                                  },
-                                ),
-                                _AsyncIconButton(
-                                  icon: Icons.skip_previous_rounded,
-                                  size: 42,
-                                  isLocked: isPlayingAd,
-                                  onTap: () async {
-                                    await ref.read(unifiedAudioProviderFixed.notifier).previous();
-                                  },
-                                ),
-                                // Solo el botón play/pause se actualiza - observa el estado directamente
-                                _PlayPauseButton(ref: ref, isLocked: isPlayingAd),
-                                _AsyncIconButton(
-                                  icon: Icons.skip_next_rounded,
-                                  size: 42,
-                                  isLocked: isPlayingAd,
-                                  onTap: () async {
-                                    await ref.read(unifiedAudioProviderFixed.notifier).next();
-                                  },
-                                ),
-                                // Botón Repeat - con estado visual y diferentes iconos
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final repeatMode = ref.watch(
-                                      unifiedAudioProviderFixed.select((state) => state.repeatMode),
-                                    );
-                                    
-                                    IconData icon;
-                                    Color color;
-                                    
-                                    switch (repeatMode) {
-                                      case RepeatMode.off:
-                                        icon = Icons.repeat_rounded;
-                                        color = Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7);
-                                        break;
-                                      case RepeatMode.all:
-                                        icon = Icons.repeat_rounded;
-                                        color = isPlayingAd 
-                                          ? Colors.white.withValues(alpha: 0.3)
-                                          : NeumorphismTheme.coffeeMedium;
-                                        break;
-                                      case RepeatMode.one:
-                                        icon = Icons.repeat_one_rounded;
-                                        color = isPlayingAd 
-                                          ? Colors.white.withValues(alpha: 0.3)
-                                          : NeumorphismTheme.coffeeMedium;
-                                        break;
-                                    }
-                                    
-                                    return RepaintBoundary(
-                                      child: IconButton(
-                                        icon: Icon(icon, color: color, size: 24),
-                                        onPressed: isPlayingAd ? null : () {
-                                          ref.read(unifiedAudioProviderFixed.notifier).toggleRepeat();
+                                    ),
+                                    Flexible(
+                                      flex: 0,
+                                      child: _PlayPauseButton(ref: ref, isLocked: isPlayingAd),
+                                    ),
+                                    Flexible(
+                                      fit: FlexFit.loose,
+                                      child: _AsyncIconButton(
+                                        icon: Icons.skip_next_rounded,
+                                        size: 42,
+                                        isLocked: isPlayingAd,
+                                        onTap: () async {
+                                          await ref.read(unifiedAudioProviderFixed.notifier).next();
                                         },
                                       ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                    ),
+                                    Flexible(
+                                      fit: FlexFit.loose,
+                                      child: RepaintBoundary(
+                                        child: Consumer(
+                                          builder: (context, ref, child) {
+                                            final repeatMode = ref.watch(
+                                              unifiedAudioProviderFixed.select((state) => state.repeatMode),
+                                            );
+                                            IconData icon;
+                                            Color color;
+                                            switch (repeatMode) {
+                                              case RepeatMode.off:
+                                                icon = Icons.repeat_rounded;
+                                                color = Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7);
+                                                break;
+                                              case RepeatMode.all:
+                                                icon = Icons.repeat_rounded;
+                                                color = isPlayingAd 
+                                                  ? Colors.white.withValues(alpha: 0.3)
+                                                  : NeumorphismTheme.coffeeMedium;
+                                                break;
+                                              case RepeatMode.one:
+                                                icon = Icons.repeat_one_rounded;
+                                                color = isPlayingAd 
+                                                  ? Colors.white.withValues(alpha: 0.3)
+                                                  : NeumorphismTheme.coffeeMedium;
+                                                break;
+                                            }
+                                            return IconButton(
+                                              icon: Icon(icon, color: color, size: 24),
+                                              onPressed: isPlayingAd ? null : () {
+                                                ref.read(unifiedAudioProviderFixed.notifier).toggleRepeat();
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
                           );
                         },
@@ -778,12 +817,18 @@ class _AsyncIconButton extends StatefulWidget {
 class _AsyncIconButtonState extends State<_AsyncIconButton> {
   bool _pending = false;
   DateTime _unlockAt = DateTime.fromMillisecondsSinceEpoch(0);
+  
+  // 🛡️ Timeout de seguridad para evitar bloqueo permanente
+  static const Duration _maxPendingDuration = Duration(seconds: 2);
 
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final isUnlocked = now.isAfter(_unlockAt);
-    final isDisabled = widget.isLocked || _pending || !isUnlocked;
+    
+    // 🛡️ Auto-desbloqueo si _pending lleva demasiado tiempo
+    // Esto evita que el botón se quede bloqueado permanentemente
+    final isDisabled = widget.isLocked || (_pending && isUnlocked == false);
 
     return RepaintBoundary(
       child: Stack(
@@ -802,10 +847,17 @@ class _AsyncIconButtonState extends State<_AsyncIconButton> {
                 : () async {
                     setState(() {
                       _pending = true;
-                      _unlockAt = DateTime.now().add(const Duration(milliseconds: 200));
+                      // 🛡️ Desbloqueo automático después de timeout de seguridad
+                      _unlockAt = DateTime.now().add(_maxPendingDuration);
                     });
                     try {
-                      await widget.onTap();
+                      // 🛡️ Timeout en la operación para evitar bloqueo infinito
+                      await widget.onTap().timeout(
+                        _maxPendingDuration,
+                        onTimeout: () {
+                          AppLogger.warning('[AsyncIconButton] Timeout en operación, desbloqueando');
+                        },
+                      );
                     } catch (e) {
                       AppLogger.error('[AsyncIconButton] Error: $e');
                     } finally {
@@ -860,6 +912,7 @@ class _ProgressControl extends ConsumerStatefulWidget {
 class _ProgressControlState extends ConsumerState<_ProgressControl> {
   bool _isDraggingSeek = false;
   Duration? _dragPosition;
+  DateTime? _lastSeekTime;
   
   // ✅ MEMOIZACIÓN: Cache de strings formateados para evitar recálculos
   String? _cachedCurrentTime;
@@ -953,71 +1006,58 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
 
     final currentDuration = progressData.totalDuration;
 
-    // ✅ MEMOIZACIÓN: Calcular progreso solo cuando es necesario
-    final finalProgress = _isDraggingSeek && _dragPosition != null
-        ? (currentDuration.inMilliseconds > 0
-            ? (_dragPosition!.inMilliseconds / currentDuration.inMilliseconds).clamp(0.0, 1.0)
-            : 0.0)
-        : (currentDuration.inMilliseconds > 0
-            ? (currentPosition.inMilliseconds / currentDuration.inMilliseconds).clamp(0.0, 1.0)
-            : progressData.progress);
-    final clampedProgress = finalProgress.clamp(0.0, 1.0);
-
     return Column(
       children: [
-            // Slider
-            SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 4,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 3), // Reducido de 6 a 3
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 8), // Reducido de 12 a 8
-                activeTrackColor: Colors.white,
-                inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
-                thumbColor: Colors.white,
-                overlayColor: Colors.white.withValues(alpha: 0.1),
-                // 🚀 FLUIDEZ ULTRA PROFESIONAL
-                trackShape: const RoundedRectSliderTrackShape(), // Bordes redondeados
-                valueIndicatorShape: const PaddleSliderValueIndicatorShape(), // Indicador suave
+            // 🎚️ NUEVO: SmoothSeekbar profesional sin parpadeo
+                    // 🆕 FIX PARPADEO: Key por canción para forzar estado nuevo al cambiar canción
+                    SmoothSeekbar(
+                      key: ValueKey('smooth_seekbar_${currentSong ?? 'none'}'),
+              enabled: !isPlayingAd, // 🛑 Deshabilitar durante anuncios
+              height: 40,
+              trackHeight: 4.0,
+              thumbRadius: 6.0,
+              activeColor: Colors.white.withValues(alpha: 0.9),
+              inactiveColor: Colors.white.withValues(alpha: 0.2),
+              bufferedColor: Colors.white.withValues(alpha: 0.4),
+              thumbColor: Colors.white,
+              showTooltip: true,
+              tooltipStyle: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 50), // 🎯 Transición ultra rápida
-                curve: Curves.easeOutCubic,
-                child: Slider(
-                  value: clampedProgress,
-                  // 🛑 BLOQUEO: Deshabilitar slider durante anuncios
-                  onChanged: isPlayingAd ? null : (value) {
-                    if (currentDuration.inSeconds > 0) {
-                      setState(() {
-                        _isDraggingSeek = true;
-                        _dragPosition = Duration(
-                          seconds: (value * currentDuration.inSeconds).toInt(),
-                        );
-                      });
-                    }
-                  },
-                  onChangeEnd: isPlayingAd ? null : (value) async {
-                    try {
-                      if (currentDuration.inSeconds > 0) {
-                        final seekPosition = Duration(
-                          seconds: (value * currentDuration.inSeconds).toInt(),
-                        );
-                        await ref.read(unifiedAudioProviderFixed.notifier).seek(seekPosition);
-                        if (!mounted) return;
-                        setState(() {
-                          _isDraggingSeek = false;
-                          _dragPosition = null;
-                        });
-                      }
-                    } catch (e) {
-                      if (!mounted) return;
-                      setState(() {
-                        _isDraggingSeek = false;
-                        _dragPosition = null;
-                      });
-                    }
-                  },
-                ),
-              ),
+              onSeekStart: () {
+                // Si la canción cambió recientemente, limpiar estado local antes de arrastrar
+                if (currentSong != null && currentSong != _lastSongId) {
+                  _lastSongId = currentSong;
+                  _lastValidPosition = null;
+                  _dragPosition = null;
+                }
+                _lastSeekTime = DateTime.now();
+                setState(() => _isDraggingSeek = true);
+              },
+              onSeekEnd: (position) {
+                // Debounce breve para evitar mezclar eventos muy rápidos
+                final now = DateTime.now();
+                if (_lastSeekTime != null && now.difference(_lastSeekTime!) < const Duration(milliseconds: 120)) {
+                  // Considerar como tap accidental, ignorar
+                  setState(() {
+                    _isDraggingSeek = false;
+                    _dragPosition = null;
+                  });
+                  return;
+                }
+
+                setState(() {
+                  _isDraggingSeek = false;
+                  _dragPosition = null;
+                });
+              },
+              onSeekChange: (position) {
+                // Ignorar cambios de seek si la canción ya cambió
+                if (currentSong != null && currentSong != _lastSongId) return;
+                setState(() => _dragPosition = position);
+              },
             ),
             
             // Tiempos - OPTIMIZADO: Alineados visualmente con ancho fijo
@@ -1061,9 +1101,20 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
           ],
         );
   }
+
+  @override
+  void dispose() {
+    // Limpiar estado local para evitar que valores persistentes influyan en nuevas instancias
+    _isDraggingSeek = false;
+    _dragPosition = null;
+    _lastValidPosition = null;
+    _lastSongId = null;
+    _lastSeekTime = null;
+    super.dispose();
+  }
 }
 
-/// ✅ FASE 5: Widget para mostrar el fondo de carátula del anuncio
+/// Widget para mostrar el fondo con color sólido profesional del anuncio (marrón oscuro)
 class _AdArtworkBackground extends StatelessWidget {
   final AudioAd ad;
 
@@ -1073,38 +1124,18 @@ class _AdArtworkBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Imagen de fondo del anuncio
-        Positioned.fill(
-          child: ad.coverImageUrl != null && ad.coverImageUrl!.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: UrlNormalizer.normalizeImageUrl(ad.coverImageUrl) ?? ad.coverImageUrl!,
-                  fit: BoxFit.cover,
-                  errorWidget: (context, url, error) => Container(
-                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                  ),
-                )
-              : Container(
-                  color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                ),
+    // Fondo con color sólido marrón más oscuro
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            NeumorphismTheme.coffeeDark.withValues(alpha: 0.95),
+            NeumorphismTheme.coffeeDark.withValues(alpha: 1.0),
+          ],
         ),
-        // Overlay con gradiente (similar a PersistentArtworkBackground)
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.4),
-                  Colors.black.withValues(alpha: 0.7),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1114,6 +1145,7 @@ class _AdCoverWidget extends StatelessWidget {
   final AudioAd ad;
 
   const _AdCoverWidget({
+    super.key,
     required this.ad,
   });
 

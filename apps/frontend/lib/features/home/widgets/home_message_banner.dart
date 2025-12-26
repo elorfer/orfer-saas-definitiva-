@@ -23,17 +23,11 @@ class HomeMessageBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: NeumorphismTheme.accentDark.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: NeumorphismTheme.accentLight.withValues(alpha: 0.22),
+            color: const Color(0xFFF3EBE3), // 🚀 Sólido
+            width: 1,
           ),
         ),
         padding: const EdgeInsets.all(12),
@@ -43,17 +37,10 @@ class HomeMessageBanner extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: NeumorphismTheme.accentLight.withOpacity(0.18),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.campaign_outlined,
-                  color: NeumorphismTheme.coffeeDark,
-                  size: 20,
-                ),
+              child: Icon(
+                Icons.campaign_outlined,
+                color: NeumorphismTheme.accent,
+                size: 24,
               ),
             ),
             const SizedBox(width: 12),
@@ -63,17 +50,18 @@ class HomeMessageBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFFFFF2E6), // 🚀 Sólido (Naranja muy pálido)
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       'NOVEDAD',
                       style: AppTextStyles.caption.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.3,
+                        color: NeumorphismTheme.accent,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),

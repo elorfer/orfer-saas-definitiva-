@@ -81,6 +81,15 @@ class PlaybackState {
   /// Verificar si hay una canción cargada
   bool get hasSong => currentSong != null;
 
+  /// Obtener el índice de la canción actual en la cola
+  int get currentIndex {
+    if (currentSong == null || currentQueue.isEmpty) return -1;
+    return currentQueue.indexWhere((s) => s.id == currentSong!.id);
+  }
+
+  /// Indica si el sistema está generando/solicitando nuevas canciones (autoplay/algoritmo)
+  bool get isGeneratingMusic => playbackMode == PlaybackMode.algorithm && isLoading;
+
   /// 🛡️ BLINDAJE DE CARÁTULA: Getter prioritario para la URL de la portada
   /// Si hay un anuncio reproduciéndose O insertándose, devuelve estrictamente la imagen del anuncio.
   /// Esto evita el "spoiler visual" de la siguiente canción durante la transición.

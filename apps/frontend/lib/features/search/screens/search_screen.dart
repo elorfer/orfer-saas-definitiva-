@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -13,6 +11,7 @@ import '../../../core/utils/url_normalizer.dart';
 import '../../../core/models/genre_model.dart';
 import '../../../core/models/artist_model.dart';
 import '../../../core/models/song_model.dart';
+import '../../../core/services/http_cache_service.dart';
 import '../widgets/artist_search_card.dart';
 import '../widgets/song_search_card.dart';
 import '../widgets/playlist_search_card.dart';
@@ -58,7 +57,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     _searchController.addListener(_onSearchTextChanged);
   }
   
-  /// ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
+  /// ✅ OPTIMIZACIÓN: Actualizar cache de URLs solo cuando cambian los datos
   void _updateImageUrlsCache() {
     final results = ref.read(searchProvider).results;
     if (results == null) {
@@ -67,8 +66,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       return;
     }
     
+    // ✅ OPTIMIZACIÓN: Calcular nuevo count primero para evitar actualización innecesaria
+    final newCount = results.artists.length + results.songs.length + results.playlists.length + results.genres.length;
+    if (newCount == _cachedResultsCount) {
+      return; // No actualizar si el count es el mismo
+    }
+    
     // Precachear imágenes de artistas visibles
     final artistImageUrls = results.artists
+        .take(20) // ✅ OPTIMIZACIÓN: Limitar a 20 para no sobrecargar
         .map((artist) => artist.profilePhotoUrl)
         .where((url) => url != null && url.isNotEmpty)
         .cast<String>()
@@ -76,6 +82,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     
     // Precachear imágenes de canciones visibles
     final songImageUrls = results.songs
+        .take(20) // ✅ OPTIMIZACIÓN: Limitar a 20
         .map((song) => song.coverArtUrl)
         .where((url) => url != null && url.isNotEmpty)
         .cast<String>()
@@ -83,6 +90,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     
     // Precachear imágenes de playlists visibles
     final playlistImageUrls = results.playlists
+        .take(20) // ✅ OPTIMIZACIÓN: Limitar a 20
         .map((playlist) => playlist.coverArtUrl)
         .where((url) => url != null && url.isNotEmpty)
         .cast<String>()
@@ -90,6 +98,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
 
     // Precachear imágenes de géneros visibles
     final genreImageUrls = results.genres
+        .take(20) // ✅ OPTIMIZACIÓN: Limitar a 20
         .map((genre) => genre.imageUrl)
         .where((url) => url != null && url.isNotEmpty)
         .cast<String>()
@@ -97,39 +106,31 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     
     // Combinar todas las URLs
     _cachedImageUrls = [...artistImageUrls, ...songImageUrls, ...playlistImageUrls, ...genreImageUrls];
-    _cachedResultsCount = results.artists.length + results.songs.length + results.playlists.length + results.genres.length;
+    _cachedResultsCount = newCount;
   }
   
-  /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles cuando el usuario hace scroll (como en Home)
-  /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
+  /// ✅ OPTIMIZACIÓN: Precargar imágenes visibles cuando el usuario hace scroll
+  /// Debounce reducido para mejor responsividad
   void _onScroll() {
-    if (!mounted || !_scrollController.hasClients) return;
+    if (!mounted || !_scrollController.hasClients || _cachedImageUrls.isEmpty) return;
     
     // ✅ OPTIMIZACIÓN: Cancelar timer anterior si existe
     _scrollDebounceTimer?.cancel();
     
-    // ✅ OPTIMIZACIÓN: Debounce de 300ms para evitar ejecuciones excesivas
-    _scrollDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted || !_scrollController.hasClients) return;
+    // ✅ OPTIMIZACIÓN: Debounce reducido a 150ms para mejor responsividad
+    _scrollDebounceTimer = Timer(const Duration(milliseconds: 150), () {
+      if (!mounted || !_scrollController.hasClients || _cachedImageUrls.isEmpty) return;
       
       try {
-        // ✅ OPTIMIZACIÓN: Usar URLs cacheadas en lugar de leer del provider cada vez
-        if (_cachedImageUrls.isEmpty) {
-          // Si no hay cache, actualizar desde el provider (solo una vez)
-          _updateImageUrlsCache();
-        }
-        
-        // Precachear imágenes visibles basado en posición del scroll (IntersectionObserver)
-        if (_cachedImageUrls.isNotEmpty) {
-          LazyImageLoader.precacheVisibleVerticalImages(
-            scrollController: _scrollController,
-            itemExtent: 80.0, // Altura estimada de cada item
-            itemCount: _cachedResultsCount,
-            imageUrls: _cachedImageUrls,
-            context: context,
-            precacheCount: 5, // Precachear 5 items antes y después del viewport
-          );
-        }
+        // ✅ OPTIMIZACIÓN: Precachear solo imágenes visibles (reducido de 5 a 3 para mejor rendimiento)
+        LazyImageLoader.precacheVisibleVerticalImages(
+          scrollController: _scrollController,
+          itemExtent: 80.0, // Altura estimada de cada item
+          itemCount: _cachedResultsCount,
+          imageUrls: _cachedImageUrls,
+          context: context,
+          precacheCount: 3, // ✅ Reducido de 5 a 3 items antes y después del viewport
+        );
       } catch (e) {
         // ✅ OPTIMIZACIÓN: Manejar errores silenciosamente para no bloquear la app
         debugPrint('[SearchScreen] Error en _onScroll: $e');
@@ -264,19 +265,22 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   Widget build(BuildContext context) {
     super.build(context); // 🔥 Requerido por AutomaticKeepAliveClientMixin
     
-    // OPTIMIZACIÓN: usar select específico para cada campo y evitar rebuilds innecesarios
+    // ✅ OPTIMIZACIÓN: usar select específico para cada campo y evitar rebuilds innecesarios
     final isLoading = ref.watch(searchProvider.select((state) => state.isLoading));
     final error = ref.watch(searchProvider.select((state) => state.error));
     final isEmpty = ref.watch(searchProvider.select((state) => state.isEmpty));
     final query = ref.watch(searchProvider.select((state) => state.query));
     final results = ref.watch(searchProvider.select((state) => state.results));
 
-    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _updateImageUrlsCache();
-      }
-    });
+    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs solo cuando cambian los resultados (no en cada build)
+    final resultsLength = (results?.artists.length ?? 0) + (results?.songs.length ?? 0) + (results?.playlists.length ?? 0) + (results?.genres.length ?? 0);
+    if (resultsLength != _cachedResultsCount && results != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _updateImageUrlsCache();
+        }
+      });
+    }
 
     // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
     return RepaintBoundary(
@@ -727,9 +731,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     );
   }
 
-  /// ⚡ OPTIMIZADO: Construir sección de artistas trending con cache persistente
+  /// ✅ OPTIMIZADO: Construir sección de artistas trending con cache persistente
   Widget _buildTrendingArtists() {
-    // ⚡ OPTIMIZADO: Usar watch para detectar cuando los datos están listos
+    // ✅ OPTIMIZACIÓN: Usar select para solo rebuild cuando cambian los datos
     final trendingArtistsAsync = ref.watch(trendingArtistsProvider);
 
     return trendingArtistsAsync.when(
@@ -737,18 +741,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         if (artists.isEmpty) {
           return const SizedBox.shrink();
         }
-        // ⚡ OPTIMIZADO: Limitar número de artistas mostrados inicialmente
-        final limitedArtists = artists.take(6).toList();
+        // ✅ Ya limitado a 6 en el provider, usar todos
         return SizedBox(
           height: 180,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            cacheExtent: 200,
-            itemCount: limitedArtists.length,
+            cacheExtent: 150, // ✅ Reducido de 200 a 150
+            itemCount: artists.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (_, index) {
-              final artist = limitedArtists[index];
+              final artist = artists[index];
               return RepaintBoundary(
                 key: ValueKey('trending_artist_${artist.id}'),
                 child: _buildTrendingArtistCard(artist),
@@ -758,21 +761,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         );
       },
       loading: () {
-        // ⚡ OPTIMIZADO: Verificar si hay datos en cache antes de mostrar skeleton
+        // ✅ OPTIMIZACIÓN: Verificar cache primero (con keepAlive ya no debería pasar, pero por si acaso)
         final cachedArtists = ref.read(trendingArtistsProvider).value;
         if (cachedArtists != null && cachedArtists.isNotEmpty) {
-          // Si hay datos en cache, mostrarlos en lugar del skeleton
-          final limitedArtists = cachedArtists.take(6).toList();
           return SizedBox(
             height: 180,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              cacheExtent: 200,
-              itemCount: limitedArtists.length,
+              cacheExtent: 150,
+              itemCount: cachedArtists.length,
               separatorBuilder: (_, __) => const SizedBox(width: 16),
               itemBuilder: (_, index) {
-                final artist = limitedArtists[index];
+                final artist = cachedArtists[index];
                 return RepaintBoundary(
                   key: ValueKey('trending_artist_${artist.id}'),
                   child: _buildTrendingArtistCard(artist),
@@ -781,6 +782,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             ),
           );
         }
+        // ✅ Skeleton solo en primera carga
         return SizedBox(
           height: 180,
           child: ListView.separated(
@@ -816,26 +818,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               Container(
                 width: 140,
                 height: 140,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
-                  boxShadow: NeumorphismTheme.softShadow,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  // ⚡ GAMA BAJA: Sin boxShadow
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: profileUrl != null
                     ? CachedNetworkImage(
                         imageUrl: profileUrl,
+                        cacheManager: AlbumArtCacheManager.instance, // ✅ Cache persistente 90 días
                         fit: BoxFit.cover,
-                        fadeInDuration: const Duration(milliseconds: 50),
-                        fadeOutDuration: const Duration(milliseconds: 50),
+                        // memCacheWidth: 280, // Desactivado para evitar redimensionamiento en memoria
+                        // memCacheHeight: 280, // Desactivado para evitar redimensionamiento en memoria
+                        fadeInDuration: Duration.zero, // ✅ Sin animación para evitar parpadeo
+                        fadeOutDuration: Duration.zero,
+                        useOldImageOnUrlChange: true, // ⚡ FIX PARPADEO: Mantener imagen anterior
                         placeholder: (context, url) => Container(
-                          decoration: const BoxDecoration(
-                            gradient: NeumorphismTheme.imagePlaceholderGradient,
-                          ),
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2), // ⚡ GAMA BAJA: Sin gradient
                         ),
                         errorWidget: (context, url, error) => Container(
-                          decoration: const BoxDecoration(
-                            gradient: NeumorphismTheme.imagePlaceholderGradient,
-                          ),
+                          color: NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
                           child: const Icon(
                             Icons.person,
                             color: Colors.white,
@@ -844,9 +846,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                         ),
                       )
                     : Container(
-                        decoration: const BoxDecoration(
-                          gradient: NeumorphismTheme.imagePlaceholderGradient,
-                        ),
+                        color: NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
                         child: const Icon(
                           Icons.person,
                           color: Colors.white,
@@ -873,46 +873,39 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   }
 
   /// Skeleton para tarjeta de artista trending
-  // ⚡ OPTIMIZADO: Skeleton simplificado
+  // ⚡ GAMA BAJA: Skeleton estático sin animación Shimmer
   Widget _buildTrendingArtistCardSkeleton() {
-    return RepaintBoundary(
-      child: Shimmer.fromColors(
-        baseColor: NeumorphismTheme.shimmerBaseColor,
-        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-        period: const Duration(milliseconds: 1500), // ⚡ Periodo más largo = menos CPU
-        child: SizedBox(
-          width: 140,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: NeumorphismTheme.shimmerContentColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 14,
-                width: 100,
-                decoration: BoxDecoration(
-                  color: NeumorphismTheme.shimmerContentColor,
-                  borderRadius: const BorderRadius.all(Radius.circular(4)),
-                ),
-              ),
-            ],
+    return SizedBox(
+      width: 140,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Container(
+            height: 14,
+            width: 100,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              borderRadius: const BorderRadius.all(Radius.circular(4)),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// ⚡ OPTIMIZADO: Construir sección de géneros con cache persistente
+  /// ✅ OPTIMIZADO: Construir sección de géneros con cache persistente
   Widget _buildGenresSection() {
-    // ⚡ OPTIMIZADO: Usar watch para detectar cuando los datos están listos
+    // ✅ OPTIMIZACIÓN: Usar watch para detectar cuando los datos están listos
     final genresAsync = ref.watch(allGenresProvider);
 
     return genresAsync.when(
@@ -923,12 +916,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         return _buildGenres(genres);
       },
       loading: () {
-        // ⚡ OPTIMIZADO: Verificar si hay datos en cache antes de mostrar skeleton
+        // ✅ OPTIMIZACIÓN: Con keepAlive ya no debería pasar, pero verificar cache por si acaso
         final cachedGenres = ref.read(allGenresProvider).value;
         if (cachedGenres != null && cachedGenres.isNotEmpty) {
-          // Si hay datos en cache, mostrarlos en lugar del skeleton
           return _buildGenres(cachedGenres);
         }
+        // ✅ Skeleton solo en primera carga
         return SizedBox(
           height: 108,
           child: ListView.separated(
@@ -944,11 +937,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     );
   }
 
-  /// ⚡ OPTIMIZADO: Construir sección de Top Charts con carga optimizada
+  /// ✅ OPTIMIZADO: Construir sección de Top Charts con carga optimizada
   Widget _buildTopCharts() {
-    // ⚡ OPTIMIZACIÓN: Usar watch con select para evitar rebuilds innecesarios
-    // Solo reconstruir cuando cambian los datos, no cuando cambia el estado del provider
-    // ⚡ OPTIMIZADO: Usar watch para detectar cuando los datos están listos
+    // ✅ OPTIMIZACIÓN: Usar watch para detectar cuando los datos están listos
     final topSongsAsync = ref.watch(topSongsProvider);
 
     return topSongsAsync.when(
@@ -956,7 +947,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         if (songs.isEmpty) {
           return const SizedBox.shrink();
         }
-        // ⚡ OPTIMIZACIÓN: Ya limitado a 8 en el provider, mostrar todos
+        // ✅ Ya limitado a 8 en el provider, mostrar todos
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -972,10 +963,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         );
       },
       loading: () {
-        // ⚡ OPTIMIZADO: Verificar si hay datos en cache antes de mostrar skeleton
+        // ✅ OPTIMIZACIÓN: Con keepAlive ya no debería pasar, pero verificar cache por si acaso
         final cachedSongs = ref.read(topSongsProvider).value;
         if (cachedSongs != null && cachedSongs.isNotEmpty) {
-          // Si hay datos en cache, mostrarlos en lugar del skeleton
           return ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -990,6 +980,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             },
           );
         }
+        // ✅ Skeleton solo en primera carga
         return ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1019,7 +1010,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           decoration: BoxDecoration(
             color: NeumorphismTheme.surface.withValues(alpha: 0.6),
             borderRadius: const BorderRadius.all(Radius.circular(16)),
-            boxShadow: NeumorphismTheme.softShadow,
+            // ⚡ GAMA BAJA: Sin boxShadow
           ),
           child: Row(
             children: [
@@ -1041,26 +1032,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               Container(
                 width: 56,
                 height: 56,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                  boxShadow: NeumorphismTheme.softShadow,
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                  // ⚡ GAMA BAJA: Sin boxShadow
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: coverUrl != null
                     ? CachedNetworkImage(
                         imageUrl: coverUrl,
+                        cacheManager: AlbumArtCacheManager.instance, // ✅ Cache persistente 90 días
                         fit: BoxFit.cover,
-                        fadeInDuration: const Duration(milliseconds: 50),
-                        fadeOutDuration: const Duration(milliseconds: 50),
+                        memCacheWidth: 112, // ⚡ GAMA BAJA: Limitar tamaño en memoria
+                        memCacheHeight: 112,
+                        fadeInDuration: Duration.zero, // ✅ Sin animación
+                        fadeOutDuration: Duration.zero,
+                        useOldImageOnUrlChange: true, // ⚡ FIX PARPADEO
                         placeholder: (context, url) => Container(
-                          decoration: const BoxDecoration(
-                            gradient: NeumorphismTheme.imagePlaceholderGradient,
-                          ),
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2), // ⚡ GAMA BAJA: Sin gradient
                         ),
                         errorWidget: (context, url, error) => Container(
-                          decoration: const BoxDecoration(
-                            gradient: NeumorphismTheme.imagePlaceholderGradient,
-                          ),
+                          color: NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
                           child: const Icon(
                             Icons.music_note_rounded,
                             color: Colors.white,
@@ -1069,9 +1060,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                         ),
                       )
                     : Container(
-                        decoration: const BoxDecoration(
-                          gradient: NeumorphismTheme.imagePlaceholderGradient,
-                        ),
+                        color: NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
                         child: const Icon(
                           Icons.music_note_rounded,
                           color: Colors.white,
@@ -1115,66 +1104,61 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   }
 
   /// Skeleton para item de Top Chart
+  // ⚡ GAMA BAJA: Skeleton estático sin animación Shimmer
   Widget _buildTopChartItemSkeleton() {
-    return RepaintBoundary(
-      child: Shimmer.fromColors(
-        baseColor: NeumorphismTheme.shimmerBaseColor,
-        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.shimmerContentColor,
-            borderRadius: const BorderRadius.all(Radius.circular(16)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 20,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              borderRadius: const BorderRadius.all(Radius.circular(4)),
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.all(Radius.circular(4)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 16,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 14,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          const SizedBox(width: 12),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 16,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 14,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1267,202 +1251,176 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   }
 
   /// Skeleton para título de sección
+  // ⚡ GAMA BAJA: Skeleton estático
   Widget _buildSectionTitleSkeleton() {
-    return RepaintBoundary(
-      child: Shimmer.fromColors(
-        baseColor: NeumorphismTheme.shimmerBaseColor,
-        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-        child: Container(
-          height: 20,
-          width: 100,
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.shimmerContentColor,
-            borderRadius: const BorderRadius.all(Radius.circular(4)),
-          ),
-        ),
+    return Container(
+      height: 20,
+      width: 100,
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+        borderRadius: const BorderRadius.all(Radius.circular(4)),
       ),
     );
   }
 
   /// Skeleton para tarjeta de artista
+  // ⚡ GAMA BAJA: Skeleton estático
   Widget _buildArtistCardSkeleton() {
-    return RepaintBoundary(
-      child: Shimmer.fromColors(
-        baseColor: NeumorphismTheme.shimmerBaseColor,
-        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.shimmerContentColor,
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
           ),
-          child: Row(
-            children: [
-              // Avatar circular
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                    Container(
+                height: 16,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
               ),
-              const SizedBox(width: 16),
-              // Nombre y tipo
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 18,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 14,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 6),
+              Container(
+                height: 12,
+                width: 100,
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   /// Skeleton para tarjeta de canción
+  // ⚡ GAMA BAJA: Skeleton estático
   Widget _buildSongCardSkeleton() {
-    return RepaintBoundary(
-      child: Shimmer.fromColors(
-        baseColor: NeumorphismTheme.shimmerBaseColor,
-        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.shimmerContentColor,
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+            ),
           ),
-          child: Row(
-            children: [
-              // Portada cuadrada
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 14,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Título y artista
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 16,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 14,
-                      width: 150,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 6),
+                Container(
+                  height: 12,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
+                  ),
                 ),
-              ),
-              // Botón play
-              Container(
-                width: 44,
-                height: 44,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   /// Skeleton para tarjeta de playlist
+  // ⚡ GAMA BAJA: Skeleton estático
   Widget _buildPlaylistCardSkeleton() {
-    return RepaintBoundary(
-      child: Shimmer.fromColors(
-        baseColor: NeumorphismTheme.shimmerBaseColor,
-        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.shimmerContentColor,
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+            ),
           ),
-          child: Row(
-            children: [
-              // Portada cuadrada
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 14,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              // Nombre y descripción
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 18,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 14,
-                      width: 180,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 6),
+                Container(
+                  height: 12,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1497,26 +1455,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   Container(
                     width: 80,
                     height: 80,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      boxShadow: NeumorphismTheme.softShadow,
+                      // ⚡ GAMA BAJA: Sin boxShadow
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: normalizedImageUrl != null
                         ? CachedNetworkImage(
                             imageUrl: normalizedImageUrl,
+                            cacheManager: AlbumArtCacheManager.instance, // ✅ Cache persistente 90 días
                             fit: BoxFit.cover,
-                            fadeInDuration: const Duration(milliseconds: 50),
-                            fadeOutDuration: const Duration(milliseconds: 50),
+                            // memCacheWidth: 160, // Desactivado para evitar redimensionamiento en memoria
+                            // memCacheHeight: 160, // Desactivado para evitar redimensionamiento en memoria
+                            fadeInDuration: Duration.zero, // ✅ Sin animación
+                            fadeOutDuration: Duration.zero,
+                            useOldImageOnUrlChange: true, // ⚡ FIX PARPADEO
                             placeholder: (context, url) => Container(
-                              decoration: const BoxDecoration(
-                                gradient: NeumorphismTheme.imagePlaceholderGradient,
-                              ),
+                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2), // ⚡ GAMA BAJA: Sin gradient
                             ),
                             errorWidget: (context, url, error) => Container(
-                              decoration: const BoxDecoration(
-                                gradient: NeumorphismTheme.imagePlaceholderGradient,
-                              ),
+                              color: NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
                               child: const Icon(
                                 Icons.music_note_rounded,
                                 color: Colors.white,
@@ -1525,9 +1483,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                             ),
                           )
                         : Container(
-                            decoration: const BoxDecoration(
-                              gradient: NeumorphismTheme.imagePlaceholderGradient,
-                            ),
+                            color: NeumorphismTheme.coffeeMedium, // ⚡ GAMA BAJA: Sin gradient
                             child: const Icon(
                               Icons.music_note_rounded,
                               color: Colors.white,
@@ -1560,33 +1516,28 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   }
 
   Widget _buildGenreCardSkeleton() {
-    return RepaintBoundary(
-      child: Shimmer.fromColors(
-        baseColor: NeumorphismTheme.shimmerBaseColor,
-        highlightColor: NeumorphismTheme.shimmerHighlightColor,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: NeumorphismTheme.shimmerContentColor,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Container(
-              height: 16,
-              width: 60,
-              decoration: BoxDecoration(
-                color: NeumorphismTheme.shimmerContentColor,
-                borderRadius: const BorderRadius.all(Radius.circular(4)),
-              ),
-            ),
-          ],
+    // ⚡ GAMA BAJA: Skeleton estático
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
         ),
-      ),
+        const SizedBox(height: 5),
+        Container(
+          height: 16,
+          width: 60,
+          decoration: BoxDecoration(
+            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+            borderRadius: const BorderRadius.all(Radius.circular(4)),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1628,7 +1579,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               ? NeumorphismTheme.coffeeMedium
               : NeumorphismTheme.surface,
           borderRadius: const BorderRadius.all(Radius.circular(20)),
-          boxShadow: isSelected ? NeumorphismTheme.softShadow : null,
+          // ⚡ GAMA BAJA: Sin boxShadow
         ),
         child: Center(
           child: Text(

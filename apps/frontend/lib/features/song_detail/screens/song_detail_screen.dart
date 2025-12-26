@@ -253,7 +253,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
     }
     
     // Verificar si está en cache de disco
-    cache_service.ImageCacheManager.instance.getFileFromCache(imageUrl).then((fileInfo) {
+    cache_service.AlbumArtCacheManager.instance.getFileFromCache(imageUrl).then((fileInfo) {
       // CRÍTICO: Si está en cache, marcar como lista INMEDIATAMENTE (no esperar precacheImage)
       if (mounted) {
         onReady(true);
@@ -401,6 +401,39 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       }
     } catch (e) {
       // Ignorar errores de PageStorage
+    }
+  }
+
+  @override
+  void didUpdateWidget(SongDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // ✅ CRÍTICO: Detectar cambio de canción (ej. auto-advance) para actualizar la UI
+    if (widget.song.id != oldWidget.song.id) {
+       // Resetear estados de carga
+       _loadedSong = null;
+       _isLoadingSong = false;
+       _coverImageReady = false;
+       _artistAvatarReady = false;
+       
+       // Intentar cargar del cache primero
+       _loadFromCache();
+       
+       // Actualizar URLs normalizadas
+       _normalizeUrls();
+       
+       // Si no estaba en cache, cargar del backend
+       if (_loadedSong == null) {
+          _loadSongFromBackend();
+       }
+       
+       // Restaurar scroll position si existe
+       final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
+       final savedPosition = scrollNotifier.getScrollPosition('song_detail_${widget.song.id}');
+       if (savedPosition != null) {
+          _scrollController.jumpTo(savedPosition);
+       } else {
+          _scrollController.jumpTo(0);
+       }
     }
   }
 
@@ -794,11 +827,12 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
           borderRadius: const BorderRadius.all(Radius.circular(32)),
           child: CachedNetworkImage(
             imageUrl: coverUrl,
+            cacheManager: cache_service.AlbumArtCacheManager.instance,
             fit: BoxFit.cover,
             width: double.infinity,
             height: double.infinity,
-            memCacheWidth: (imageSize * devicePixelRatio).round(),
-            memCacheHeight: (imageSize * devicePixelRatio).round(),
+            // memCacheWidth: (imageSize * devicePixelRatio).round(), // Desactivado por compatibilidad 90 días
+            // memCacheHeight: (imageSize * devicePixelRatio).round(),
             // CRÍTICO: Sin fade ni placeholder cuando hay cache (evita parpadeo)
             fadeInDuration: Duration.zero,
             fadeOutDuration: Duration.zero,
@@ -1035,7 +1069,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         child: SafeArea(
           bottom: false, // No agregar padding inferior, MainNavigation ya lo maneja
           child: CustomScrollView(
-            key: PageStorageKey<String>('song_detail_scroll_${song.id}'),
+            key: PageStorageKey<String>('song_detail_scroll_${widget.song.id}'),
             controller: _scrollController,
             physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
             cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
@@ -1161,6 +1195,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                         offset: const Offset(0, -4), // Subir más el botón
                                         child: FavoriteButton(
                                           songId: song.id,
+                                          song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
                                           iconColor: NeumorphismTheme.textPrimary,
                                           iconSize: 28, // Aumentado de 22 a 28
                                         ),
@@ -1211,8 +1246,8 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                             // Siempre mostrar avatar (con placeholder si no hay URL)
                                             Builder(
                                               builder: (context) {
-                                                debugPrint('🎨 [BUILD] Construyendo avatar - URL: $artistAvatarUrl, Artista: ${artist?.displayName}');
-                                                debugPrint('🎨 [BUILD] Artista completo: ${artist?.toJson()}');
+                                                // Removed verbose build logs to avoid jank during scrolling.
+                                                // Avoid printing large objects like artist.toJson() here.
                                                 return _buildArtistAvatar(hasCacheData, artistAvatarUrl);
                                               },
                                             ),
@@ -1385,7 +1420,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         child: SafeArea(
           bottom: false, // No agregar padding inferior, MainNavigation ya lo maneja
           child: CustomScrollView(
-            key: PageStorageKey<String>('song_detail_scroll_${song.id}'),
+            key: PageStorageKey<String>('song_detail_scroll_${widget.song.id}'),
             controller: _scrollController,
             physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
             cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
@@ -1416,6 +1451,8 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                               borderRadius: const BorderRadius.all(Radius.circular(32)),
                               child: coverUrl != null
                                   ? CachedNetworkImage(
+                                      // ⚡ MIRROR PATTERN: ValueKey obliga a reconstruir si cambia la URL
+                                      key: ValueKey(coverUrl),
                                       imageUrl: coverUrl,
                                       fit: BoxFit.cover,
                                       width: double.infinity,
@@ -1557,6 +1594,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     offset: const Offset(0, -4), // Subir más el botón
                                     child: FavoriteButton(
                                       songId: song.id,
+                                      song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
                                       iconColor: NeumorphismTheme.textPrimary,
                                       iconSize: 28, // Aumentado de 22 a 28
                                     ),

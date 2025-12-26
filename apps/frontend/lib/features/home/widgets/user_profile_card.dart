@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/models/user_model.dart';
 import '../../../core/widgets/optimized_image.dart';
@@ -8,26 +8,27 @@ class UserProfileCard extends StatelessWidget {
   final User user;
 
   // Estilos cacheados
-  static final TextStyle _nameStyle = GoogleFonts.inter(
+  // Estilos cacheados nativos (Sin GoogleFonts)
+  static const TextStyle _nameStyle = TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
-    color: Colors.grey[800],
+    color: Color(0xFF3D2E20),
     decoration: TextDecoration.none,
   );
-  static final TextStyle _usernameStyle = GoogleFonts.inter(
+  static const TextStyle _usernameStyle = TextStyle(
     fontSize: 14,
-    color: Colors.grey[600],
+    color: Color(0xFF8B7A6A),
     decoration: TextDecoration.none,
   );
-  static final TextStyle _statValueStyle = GoogleFonts.inter(
+  static const TextStyle _statValueStyle = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.bold,
-    color: Colors.grey[800],
+    color: Color(0xFF3D2E20),
     decoration: TextDecoration.none,
   );
-  static final TextStyle _statLabelStyle = GoogleFonts.inter(
+  static const TextStyle _statLabelStyle = TextStyle(
     fontSize: 12,
-    color: Colors.grey[600],
+    color: Color(0xFF8B7A6A),
     decoration: TextDecoration.none,
   );
 
@@ -43,11 +44,11 @@ class UserProfileCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(20)),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha:0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Color(0x1A000000), // Hex sólido reducido
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -60,9 +61,9 @@ class UserProfileCard extends StatelessWidget {
               Container(
                 width: 60,
                 height: 60,
-                decoration: BoxDecoration(
-                  color: NeumorphismTheme.coffeeMedium.withValues(alpha:0.1),
-                  borderRadius: const BorderRadius.all(Radius.circular(30)),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3EBE3), // Sólido
+                  shape: BoxShape.circle,
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.all(Radius.circular(30)),
@@ -109,16 +110,16 @@ class UserProfileCard extends StatelessWidget {
                             horizontal: 8,
                             vertical: 4,
                           ),
-                          decoration: BoxDecoration(
-                            color: _getRoleColor(user.role).withValues(alpha:0.1),
-                            borderRadius: const BorderRadius.all(Radius.circular(12)),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF3EBE3),
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
                           ),
                           child: Text(
                             _getRoleText(user.role),
-                            style: GoogleFonts.inter(
+                            style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: _getRoleColor(user.role),
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF8B7A6A),
                               decoration: TextDecoration.none,
                             ),
                           ),
@@ -129,16 +130,16 @@ class UserProfileCard extends StatelessWidget {
                             horizontal: 8,
                             vertical: 4,
                           ),
-                          decoration: BoxDecoration(
-                            color: _getSubscriptionColor(user.subscriptionStatus).withValues(alpha:0.1),
-                            borderRadius: const BorderRadius.all(Radius.circular(12)),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFF2E6),
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
                           ),
                           child: Text(
                             _getSubscriptionText(user.subscriptionStatus),
-                            style: GoogleFonts.inter(
+                            style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: _getSubscriptionColor(user.subscriptionStatus),
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFE67E22),
                               decoration: TextDecoration.none,
                             ),
                           ),
@@ -152,9 +153,9 @@ class UserProfileCard extends StatelessWidget {
               if (user.isUserVerified)
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha:0.1),
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F5E9),
+                    shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.verified,
@@ -196,16 +197,6 @@ class UserProfileCard extends StatelessWidget {
     );
   }
 
-  Color _getRoleColor(UserRole role) {
-    switch (role) {
-      case UserRole.user:
-        return Colors.blue;
-      case UserRole.artist:
-        return Colors.purple;
-      case UserRole.admin:
-        return Colors.red;
-    }
-  }
 
   String _getRoleText(UserRole role) {
     switch (role) {
@@ -218,18 +209,6 @@ class UserProfileCard extends StatelessWidget {
     }
   }
 
-  Color _getSubscriptionColor(SubscriptionStatus status) {
-    switch (status) {
-      case SubscriptionStatus.free:
-        return Colors.grey;
-      case SubscriptionStatus.premium:
-        return Colors.orange;
-      case SubscriptionStatus.vip:
-        return Colors.purple;
-      case SubscriptionStatus.inactive:
-        return Colors.red;
-    }
-  }
 
   String _getSubscriptionText(SubscriptionStatus status) {
     switch (status) {

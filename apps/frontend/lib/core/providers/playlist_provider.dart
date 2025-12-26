@@ -6,15 +6,21 @@ import '../models/song_model.dart';
 /// Provider para el servicio de playlists (singleton)
 final playlistServiceProvider = Provider<PlaylistService>((ref) {
   final service = PlaylistService();
-  // Inicializar una vez al crear el provider
-  service.initialize().catchError((_) {});
+  // ✅ OPTIMIZACIÓN: No inicializar automáticamente - se inicializa lazy cuando se necesita
+  // Esto acelera el startup de la app
   return service;
 });
 
 /// Provider para listar todas las playlists
+/// ✅ OPTIMIZACIÓN: Agregado keepAlive para cachear resultados y evitar recargas innecesarias
 final playlistsProvider = FutureProvider.family<List<Playlist>, ({int page, int limit})>((ref, params) async {
+  // ✅ OPTIMIZACIÓN: keepAlive para mantener cache durante la sesión
+  ref.keepAlive();
+  
   try {
     final service = ref.read(playlistServiceProvider);
+    // ✅ OPTIMIZACIÓN: Inicializar lazy solo cuando se necesita (sin bloquear)
+    service.initialize().catchError((_) {});
     return await service.getPlaylists(page: params.page, limit: params.limit);
   } catch (e) {
     return [];

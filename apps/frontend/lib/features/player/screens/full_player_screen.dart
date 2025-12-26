@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/services/player_navigation_service.dart';
 import '../../../core/widgets/professional_audio_player.dart';
@@ -40,6 +39,8 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
     final playbackState = ref.watch(unifiedAudioProviderFixed);
     final currentSong = playbackState.lastConfirmedSong ?? playbackState.currentSong;
     final isPlayingAd = playbackState.isPlayingAd;
+    final currentAd = playbackState.currentAd;
+    final isInsertingAd = playbackState.isInsertingAd;
     
     // ✅ FIX: Abrir el reproductor completo cuando se construye, pero solo una vez
     // Usar un flag para evitar múltiples llamadas
@@ -52,18 +53,31 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
       }
     });
 
-    // ✅ FIX: Si no hay canción ni anuncio, regresar de forma segura
-    // ✅ CORRECCIÓN: Usar Future.delayed para evitar conflictos con animaciones Hero
-    if (currentSong == null && !isPlayingAd) {
+    // ✅ FIX CRÍTICO: NO cerrar el reproductor durante transiciones (skip ad, cambio de canción)
+    // Esperar un poco más para permitir que el estado se sincronice después de saltar anuncio
+    final hasAnyContent = currentSong != null || isPlayingAd || currentAd != null || isInsertingAd;
+    
+    if (!hasAnyContent) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && context.mounted) {
-          // Pequeño delay para permitir que las animaciones Hero terminen
-          Future.delayed(const Duration(milliseconds: 100), () {
+          // ✅ AUMENTAR delay para dar tiempo a que se sincronice el estado después de skip
+          Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted && context.mounted) {
-              try {
-                context.pop();
-              } catch (e) {
-                // Ignorar errores de navegación si el contexto ya no es válido
+              // Verificar una vez más antes de cerrar
+              final finalState = ref.read(unifiedAudioProviderFixed);
+              final stillNoContent = finalState.currentSong == null && 
+                                   !finalState.isPlayingAd && 
+                                   finalState.currentAd == null;
+              
+              if (stillNoContent) {
+                try {
+                  PlayerNavigationService.closeFullPlayer(
+                    context: context,
+                    ref: ref,
+                  );
+                } catch (e) {
+                  // Ignorar errores de navegación si el contexto ya no es válido
+                }
               }
             }
           });
@@ -100,14 +114,9 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
           child: Stack(
             children: [
               // ✅ Reproductor profesional completo (con fondo lazy)
-              // Key única basada en el ID de la canción o anuncio para forzar reconstrucción cuando cambia
-              ProfessionalAudioPlayer(
-                key: ValueKey(
-                  isPlayingAd 
-                      ? 'full_player_ad_${playbackState.currentAd?.id ?? 'none'}'
-                      : 'full_player_${currentSong?.id ?? 'none'}',
-                ),
-              ),
+              // 🆕 FIX PARPADEO: Eliminada la Key dinámica que causaba reconstrucción
+              // al cambiar de canción, reiniciando el estado del Seekbar
+              const ProfessionalAudioPlayer(),
               
               // Botón de cerrar - OPTIMIZADO con const
               Positioned(

@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/scheduler.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
@@ -100,20 +99,16 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
   void initState() {
     super.initState();
     
-    // 🔥 PERSISTENCIA: Restaurar scroll position desde Provider (más robusto)
+    // ✅ OPTIMIZACIÓN: Cargar posición de scroll una sola vez
     final scrollNotifier = ref.read(secondaryScreensScrollProvider.notifier);
     final savedPosition = scrollNotifier.getScrollPosition('playlist_detail_${widget.playlistId}');
-    
-    // También intentar desde PageStorage como backup
     final pageStoragePosition = PageStorage.of(context).readState(
       context, 
       identifier: PageStorageKey<String>('playlist_detail_scroll_${widget.playlistId}'),
     ) as double?;
-    
-    // Usar la posición del provider si existe, sino la de PageStorage
     final initialPosition = savedPosition ?? pageStoragePosition ?? 0.0;
     
-    // 🔥 OPTIMIZACIÓN: Cargar desde cache SÍNCRONAMENTE primero para saber si hay datos
+    // ✅ OPTIMIZACIÓN: Cargar desde cache SÍNCRONAMENTE una sola vez
     final cachedData = _playlistCache[widget.playlistId];
     bool hasValidCache = false;
     if (cachedData != null) {
@@ -125,69 +120,49 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         
         if (cachedPlaylist != null && cachedSongs != null) {
           hasValidCache = true;
-          // ✅ Si hay cache válido, establecer datos ANTES de crear el ScrollController
+          // Establecer datos ANTES de crear el ScrollController
           _playlist = cachedPlaylist;
           _displayedSongs = List<Song>.from(cachedSongs);
           _hasMoreSongs = cachedHasMore;
           _hasLoadedOnce = true;
-          
-          // 🔥 CRÍTICO: Inicializar ScrollController en 0 y restaurar después
-          // Aunque hay cache, mejor restaurar después del frame para garantizar que funcione
-          _scrollController = ScrollController(initialScrollOffset: 0.0);
-          _savedInitialScrollPosition = initialPosition;
-          // Marcar que tenemos cache para no restaurar múltiples veces
-          _hasRestoredInitialScroll = false;
         }
       }
     }
     
-    // Si no hay cache válido, inicializar en 0 y restaurar después de cargar
-    if (!hasValidCache) {
-      _scrollController = ScrollController(initialScrollOffset: 0.0);
-      _savedInitialScrollPosition = initialPosition;
-    }
-    
+    // Inicializar ScrollController
+    _scrollController = ScrollController(initialScrollOffset: 0.0);
+    _savedInitialScrollPosition = initialPosition;
     _scrollController.addListener(_onScroll);
-    // 🔥 PERSISTENCIA: Guardar posición del scroll cuando cambia
     _scrollController.addListener(_saveScrollPosition);
     
-    // ✅ Si ya cargamos desde cache síncronamente, restaurar scroll y actualizar URLs
+    // ✅ OPTIMIZACIÓN: Restaurar scroll solo una vez si hay cache y posición guardada
     if (hasValidCache && _playlist != null) {
-      // 🔥 CRÍTICO: Restaurar scroll después del primer frame usando SchedulerBinding
       if (_savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
         SchedulerBinding.instance.addPostFrameCallback((_) {
           _restoreScrollPosition();
         });
       }
-      
-      scheduleMicrotask(() {
+      // ✅ OPTIMIZACIÓN: No recargar datos si hay cache válido - solo actualizar en background
+      // Actualizar datos en background sin mostrar loading
+      Future.microtask(() {
         if (mounted) {
-          _updateImageUrlsCache();
+          _loadPlaylist(); // Carga silenciosa para actualizar cache
         }
       });
     } else {
-      // ✅ Cargar desde caché en el siguiente microtask (si no se cargó síncronamente)
-      scheduleMicrotask(() {
-        if (mounted) {
-          _loadFromCache();
+      // Si no hay cache, cargar datos después del frame inicial
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_hasLoadedOnce) {
+          _loadPlaylist();
+        }
+        // Restaurar scroll después de cargar si hay posición guardada
+        if (_savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            _restoreScrollPosition();
+          });
         }
       });
-      
-      // 🔥 CRÍTICO: Restaurar scroll después del primer frame si hay posición guardada
-      if (_savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
-        SchedulerBinding.instance.addPostFrameCallback((_) {
-          _restoreScrollPosition();
-        });
-      }
     }
-    
-    // 🔥 OPTIMIZACIÓN: Solo cargar datos si NO hay cache válido
-    // Si hay cache válido, no recargar automáticamente para evitar refrescos innecesarios
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_hasLoadedOnce && !hasValidCache) {
-        _loadPlaylist();
-      }
-    });
   }
   
   /// 🔥 CRÍTICO: Restaurar posición del scroll después de que el contenido esté medido
@@ -304,10 +279,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     super.dispose();
   }
   
-  /// ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
-  void _updateImageUrlsCache() {
-    // Mantener método para compatibilidad; actualmente no se usa precache intensivo.
-  }
   
   /// 🔥 OPTIMIZACIÓN: Precargar imágenes visibles y detectar fin de scroll para paginación automática
   /// ✅ CORRECCIÓN: Agregado debounce para evitar ejecuciones excesivas
@@ -344,78 +315,15 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     });
   }
 
-  // ✅ OPTIMIZACIÓN: Cargar datos desde caché si están disponibles (solo si no se cargó en initState)
-  void _loadFromCache() {
-    // Si ya se cargó desde cache en initState, no hacer nada
-    if (_hasLoadedOnce && _playlist != null) return;
-    
-    final cachedData = _playlistCache[widget.playlistId];
-    if (cachedData != null) {
-      final lastLoad = cachedData['lastLoad'] as DateTime?;
-      if (lastLoad != null && DateTime.now().difference(lastLoad) < _cacheExpiration) {
-        // Cache válido, cargar datos inmediatamente
-        final cachedPlaylist = cachedData['playlist'] as Playlist?;
-        final cachedSongs = cachedData['displayedSongs'] as List<Song>?;
-        final cachedHasMore = cachedData['hasMoreSongs'] as bool? ?? false;
-        
-        if (cachedPlaylist != null && cachedSongs != null) {
-          // 🔥 OPTIMIZACIÓN: Evitar setState si los datos son los mismos (previene refresco visual)
-          if (_playlist?.id == cachedPlaylist.id && _displayedSongs.length == cachedSongs.length) {
-            // Los datos son los mismos, solo actualizar flags sin setState
-            _hasLoadedOnce = true;
-            return;
-          }
-          
-          // 🔥 CRÍTICO: Guardar posición actual del scroll antes del setState
-          final savedScrollPosition = _scrollController.hasClients 
-              ? _scrollController.offset 
-              : 0.0;
-          
-          setState(() {
-            _playlist = cachedPlaylist;
-            _displayedSongs = List<Song>.from(cachedSongs);
-            _hasMoreSongs = cachedHasMore;
-            _hasLoadedOnce = true; // NO mostrar loading si tenemos datos en caché
-          });
-          
-          // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
-          _updateImageUrlsCache();
-          
-          // 🔥 CRÍTICO: Restaurar posición del scroll después del setState (solo si no se restauró antes)
-          if (!_hasRestoredInitialScroll && _savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _scrollController.hasClients && _displayedSongs.isNotEmpty) {
-                  final currentOffset = _scrollController.offset;
-                  // Solo restaurar si está en 0 o muy cerca de 0 (no se ha restaurado aún)
-                  if (currentOffset < 10) {
-                    _scrollController.jumpTo(_savedInitialScrollPosition!);
-                    _hasRestoredInitialScroll = true;
-                  }
-                }
-              });
-            });
-          } else if (savedScrollPosition > 0 && _scrollController.hasClients) {
-            // Si ya había una posición guardada durante la recarga, restaurarla
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _scrollController.hasClients) {
-                _scrollController.jumpTo(savedScrollPosition);
-              }
-            });
-          }
-        }
-      } else {
-        // Cache expirado, limpiar
-        _playlistCache.remove(widget.playlistId);
-      }
-    }
-  }
+  // ✅ OPTIMIZACIÓN: Método removido - la carga de cache ahora se hace directamente en initState
+  // Esto evita llamadas duplicadas y mejora el rendimiento
 
   Future<void> _loadPlaylist() async {
     if (!mounted) return;
     
-    // Limpiar error al iniciar carga
-    if (!_hasLoadedOnce && mounted) {
+    // ✅ OPTIMIZACIÓN: Solo limpiar error si realmente no hay datos cargados
+    final isSilentUpdate = _hasLoadedOnce && _playlist != null;
+    if (!isSilentUpdate && mounted) {
       setState(() {
         _error = null;
       });
@@ -429,7 +337,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         throw Exception('ID de playlist vacío');
       }
       
-      // Obtener respuesta HTTP con retry
+      // ✅ OPTIMIZACIÓN: Obtener respuesta HTTP con retry
       final response = await RetryHandler.retryDataLoad(
         shouldRetry: RetryHandler.isDioErrorRetryable,
         operation: () => service.dio.get('/public/playlists/$playlistId'),
@@ -459,7 +367,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         }
         
         if (playlistData != null) {
-          await _processPlaylistData(playlistData);
+          await _processPlaylistData(playlistData, isSilentUpdate: isSilentUpdate);
         } else {
           throw Exception('Formato de respuesta inválido: no se encontró información de playlist');
         }
@@ -468,13 +376,16 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-      });
+      // ✅ OPTIMIZACIÓN: Solo mostrar error si no hay datos cargados (no en actualizaciones silenciosas)
+      if (!isSilentUpdate) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
     }
   }
 
-  Future<void> _processPlaylistData(Map<String, dynamic> jsonData) async {
+  Future<void> _processPlaylistData(Map<String, dynamic> jsonData, {bool isSilentUpdate = false}) async {
     // ✅ OPTIMIZACIÓN: Para JSON pequeños, procesar directamente (más rápido)
     // Solo usar isolate si el JSON es grande (más de ~100KB estimado)
     final jsonString = jsonData.toString();
@@ -492,17 +403,40 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     if (!mounted) return;
     
     if (playlist == null) {
-      setState(() {
-        _error = 'Error al procesar playlist: datos inválidos o incompletos';
-      });
+      if (!isSilentUpdate) {
+        setState(() {
+          _error = 'Error al procesar playlist: datos inválidos o incompletos';
+        });
+      }
       return;
     }
 
     // Verificar que la playlist tenga datos básicos
     if (playlist.id.isEmpty) {
-      setState(() {
-        _error = 'Error: Playlist sin ID válido';
-      });
+      if (!isSilentUpdate) {
+        setState(() {
+          _error = 'Error: Playlist sin ID válido';
+        });
+      }
+      return;
+    }
+
+    // ✅ OPTIMIZACIÓN: Si es actualización silenciosa y la playlist es la misma, solo actualizar cache sin setState
+    if (isSilentUpdate && _playlist?.id == playlist.id) {
+      // Solo actualizar cache sin rebuild de UI
+      final now = DateTime.now();
+      final allSongs = playlist.songs;
+      final currentDisplayedCount = _displayedSongs.length;
+      final initialSongs = allSongs.take(currentDisplayedCount > 0 ? currentDisplayedCount : _initialSongsLimit).toList();
+      final hasMore = allSongs.length > initialSongs.length;
+      
+      // Actualizar cache sin setState
+      _playlistCache[widget.playlistId] = {
+        'playlist': playlist,
+        'displayedSongs': List<Song>.from(initialSongs),
+        'hasMoreSongs': hasMore,
+        'lastLoad': now,
+      };
       return;
     }
 
@@ -511,54 +445,37 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     final initialSongs = allSongs.take(_initialSongsLimit).toList();
     final hasMore = allSongs.length > _initialSongsLimit;
 
-    // 🔥 CRÍTICO: Guardar posición actual del scroll antes del setState
-    // Solo si ya había datos cargados (no en la primera carga)
-    final savedScrollPosition = _hasLoadedOnce && _scrollController.hasClients
-        ? _scrollController.offset
-        : null;
-
     final now = DateTime.now();
-    setState(() {
-      _playlist = playlist;
-      _displayedSongs = initialSongs;
-      _hasMoreSongs = hasMore;
-      _hasLoadedOnce = true;
-    });
     
-    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
-    _updateImageUrlsCache();
-    
-    // 🔥 CRÍTICO: Restaurar posición inicial del scroll después del setState (solo si no se ha restaurado aún)
-    if (!_hasRestoredInitialScroll && _savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    // ✅ OPTIMIZACIÓN: Solo hacer setState si realmente hay cambios o es la primera carga
+    if (!_hasLoadedOnce || _playlist?.id != playlist.id) {
+      setState(() {
+        _playlist = playlist;
+        _displayedSongs = initialSongs;
+        _hasMoreSongs = hasMore;
+        _hasLoadedOnce = true;
+      });
+      
+      // ✅ OPTIMIZACIÓN: Restaurar scroll solo en la primera carga
+      if (!_hasRestoredInitialScroll && _savedInitialScrollPosition != null && _savedInitialScrollPosition! > 0) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && _scrollController.hasClients && _displayedSongs.isNotEmpty) {
             final currentOffset = _scrollController.offset;
-            // Solo restaurar si está en 0 o muy cerca de 0 (no se ha restaurado aún)
             if (currentOffset < 10) {
               _scrollController.jumpTo(_savedInitialScrollPosition!);
               _hasRestoredInitialScroll = true;
             }
           }
         });
-      });
-    } else if (savedScrollPosition != null && savedScrollPosition > 0 && _scrollController.hasClients) {
-      // Si ya se restauró la inicial pero había una posición guardada durante la recarga, restaurarla
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _scrollController.hasClients) {
-          _scrollController.jumpTo(savedScrollPosition);
-        }
-      });
+      }
     }
     
     // ✅ OPTIMIZACIÓN: Guardar en caché estático con gestión de memoria
-    // Limpiar cache expirado primero
     _playlistCache.removeWhere((key, value) {
       final lastLoad = value['lastLoad'] as DateTime?;
       return lastLoad == null || DateTime.now().difference(lastLoad) >= _cacheExpiration;
     });
     
-    // Si el cache está lleno, eliminar el más antiguo
     if (_playlistCache.length >= _maxCacheSize && !_playlistCache.containsKey(widget.playlistId)) {
       final oldestKey = _playlistCache.keys.first;
       _playlistCache.remove(oldestKey);
@@ -571,23 +488,25 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       'lastLoad': now,
     };
 
-    // 🔥 OPTIMIZACIÓN: Pre-cachear imágenes iniciales (portada + primeras canciones)
-    final coverUrl = playlist.coverArtUrl;
-    final initialImageUrls = <String?>[
-      coverUrl,
-      ...initialSongs.take(5).map((song) => song.coverArtUrl),
-    ].where((url) => url != null && url.isNotEmpty).toList();
-    
-    if (mounted && initialImageUrls.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          LazyImageLoader.precacheInitialImages(
-            imageUrls: initialImageUrls,
-            context: context,
-            count: initialImageUrls.length,
-          );
-        }
-      });
+    // ✅ OPTIMIZACIÓN: Pre-cachear imágenes solo si es la primera carga
+    if (!isSilentUpdate && mounted) {
+      final coverUrl = playlist.coverArtUrl;
+      final initialImageUrls = <String?>[
+        coverUrl,
+        ...initialSongs.take(5).map((song) => song.coverArtUrl),
+      ].where((url) => url != null && url.isNotEmpty).toList();
+      
+      if (initialImageUrls.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            LazyImageLoader.precacheInitialImages(
+              imageUrls: initialImageUrls,
+              context: context,
+              count: initialImageUrls.length,
+            );
+          }
+        });
+      }
     }
   }
 
@@ -596,15 +515,16 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
 
     setState(() => _loadingMore = true);
 
-    // ✅ Permitir que el frame se renderice antes de procesar más datos
-    await Future.microtask(() {});
-
+    // ✅ OPTIMIZACIÓN: Procesar datos directamente sin microtask innecesario
     final allSongs = _playlist!.songs;
     final currentCount = _displayedSongs.length;
     final nextBatch = allSongs.skip(currentCount).take(_loadMoreSongsLimit).toList();
     final hasMore = currentCount + nextBatch.length < allSongs.length;
 
-    if (!mounted) return;
+    if (!mounted) {
+      setState(() => _loadingMore = false);
+      return;
+    }
 
     setState(() {
       _displayedSongs = [..._displayedSongs, ...nextBatch];
@@ -612,8 +532,14 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       _loadingMore = false;
     });
     
-    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs cuando cambian los datos
-    _updateImageUrlsCache();
+    // ✅ OPTIMIZACIÓN: Actualizar cache con nuevas canciones mostradas
+    if (_playlistCache.containsKey(widget.playlistId)) {
+      _playlistCache[widget.playlistId] = {
+        ..._playlistCache[widget.playlistId]!,
+        'displayedSongs': List<Song>.from(_displayedSongs),
+        'hasMoreSongs': hasMore,
+      };
+    }
   }
 
   @override
@@ -1030,34 +956,28 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         onPressed: () => context.pop(),
       ),
       flexibleSpace: FlexibleSpaceBar(
+        // ⚡ GAMA BAJA: Skeleton estático sin Shimmer
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.7),
+                NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                NeumorphismTheme.coffeeMedium.withValues(alpha: 0.6),
               ],
             ),
           ),
-          child: Shimmer.fromColors(
-            baseColor: Colors.grey[300]!,
-            highlightColor: Colors.grey[200]!,
-            child: Container(
-              color: Colors.grey[300],
-              child: Align(
-                alignment: Alignment.bottomLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 72, bottom: 16),
-                  child: Container(
-                    width: 200,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                    ),
-                  ),
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 72, bottom: 16),
+              child: Container(
+                width: 200,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
             ),
@@ -1067,7 +987,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     );
   }
 
-  // ✅ Skeleton loader para el contenido - OPTIMIZADO: Más liviano
+  // ⚡ GAMA BAJA: Skeleton estático sin Shimmer
   Widget _buildContentSkeleton() {
     return SliverToBoxAdapter(
       child: Padding(
@@ -1075,85 +995,65 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Descripción skeleton - solo 2 líneas
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: double.infinity,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                ),
+            // Descripción skeleton
+            Container(
+              width: double.infinity,
+              height: 16,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
             ),
             const SizedBox(height: 8),
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: 150,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                ),
+            Container(
+              width: 150,
+              height: 16,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
             ),
             const SizedBox(height: 16),
-            // Estadísticas skeleton - simplificado
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Row(
-                children: [
-                  Container(
-                    width: 100,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: const BorderRadius.all(Radius.circular(6)),
-                    ),
+            // Estadísticas skeleton
+            Row(
+              children: [
+                Container(
+                  width: 100,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(6)),
                   ),
-                  const SizedBox(width: 16),
-                  Container(
-                    width: 120,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: const BorderRadius.all(Radius.circular(6)),
-                    ),
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  width: 120,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(6)),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             // Botón reproducir todo skeleton
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
-                ),
+            Container(
+              width: double.infinity,
+              height: 48,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
               ),
             ),
             const SizedBox(height: 24),
             // Título canciones skeleton
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: 120,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: const BorderRadius.all(Radius.circular(8)),
-                ),
+            Container(
+              width: 120,
+              height: 20,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
             ),
             const SizedBox(height: 16),
@@ -1163,53 +1063,38 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     );
   }
 
-  // ✅ Skeleton loader para la lista de canciones - OPTIMIZADO: Más liviano
+  // ⚡ GAMA BAJA: Skeleton estático sin Shimmer ni boxShadow
   Widget _buildSongsSkeleton() {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) => Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: NeumorphismTheme.surface,
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.08),
               borderRadius: const BorderRadius.all(Radius.circular(12)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: Row(
               children: [
                 // Número skeleton
-                Shimmer.fromColors(
-                  baseColor: Colors.grey[200]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(
-                    width: 32,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: const BorderRadius.all(Radius.circular(6)),
-                    ),
+                Container(
+                  width: 28,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 // Portada skeleton
-                Shimmer.fromColors(
-                  baseColor: Colors.grey[200]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: const BorderRadius.all(Radius.circular(8)),
-                    ),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1218,29 +1103,21 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[200]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          width: double.infinity,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: const BorderRadius.all(Radius.circular(8)),
-                          ),
+                      Container(
+                        width: double.infinity,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                          borderRadius: const BorderRadius.all(Radius.circular(4)),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Shimmer.fromColors(
-                        baseColor: Colors.grey[200]!,
-                        highlightColor: Colors.grey[100]!,
-                        child: Container(
-                          width: 120,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: const BorderRadius.all(Radius.circular(8)),
-                          ),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: 100,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                          borderRadius: const BorderRadius.all(Radius.circular(4)),
                         ),
                       ),
                     ],
@@ -1248,22 +1125,18 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 ),
                 const SizedBox(width: 8),
                 // Botón play skeleton
-                Shimmer.fromColors(
-                  baseColor: Colors.grey[200]!,
-                  highlightColor: Colors.grey[100]!,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      shape: BoxShape.circle,
-                    ),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
                   ),
                 ),
               ],
             ),
           ),
-          childCount: 5, // Reducido de 6 a 5 skeletons
+          childCount: 4, // ⚡ Reducido a 4 skeletons
         ),
       ),
     );
@@ -1512,15 +1385,9 @@ class _SongListItem extends ConsumerWidget {
             Container(
               width: 56,
               height: 56,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.all(Radius.circular(8)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                // ⚡ GAMA BAJA: Sin boxShadow
               ),
               child: ClipRRect(
                 borderRadius: const BorderRadius.all(Radius.circular(8)),

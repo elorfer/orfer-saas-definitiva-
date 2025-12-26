@@ -10,10 +10,14 @@ import {
   PlusIcon,
   PencilIcon,
   MusicalNoteIcon,
+  ClockIcon,
+  PlayIcon,
 } from '@heroicons/react/24/outline';
 
 import { useGenres, useDeleteGenre, useCreateGenre, useUpdateGenre, GenreModel } from '@/hooks/useGenres';
 import { apiClient } from '@/lib/api';
+import { useQuery } from 'react-query';
+import type { SongModel } from '@/types/song';
 
 const PAGE_SIZE = 20;
 
@@ -22,11 +26,13 @@ function GenreRow({
   genre,
   onEdit,
   onDelete,
+  onViewSongs,
   isDeleting,
 }: {
   genre: GenreModel;
   onEdit: (genre: GenreModel) => void;
   onDelete: (genre: GenreModel) => void;
+  onViewSongs: (genre: GenreModel) => void;
   isDeleting: boolean;
 }) {
   return (
@@ -65,7 +71,12 @@ function GenreRow({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-900">{genre.name}</p>
+            <button
+              onClick={() => onViewSongs(genre)}
+              className="text-sm font-medium text-gray-900 hover:text-brown-700 transition cursor-pointer text-left"
+            >
+              {genre.name}
+            </button>
             {genre.description && (
               <p className="text-xs text-gray-500 truncate max-w-md">{genre.description}</p>
             )}
@@ -120,6 +131,9 @@ export default function GenresPage() {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showSongsModal, setShowSongsModal] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<GenreModel | null>(null);
+  const [songsPage, setSongsPage] = useState(1);
   const [editingGenre, setEditingGenre] = useState<GenreModel | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -140,6 +154,20 @@ export default function GenresPage() {
   const { mutateAsync: createGenre } = useCreateGenre();
   const { mutateAsync: updateGenre } = useUpdateGenre();
   const { mutateAsync: deleteGenre } = useDeleteGenre();
+
+  // Obtener canciones del género seleccionado
+  const { data: songsData, isLoading: isLoadingSongs } = useQuery(
+    ['songsByGenre', selectedGenre?.id, songsPage],
+    async () => {
+      if (!selectedGenre) return null;
+      const response = await apiClient.getSongsByGenre(selectedGenre.id, songsPage, 50);
+      return response.data;
+    },
+    {
+      enabled: !!selectedGenre && showSongsModal,
+      keepPreviousData: true,
+    }
+  );
 
   const filteredGenres = useMemo(() => {
     if (!search.trim()) return genres;
@@ -287,6 +315,24 @@ export default function GenresPage() {
     }
   };
 
+  const handleViewSongs = (genre: GenreModel) => {
+    setSelectedGenre(genre);
+    setSongsPage(1);
+    setShowSongsModal(true);
+  };
+
+  const closeSongsModal = () => {
+    setShowSongsModal(false);
+    setSelectedGenre(null);
+    setSongsPage(1);
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -381,6 +427,7 @@ export default function GenresPage() {
                           genre={genre}
                           onEdit={openEditModal}
                           onDelete={handleDelete}
+                          onViewSongs={handleViewSongs}
                           isDeleting={deletingId === genre.id}
                         />
                       ))
@@ -649,6 +696,151 @@ export default function GenresPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para ver canciones del género */}
+      {showSongsModal && selectedGenre && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white shadow-xl flex flex-col">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Canciones del género: {selectedGenre.name}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {songsData?.total || 0} canciones en total
+                </p>
+              </div>
+              <button
+                onClick={closeSongsModal}
+                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                aria-label="Cerrar"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {isLoadingSongs ? (
+                <div className="py-12 text-center text-sm text-gray-500">
+                  Cargando canciones...
+                </div>
+              ) : songsData?.songs && songsData.songs.length > 0 ? (
+                <div className="space-y-3">
+                  {songsData.songs.map((song: SongModel) => {
+                    // Construir URL completa de la portada (usar coverArtUrl primero, luego coverImageUrl)
+                    const getCoverUrl = () => {
+                      const imageUrl = song.coverArtUrl || song.coverImageUrl;
+                      if (!imageUrl) return null;
+                      
+                      // Si ya es una URL completa, usarla tal cual
+                      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                        return imageUrl;
+                      }
+                      
+                      // Si es una ruta relativa, construir URL completa
+                      if (imageUrl.startsWith('/')) {
+                        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+                        return `${baseUrl}${imageUrl}`;
+                      }
+                      
+                      // Si es una ruta sin /, agregar el prefijo del backend
+                      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+                      return `${baseUrl}/uploads/covers/${imageUrl}`;
+                    };
+                    
+                    const coverUrl = getCoverUrl();
+                    
+                    return (
+                      <div
+                        key={song.id}
+                        className="flex items-center gap-4 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+                      >
+                        <div className="h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden shadow-sm bg-gray-100">
+                          {coverUrl ? (
+                            <img
+                              src={coverUrl}
+                              alt={song.title}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `
+                                    <div class="h-full w-full flex items-center justify-center bg-gray-200">
+                                      <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+                                      </svg>
+                                    </div>
+                                  `;
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-gray-200">
+                              <MusicalNoteIcon className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {song.title}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {song.artist?.stageName || 'Artista desconocido'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <ClockIcon className="h-4 w-4" />
+                            {formatDuration(song.duration)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <PlayIcon className="h-4 w-4" />
+                            {song.totalStreams?.toLocaleString('es-ES') || 0}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-gray-500 mb-2">
+                    No hay canciones en este género.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {songsData && songsData.total > 50 && (
+              <div className="border-t border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <p className="text-sm text-gray-500">
+                  Mostrando {songsData.songs.length} de {songsData.total} canciones
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSongsPage((p) => Math.max(1, p - 1))}
+                    disabled={songsPage === 1}
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Anterior
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    Página {songsPage}
+                  </span>
+                  <button
+                    onClick={() => setSongsPage((p) => p + 1)}
+                    disabled={!songsData || songsData.songs.length < 50}
+                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Siguiente
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

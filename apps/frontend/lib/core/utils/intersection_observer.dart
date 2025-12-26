@@ -199,9 +199,17 @@ class LazyImageLoader {
     for (int i = startIndex; i <= endIndex && i < imageUrls.length; i++) {
       final imageUrl = imageUrls[i];
       if (imageUrl != null && imageUrl.isNotEmpty) {
+        // 🔥 OPTIMIZACIÓN: Precache con ResizeImage para ahorrar memoria
+        final double devicePixelRatio = MediaQuery.maybeDevicePixelRatioOf(mountedContext) ?? 2.0;
+        final int cacheSize = (itemExtent * devicePixelRatio).round();
+
         futures.add(
           precacheImage(
-            CachedNetworkImageProvider(imageUrl),
+            ResizeImage(
+              CachedNetworkImageProvider(imageUrl),
+              width: cacheSize,
+              height: cacheSize,
+            ),
             mountedContext,
           ).catchError((error, stackTrace) {
             // Ignorar errores de pre-cache (ej: sin conexión, imagen no encontrada)
@@ -277,9 +285,17 @@ class LazyImageLoader {
     for (int i = startIndex; i <= endIndex && i < imageUrls.length; i++) {
       final imageUrl = imageUrls[i];
       if (imageUrl != null && imageUrl.isNotEmpty) {
+        // 🔥 OPTIMIZACIÓN: Precache con ResizeImage
+        final double devicePixelRatio = MediaQuery.maybeDevicePixelRatioOf(mountedContext) ?? 2.0;
+        final int cacheSize = ((itemExtent ?? 80.0) * devicePixelRatio).round();
+
         futures.add(
           precacheImage(
-            CachedNetworkImageProvider(imageUrl),
+            ResizeImage(
+              CachedNetworkImageProvider(imageUrl),
+              width: cacheSize,
+              height: cacheSize,
+            ),
             mountedContext,
           ).catchError((error, stackTrace) {
             // Ignorar errores de pre-cache
@@ -331,9 +347,17 @@ class LazyImageLoader {
     final futures = <Future>[];
     for (final imageUrl in imagesToPrecache) {
       if (imageUrl != null && imageUrl.isNotEmpty) {
+        // 🔥 OPTIMIZACIÓN: Precache con ResizeImage (Estimado 100px para carga inicial)
+        final double devicePixelRatio = MediaQuery.maybeDevicePixelRatioOf(mountedContext) ?? 2.0;
+        final int cacheSize = (100 * devicePixelRatio).round();
+
         futures.add(
           precacheImage(
-            CachedNetworkImageProvider(imageUrl),
+            ResizeImage(
+              CachedNetworkImageProvider(imageUrl),
+              width: cacheSize,
+              height: cacheSize,
+            ),
             mountedContext,
           ).catchError((error, stackTrace) {
             // Ignorar errores de pre-cache

@@ -18,7 +18,8 @@ export interface SongModel {
   title: string;
   duration: number;
   fileUrl: string;
-  coverImageUrl?: string;
+  coverImageUrl?: string; // Para compatibilidad con admin
+  coverArtUrl?: string; // Campo que viene del backend
   artistId?: string;
   artist?: ArtistModel;
   albumId?: string;

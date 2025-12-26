@@ -107,15 +107,12 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                 Column(
                   children: List.generate(displayCount, (idx) {
                     final featuredSong = featuredSongs[idx];
-                    return RepaintBoundary(
-                      key: ValueKey('intelligent_song_repaint_${featuredSong.song.id}'),
-                      child: IntelligentFeaturedSongCard(
-                        key: ValueKey('intelligent_song_${featuredSong.song.id}'),
-                        featuredSong: featuredSong,
-                        onTap: () {
-                          _onSongTap(context, ref, featuredSong.song);
-                        },
-                      ),
+                    return IntelligentFeaturedSongCard(
+                      key: ValueKey('intelligent_song_${featuredSong.song.id}'),
+                      featuredSong: featuredSong,
+                      onTap: () {
+                        _onSongTap(context, ref, featuredSong.song);
+                      },
                     );
                   }),
                 ),

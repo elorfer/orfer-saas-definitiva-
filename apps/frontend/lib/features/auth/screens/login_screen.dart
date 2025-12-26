@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Para kDebugMode
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -421,6 +422,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ],
         ),
+        // Botón de Acceso Rápido (Solo Debug)
+        if (kDebugMode)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.red.withOpacity(0.1),
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                onPressed: () {
+                  _emailController.text = 'domi@gmail.com';
+                  _passwordController.text = 'domi321321';
+                },
+                icon: const Icon(Icons.rocket_launch, size: 18),
+                label: const Text('⚡ DEV QUICK ACCESS'),
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -9,6 +9,186 @@ import '../../features/ads/models/audio_ad_model.dart';
 import '../../features/ads/widgets/ads_skip_button.dart';
 import '../../features/ads/widgets/ad_duration_counter.dart';
 
+/// Custom Track Shape que permite diferentes alturas para track activo e inactivo
+class _CustomSliderTrackShape extends SliderTrackShape with BaseSliderTrackShape {
+  const _CustomSliderTrackShape({
+    this.inactiveTrackHeight = 3.0,
+    this.activeTrackHeight = 2.0,
+  });
+
+  final double inactiveTrackHeight;
+  final double activeTrackHeight;
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 0,
+  }) {
+    assert(sliderTheme.disabledActiveTrackColor != null);
+    assert(sliderTheme.disabledInactiveTrackColor != null);
+    assert(sliderTheme.activeTrackColor != null);
+    assert(sliderTheme.inactiveTrackColor != null);
+    assert(sliderTheme.thumbShape != null);
+
+    // Usar colores habilitados o deshabilitados
+    final Color activeColor = sliderTheme.activeTrackColor!;
+    final Color inactiveColor = sliderTheme.inactiveTrackColor!;
+
+    final Paint activePaint = Paint()..color = activeColor;
+    final Paint inactivePaint = Paint()..color = inactiveColor;
+
+    final Rect trackRect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+
+    final Rect leftTrackSegment = Rect.fromLTRB(
+      trackRect.left,
+      trackRect.top + (trackRect.height - activeTrackHeight) / 2,
+      thumbCenter.dx,
+      trackRect.top + (trackRect.height - activeTrackHeight) / 2 + activeTrackHeight,
+    );
+    if (!leftTrackSegment.isEmpty) {
+      context.canvas.drawRRect(
+        RRect.fromRectAndRadius(leftTrackSegment, const Radius.circular(1.0)),
+        activePaint,
+      );
+    }
+
+    final Rect rightTrackSegment = Rect.fromLTRB(
+      thumbCenter.dx,
+      trackRect.top + (trackRect.height - inactiveTrackHeight) / 2,
+      trackRect.right,
+      trackRect.top + (trackRect.height - inactiveTrackHeight) / 2 + inactiveTrackHeight,
+    );
+    if (!rightTrackSegment.isEmpty) {
+      context.canvas.drawRRect(
+        RRect.fromRectAndRadius(rightTrackSegment, const Radius.circular(1.0)),
+        inactivePaint,
+      );
+    }
+  }
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) {
+    // Usar la altura máxima (inactiva) para el rectángulo preferido
+    final double trackHeight = inactiveTrackHeight;
+    final double trackLeft = offset.dx;
+    final double trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
+    final double trackWidth = parentBox.size.width;
+    return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
+  }
+}
+
+/// ⚡ OPTIMIZACIÓN: Widget separado para la barra de progreso del anuncio extendido
+/// Solo se reconstruye cuando cambia currentPosition o totalDuration
+class _AdExtendedProgressSection extends ConsumerWidget {
+  final AudioAd ad;
+  
+  const _AdExtendedProgressSection({required this.ad});
+  
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '${minutes.toString().padLeft(1, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+  
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ⚡ OPTIMIZACIÓN: Solo escuchar los valores necesarios
+    final currentPosition = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentPosition),
+    );
+    final totalDuration = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.totalDuration),
+    );
+    
+    // Usar duración del modelo como fallback
+    final effectiveDuration = totalDuration.inMilliseconds > 0 
+        ? totalDuration 
+        : ad.duration;
+    
+    double progress = 0.0;
+    if (effectiveDuration.inMilliseconds > 0) {
+      progress = (currentPosition.inMilliseconds / effectiveDuration.inMilliseconds).clamp(0.0, 1.0);
+    }
+    
+    return Column(
+      children: [
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 4, // ✅ Altura base (usada por el track inactivo)
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+            activeTrackColor: Colors.white.withValues(alpha: 0.7), // ✅ Opacidad reducida
+            inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
+            trackShape: const _CustomSliderTrackShape(
+              activeTrackHeight: 3.0, // ✅ Barra activa más gruesa
+              inactiveTrackHeight: 4.0, // ✅ Barra inactiva más gruesa
+            ),
+            thumbColor: Colors.white,
+            overlayColor: Colors.white.withValues(alpha: 0.2),
+          ),
+          child: Slider(
+            value: progress,
+            onChanged: null, // No permitir seek durante anuncios
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.zero,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SizedBox(
+                width: 50,
+                child: Text(
+                  _formatDuration(currentPosition),
+                  style: GoogleFonts.inter(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              ),
+              SizedBox(
+                width: 50,
+                child: Text(
+                  _formatDuration(effectiveDuration),
+                  style: GoogleFonts.inter(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Widget para mostrar anuncios en el reproductor extendido
 /// Similar a _StaticPlayerUI pero adaptado para anuncios
 class AdExtendedPlayer extends ConsumerStatefulWidget {
@@ -27,13 +207,13 @@ class AdExtendedPlayer extends ConsumerStatefulWidget {
 
 class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
   // Estilos para el anuncio
-  static final TextStyle _AdTitleStyle = GoogleFonts.inter(
+  static final TextStyle _adTitleStyle = GoogleFonts.inter(
     fontSize: 24,
     fontWeight: FontWeight.w800,
     color: Colors.white,
     letterSpacing: -0.5,
   );
-  static final TextStyle _AdvertiserStyle = GoogleFonts.inter(
+  static final TextStyle _advertiserStyle = GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: Colors.white.withValues(alpha: 0.9),
@@ -42,27 +222,20 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    final playbackState = ref.watch(unifiedAudioProviderFixed);
+    // ⚡ OPTIMIZACIÓN: Solo escuchar los campos necesarios
+    final isPlayingAd = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
+    );
+    final currentAdId = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentAd?.id),
+    );
     
     // ✅ FIX CRÍTICO: Verificar que realmente se esté reproduciendo un anuncio
-    // Si el estado cambió y ya no hay anuncio, ocultar este widget inmediatamente
-    if (!playbackState.isPlayingAd || playbackState.currentAd?.id != widget.ad.id) {
-      // El anuncio terminó o cambió, ocultar este widget
+    if (!isPlayingAd || currentAdId != widget.ad.id) {
       return const SizedBox.shrink();
     }
     
     final showSkipControl = widget.ad.isSkippable;
-    final currentPosition = playbackState.currentPosition;
-    // ✅ FIX: Usar duración del modelo AudioAd como fallback si totalDuration es cero
-    // Esto asegura que la barra de progreso siempre tenga una duración válida
-    final totalDuration = playbackState.totalDuration.inMilliseconds > 0 
-        ? playbackState.totalDuration 
-        : widget.ad.duration;
-    
-    double progress = 0.0;
-    if (totalDuration.inMilliseconds > 0) {
-      progress = (currentPosition.inMilliseconds / totalDuration.inMilliseconds).clamp(0.0, 1.0);
-    }
     
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -70,50 +243,17 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Fondo con carátula del anuncio o color sólido
-          SizedBox.expand(
-            child: widget.ad.coverImageUrl != null && widget.ad.coverImageUrl!.isNotEmpty
-                ? Builder(
-                    builder: (context) {
-                      // ✅ OPTIMIZACIÓN: Calcular tamaño de cache basado en el tamaño de pantalla
-                      final screenSize = MediaQuery.of(context).size;
-                      final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
-                      final maxScreenDimension = screenSize.width > screenSize.height 
-                          ? screenSize.width 
-                          : screenSize.height;
-                      // Limitar a un máximo razonable para evitar uso excesivo de memoria
-                      final maxCacheSize = (maxScreenDimension * devicePixelRatio * 1.2).round().clamp(0, 1200);
-                      
-                      return CachedNetworkImage(
-                        imageUrl: UrlNormalizer.normalizeImageUrl(widget.ad.coverImageUrl) ?? widget.ad.coverImageUrl!,
-                        fit: BoxFit.cover,
-                        // ✅ FIX CRÍTICO: Agregar parámetros de cache para optimizar memoria
-                        memCacheWidth: maxCacheSize,
-                        memCacheHeight: maxCacheSize,
-                        maxWidthDiskCache: maxCacheSize,
-                        maxHeightDiskCache: maxCacheSize,
-                        filterQuality: FilterQuality.medium,
-                        errorWidget: (context, url, error) => Container(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                        ),
-                      );
-                    },
-                  )
-                : Container(
-                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                  ),
-          ),
-          
-          // Blur overlay
+          // ✅ FIX: Fondo con color sólido profesional (sin imagen de carátula)
+          // Eliminado completamente cualquier referencia a imágenes de fondo
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    Colors.black.withValues(alpha: 0.4),
-                    Colors.black.withValues(alpha: 0.7),
+                    NeumorphismTheme.coffeeMedium.withValues(alpha: 0.85),
+                    NeumorphismTheme.coffeeDark.withValues(alpha: 0.95),
                   ],
                 ),
               ),
@@ -138,7 +278,7 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
                               color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: const BorderRadius.all(Radius.circular(12)),
                             ),
                             child: Text(
                               "ANUNCIO",
@@ -161,7 +301,7 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                           width: MediaQuery.of(context).size.width * 0.85,
                           height: MediaQuery.of(context).size.width * 0.85,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: const BorderRadius.all(Radius.circular(20)),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.3),
@@ -171,33 +311,33 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                             ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: const BorderRadius.all(Radius.circular(20)),
                             child: widget.ad.coverImageUrl != null && widget.ad.coverImageUrl!.isNotEmpty
                                 ? CachedNetworkImage(
                                     imageUrl: UrlNormalizer.normalizeImageUrl(widget.ad.coverImageUrl) ?? widget.ad.coverImageUrl!,
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => Container(
                                       color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                      child: Icon(
+                                      child: const Icon(
                                         Icons.volume_up,
-                                        color: Colors.white.withValues(alpha: 0.5),
+                                        color: Colors.white,
                                         size: 64,
                                       ),
                                     ),
                                     errorWidget: (context, url, error) => Container(
                                       color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                      child: Icon(
+                                      child: const Icon(
                                         Icons.volume_up,
-                                        color: Colors.white.withValues(alpha: 0.5),
+                                        color: Colors.white,
                                         size: 64,
                                       ),
                                     ),
                                   )
                                 : Container(
                                     color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                    child: Icon(
+                                    child: const Icon(
                                       Icons.volume_up,
-                                      color: Colors.white.withValues(alpha: 0.5),
+                                      color: Colors.white,
                                       size: 64,
                                     ),
                                   ),
@@ -223,14 +363,14 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                                     children: [
                                       Text(
                                         widget.ad.title,
-                                        style: _AdTitleStyle,
+                                        style: _adTitleStyle,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         widget.ad.advertiserName,
-                                        style: _AdvertiserStyle,
+                                        style: _advertiserStyle,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -249,57 +389,9 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                             
                             const SizedBox(height: 12),
                             
-                            // Barra de progreso
-                            Column(
-                              children: [
-                                SliderTheme(
-                                  data: SliderTheme.of(context).copyWith(
-                                    trackHeight: 4,
-                                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                                    activeTrackColor: Colors.white,
-                                    inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
-                                    thumbColor: Colors.white,
-                                    overlayColor: Colors.white.withValues(alpha: 0.2),
-                                  ),
-                                  child: Slider(
-                                    value: progress,
-                                    onChanged: null, // No permitir seek durante anuncios
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      SizedBox(
-                                        width: 50,
-                                        child: Text(
-                                          _formatDuration(currentPosition),
-                                          style: GoogleFonts.inter(
-                                            color: Colors.white.withValues(alpha: 0.6),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          textAlign: TextAlign.left,
-                                        ),
-                                      ),
-                                      SizedBox(
-                                        width: 50,
-                                        child: Text(
-                                          _formatDuration(totalDuration),
-                                          style: GoogleFonts.inter(
-                                            color: Colors.white.withValues(alpha: 0.6),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            // ⚡ Widget optimizado: solo se reconstruye cuando cambia el progreso
+                            RepaintBoundary(
+                              child: _AdExtendedProgressSection(ad: widget.ad),
                             ),
                             
                             const SizedBox(height: 20),
@@ -375,12 +467,6 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
         ],
       ),
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '${minutes.toString().padLeft(1, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
 

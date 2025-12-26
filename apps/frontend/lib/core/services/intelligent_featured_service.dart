@@ -338,8 +338,8 @@ class IntelligentFeaturedService {
         // 🚀 NUEVO: Usar endpoint de batch en lugar de múltiples llamadas paralelas
         // El backend maneja internamente el batching y garantiza variedad
         debugPrint('🚀 [IntelligentFeatured] Llamando a generatePlaylistBatch() con seed=$currentSongId, count=$seedsToFetch');
-        
-        final batchSongs = await _recommendationService.generatePlaylistBatch(
+        debugPrint('GENRE_DEBUG IntelligentFeatured calling generatePlaylistBatch seed=$currentSongId count=$seedsToFetch');
+        final batchResult = await _recommendationService.generatePlaylistBatch(
           seedSongId: currentSongId,
           count: seedsToFetch,
           user: user,
@@ -347,11 +347,11 @@ class IntelligentFeaturedService {
           excludeIds: usedIds.toList(),
           useCache: false, // Desactivar cache local para forzar variedad
         );
-        
-        debugPrint('🚀 [IntelligentFeatured] generatePlaylistBatch() retornó ${batchSongs.length} canciones');
-        
+
+        debugPrint('🚀 [IntelligentFeatured] generatePlaylistBatch() retornó ${batchResult.songs.length} canciones');
+
         // Filtrar canciones válidas y no duplicadas
-        initialResults = batchSongs
+        initialResults = batchResult.songs
             .where((song) => !usedIds.contains(song.id) && song.isValidForPlayback)
             .toList();
         
@@ -483,7 +483,7 @@ class IntelligentFeaturedService {
         try {
           seedAttempts[seedId] = seedAttempts[seedId]! + 1;
           // 🚀 NUEVO: Usar endpoint de batch en lugar de múltiples llamadas individuales
-          final batchSongs = await _recommendationService.generatePlaylistBatch(
+          final batchResult = await _recommendationService.generatePlaylistBatch(
             seedSongId: seedId, // ✅ USAR SEMILLA VARIADA (no currentSongId original)
             count: needed,
             user: user,
@@ -491,14 +491,14 @@ class IntelligentFeaturedService {
             excludeIds: usedIds.toList(),
             useCache: false, // 🚨 DESACTIVAR CACHE para forzar nuevas recomendaciones
           );
-          
-          debugPrint('✅ [IntelligentFeatured] Fase 2 batch: ${batchSongs.length}/$needed recomendaciones recibidas');
-          
+
+          debugPrint('✅ [IntelligentFeatured] Fase 2 batch: ${batchResult.songs.length}/$needed recomendaciones recibidas');
+
           // Procesar resultados del batch
           int addedInBatch = 0;
           int duplicatesInBatch = 0;
-          
-          for (final recommendedSong in batchSongs) {
+
+          for (final recommendedSong in batchResult.songs) {
             if (recommendations.length >= count) break;
             
             if (!usedIds.contains(recommendedSong.id) && recommendedSong.isValidForPlayback) {
@@ -618,7 +618,7 @@ class IntelligentFeaturedService {
     final callsPerSeed = _distributeCallsByWeights(seedWeights, count);
     
     // 🚀 Crear llamadas batch en lugar de llamadas individuales
-    final List<Future<List<Song>>> batchFutures = [];
+    final List<Future<BatchResult>> batchFutures = [];
     
     for (int seedIdx = 0; seedIdx < seeds.length; seedIdx++) {
       final batchSizeForThisSeed = callsPerSeed[seedIdx];
@@ -639,7 +639,7 @@ class IntelligentFeaturedService {
           useCache: false, // No usar cache para variedad
         ).catchError((error) {
           debugPrint('❌ [IntelligentFeatured] Error en Fase 2 batch (semilla: ${seedId.substring(0, 8)}...): $error');
-          return <Song>[]; // Retornar lista vacía en caso de error
+          return const BatchResult(songs: []); // Retornar BatchResult vacío en caso de error
         })
       );
     }
@@ -647,20 +647,20 @@ class IntelligentFeaturedService {
     // Ejecutar todas las llamadas batch en paralelo
     debugPrint('⚡ [IntelligentFeatured] Fase 2: ejecutando ${batchFutures.length} llamadas batch en paralelo...');
     final batchResults = await Future.wait(batchFutures);
-    
+
     // Procesar resultados de todos los batches
-    for (final batchSongs in batchResults) {
-      for (final song in batchSongs) {
+    for (final batchResult in batchResults) {
+      for (final song in batchResult.songs) {
         if (!usedIds.contains(song.id) && song.isValidForPlayback) {
           recommendations.add(song);
           usedIds.add(song.id);
-          
+
           if (recommendations.length >= count) {
             break;
           }
         }
       }
-      
+
       if (recommendations.length >= count) {
         break;
       }

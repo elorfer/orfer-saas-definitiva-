@@ -57,7 +57,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         _isLoaded = true;
 
         // 🚀 Precarga completamente async sin bloquear
-        ImageCacheManager.ensureInitialized().then((_) {
+        AlbumArtCacheManager.ensureInitialized().then((_) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             try {
@@ -131,9 +131,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               
               // 🚀 CAPA 1: Contenido scrolleable
-              RepaintBoundary(
-                child: RefreshIndicator(
-                  onRefresh: () async {
+              RefreshIndicator(
+                onRefresh: () async {
                     final isLoading = ref.read(
                       homeStateProvider.select((state) => state.isLoading),
                     );
@@ -144,10 +143,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ref.read(intelligentFeaturedProvider.notifier)
                         .refreshIntelligentRecommendations()
                         .catchError((_) {});
-                  },
-                  color: Colors.white,
-                  backgroundColor: NeumorphismTheme.coffeeMedium,
-                  child: SafeArea(
+                },
+                color: Colors.white,
+                backgroundColor: NeumorphismTheme.coffeeMedium,
+                child: SafeArea(
                     child: CustomScrollView(
                       key: const PageStorageKey<String>('home_screen_scroll'),
                       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -173,11 +172,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               homeMessageProvider.select((msg) => msg != null && msg.isActive ? msg : null),
                             );
                             if (homeMessage == null) return const SizedBox.shrink();
-                            return RepaintBoundary(
-                              child: HomeMessageBanner(
-                                message: homeMessage.message,
-                                updatedAt: homeMessage.updatedAt,
-                              ),
+                            // 🚀 OPTIMIZACIÓN: HomeMessageBanner no necesita RepaintBoundary (contenido estático)
+                            return HomeMessageBanner(
+                              message: homeMessage.message,
+                              updatedAt: homeMessage.updatedAt,
                             );
                           },
                         ),
@@ -185,25 +183,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 6)),
                     SliverToBoxAdapter(
-                      child: const RepaintBoundary(
-                        child: FeaturedArtistsSection(key: ValueKey('artists')),
-                      ),
+                      // 🚀 OPTIMIZACIÓN: Secciones ya gestionan su propio repintado si es complejo
+                      child: const FeaturedArtistsSection(key: ValueKey('artists')),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 32)),
                     SliverToBoxAdapter(
-                      child: const RepaintBoundary(
-                        child: IntelligentFeaturedSongsSection(key: ValueKey('intelligent_songs')),
-                      ),
+                      child: const IntelligentFeaturedSongsSection(key: ValueKey('intelligent_songs')),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 48)),
                     SliverToBoxAdapter(
-                      child: const RepaintBoundary(
-                        child: FeaturedPlaylistsSection(key: ValueKey('playlists')),
-                      ),
+                      child: const FeaturedPlaylistsSection(key: ValueKey('playlists')),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 80)),
                   ],
-                  ),
                 ),
               ),
             ),

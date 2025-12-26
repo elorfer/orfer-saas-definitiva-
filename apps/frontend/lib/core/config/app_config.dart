@@ -6,128 +6,33 @@ class AppConfig {
   static const String appName = 'struky';
   static const String appVersion = '1.0.0';
 
-  // URLs de configuración
-  static const String _productionUrl = 'http://backend-alb-1038609925.us-east-1.elb.amazonaws.com';
-  
-  // URL para emulador Android (10.0.2.2 es el alias del localhost del host en el emulador)
-  static const String _developmentUrlAndroidEmulator = 'http://10.0.2.2:3001';
-  
-  // URL para dispositivos físicos Android conectados por USB
-  // Si usas 'adb reverse tcp:3001 tcp:3001', puedes usar localhost
-  // Si prefieres usar la IP de red, cambia esto a tu IP local
-  static const String _developmentUrlAndroidPhysical = 'http://localhost:3001';
-  
-  // URL alternativa para dispositivos físicos por WiFi (IP local de tu computadora)
-  // IMPORTANTE: Esta es la IP de tu computadora en la red local
-  // Para encontrar tu IP: Windows: ipconfig | Linux/Mac: ifconfig o ip addr
-  static const String _developmentUrlAndroidWiFi = 'http://192.168.1.6:3001';
-  
-  static const String _developmentUrlWeb = 'http://localhost:3001'; // Flutter Web
+  // URLs de configuración (usar `--dart-define` para `API_BASE_URL`)
 
   // Configuración de la API
-  // En modo DEBUG: usa localhost/10.0.2.2 automáticamente
-  // En modo RELEASE: usa producción (o variable de entorno si está definida)
-  static final String baseUrl = _resolveBaseUrl();
+  // `baseUrl` debe ser `const` para respetar `--dart-define` en tiempo de compilación.
+  // Por conveniencia dejamos un `defaultValue` local seguro como respaldo.
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    // 🌍 HYBRID CONFIG:
+    // - DEBUG: Usar 10.0.2.2 (Emulator) porque Prod está dando 503 o es inestable para desarrollo.
+    // - RELEASE/PROFILE: Usar PROD por defecto.
+    defaultValue: kDebugMode 
+        ? 'http://10.0.2.2:3001/api/v1' 
+        : 'http://backend-alb-1038609925.us-east-1.elb.amazonaws.com/api/v1',
+  );
 
-  static String _resolveBaseUrl() {
-    // 1. Prioridad: Variable de entorno (siempre tiene precedencia)
-    final rawBaseUrl = String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: '',
-    );
-
-    if (rawBaseUrl.isNotEmpty) {
-      AppLogger.config('Usando URL desde variable de entorno: $rawBaseUrl');
-      return _buildFinalUrl(rawBaseUrl);
-    }
-
-    // 2. Si está en modo DEBUG, usar desarrollo automáticamente
-    if (kDebugMode) {
-      final devUrl = _getDevelopmentUrl();
-      AppLogger.config('MODO DEBUG: Usando URL de desarrollo: $devUrl');
-      AppLogger.config('NOTA: Si estás en un dispositivo físico conectado por USB:');
-      AppLogger.config('  1. Ejecuta: adb reverse tcp:3001 tcp:3001');
-      AppLogger.config('  2. Luego ejecuta: flutter run');
-      AppLogger.config('Si estás usando WiFi, usa: flutter run --dart-define=USE_WIFI=true');
-      return _buildFinalUrl(devUrl);
-    }
-
-    // 3. Si está en modo RELEASE, usar producción
-    AppLogger.config('MODO RELEASE: Usando URL de producción: $_productionUrl');
-    return _buildFinalUrl(_productionUrl);
+  // Llamar a este método desde `main()` para imprimir la URL que usa la app.
+  static void checkConnection() {
+    AppLogger.config('📡 [NETWORK] Intentando conectar a: $baseUrl');
   }
+  
 
-  static String _getDevelopmentUrl() {
-    // Detectar plataforma sin usar dart:io (compatible con web)
-    if (kIsWeb) {
-      return _developmentUrlWeb;
-    }
-    
-    // Para Android, detectar si está en emulador o dispositivo físico
-    if (!kIsWeb) {
-      try {
-        // Verificar si hay una IP configurada manualmente
-        final manualIp = String.fromEnvironment('DEV_IP', defaultValue: '');
-        if (manualIp.isNotEmpty) {
-          AppLogger.config('Usando IP manual para desarrollo: $manualIp');
-          return 'http://$manualIp:3001';
-        }
-        
-        // Verificar si se especifica usar WiFi en lugar de USB
-        final useWiFi = String.fromEnvironment('USE_WIFI', defaultValue: 'false') == 'true';
-        if (useWiFi) {
-          AppLogger.config('Usando conexión WiFi (IP de red)');
-          return _developmentUrlAndroidWiFi;
-        }
-        
-        // Por defecto, si no se especifica nada, usar la IP de red local para dispositivos físicos
-        // o 10.0.2.2 para emuladores si se usa adb reverse
-        // Si la IP de red local es 192.168.1.6, usarla por defecto
-        AppLogger.config('Usando URL de red local: $_developmentUrlAndroidWiFi');
-        return _developmentUrlAndroidWiFi;
-      } catch (e) {
-        AppLogger.warning('Error detectando plataforma: $e');
-        // Fallback: usar emulador por defecto
-        return _developmentUrlAndroidEmulator;
-      }
-    }
-    
-    // Para iOS u otras plataformas, usar localhost
-    return _developmentUrlAndroidPhysical;
-  }
+  // Platform detection helpers were removed because `baseUrl` is provided at
+  // compile time via `--dart-define`. Keep development URLs above for reference.
 
-  static String _buildFinalUrl(String baseUrl) {
-    try {
-      final uri = Uri.parse(baseUrl);
-      // Siempre agregar api/v1 al final
-      final segments = <String>[
-        for (final segment in uri.pathSegments)
-          if (segment.isNotEmpty) segment,
-      ];
-      
-      // Solo agregar api/v1 si no está ya presente
-      if (!segments.contains('api') || !segments.contains('v1')) {
-        segments.addAll(['api', 'v1']);
-      }
+  // NOTE: Removed unused helper `_buildFinalUrl` after analyzer warning.
 
-      final finalUrl = _removeTrailingSlash(
-        uri.replace(pathSegments: segments).toString(),
-      );
-      
-      return finalUrl;
-    } catch (e) {
-      AppLogger.warning('Error al parsear URL: $e');
-      // Fallback seguro: usar desarrollo si está en debug, producción si no
-      final fallbackUrl = kDebugMode 
-          ? _getDevelopmentUrl()
-          : _productionUrl;
-      return '$fallbackUrl/api/v1';
-    }
-  }
-
-  static String _removeTrailingSlash(String value) {
-    return value.endsWith('/') ? value.substring(0, value.length - 1) : value;
-  }
+  // helper removed: `_removeTrailingSlash` not used after refactor
 
   // Endpoints de autenticación
   static const String loginEndpoint = '/auth/login';
@@ -143,11 +48,11 @@ class AppConfig {
   };
   
   // Timeouts
-  // 🚨 REDUCIDO A 10 SEGUNDOS: Evita que la app se congele por más de 10s
-  // Si la API tarda más, es mejor fallar rápido y mostrar un mensaje al usuario
-  static const Duration connectTimeout = Duration(seconds: 10);
-  static const Duration receiveTimeout = Duration(seconds: 10);
-  static const Duration sendTimeout = Duration(seconds: 10);
+  // ⏱️ AUMENTADO A 30 SEGUNDOS: Para dar más tiempo en conexiones lentas o redes inestables
+  // El timeout anterior de 10s era muy corto para conexiones de red local que pueden ser lentas
+  static const Duration connectTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration sendTimeout = Duration(seconds: 30);
   
   // Configuración de reintentos
   static const int maxRetries = 3;

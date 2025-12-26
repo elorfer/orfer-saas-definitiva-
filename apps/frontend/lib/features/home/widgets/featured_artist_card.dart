@@ -1,36 +1,20 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/artist_model.dart';
-import '../../../core/utils/number_formatter.dart';
 import '../../../core/utils/url_normalizer.dart';
-import '../../../core/widgets/image_placeholder.dart';
-import '../../../core/widgets/verified_badge.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/services/http_cache_service.dart';
 
+/// ⚡ GAMA BAJA: Card ultra-liviana para compositores destacados
 class FeaturedArtistCard extends StatelessWidget {
   final FeaturedArtist featuredArtist;
   final VoidCallback? onTap;
 
-  // Estilos cacheados para evitar recrearlos por item
-  static final TextStyle _nameStyle = GoogleFonts.inter(
-    fontSize: 14,
-    fontWeight: FontWeight.w700,
+  // ⚡ GAMA BAJA: TextStyle const
+  static const TextStyle _nameStyle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,
-    letterSpacing: -0.2,
-  );
-
-  static final TextStyle _followersStyle = GoogleFonts.inter(
-    fontSize: 11.5,
-    color: NeumorphismTheme.textSecondary,
-    fontWeight: FontWeight.w500,
-  );
-
-  static final TextStyle _badgeStyle = GoogleFonts.inter(
-    fontSize: 10.5,
-    color: Colors.white,
-    fontWeight: FontWeight.w700,
   );
 
   const FeaturedArtistCard({
@@ -45,156 +29,43 @@ class FeaturedArtistCard extends StatelessWidget {
     
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 112,
-        margin: const EdgeInsets.only(right: 14),
+      child: SizedBox(
+        width: 100,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Imagen del artista (redonda)
-            Container(
-              width: 112,
-              height: 112,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle, // ✅ Forma circular completa
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ClipOval( // ✅ ClipOval para recortar en círculo
-                child: _buildImageOrPlaceholder(),
+            // ⚡ Imagen del artista
+            ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
+              child: SizedBox(
+                width: 100,
+                height: 100,
+                child: _buildImage(),
               ),
             ),
             
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             
-            // Información del artista mejorada
-            // ✅ CORRECCIÓN: Eliminado Expanded - no es necesario aquí ya que el Column se ajusta naturalmente
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // ⚡ Nombre del artista con verificado
+            Row(
               mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Nombre del artista con badge de verificación
-                ArtistNameWithBadge(
-                  artistName: artist.stageName ?? 'Artista Desconocido',
-                  isVerified: artist.isVerifiedValue,
-                  textStyle: _nameStyle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  badgeSize: 12.0,
-                ),
-                
-                const SizedBox(height: 4),
-                
-                // Seguidores con icono
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.people_outline,
-                      size: 11,
-                      color: NeumorphismTheme.textSecondary,
-                    ),
-                    const SizedBox(width: 3),
-                    Flexible(
-                      child: Text(
-                        '${NumberFormatter.format(artist.totalFollowers)} seguidores',
-                        style: _followersStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                
-                // Badge destacado mejorado (si existe)
-                if (featuredArtist.featuredReason != null) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          NeumorphismTheme.coffeeMedium,
-                          NeumorphismTheme.coffeeDark,
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.all(Radius.circular(12)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      // ✅ CORRECCIÓN: No usar mainAxisSize.min cuando hay Flexible
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 12,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            featuredArtist.featuredReason!,
-                            style: _badgeStyle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                Flexible(
+                  child: Text(
+                    artist.stageName ?? 'Artista',
+                    style: _nameStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ] else ...[
-                  // Badge "Destacado" por defecto si no hay razón específica
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          NeumorphismTheme.coffeeMedium,
-                          NeumorphismTheme.coffeeDark,
-                        ],
-                      ),
-                      borderRadius: const BorderRadius.all(Radius.circular(12)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 12,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Destacado',
-                          style: GoogleFonts.inter(
-                            fontSize: 10.5,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                if (artist.isVerifiedValue) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.verified,
+                    size: 14,
+                    color: NeumorphismTheme.coffeeMedium,
                   ),
                 ],
               ],
@@ -205,41 +76,39 @@ class FeaturedArtistCard extends StatelessWidget {
     );
   }
 
-  Widget _buildImageOrPlaceholder() {
+  Widget _buildImage() {
     final rawUrl = featuredArtist.imageUrl 
         ?? featuredArtist.artist.profilePhotoUrl 
         ?? featuredArtist.artist.coverPhotoUrl;
     
-    // Normalizar la URL para logging (NetworkImageWithFallback también normaliza, pero queremos ver la URL original)
-    final normalizedUrl = UrlNormalizer.normalizeImageUrl(rawUrl, enableLogging: true);
+    final normalizedUrl = UrlNormalizer.normalizeImageUrl(rawUrl);
     
     if (normalizedUrl != null && normalizedUrl.isNotEmpty) {
       return CachedNetworkImage(
         imageUrl: normalizedUrl,
+        cacheManager: AlbumArtCacheManager.instance,
         fit: BoxFit.cover,
-        memCacheWidth: 240, // 🔥 OPTIMIZACIÓN: Tamaño optimizado (240px para imagen de 120px)
-        memCacheHeight: 240,
-        maxWidthDiskCache: 400,
-        maxHeightDiskCache: 400,
-        fadeInDuration: Duration.zero, // 🔥 Cero animaciones innecesarias
+        // memCacheWidth: 200, // Desactivado por conflicto con AlbumArtCacheManager (prioridad 90 días)
+        // memCacheHeight: 200,
+        fadeInDuration: Duration.zero,
         fadeOutDuration: Duration.zero,
-        errorWidget: (context, url, error) {
-          // Log del error solo en modo debug (no en producción)
-          if (kDebugMode) {
-            debugPrint('[FeaturedArtistCard] Error cargando imagen para artista ${featuredArtist.artist.id}: $error');
-          }
-          return const ImagePlaceholder.artistRound(); // ✅ Placeholder redondo
-        },
-        placeholder: (context, url) {
-          return const ImagePlaceholder.shimmer();
-        },
-        // Key estable para evitar reconstrucciones innecesarias
-        key: ValueKey('artist_image_${featuredArtist.artist.id}_$normalizedUrl'),
+        useOldImageOnUrlChange: true,
+        errorWidget: (_, __, ___) => _buildPlaceholder(),
+        placeholder: (_, __) => _buildPlaceholder(),
       );
     }
     
-    // Si no hay URL, usar placeholder (sin log - es normal que algunos artistas no tengan imagen)
-    return const ImagePlaceholder.artistRound(); // ✅ Placeholder redondo
+    return _buildPlaceholder();
   }
 
+  Widget _buildPlaceholder() {
+    return Container(
+      color: const Color(0xFFE4D6C8), // Color sólido similar al café claro con opacidad
+      child: const Icon(
+        Icons.person,
+        color: Colors.white70,
+        size: 32,
+      ),
+    );
+  }
 }

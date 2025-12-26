@@ -73,7 +73,12 @@ export class ImageProcessingService {
     if (this.sharpAvailable) {
       this.logger.log('Sharp disponible - compresión de imágenes habilitada');
     } else {
-      this.logger.warn('Sharp no está instalado - las imágenes se guardarán sin comprimir. Ejecuta: npm install sharp');
+      // En desarrollo no queremos spam de warnings repetidos; usar debug
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.warn('Sharp no está instalado - las imágenes se guardarán sin comprimir. Ejecuta: npm install sharp');
+      } else {
+        this.logger.debug('Sharp no está instalado (dev) - imágenes se guardarán sin comprimir');
+      }
     }
   }
 

@@ -21,7 +21,7 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/follow_button.dart';
 import '../../../core/providers/follow_provider.dart';
 import '../../../core/utils/number_formatter.dart';
-import 'package:google_fonts/google_fonts.dart';
+// ✅ OPTIMIZACIÓN: GoogleFonts removido - usando estilos constantes para mejor rendimiento
 import '../../../core/widgets/verified_badge.dart';
 import '../../../core/utils/intersection_observer.dart';
 
@@ -660,6 +660,9 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       // Error al cargar datos del artista
       if (!mounted) return;
       
+      // ✅ MEJORA: Logging más específico del error
+      AppLogger.error('[ArtistPage] Error al cargar datos del artista ${widget.artist.id}: $e', e is Error ? StackTrace.current : null);
+      
       if (mounted) {
         setState(() {
           // Si ya teníamos datos, mantenerlos en caso de error
@@ -1116,95 +1119,14 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
               'Canciones',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            // ✅ Siempre reservar espacio para el botón para evitar movimiento
+            // ✅ OPTIMIZACIÓN: Widget separado con RepaintBoundary para evitar rebuilds innecesarios
             Opacity(
               opacity: _allProcessedSongs.isNotEmpty ? 1.0 : 0.0,
               child: IgnorePointer(
                 ignoring: _allProcessedSongs.isEmpty,
-                child: Consumer(
-                  builder: (context, ref, child) {
-                    // ✅ Solo escuchar las propiedades específicas que necesitamos
-                    final contextId = ref.watch(
-                      unifiedAudioProviderFixed.select((state) => state.contextId),
-                    );
-                    final playbackMode = ref.watch(
-                      unifiedAudioProviderFixed.select((state) => state.playbackMode),
-                    );
-                    final isPlaying = ref.watch(
-                      unifiedAudioProviderFixed.select((state) => state.isPlaying),
-                    );
-                    final currentSong = ref.watch(
-                      unifiedAudioProviderFixed.select((state) => state.currentSong),
-                    );
-                    
-                    // ✅ VERIFICACIÓN ESTRICTA: Solo mostrar pausa si:
-                    // 1. Está en el contexto correcto (mismo artista)
-                    // 2. Está en modo fixedQueue (playlist)
-                    // 3. Está reproduciendo
-                    // 4. La canción actual pertenece al artista (verificación adicional)
-                    final isSameContext = contextId == widget.artist.id &&
-                                         playbackMode == PlaybackMode.fixedQueue;
-                    final currentSongBelongsToArtist = currentSong?.artistId == widget.artist.id ||
-                                                       currentSong?.artist?.id == widget.artist.id;
-                    final showPause = isSameContext && 
-                                     isPlaying && 
-                                     currentSongBelongsToArtist;
-                    
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            NeumorphismTheme.coffeeMedium,
-                            NeumorphismTheme.coffeeDark,
-                          ],
-                        ),
-                        borderRadius: const BorderRadius.all(Radius.circular(20)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            // ✅ SOLO activar cuando el usuario toca explícitamente
-                            // No hay lógica automática, solo responde al toque del usuario
-                            _onPlayAll();
-                          },
-                          borderRadius: const BorderRadius.all(Radius.circular(20)),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Reproducir todo',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+                child: _PlayAllButton(
+                  artistId: widget.artist.id,
+                  onTap: _onPlayAll,
                 ),
               ),
             ),
@@ -1349,7 +1271,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       albumId: song.albumId,
       title: song.title,
       duration: song.duration,
-      fileUrl: song.fileUrl,
+      fileUrl: song.fileUrl != null ? UrlNormalizer.normalizeUrl(song.fileUrl!) : null, // ✅ Normalizar URL para IP de red local
       coverArtUrl: finalCoverUrl, // ✅ Usar URL normalizada (preferir la pasada)
       lyrics: song.lyrics,
       genreId: song.genreId,
@@ -1666,6 +1588,101 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
   }
 }
 
+/// ✅ OPTIMIZACIÓN: Widget separado para botón "Reproducir todo" con RepaintBoundary
+/// Evita rebuilds innecesarios del Scaffold completo cuando cambia el estado de reproducción
+class _PlayAllButton extends ConsumerWidget {
+  final String artistId;
+  final VoidCallback onTap;
+
+  const _PlayAllButton({
+    required this.artistId,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ✅ Solo escuchar las propiedades específicas que necesitamos
+    final contextId = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.contextId),
+    );
+    final playbackMode = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.playbackMode),
+    );
+    final isPlaying = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isPlaying),
+    );
+    final currentSong = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentSong),
+    );
+    
+    // ✅ VERIFICACIÓN ESTRICTA: Solo mostrar pausa si:
+    // 1. Está en el contexto correcto (mismo artista)
+    // 2. Está en modo fixedQueue (playlist)
+    // 3. Está reproduciendo
+    // 4. La canción actual pertenece al artista (verificación adicional)
+    final isSameContext = contextId == artistId &&
+                         playbackMode == PlaybackMode.fixedQueue;
+    final currentSongBelongsToArtist = currentSong?.artistId == artistId ||
+                                       currentSong?.artist?.id == artistId;
+    final showPause = isSameContext && 
+                     isPlaying && 
+                     currentSongBelongsToArtist;
+    
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              NeumorphismTheme.coffeeMedium,
+              NeumorphismTheme.coffeeDark,
+            ],
+          ),
+          borderRadius: const BorderRadius.all(Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Reproducir todo',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Widget para la fila de canción con el mismo diseño que "recientemente escuchadas"
 class _SongRowWidget extends ConsumerWidget {
   final int index;
@@ -1682,6 +1699,31 @@ class _SongRowWidget extends ConsumerWidget {
     required this.artistId,
     required this.onPlaySong,
   });
+
+  // ✅ OPTIMIZACIÓN: Estilos de texto cacheados para evitar llamadas a GoogleFonts en cada build
+  static const TextStyle _songTitleStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: NeumorphismTheme.textPrimary,
+    fontFamily: 'Inter',
+  );
+  static const TextStyle _songArtistStyle = TextStyle(
+    fontSize: 14,
+    color: NeumorphismTheme.textSecondary,
+    fontFamily: 'Inter',
+  );
+  static const TextStyle _songNumberStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: NeumorphismTheme.textSecondary,
+    fontFamily: 'Inter',
+  );
+  static TextStyle get _songNumberStyleDisabled => TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
+    fontFamily: 'Inter',
+  );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1742,13 +1784,9 @@ class _SongRowWidget extends ConsumerWidget {
                     alignment: Alignment.center,
                     child: Text(
                       '${index + 1}',
-                      style: GoogleFonts.inter(
-                        color: isAvailable 
-                            ? NeumorphismTheme.textSecondary 
-                            : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: isAvailable 
+                          ? _SongRowWidget._songNumberStyle 
+                          : _SongRowWidget._songNumberStyleDisabled,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1784,25 +1822,22 @@ class _SongRowWidget extends ConsumerWidget {
                       children: [
                         Text(
                           song.title ?? 'Sin título',
-                          style: GoogleFonts.inter(
-                            color: isAvailable 
-                                ? NeumorphismTheme.textPrimary 
-                                : NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: isAvailable 
+                              ? _SongRowWidget._songTitleStyle 
+                              : _SongRowWidget._songTitleStyle.copyWith(
+                                  color: NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
+                                ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           artistName,
-                          style: GoogleFonts.inter(
-                            color: isAvailable 
-                                ? NeumorphismTheme.textSecondary 
-                                : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                            fontSize: 14,
-                          ),
+                          style: isAvailable 
+                              ? _SongRowWidget._songArtistStyle 
+                              : _SongRowWidget._songArtistStyle.copyWith(
+                                  color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
+                                ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

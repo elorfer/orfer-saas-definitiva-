@@ -87,16 +87,46 @@ export class SongsService {
       .getMany();
   }
 
-  async getSongsByGenre(genreId: string, page: number = 1, limit: number = 10): Promise<{ songs: Song[]; total: number }> {
-    const [songs, total] = await this.songRepository.findAndCount({
-      where: { genreId, status: SongStatus.PUBLISHED },
-      relations: ['artist', 'album', 'genre'],
-      skip: (page - 1) * limit,
-      take: limit,
-      order: { createdAt: 'DESC' },
+  async getSongsByGenre(genreId: string, page: number = 1, limit: number = 10): Promise<{ songs: SongResponseDto[]; total: number }> {
+    // Obtener el género para obtener su nombre
+    const genre = await this.genreRepository.findOne({
+      where: { id: genreId },
     });
 
-    return { songs, total };
+    if (!genre) {
+      return { songs: [], total: 0 };
+    }
+
+    // Normalizar el nombre del género para búsqueda (minúsculas, sin espacios extra)
+    const normalizedGenreName = genre.name.toLowerCase().trim();
+
+    // Buscar canciones que tengan:
+    // 1. genreId igual al ID del género, O
+    // 2. El nombre del género en el array genres
+    const queryBuilder = this.songRepository
+      .createQueryBuilder('song')
+      .leftJoinAndSelect('song.artist', 'artist')
+      .leftJoinAndSelect('song.album', 'album')
+      .leftJoinAndSelect('song.genre', 'genre')
+      .where('song.status = :status', { status: SongStatus.PUBLISHED })
+      .andWhere(
+        '(song.genreId = :genreId OR LOWER(song.genres) LIKE :genreName)',
+        {
+          genreId,
+          genreName: `%${normalizedGenreName}%`,
+        }
+      )
+      .orderBy('song.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [songs, total] = await queryBuilder.getManyAndCount();
+
+    // Convertir a DTOs usando el mapper
+    return {
+      songs: SongMapper.toDtoArray(songs),
+      total,
+    };
   }
 
   async searchSongs(query: string, page: number = 1, limit: number = 10): Promise<{ songs: Song[]; total: number }> {

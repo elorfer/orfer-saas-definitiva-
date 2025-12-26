@@ -48,11 +48,16 @@ class _PremiumStatusListenerState extends ConsumerState<PremiumStatusListener>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _lastRefreshTime = DateTime.now();
-    
-    // Inicializar el estado previo y conectar WebSocket
+    // Inicializar el estado previo y conectar WebSocket solo si perfil/subscriptionStatus es válido
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializePreviousStatus();
-      _connectWebSocket();
+      final authState = ref.read(authStateProvider);
+      if (authState.isAuthenticated && authState.user != null &&
+          (authState.user!.subscriptionStatus == SubscriptionStatus.premium ||
+           authState.user!.subscriptionStatus == SubscriptionStatus.vip ||
+           authState.user!.subscriptionStatus == SubscriptionStatus.free)) {
+        _connectWebSocket();
+      }
     });
   }
 
@@ -121,32 +126,34 @@ class _PremiumStatusListenerState extends ConsumerState<PremiumStatusListener>
   /// Conectar al WebSocket y escuchar eventos de cambio premium
   void _connectWebSocket() {
     if (_isDisposed || !mounted) return;
-
     try {
       final authState = ref.read(authStateProvider);
-      if (!authState.isAuthenticated) {
+      if (!authState.isAuthenticated || authState.user == null) {
         if (kDebugMode) {
           debugPrint('⚠️ Usuario no autenticado, no conectando WebSocket');
         }
         return;
       }
-
-      // Conectar al WebSocket
+      // Solo conectar si el perfil tiene subscriptionStatus válido
+      final status = authState.user!.subscriptionStatus;
+      if (status != SubscriptionStatus.premium &&
+          status != SubscriptionStatus.vip &&
+          status != SubscriptionStatus.free) {
+        if (kDebugMode) {
+          debugPrint('⚠️ Perfil sin subscriptionStatus válido, no conectando WebSocket');
+        }
+        return;
+      }
       if (kDebugMode) {
         debugPrint('🔌 Intentando conectar WebSocket...');
         debugPrint('   - Estado actual: conectado=${_realtimeService.isConnected}');
       }
-      
       _realtimeService.connect();
-      
-      // Esperar un momento y verificar conexión
       Future.delayed(const Duration(seconds: 2), () {
         if (kDebugMode && mounted) {
           debugPrint('🔍 Estado WebSocket después de 2s: conectado=${_realtimeService.isConnected}');
         }
       });
-
-      // Escuchar eventos de cambio de estado premium
       _premiumStatusSubscription?.cancel();
       _premiumStatusSubscription = _realtimeService.premiumStatusStream.listen(
         (data) async {
@@ -273,21 +280,18 @@ class _PremiumStatusListenerState extends ConsumerState<PremiumStatusListener>
   @override
   void dispose() {
     _isDisposed = true;
-    
     // Cancelar suscripción de WebSocket
     _premiumStatusSubscription?.cancel();
     _premiumStatusSubscription = null;
-    
+    // Desconectar WebSocket al hacer logout o dispose
+    _realtimeService.disconnect();
     // Limpiar referencias
     _lastRefreshTime = null;
-    
     // Remover observer
     WidgetsBinding.instance.removeObserver(this);
-    
     if (kDebugMode) {
       debugPrint('🧹 PremiumStatusListener - Recursos limpiados correctamente');
     }
-    
     super.dispose();
   }
 
