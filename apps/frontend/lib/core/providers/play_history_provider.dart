@@ -27,47 +27,47 @@ class PlayHistoryNotifier extends Notifier<List<Song>> {
     return [];
   }
 
-  /// Agregar canción al historial (solo si no es la misma que la última)
+  /// Agregar canción al historial
+  /// 🧠 LÓGICA BURBUJA: Si la canción ya existe, la mueve al final (más reciente)
+  /// en lugar de duplicarla. Esto mantiene el historial limpio y relevante.
   void addToHistory(Song song) {
-    final current = state;
+    final current = List<Song>.from(state);
     
-    // Solo agregar si está vacío o si no es la misma canción que la última
-    if (current.isEmpty || current.last.id != song.id) {
-      
-      // ✅ SANITIZACIÓN: Asegurar que guardamos URLs válidas/normalizadas
-      // Esto corrige el bug donde se guardan IPs viejas (192.168...) en el historial
-      String? cleanCover = song.coverArtUrl;
-      if (cleanCover != null) {
-          cleanCover = UrlNormalizer.normalizeImageUrl(cleanCover);
-      }
-      
-      String? cleanFile = song.fileUrl;
-      // Solo normalizar si parece una URL completa y no es nula
-      if (cleanFile != null && cleanFile.isNotEmpty && (cleanFile.startsWith('http') || cleanFile.startsWith('/'))) {
-         try {
-           cleanFile = UrlNormalizer.normalizeUrl(cleanFile);
-         } catch (_) {
-           // Si falla normalización (ej. url extraña), mantener original
-         }
-      }
-
-      final sanitizedSong = song.copyWith(
-          coverArtUrl: cleanCover,
-          fileUrl: cleanFile,
-      );
-
-      final newHistory = [...current, sanitizedSong];
-      
-      // Limitar tamaño del historial
-      if (newHistory.length > _maxHistorySize) {
-        newHistory.removeAt(0);
-      }
-      
-      state = newHistory;
-      _scheduleSaveDebounced();
-      
-      AppLogger.info('[PlayHistory] ➕ Agregada: ${song.title} (Total: ${state.length})');
+    // ✅ SANITIZACIÓN: Asegurar que guardamos URLs válidas/normalizadas
+    String? cleanCover = song.coverArtUrl;
+    if (cleanCover != null) {
+        cleanCover = UrlNormalizer.normalizeImageUrl(cleanCover);
     }
+    
+    String? cleanFile = song.fileUrl;
+    if (cleanFile != null && cleanFile.isNotEmpty && (cleanFile.startsWith('http') || cleanFile.startsWith('/'))) {
+       try {
+         cleanFile = UrlNormalizer.normalizeUrl(cleanFile);
+       } catch (_) {}
+    }
+
+    final sanitizedSong = song.copyWith(
+        coverArtUrl: cleanCover,
+        fileUrl: cleanFile,
+    );
+
+    // 🧼 DEDUPLICACIÓN INTELIGENTE (Bubble Logic)
+    // 1. Si existe, la removemos de su posición antigua
+    current.removeWhere((s) => s.id == song.id);
+    
+    // 2. Agregamos la nueva versión al final (más reciente)
+    current.add(sanitizedSong);
+    
+    // 3. Limitar tamaño del historial
+    if (current.length > _maxHistorySize) {
+      // Remover desde el inicio (los más antiguos)
+      current.removeRange(0, current.length - _maxHistorySize);
+    }
+    
+    state = current;
+    _scheduleSaveDebounced();
+    
+    AppLogger.info('[PlayHistory] 🫧 Burbuja: ${song.title} movida a reciente (Total: ${state.length})');
   }
 
   /// Obtener canción anterior (elimina la actual y retorna la anterior)

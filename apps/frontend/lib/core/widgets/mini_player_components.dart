@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
@@ -182,6 +183,9 @@ class _MiniPlayerPlayButton extends ConsumerWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () async {
+                  // 🔥 UX PRO: Feedback táctil al pausar/reproducir
+                  HapticFeedback.lightImpact();
+
                   // ✅ ACCIÓN DIRECTA: Sin intermediarios
                   try {
                     if (playing) {

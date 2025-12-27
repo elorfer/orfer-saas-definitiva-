@@ -22,8 +22,8 @@ class NeumorphismTheme {
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [
-      Color(0xFFFDFBF9),
-      Color(0xFFF5F2F0),
+      Color(0xFFF2EFE9), // Slightly darker than FDFBF9
+      Color(0xFFE8E2DD), // Slightly darker than F5F2F0
     ],
   );
 

@@ -117,26 +117,16 @@ class SongDetailService {
           if (normalized['artist'] is Map<String, dynamic>) {
             final artistData = normalized['artist'] as Map<String, dynamic>;
             final rawArtistAvatarUrl = artistData['profile_photo_url'] as String?;
-            debugPrint('🔍 [SONG DETAIL SERVICE] Artista encontrado: ${artistData['stage_name'] ?? artistData['name']}');
-            debugPrint('🔍 [SONG DETAIL SERVICE] profile_photo_url raw: $rawArtistAvatarUrl');
             
             // 🆕 OPTIMIZACIÓN: No cargar artista completo aquí (se hace de forma asíncrona en la UI)
             // Esto permite que la pantalla se muestre inmediatamente mientras se carga el avatar en segundo plano
             if (rawArtistAvatarUrl != null && rawArtistAvatarUrl.isNotEmpty) {
               final normalizedArtistAvatarUrl = UrlNormalizer.normalizeImageUrl(rawArtistAvatarUrl);
-              debugPrint('🔍 [SONG DETAIL SERVICE] profile_photo_url normalizado: $normalizedArtistAvatarUrl');
               if (normalizedArtistAvatarUrl != null) {
                 artistData['profile_photo_url'] = normalizedArtistAvatarUrl;
                 normalized['artist'] = artistData;
-                debugPrint('✅ [SONG DETAIL SERVICE] Avatar del artista normalizado correctamente');
-              } else {
-                debugPrint('⚠️ [SONG DETAIL SERVICE] No se pudo normalizar la URL del avatar');
               }
-            } else {
-              debugPrint('⚠️ [SONG DETAIL SERVICE] Artista sin profile_photo_url - se cargará asíncronamente en la UI');
             }
-          } else {
-            debugPrint('⚠️ [SONG DETAIL SERVICE] No hay datos de artista en la respuesta');
           }
           
           return await Song.parse(normalized);

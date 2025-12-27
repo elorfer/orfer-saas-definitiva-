@@ -743,13 +743,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         }
         // ✅ Ya limitado a 6 en el provider, usar todos
         return SizedBox(
-          height: 180,
+          height: 140, // ⚡ REDUCIDO: de 180 a 140
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             cacheExtent: 150, // ✅ Reducido de 200 a 150
             itemCount: artists.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 12), // ⚡ REDUCIDO: spacing 16->12
             itemBuilder: (_, index) {
               final artist = artists[index];
               return RepaintBoundary(
@@ -761,17 +761,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         );
       },
       loading: () {
-        // ✅ OPTIMIZACIÓN: Verificar cache primero (con keepAlive ya no debería pasar, pero por si acaso)
+        // ✅ OPTIMIZACIÓN: Verificar cache primero
         final cachedArtists = ref.read(trendingArtistsProvider).value;
         if (cachedArtists != null && cachedArtists.isNotEmpty) {
           return SizedBox(
-            height: 180,
+            height: 140, // ⚡ REDUCIDO
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               cacheExtent: 150,
               itemCount: cachedArtists.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: 12), // ⚡ REDUCIDO
               itemBuilder: (_, index) {
                 final artist = cachedArtists[index];
                 return RepaintBoundary(
@@ -784,12 +784,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         }
         // ✅ Skeleton solo en primera carga
         return SizedBox(
-          height: 180,
+          height: 140, // ⚡ REDUCIDO
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 3,
-            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            separatorBuilder: (_, __) => const SizedBox(width: 12), // ⚡ REDUCIDO
             itemBuilder: (_, __) => _buildTrendingArtistCardSkeleton(),
           ),
         );
@@ -810,14 +810,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           // Nota: Navegación al perfil del artista pendiente de implementar
         },
         child: SizedBox(
-          width: 140,
+          width: 100, // ⚡ REDUCIDO: de 140 a 100
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 140,
-                height: 140,
+                width: 100, // ⚡ REDUCIDO: de 140 a 100
+                height: 100, // ⚡ REDUCIDO: de 140 a 100
                 decoration: const BoxDecoration(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   // ⚡ GAMA BAJA: Sin boxShadow
@@ -828,8 +828,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                         imageUrl: profileUrl,
                         cacheManager: AlbumArtCacheManager.instance, // ✅ Cache persistente 90 días
                         fit: BoxFit.cover,
-                        // memCacheWidth: 280, // Desactivado para evitar redimensionamiento en memoria
-                        // memCacheHeight: 280, // Desactivado para evitar redimensionamiento en memoria
+                        // memCacheWidth: 200, // ⚡ Ajustado para tamaño 100x100
+                        // memCacheHeight: 200,
                         fadeInDuration: Duration.zero, // ✅ Sin animación para evitar parpadeo
                         fadeOutDuration: Duration.zero,
                         useOldImageOnUrlChange: true, // ⚡ FIX PARPADEO: Mantener imagen anterior
@@ -841,7 +841,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                           child: const Icon(
                             Icons.person,
                             color: Colors.white,
-                            size: 40,
+                            size: 30, // ⚡ REDUCIDO: Icon size
                           ),
                         ),
                       )
@@ -850,15 +850,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                         child: const Icon(
                           Icons.person,
                           color: Colors.white,
-                          size: 40,
+                          size: 30, // ⚡ REDUCIDO
                         ),
                       ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6), // ⚡ REDUCIDO: 8->6
               Text(
                 artist.stageName ?? 'Artista',
                 style: AppTextStyles.searchTitle.copyWith(
-                  fontSize: 14,
+                  fontSize: 12, // ⚡ REDUCIDO: 14->12
                   fontWeight: FontWeight.w600,
                 ),
                 maxLines: 1,
@@ -876,23 +876,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   // ⚡ GAMA BAJA: Skeleton estático sin animación Shimmer
   Widget _buildTrendingArtistCardSkeleton() {
     return SizedBox(
-      width: 140,
+      width: 100, // ⚡ REDUCIDO: 140->100
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 140,
-            height: 140,
+            width: 100, // ⚡ REDUCIDO
+            height: 100, // ⚡ REDUCIDO
             decoration: BoxDecoration(
               color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
               borderRadius: const BorderRadius.all(Radius.circular(12)),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6), // ⚡ REDUCIDO
           Container(
-            height: 14,
-            width: 100,
+            height: 12, // ⚡ REDUCIDO
+            width: 70, // ⚡ REDUCIDO
             decoration: BoxDecoration(
               color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
               borderRadius: const BorderRadius.all(Radius.circular(4)),
@@ -1146,7 +1146,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Container(
                   height: 14,
                   width: 120,
@@ -1283,7 +1283,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1348,7 +1348,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                     borderRadius: const BorderRadius.all(Radius.circular(4)),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Container(
                   height: 12,
                   width: 100,
@@ -1394,7 +1394,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               borderRadius: const BorderRadius.all(Radius.circular(12)),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,

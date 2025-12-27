@@ -39,7 +39,7 @@ class ArtistSongsHorizontalList extends ConsumerWidget {
         return ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: filteredSongs.length,
-          itemExtent: 140.0, // ✅ OPTIMIZACIÓN: itemExtent para mejor scroll performance
+          itemExtent: 152.0, // ✅ OPTIMIZACIÓN: itemExtent ajustado (140px card + 12px margin) para que la imagen sea cuadrada
           padding: const EdgeInsets.symmetric(horizontal: 16),
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
@@ -60,7 +60,7 @@ class ArtistSongsHorizontalList extends ConsumerWidget {
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: 5,
-          itemExtent: 140.0,
+          itemExtent: 152.0,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemBuilder: (context, index) => const _SongCardSkeleton(),
         ),

@@ -170,6 +170,23 @@ class DataNormalizer {
       }
     }
     
+    // ✅ FIX: Normalizar URLs de imágenes de artista
+    // Profile Photo
+    final profileUrl = _normalizeImageUrlField(
+      {...data, ...normalized},
+      ['profile_photo_url', 'profilePhotoUrl', 'avatarUrl', 'avatar_url', 'image'],
+      'profile_photo_url',
+    );
+    normalized['profile_photo_url'] = profileUrl;
+    
+    // Cover Photo
+    final coverUrl = _normalizeImageUrlField(
+      {...data, ...normalized},
+      ['cover_photo_url', 'coverPhotoUrl', 'bannerUrl', 'banner_url'],
+      'cover_photo_url',
+    );
+    normalized['cover_photo_url'] = coverUrl;
+    
     // Asegurar valores por defecto
     _ensureDefaultValue(normalized, 'verification_status', false);
     _ensureDefaultValue(normalized, 'total_streams', _defaultNumericValue);
@@ -350,8 +367,10 @@ class DataNormalizer {
       data,
       ['imageUrl', 'image_url', 'coverUrl', 'cover_url', 'image'],
     );
+    
+    // ✅ FIX: Usar UrlNormalizer para corregir localhost -> 10.0.2.2
     if (imageUrl != null && imageUrl is String && imageUrl.trim().isNotEmpty) {
-      normalized['image_url'] = imageUrl.trim();
+      normalized['image_url'] = UrlNormalizer.normalizeImageUrl(imageUrl.trim());
     } else if (normalized.containsKey('image_url') && 
                (normalized['image_url'] == null || normalized['image_url'].toString().trim().isEmpty)) {
       // Si el campo existe pero está vacío, mantenerlo como null

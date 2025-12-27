@@ -117,14 +117,26 @@ class FeaturedSongsSection extends ConsumerWidget {
         // Título de la sección con padding
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Canciones Destacadas',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF3D2E20),
-              decoration: TextDecoration.none,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                height: 24,
+                width: 180,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE4D6C8), // 🚀 Sólido
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+              ),
+              Container(
+                height: 14,
+                width: 60,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE4D6C8), // 🚀 Sólido
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -132,15 +144,17 @@ class FeaturedSongsSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            children: List.generate(3, (index) {
-              return RepaintBoundary(
-                key: ValueKey('loading_song_$index'),
-                child: Container(
+            children: List.generate(4, (index) { // Match 4 items (take(4))
+              return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEEE4DA), // 🚀 Sólido
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.all(Radius.circular(16)),
+                   border: Border.all(
+                    color: const Color(0xFFEEE4DA),
+                    width: 1,
+                  ),
                 ),
               child: Row(
                 children: [
@@ -149,51 +163,55 @@ class FeaturedSongsSection extends ConsumerWidget {
                     height: 56,
                     decoration: const BoxDecoration(
                       color: Color(0xFFF3EBE3), // 🚀 Sólido
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
-                    ),
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
+                      borderRadius: BorderRadius.all(Radius.circular(12)), // Match card 10/12 radius mixing
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16), // Match 16px
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          height: 16,
+                          height: 15,
                           width: double.infinity,
                           decoration: const BoxDecoration(
                             color: Color(0xFFF3EBE3), // 🚀 Sólido
-                            borderRadius: BorderRadius.all(Radius.circular(8)),
+                            borderRadius: BorderRadius.all(Radius.circular(4)),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6), // Match 4px + lineheight approx
                         Container(
                           height: 12,
-                          width: 120,
+                          width: 120, // Artist name
                           decoration: const BoxDecoration(
                             color: Color(0xFFEEE4DA), // 🚀 Sólido
-                            borderRadius: BorderRadius.all(Radius.circular(6)),
+                            borderRadius: BorderRadius.all(Radius.circular(4)),
+                          ),
+                        ),
+                        const SizedBox(height: 6), // Match 4px
+                        Container(
+                          height: 10,
+                          width: 80, // Meta info
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEEE4DA), // 🚀 Sólido
+                            borderRadius: BorderRadius.all(Radius.circular(4)),
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  // Play button placeholder (32px)
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 32,
+                    height: 32,
                     decoration: const BoxDecoration(
                       color: Color(0xFFF3EBE3), // 🚀 Sólido
-                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                      shape: BoxShape.circle,
                     ),
                   ),
                 ],
               ),
-            ),
             );
             }),
           ),

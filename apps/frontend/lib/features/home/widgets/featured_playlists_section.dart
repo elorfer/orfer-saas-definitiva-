@@ -137,17 +137,17 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            'Playlists Destacadas',
+            'Playlists', // Match title 'Playlists' from build method or 'Playlists Destacadas' if intended, but keeping 'Playlists' matches the build method header.
             // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 22, // Match build method
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Color(0xFF3D2E20), // Match build method
               decoration: TextDecoration.none,
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         // ⚡ Lista skeleton estática - sin animaciones Shimmer
         SizedBox(
           height: 220,
@@ -166,10 +166,19 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
                         borderRadius: BorderRadius.all(Radius.circular(16)),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 4), // Match 4px Spacer
                     Container(
-                      height: 15,
+                      height: 16, // Match 16px Row height
                       width: 120,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEAE2D9), // 🚀 Sólido
+                        borderRadius: BorderRadius.all(Radius.circular(4)),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                     Container(
+                      height: 18, // Badge placeholder
+                      width: 100,
                       decoration: const BoxDecoration(
                         color: Color(0xFFEAE2D9), // 🚀 Sólido
                         borderRadius: BorderRadius.all(Radius.circular(4)),

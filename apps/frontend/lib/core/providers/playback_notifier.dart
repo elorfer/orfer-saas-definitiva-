@@ -4761,9 +4761,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   /// Orquesta la detección de anuncios y la preparación de transiciones
   void _monitorPlaybackProgress(Duration currentPosition) {
     // AGENT DEBUG: Unconditional Entry Log
-    if (currentPosition.inSeconds % 1 == 0 && currentPosition.inMilliseconds % 1000 < 500) {
-       print('[AGENT DEBUG] 🛑 MONITOR ENTRY | Pos: ${currentPosition.inSeconds}s | QLen: ${state.currentQueue.length} | Dur: ${state.totalDuration.inSeconds}s | PlayingAd: ${state.isPlayingAd}');
-    }
+
 
     // 🔥 FIX: No abortar si queue es cero pero hay canción sonando (puede ser inicio de sesión)
     // 🔥 FIX: No abortar si duration es cero, intentar obtenerla del player

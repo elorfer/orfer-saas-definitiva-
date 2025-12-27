@@ -7,27 +7,35 @@ import '../utils/logger.dart';
 class FavoritesState {
   final List<Song> favorites;
   final Set<String> favoriteIds; // Para búsqueda rápida
+  final int totalCount;
   final bool isLoading;
   final String? error;
+  final bool isInitialized; // Para saber si ya se intentó cargar al menos una vez
 
   const FavoritesState({
     this.favorites = const [],
     Set<String>? favoriteIds,
+    this.totalCount = 0,
     this.isLoading = false,
     this.error,
+    this.isInitialized = false,
   }) : favoriteIds = favoriteIds ?? const {};
 
   FavoritesState copyWith({
     List<Song>? favorites,
     Set<String>? favoriteIds,
+    int? totalCount,
     bool? isLoading,
     String? error,
+    bool? isInitialized,
   }) {
     return FavoritesState(
       favorites: favorites ?? this.favorites,
       favoriteIds: favoriteIds ?? this.favoriteIds,
+      totalCount: totalCount ?? this.totalCount,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      isInitialized: isInitialized ?? this.isInitialized,
     );
   }
 
@@ -52,15 +60,20 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
 
   @override
   FavoritesState build() {
+    // 🔥 CRÍTICO: keepAlive para persistir el estado y evitar recargas en cada navegación
+    ref.keepAlive();
+    
     _service = ref.read(favoritesServiceProvider);
-    // Cargar favoritos después de que el build haya completado
-    // Usar un delay más largo para asegurar que el provider esté completamente inicializado
-    // y que el estado esté disponible antes de intentar accederlo
-    Future.delayed(const Duration(milliseconds: 200), () {
+    
+    // Cargar favoritos inicial (Cold Start)
+    // No chequeamos state.isInitialized aquí porque state no está disponible en build()
+    // Como build() corre solo al inicio (o reinicio), siempre cargamos.
+    Future.microtask(() {
       if (ref.mounted) {
-        _loadFavorites();
+         _loadFavorites();
       }
     });
+    
     return const FavoritesState(isLoading: true);
   }
 
@@ -95,7 +108,9 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
       state = state.copyWith(
         favorites: favorites,
         favoriteIds: favoriteIds,
+        totalCount: favorites.length, // Por ahora derivado, luego backend
         isLoading: false,
+        isInitialized: true,
       );
     } catch (e, stackTrace) {
       AppLogger.error('[FavoritesNotifier] Error al cargar favoritos: $e', stackTrace);
@@ -109,6 +124,7 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
+        isInitialized: true, // Marcamos como inicializado aunque falle para no reintentar infinito en build
       );
     }
   }
@@ -120,6 +136,12 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
 
   /// Toggle de favorito (optimistic update)
   Future<void> toggleFavorite(String songId, {Song? songData}) async {
+    // Protección Cold Start: Asegurar que tenemos estado cargado antes de togglear
+    // Si isInitialized es false, no podemos saber el estado real, así que forzamos carga primero
+    // O asumimos que si no está inicializado, no está en favoritos (arriesgado but fast)
+    // Mejor enfoque: confiamos en que build() ya disparó la carga.
+    // Si isLoading es true, quizás deberíamos esperar? No, optimistic update manda.
+    
     try {
       final wasFavorite = state.isFavorite(songId);
       
@@ -131,6 +153,7 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
         state = state.copyWith(
           favorites: newFavorites,
           favoriteIds: newFavoriteIds,
+           totalCount: newFavorites.length,
         );
       } else {
         // Agregar a favoritos
@@ -146,6 +169,7 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
         state = state.copyWith(
           favorites: newFavorites,
           favoriteIds: newFavoriteIds,
+          totalCount: newFavorites.length,
         );
       }
 
@@ -173,7 +197,7 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
               // Agregar la canción a la lista si todavía no está
               if (!state.favorites.any((s) => s.id == songId)) {
                 final updatedFavorites = List<Song>.from(state.favorites)..add(fetchedSong);
-                state = state.copyWith(favorites: updatedFavorites);
+                state = state.copyWith(favorites: updatedFavorites, totalCount: updatedFavorites.length);
               }
             }
           } catch (e) {
@@ -202,11 +226,14 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
         state = state.copyWith(
           favorites: newFavorites,
           favoriteIds: newFavoriteIds,
+          totalCount: newFavorites.length,
         );
       } else {
         // Si ahora NO es favorito pero falló, agregarlo de vuelta
         final newFavoriteIds = Set<String>.from(state.favoriteIds)..add(songId);
-        state = state.copyWith(favoriteIds: newFavoriteIds);
+        state = state.copyWith(favoriteIds: newFavoriteIds); // Count no es crítico aquí si solo revertimos ID
+        // Si necesitáramos revertir la lista completa, es más complejo sin la canción data.
+        // Asumimos que si falla, el count puede quedar desincronizado un momento hasta el refresh.
       }
       
       // Re-lanzar el error para que el UI pueda manejarlo
@@ -214,7 +241,7 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
     }
   }
 
-  /// Verificar si una canción es favorita
+  /// Verificar si una canción es favorita (O(1))
   bool isFavorite(String songId) {
     return state.isFavorite(songId);
   }

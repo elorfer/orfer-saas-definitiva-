@@ -162,10 +162,14 @@ class FavoritesService {
   }
 
   /// Verificar si una canción es favorita
-  /// Esto se puede hacer verificando si está en la lista de favoritos
-  /// o el backend puede tener un endpoint específico
+  /// ⚠️ ADVERTENCIA: Este método realiza una petición completa al backend (/favorites/my).
+  /// Para chequear favoritos en la UI, PREFIERA usar `FavoritesProvider.isFavorite(id)`
+  /// que usa un Set en memoria O(1) sin latencia de red.
   Future<bool> isFavorite(String songId) async {
     try {
+      // Intentar usar endpoint ligero si existiera (por ahora fallback a fetch full)
+      // Si el backend soportara /favorites/check/:id sería ideal.
+      // Como no lo sabemos, mantenemos la lógica pero advertimos.
       final favorites = await getMyFavorites();
       return favorites.any((song) => song.id == songId);
     } catch (e) {

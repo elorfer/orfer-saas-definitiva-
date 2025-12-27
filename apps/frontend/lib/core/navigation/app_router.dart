@@ -21,6 +21,7 @@ import '../../features/library/screens/recently_played_screen.dart';
 import '../../features/library/screens/followed_artists_screen.dart';
 import '../../features/premium/screens/premium_activated_screen.dart';
 import '../../features/premium/screens/premium_router_screen.dart';
+import '../../features/premium/screens/composer_promo_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../core/providers/onboarding_provider.dart';
 import '../../features/artists/pages/artist_page.dart';
@@ -537,6 +538,17 @@ class GoRouterNotifier extends ChangeNotifier {
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
                     key: state.pageKey,
                     child: const PremiumRouterScreen(),
+                  ),
+                ),
+                // Composer Promo - Accessible from Premium branch or potentially others if needed
+                GoRoute(
+                  path: '/composer-promo',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const ComposerPromoScreen(),
+                     transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
                   ),
                 ),
               ],

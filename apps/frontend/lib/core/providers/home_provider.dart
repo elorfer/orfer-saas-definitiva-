@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/home_service.dart';
@@ -184,14 +185,9 @@ class HomeNotifier extends Notifier<HomeState> {
   }
 
   /// Cargar todos los datos de la pantalla de inicio
-  /// 🔥 OPTIMIZACIÓN: Carga progresiva - primero lo visible, luego el resto
+  /// 🔥 OPTIMIZACIÓN: Carga progresiva - primero lo prioridad, luego el resto
   Future<void> loadHomeData({bool forceRefresh = false}) async {
     try {
-      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
-      // #region agent log
-      // final loadStartTime = DateTime.now().millisecondsSinceEpoch;
-      // _writeDebugLog('home_provider.dart:152', 'loadHomeData started', {'forceRefresh': forceRefresh}, 'C');
-      // #endregion
       
       // ⚡ FIX PARPADEO: Solo mostrar loading si no hay datos actuales
       // Si ya hay datos, mantenerlos visibles durante la recarga
@@ -203,57 +199,56 @@ class HomeNotifier extends Notifier<HomeState> {
         state = state.copyWith(error: null);
       }
 
-      // ✅ OPTIMIZACIÓN: Carga progresiva ultra-rápida - solo lo mínimo esencial
-      // Fase 1: Cargar SOLO lo que aparece primero en pantalla (artistas)
+      // ✅ OPTIMIZACIÓN: Carga prioritaria de canciones (Task 1 & 3)
+      // Limit reducido a 4 para aligerar la carga
+      List<FeaturedSong> featuredSongs = [];
+      try {
+        featuredSongs = await _homeService.getFeaturedSongs(limit: 4, forceRefresh: forceRefresh);
+      } catch (_) {
+        featuredSongs = [];
+      }
+
+      // Actualizar estado inmediatamente con canciones
+      state = state.copyWith(
+        featuredSongs: featuredSongs,
+        isLoading: false, // Ya tenemos algo que mostrar
+        isInitialized: true,
+      );
+      _saveToCacheThrottled(state);
+
+      // 🕒 DELAY (Task 3): Pequeña pausa para dar aire al Choreographer antes de la siguiente carga pesada
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // Fase 2: Cargar Artistas
       List<FeaturedArtist> featuredArtists = [];
-      
-      // ✅ OPTIMIZACIÓN: Cargar solo artistas primero (lo que se ve primero)
       try {
         featuredArtists = await _homeService.getFeaturedArtists(limit: 6, forceRefresh: forceRefresh);
       } catch (_) {
         featuredArtists = [];
       }
       
-      // ✅ OPTIMIZACIÓN: Actualizar estado inmediatamente con artistas para mostrar algo rápido
-      state = state.copyWith(
-        featuredArtists: featuredArtists,
-        isLoading: false,
-        isInitialized: true,
-      );
-      
-      // ✅ OPTIMIZACIÓN: Guardar cache rápido con artistas (aunque no haya más datos aún)
+      state = state.copyWith(featuredArtists: featuredArtists);
       _saveToCacheThrottled(state);
-      
-      // Fase 2: Cargar canciones destacadas y mensaje (aparecen después en el scroll)
-      List<FeaturedSong> featuredSongs = [];
+
+      // Fase 3: Mensaje del home y resto de datos en background
       HomeMessage? homeMessage;
       
-      Future.wait([
-        _homeService.getFeaturedSongs(limit: 20, forceRefresh: forceRefresh).then((value) => featuredSongs = value).catchError((_) => <FeaturedSong>[]),
-        _homeService.getHomeMessage(forceRefresh: forceRefresh).then((value) => homeMessage = value).catchError((_) => null),
-      ]).then((_) {
-        // Actualizar estado con canciones y mensaje cuando estén listos
-        state = state.copyWith(
-          featuredSongs: featuredSongs,
-          homeMessage: homeMessage,
-        );
-        _saveToCacheThrottled(state);
-      });
+      // No bloqueamos para el mensaje, pero lo pedimos pronto
+      _homeService.getHomeMessage(forceRefresh: forceRefresh).then((value) {
+        state = state.copyWith(homeMessage: value);
+      }).catchError((_) {});
       
-      // ✅ OPTIMIZACIÓN: Fase 3 - Cargar datos secundarios (playlists, popular, top) solo cuando sean necesarios
-      // Estos datos se cargan de forma lazy cuando el usuario hace scroll hacia abajo
-      // Por ahora, los cargamos en background pero con menor prioridad
+      // ✅ OPTIMIZACIÓN: Fase 4 - Cargar datos secundarios (playlists, popular, top)
+      // Baja prioridad, lazy load
       List<FeaturedPlaylist> featuredPlaylists = [];
       List<Song> popularSongs = [];
       List<Artist> topArtists = [];
       
-      // Cargar el resto en paralelo de forma asíncrona (sin bloquear, baja prioridad)
       Future.wait([
         _homeService.getFeaturedPlaylists(limit: 6).then((value) => featuredPlaylists = value).catchError((_) => <FeaturedPlaylist>[]),
         _homeService.getPopularSongs(limit: 10).then((value) => popularSongs = value).catchError((_) => <Song>[]),
         _homeService.getTopArtists(limit: 8).then((value) => topArtists = value).catchError((_) => <Artist>[]),
       ]).then((_) {
-        // Actualizar estado con datos secundarios cuando estén listos
         state = state.copyWith(
           featuredPlaylists: featuredPlaylists,
           popularSongs: popularSongs,
@@ -262,13 +257,6 @@ class HomeNotifier extends Notifier<HomeState> {
         _saveToCacheThrottled(state);
       });
       
-      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
-      // OPTIMIZACIÓN: Logging removido para mejor rendimiento
-      // #region agent log
-      // final loadEndTime = DateTime.now().millisecondsSinceEpoch;
-      // final totalLoadDuration = loadEndTime - loadStartTime;
-      // _writeDebugLog('home_provider.dart:197', 'loadHomeData completed', {'totalDuration': totalLoadDuration, 'artistsCount': featuredArtists.length, 'songsCount': featuredSongs.length, 'playlistsCount': featuredPlaylists.length}, 'C');
-      // #endregion
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -283,10 +271,19 @@ class HomeNotifier extends Notifier<HomeState> {
   Future<void> refresh() async {
     // Mostrar loading solo en refresh explícito del usuario
     state = state.copyWith(isLoading: true);
-    await loadHomeData(forceRefresh: true);
-    // Asegurar que las playlists se refrescan también durante el pull-to-refresh
-    // Llamamos explícitamente para forzar actualización inmediata de la sección
-    await loadFeaturedPlaylists();
+    
+    try {
+      // 🚀 OPTIMIZACIÓN: Solo llamar a loadHomeData.
+      // loadHomeData ya se encarga de iniciar la carga progresiva de todo (artistas, canciones, playlists).
+      // Al no esperar las tareas de fondo (fase 2 y 3), el spinner desaparece rápido (UX "Snappy").
+      // Evitamos llamar a loadFeaturedPlaylists en paralelo para no causar condiciones de carrera con loadHomeData.
+      await loadHomeData(forceRefresh: true);
+    } catch (e) {
+      debugPrint('Error en refresh: $e');
+    } finally {
+      // Asegurar siempre que el loading se apague
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   /// Cargar solo artistas destacados

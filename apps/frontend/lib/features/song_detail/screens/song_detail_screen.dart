@@ -1000,73 +1000,15 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       child: Scaffold(
         key: ValueKey('song_detail_scaffold_${song.id}'), // Key estable para evitar rebuilds
         extendBody: false, // No extender el cuerpo detrás del NavigationBar
-        // ✅ AppBar COMPACTO con efecto glassmorphism difuso
-        extendBodyBehindAppBar: false,
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(MediaQuery.of(context).padding.top + kToolbarHeight),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  NeumorphismTheme.surface,
-                  NeumorphismTheme.surface.withValues(alpha: 0.95),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                height: kToolbarHeight,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  children: [
-                    RepaintBoundary(
-                      child: _BackButton(
-                        onPressed: () => context.pop(),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          song.title ?? 'Sin título',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: NeumorphismTheme.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                    RepaintBoundary(
-                      child: _MenuButton(
-                        onPressed: () {
-                          // Mostrar menú de opciones (pendiente de implementar)
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+        // ✅ AppBar ELIMINADO para diseño inmersivo full screen
+        extendBodyBehindAppBar: true, 
+        // appBar: removed
         body: Container(
         decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
+          top: false, // ✅ Contenido detrás del status bar
           bottom: false, // No agregar padding inferior, MainNavigation ya lo maneja
           child: CustomScrollView(
             key: PageStorageKey<String>('song_detail_scroll_${widget.song.id}'),
@@ -1081,7 +1023,19 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 16),
+                      SizedBox(height: MediaQuery.of(context).padding.top + 32),
+                      // ✅ Botón de retroceso scrolleable (parte del contenido)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: RepaintBoundary(
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 24),
+                            child: _BackButton(
+                              onPressed: () => context.pop(),
+                            ),
+                          ),
+                        ),
+                      ),
                             
                             // Portada centrada - Diseño compacto
                             RepaintBoundary(
@@ -1353,71 +1307,15 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       child: Scaffold(
         key: ValueKey('song_detail_scaffold_${song.id}'),
         extendBody: false, // No extender el cuerpo detrás del NavigationBar
-        // ✅ AppBar PROFESIONAL con gradiente sutil y sombra elegante
-        extendBodyBehindAppBar: false,
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(MediaQuery.of(context).padding.top + kToolbarHeight),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  NeumorphismTheme.surface,
-                  NeumorphismTheme.surface.withValues(alpha: 0.95),
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                height: kToolbarHeight,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  children: [
-                    RepaintBoundary(
-                      child: _BackButton(
-                        onPressed: () => context.pop(),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          song.title ?? 'Sin título',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: NeumorphismTheme.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                    RepaintBoundary(
-                      child: _MenuButton(
-                        onPressed: () {},
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+        // ✅ AppBar ELIMINADO para diseño inmersivo full screen
+        extendBodyBehindAppBar: true, 
+        // appBar: removed
         body: Container(
         decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
+          top: false, // ✅ Contenido detrás del status bar
           bottom: false, // No agregar padding inferior, MainNavigation ya lo maneja
           child: CustomScrollView(
             key: PageStorageKey<String>('song_detail_scroll_${widget.song.id}'),
@@ -1431,7 +1329,19 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 16),
+                            SizedBox(height: MediaQuery.of(context).padding.top + 32),
+                            // ✅ Botón de retroceso scrolleable (parte del contenido)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: RepaintBoundary(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 24),
+                                  child: _BackButton(
+                                    onPressed: () => context.pop(),
+                                  ),
+                                ),
+                              ),
+                            ),
                       RepaintBoundary(
                         child: Center(
                           child: Container(
@@ -1637,7 +1547,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                   // Siempre mostrar avatar (con placeholder si no hay URL)
                                   Builder(
                                     builder: (context) {
-                                      debugPrint('🎨 [BUILD CACHE] Construyendo avatar - URL: $artistAvatarUrl, Artista: ${artist?.displayName}');
+
                                       return _buildArtistAvatar(true, artistAvatarUrl);
                                     },
                                   ),

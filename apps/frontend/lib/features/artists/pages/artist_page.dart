@@ -275,7 +275,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     if (_cachedScreenWidth == null) {
       final mediaQuery = MediaQuery.of(context);
       _cachedScreenWidth = mediaQuery.size.width;
-      _cachedCoverHeight = _cachedScreenWidth! / 2.4; // AspectRatio 2.4
+      _cachedCoverHeight = _cachedScreenWidth! / 1.2; // ✅ AspectRatio 1.2 (Aún más alto/inmersivo)
       _cachedDevicePixelRatio = mediaQuery.devicePixelRatio;
     }
   }
@@ -717,30 +717,35 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     return RepaintBoundary(
       child: Scaffold(
         key: const ValueKey('artist_page_scaffold'),
-        appBar: AppBar(
-          title: Text(_effectiveName ?? widget.artist.name),
-          elevation: 0,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-        ),
-        body: CustomScrollView(
-          key: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
-          controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
-          // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
-          // Mantiene solo ~5 items fuera de vista (400px / ~80px por item)
-          cacheExtent: 400, // Reducido de 1000 a 400 para mejor rendimiento
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ), // ✅ Scroll estilo iPhone (igual que Home)
-          // Optimizar scroll con mejor rendimiento
-          clipBehavior: Clip.none, // Evitar clipping innecesario
-          slivers: [
-          // Header fijo con portada y avatar - Optimizado con RepaintBoundary y memoización
-          SliverToBoxAdapter(
-            child: !_hasLoadedOnce 
-                ? _buildHeaderSkeleton(screenWidth, coverHeight)
-                : _buildHeader(screenWidth, coverHeight, devicePixelRatio),
+        // ✅ AppBar ELIMINADO para diseño inmersivo full screen
+        extendBodyBehindAppBar: true, 
+        // appBar: removed
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: NeumorphismTheme.backgroundGradient,
           ),
+          child: SafeArea(
+            top: false, // ✅ Contenido detrás del status bar
+            bottom: false,
+            child: CustomScrollView(
+              key: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
+              controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
+              // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
+              // Mantiene solo ~5 items fuera de vista (400px / ~80px por item)
+              cacheExtent: 400, // Reducido de 1000 a 400 para mejor rendimiento
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ), // ✅ Scroll estilo iPhone (igual que Home)
+              // Optimizar scroll con mejor rendimiento
+              clipBehavior: Clip.none, // Evitar clipping innecesario
+              slivers: [
+              // ✅ Espacio superior y botón de retroceso
+              // ✅ Header fijo con portada y avatar - Optimizado con RepaintBoundary y memoización
+              SliverToBoxAdapter(
+                child: !_hasLoadedOnce 
+                    ? _buildHeaderSkeleton(screenWidth, coverHeight)
+                    : _buildHeader(screenWidth, coverHeight, devicePixelRatio),
+              ),
           // Biografía - Optimizado con RepaintBoundary y memoización
           if (!_hasLoadedOnce)
             SliverToBoxAdapter(
@@ -791,7 +796,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverFixedExtentList(
-                itemExtent: 80.0, // ✅ Altura fija conocida (mejora rendimiento significativamente)
+                itemExtent: 80.0, // ✅ Revertido a 80.0 (más compacto)
                 delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   // Botón "Ver más" al final
@@ -804,7 +809,6 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                   
                   // Item de canción
                   final song = _displayedSongs[index];
-                  final artistName = _effectiveName ?? widget.artist.name;
                   
                   return RepaintBoundary(
                     key: ValueKey('song_${song.song.id}'),
@@ -812,7 +816,6 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                       key: ValueKey('song_row_${song.song.id}'),
                       index: index,
                       processedSong: song,
-                      artistName: artistName,
                       artistId: widget.artist.id, // ✅ Pasar artistId para verificar contexto
                       onPlaySong: (song, {normalizedCoverUrl}) => _onPlaySong(song, normalizedCoverUrl: normalizedCoverUrl),
                     ),
@@ -835,6 +838,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           ),
         ],
           ), // Cierra CustomScrollView
+          ), // Cierra SafeArea
+        ), // Cierra Container
       ),
     );
   }
@@ -846,7 +851,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         children: [
           // Portada
           AspectRatio(
-            aspectRatio: 2.4,
+            aspectRatio: 1.2,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -875,6 +880,14 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                         ],
                       ),
                     ),
+                  ),
+                ),
+                // ✅ Botón de retroceso sobre la portada (overlay)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 16,
+                  left: 16,
+                  child: _BackButton(
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
               ],
@@ -1387,7 +1400,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
       children: [
         // Portada skeleton - simple sin gradiente
         AspectRatio(
-          aspectRatio: 2.4,
+          aspectRatio: 1.2, // ✅ AspectRatio 1.2 (más alto)
           child: Shimmer.fromColors(
             baseColor: Colors.grey[200]!,
             highlightColor: Colors.grey[100]!,
@@ -1525,8 +1538,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
               baseColor: Colors.grey[200]!,
               highlightColor: Colors.grey[100]!,
               child: Container(
-                width: 64,
-                height: 64,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
                   borderRadius: const BorderRadius.all(Radius.circular(12)),
@@ -1687,7 +1700,6 @@ class _PlayAllButton extends ConsumerWidget {
 class _SongRowWidget extends ConsumerWidget {
   final int index;
   final _ProcessedSong processedSong;
-  final String artistName;
   final String artistId; // ✅ ArtistId para verificar contexto
   final Function(Song, {String? normalizedCoverUrl}) onPlaySong;
 
@@ -1695,7 +1707,6 @@ class _SongRowWidget extends ConsumerWidget {
     super.key,
     required this.index,
     required this.processedSong,
-    required this.artistName,
     required this.artistId,
     required this.onPlaySong,
   });
@@ -1705,11 +1716,6 @@ class _SongRowWidget extends ConsumerWidget {
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,
-    fontFamily: 'Inter',
-  );
-  static const TextStyle _songArtistStyle = TextStyle(
-    fontSize: 14,
-    color: NeumorphismTheme.textSecondary,
     fontFamily: 'Inter',
   );
   static const TextStyle _songNumberStyle = TextStyle(
@@ -1731,131 +1737,150 @@ class _SongRowWidget extends ConsumerWidget {
     
     // ✅ Verificar si la canción está disponible para reproducir
     final isAvailable = song.fileUrl != null && song.fileUrl!.isNotEmpty;
-    final playbackState = ref.watch(unifiedAudioProviderFixed);
-    final isCurrent = playbackState.currentSong?.id == song.id;
-    final isPlaying = playbackState.isPlaying;
-    final playingIcon = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 180),
-      child: (isCurrent && isPlaying)
-          ? MiniEqualizer(
-              key: ValueKey('eq_${song.id}'),
-              size: 22,
-              color: NeumorphismTheme.coffeeMedium,
-              active: true,
-            )
-          : Icon(Icons.play_circle_filled,
-              key: ValueKey('play_${song.id}'),
-              color: NeumorphismTheme.coffeeMedium,
-              size: 28),
+    
+    // ✅ GRANULAR REBUILDS: Solo reconstruir si cambia el estado de ESTA canción
+    final isCurrent = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentSong?.id == song.id)
+    );
+    final isPlaying = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isPlaying)
     );
 
-    return Opacity(
-      opacity: isAvailable ? 1.0 : 0.5, // Reducir opacidad si no está disponible
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8), // Reducido de 12 a 8
-        decoration: BoxDecoration(
-          color: NeumorphismTheme.surface,
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08), // Opacidad 0.08
-              blurRadius: 8, // Blur 8
-              offset: const Offset(0, 2), // Offset 0, 2
-            ),
-          ],
+    // Color base para el texto/contenido (con o sin opacidad según disponibilidad)
+    final contentOpacity = isAvailable ? 1.0 : 0.5;
+
+    final playingIcon = SizedBox(
+      width: 28, // ✅ Ancho fijo igual al ícono de play para evitar saltos
+      height: 28,
+      child: Center(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          child: (isCurrent && isPlaying)
+              ? MiniEqualizer(
+                  key: ValueKey('eq_${song.id}'),
+                  size: 22,
+                  color: NeumorphismTheme.coffeeMedium.withValues(alpha: contentOpacity),
+                  active: true,
+                )
+              : Icon(Icons.play_circle_filled,
+                  key: ValueKey('play_${song.id}'),
+                  color: NeumorphismTheme.coffeeMedium.withValues(alpha: contentOpacity),
+                  size: 28),
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: isAvailable
-                ? () {
-                    // ✅ Tocar la tarjeta = reproducir (igual que el botón play)
-                    onPlaySong(song);
-                  }
-                : null, // Deshabilitar tap si no está disponible
-            borderRadius: const BorderRadius.all(Radius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(10), // Reducido de 12 a 10
-              child: Row(
-                children: [
-                    // Número de posición
-                  Container(
-                    width: 32,
-                    alignment: Alignment.center,
+      ),
+    );
+
+    // ✅ OPTIMIZACIÓN: Opacity eliminado para mejor rendimiento GPU
+    // Usar colores con alpha directamente en los hijos cuando sea necesario
+    return Container(
+      height: 72, // ✅ User fix: Altura fija consistente (80 total - 8 margin)
+      margin: const EdgeInsets.only(bottom: 8), // Reducido de 12 a 8
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.surface.withValues(alpha: isAvailable ? 1.0 : 0.7),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08 * contentOpacity), // Opacidad reducida
+            blurRadius: 8, // Blur 8
+            offset: const Offset(0, 2), // Offset 0, 2
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isAvailable
+              ? () {
+                  // ✅ Tocar la tarjeta = reproducir (igual que el botón play)
+                  onPlaySong(song);
+                }
+              : null, // Deshabilitar tap si no está disponible
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0), // ✅ Padding simétrico simplificado
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center, // ✅ Alineación vertical centrada explícita
+              children: [
+                  // Número de posición
+                SizedBox(
+                  width: 32,
+                  child: Center(
                     child: Text(
                       '${index + 1}',
-                      style: isAvailable 
+                      style: (isAvailable 
                           ? _SongRowWidget._songNumberStyle 
-                          : _SongRowWidget._songNumberStyleDisabled,
+                          : _SongRowWidget._songNumberStyleDisabled).copyWith(
+                            color: (isAvailable 
+                              ? _SongRowWidget._songNumberStyle.color 
+                              : _SongRowWidget._songNumberStyleDisabled.color)
+                              ?.withValues(alpha: isAvailable ? 1.0 : 0.5)
+                          ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  // Portada optimizada
-                  ClipRRect(
+                ),
+                const SizedBox(width: 12),
+                // Portada optimizada
+                Opacity(
+                  opacity: contentOpacity, // Mantener opacidad solo en imagen si es necesario, o usar color filter
+                  child: ClipRRect(
                     borderRadius: const BorderRadius.all(Radius.circular(12)),
                     child: processedSong.normalizedCoverUrl != null
                         ? OptimizedImage(
                             imageUrl: processedSong.normalizedCoverUrl,
-                            width: 64,
-                            height: 64,
+                            width: 48,
+                            height: 48,
                             fit: BoxFit.cover,
                             isLargeCover: false,
                             // 🔥 OPTIMIZADO: Tamaños de cache reducidos para mejor rendimiento con muchas imágenes
-                            maxCacheWidth: 128, // 2x el tamaño de visualización (64 * 2)
-                            maxCacheHeight: 128,
+                            maxCacheWidth: 96, // 2x el tamaño de visualización (48 * 2)
+                            maxCacheHeight: 96,
                             useThumbnail: true, // Usar thumbnails cuando estén disponibles
                             skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
                           )
                         : Container(
-                            width: 64,
-                            height: 64,
+                            width: 48,
+                            height: 48,
                             color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
                             child: const Icon(Icons.music_note, color: Colors.white30),
                           ),
                   ),
-                  const SizedBox(width: 12),
-                  // ✅ TÍTULO Y ARTISTA - Prioridad máxima con más espacio
-                  // ✅ TÍTULO Y ARTISTA - Máxima prioridad con todo el espacio disponible
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          song.title ?? 'Sin título',
-                          style: isAvailable 
-                              ? _SongRowWidget._songTitleStyle 
-                              : _SongRowWidget._songTitleStyle.copyWith(
-                                  color: NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
-                                ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                ),
+                const SizedBox(width: 16), // ✅ Más espacio (12 -> 16)
+                // ✅ TÍTULO - Expanded para empujar el botón
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        song.title ?? 'Sin título',
+                        style: (isAvailable 
+                            ? _SongRowWidget._songTitleStyle 
+                            : _SongRowWidget._songTitleStyle.copyWith(
+                                color: NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
+                              )).copyWith(
+                                color: (isAvailable 
+                                  ? _SongRowWidget._songTitleStyle.color 
+                                  : NeumorphismTheme.textPrimary.withValues(alpha: 0.6))
+                                  ?.withValues(alpha: contentOpacity)
+                              ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (!isAvailable) ...[
                         const SizedBox(height: 4),
-                        Text(
-                          artistName,
-                          style: isAvailable 
-                              ? _SongRowWidget._songArtistStyle 
-                              : _SongRowWidget._songArtistStyle.copyWith(
-                                  color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                                ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Icon(
+                          Icons.error_outline,
+                          size: 14,
+                          color: Colors.orange.withValues(alpha: 0.7 * contentOpacity),
                         ),
-                        if (!isAvailable) ...[
-                          const SizedBox(height: 4),
-                          Icon(
-                            Icons.error_outline,
-                            size: 14,
-                            color: Colors.orange.withValues(alpha: 0.7),
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
                   ),
-                const Spacer(),
+                ),
+                // Spacer eliminado - Expanded hace el trabajo
                 playingIcon,
-                ],
-              ),
+              ],
             ),
           ),
         ),
@@ -1946,6 +1971,40 @@ class _MiniEqualizerState extends State<MiniEqualizer>
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _BackButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.background,
+        shape: BoxShape.circle,
+        boxShadow: NeumorphismTheme.floatingCardShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: const CircleBorder(),
+          child: const Padding(
+            padding: EdgeInsets.all(8), // ✅ Reducido de 12 a 8 para botón más pequeño
+            child: Icon(
+              Icons.arrow_back_rounded,
+              color: NeumorphismTheme.textPrimary,
+              size: 24,
+            ),
+          ),
+        ),
       ),
     );
   }

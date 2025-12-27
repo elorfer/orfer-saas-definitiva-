@@ -45,6 +45,12 @@ void main() {
   // ⚡ SUPER ROBUSTO: Mínimo trabajo antes de runApp
   WidgetsFlutterBinding.ensureInitialized();
   
+  // 🚀 OPTIMIZACIÓN DE MEMORIA: Limitar caché de imágenes
+  // Evita que la app consuma GBs de RAM en sesiones largas
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 50 * 1024 * 1024; // 50 MB
+  PaintingBinding.instance.imageCache.maximumSize = 50; // 50 Imágenes
+
+  
   // Inicialización diferida (no bloquea el primer frame)
   Future.microtask(() async {
     _setupErrorHandlers();

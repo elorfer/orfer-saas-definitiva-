@@ -124,42 +124,81 @@ class UltraLightProfileDrawer extends ConsumerWidget {
                           );
                         },
                       ),
-                      _DrawerOption(
-                        icon: Icons.speed_rounded,
-                        label: 'Pro Experience V2 (Beta)',
-                        onTap: () {
-                          context.pop();
-                          context.push('/home-v2');
-                        },
+                      
+                      const SizedBox(height: 12),
+                      
+                      // 🚀 NUEVO BOTÓN: Eres compositor?
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              context.pop(); // Cerrar drawer
+                              context.push('/composer-promo'); // Navegar a pantalla promo
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFF8B7A6A).withAlpha(76)), // 0.3 * 255
+                                borderRadius: BorderRadius.circular(12),
+                                color: const Color(0xFF8B7A6A).withAlpha(12), // 0.05 * 255
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.music_note_rounded, size: 20, color: Color(0xFF8B7A6A)),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    '¿Eres compositor?',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF3D2E20),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF8B7A6A)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
+
+                      const SizedBox(height: 24),
+                      const Divider(color: Color(0xFFEFE7DE)),
+                      const SizedBox(height: 16),
+
+                      // Cerrar sesión
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.logout_rounded, color: Color(0xFFD32F2F), size: 18),
+                            label: const Text('Cerrar Sesión', style: TextStyle(color: Color(0xFFD32F2F), fontWeight: FontWeight.w700)),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFFD32F2F), width: 1.5),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              backgroundColor: const Color(0xFFFFEBEE), // Fondo ligero para el botón de salida
+                            ),
+                            onPressed: () async {
+                              await ref.read(authStateProvider.notifier).logout();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                                await Future.delayed(const Duration(milliseconds: 250));
+                                if (context.mounted) {
+                                  GoRouter.of(context).go('/login');
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32), // Bottom padding
                     ],
-                  ),
-                ),
-                // Cerrar sesión
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.logout_rounded, color: Color(0xFFD32F2F), size: 18),
-                      label: const Text('Cerrar Sesión', style: TextStyle(color: Color(0xFFD32F2F), fontWeight: FontWeight.w700)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFD32F2F), width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        backgroundColor: const Color(0xFFFFEBEE), // Fondo ligero para el botón de salida
-                      ),
-                      onPressed: () async {
-                        await ref.read(authStateProvider.notifier).logout();
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                          await Future.delayed(const Duration(milliseconds: 250));
-                          if (context.mounted) {
-                            GoRouter.of(context).go('/login');
-                          }
-                        }
-                      },
-                    ),
                   ),
                 ),
               ],

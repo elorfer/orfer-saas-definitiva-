@@ -371,7 +371,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${favorites.length} ${favorites.length == 1 ? 'canción guardada' : 'canciones guardadas'}',
+                            // ✅ OPTIMIZACIÓN: Usar totalCount del estado (soporta paginación futura)
+                            '${ref.watch(favoritesProvider.select((s) => s.totalCount))} canciones guardadas',
                             style: AppTextStyles.bodyMedium,
                           ),
                         ],

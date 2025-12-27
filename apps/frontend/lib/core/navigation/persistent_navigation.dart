@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -67,7 +68,15 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
         children: [
           // 🔥 NAVIGATION SHELL: GoRouter maneja automáticamente el IndexedStack
           // Cada rama mantiene su propio Navigator y stack de navegación
-          widget.navigationShell,
+          // ✅ FIX LAYOUT SHIFT: Animar el padding inferior para evitar saltos bruscos
+          AnimatedPadding(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubic,
+            padding: EdgeInsets.only(
+              bottom: (isPlayingAd || currentSong != null) ? 72.0 : 0.0,
+            ),
+            child: widget.navigationShell,
+          ),
           
           // Navigation Bar
           Positioned(
@@ -79,47 +88,53 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             ),
           ),
           
-          // 📢 Mini Player de Anuncios (prioridad sobre el mini player normal)
-          if (isPlayingAd)
-            Positioned(
-              bottom: navBarHeight,
-              left: 0,
-              right: 0,
-              child: RepaintBoundary(
-                child: AdsMiniPlayer(
-                  // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
-                  onTap: () => PlayerNavigationService.openFullPlayer(
-                    context: context,
-                    ref: ref,
-                  ),
-                ),
-              ),
-            )
-          // Mini Player normal (solo cuando no hay anuncio)
-          else if (currentSong != null)
-            Positioned(
-              bottom: navBarHeight,
-              left: 0,
-              right: 0,
-              child: RepaintBoundary(
-                child: FinalMiniPlayer(
-                  onTap: () {
-                    try {
-                      final audioState = ref.read(unifiedAudioProviderFixed);
-                      if (audioState.currentSong != null && 
-                          !audioState.isPlayerExpanded) {
-                        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                        if (context.mounted) {
-                          context.push('/player');
-                        }
-                      }
-                    } catch (e) {
-                      AppLogger.error('[PersistentNavigation] Error: $e');
-                    }
-                  },
+          // 📢 Mini Player de Anuncios (Animación Slide-Up)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubic, // Curva "Apple-like" más natural
+            bottom: isPlayingAd ? navBarHeight : -(navBarHeight + 20),
+            left: 0,
+            right: 0,
+            child: RepaintBoundary(
+              child: AdsMiniPlayer(
+                // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
+                onTap: () => PlayerNavigationService.openFullPlayer( // Nota: AdsMiniPlayer debe soportar onTap externo
+                  context: context,
+                  ref: ref,
                 ),
               ),
             ),
+          ),
+
+          // 🎵 Mini Player de Música (Animación Slide-Up)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutCubic,
+            // Solo mostramos player de música si no hay anuncio sonando
+            bottom: (!isPlayingAd && currentSong != null) 
+                ? navBarHeight 
+                : -(navBarHeight + 100), // Ocultar completamente fuera de pantalla
+            left: 0,
+            right: 0,
+            child: RepaintBoundary(
+              child: FinalMiniPlayer(
+                onTap: () {
+                  try {
+                    final audioState = ref.read(unifiedAudioProviderFixed);
+                    if (audioState.currentSong != null && 
+                        !audioState.isPlayerExpanded) {
+                      ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+                      if (context.mounted) {
+                        context.push('/player');
+                      }
+                    }
+                  } catch (e) {
+                    AppLogger.error('[PersistentNavigation] Error: $e');
+                  }
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -237,13 +252,28 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
   }
 
   void _navigateToTab(int index) {
-    // 🔥 Usar goBranch para cambiar de pestaña
-    // Esto mantiene el stack de navegación de cada rama intacto
-    widget.navigationShell.goBranch(
-      index,
-      // Si queremos resetear el stack de la rama al cambiar, usar initialLocation
-      // initialLocation: index == 0 ? '/home' : index == 1 ? '/search' : index == 2 ? '/library' : '/premium',
-    );
+    // 🔥 UX PRO: Haptic feedback al cambiar de tab
+    // Da una sensación táctil de respuesta inmediata
+    HapticFeedback.lightImpact();
+
+    // Lógica de "Doble Toque":
+    // Si el usuario toca el tab en el que YA está...
+    if (widget.navigationShell.currentIndex == index) {
+      // ...reseteamos el stack de esa rama a su ruta inicial.
+      // Esto permite "volver al inicio" rápidamente si te perdiste navegando.
+      widget.navigationShell.goBranch(
+        index,
+        initialLocation: true, // 🚀 FORCE RESET
+      );
+    } else {
+      // Si es un tab diferente, cambiamos de rama normalmente.
+      // El estado del stack anterior se preserva en memoria.
+      widget.navigationShell.goBranch(
+        index,
+        // No forzamos initialLocation aquí para mantener la persistencia
+        // del historial cuando vuelvas a este tab más tarde.
+      );
+    }
   }
   
   // ⚡ OPTIMIZACIÓN: Cachear estilos de texto para evitar recrear GoogleFonts en cada build
