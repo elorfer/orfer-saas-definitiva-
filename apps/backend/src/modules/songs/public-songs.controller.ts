@@ -1,4 +1,6 @@
 import {
+  UseGuards,
+  Req,
   Controller,
   Get,
   Query,
@@ -8,6 +10,8 @@ import {
   DefaultValuePipe,
   Logger,
 } from '@nestjs/common';
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SongsService } from './songs.service';
 import { SongMapper } from './mappers/song.mapper';
@@ -19,18 +23,18 @@ import { PaginatedSongsResponseDto, HomeFeedResponseDto, SongResponseDto } from 
 @Controller('public/songs')
 export class PublicSongsController {
   private readonly logger = new Logger(PublicSongsController.name);
-  
+
   constructor(
     private readonly songsService: SongsService,
     private readonly recommendationService: RecommendationService,
-  ) {}
+  ) { }
 
   /**
    * Obtiene todas las canciones publicadas (optimizado para Flutter)
    * Endpoint principal para la app móvil
    */
   @Get()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener canciones publicadas (optimizado para Flutter)',
     description: 'Endpoint principal para la app móvil. Retorna canciones publicadas con filtros opcionales por featured, artista, género y búsqueda.'
   })
@@ -40,8 +44,8 @@ export class PublicSongsController {
   @ApiQuery({ name: 'artistId', required: false, type: String, description: 'Filtrar por artista' })
   @ApiQuery({ name: 'genreId', required: false, type: String, description: 'Filtrar por género' })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Búsqueda por título o artista' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Lista de canciones obtenida exitosamente',
     type: PaginatedSongsResponseDto,
   })
@@ -54,10 +58,10 @@ export class PublicSongsController {
     @Query('search') search?: string,
   ): Promise<PaginatedSongsResponseDto> {
     const featuredBool = featured !== undefined ? featured === 'true' : undefined;
-    
+
     // Log para debugging
     this.logger.log(`📥 Request recibido - artistId: ${artistId || 'ninguno'}, page: ${page}, limit: ${limit}`);
-    
+
     return this.songsService.getPublishedSongs(
       page,
       Math.min(limit, 100), // Máximo 100 elementos
@@ -72,14 +76,14 @@ export class PublicSongsController {
    * Obtiene canciones destacadas
    */
   @Get('featured')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener canciones destacadas',
     description: 'Retorna solo las canciones marcadas como destacadas (featured: true)'
   })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número de página (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Elementos por página (default: 20)' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Lista de canciones destacadas',
     type: PaginatedSongsResponseDto,
   })
@@ -94,14 +98,14 @@ export class PublicSongsController {
    * Obtiene el feed del home con canciones destacadas y nuevas
    */
   @Get('home-feed')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener feed del home',
     description: 'Retorna canciones destacadas primero, seguidas de canciones nuevas. Optimizado para la pantalla principal de la app.'
   })
   @ApiQuery({ name: 'featuredLimit', required: false, type: Number, description: 'Límite de canciones destacadas (default: 10)' })
   @ApiQuery({ name: 'newSongsLimit', required: false, type: Number, description: 'Límite de canciones nuevas (default: 20)' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Feed del home obtenido exitosamente',
     type: HomeFeedResponseDto,
   })
@@ -133,6 +137,7 @@ export class PublicSongsController {
    * IMPORTANTE: Debe estar ANTES de 'recommended/:songId' para que la ruta no sea interpretada como un ID
    */
   @Get('playlist/generate')
+  @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary: '🚀 Generar batch de recomendaciones (optimizado)',
     description: 'Genera múltiples recomendaciones en una sola llamada. El backend maneja internamente el batching y garantiza variedad. Reemplaza múltiples llamadas frontend con offset.',
@@ -146,31 +151,40 @@ export class PublicSongsController {
   @ApiResponse({ status: 200, description: 'Lista de canciones recomendadas generadas en batch' })
   @ApiResponse({ status: 400, description: 'Parámetros inválidos' })
   async generatePlaylistBatch(
+    @Req() req,
     @Query('seed') seed: string,
     @Query('count', new DefaultValuePipe(4), ParseIntPipe) count: number = 4,
-    @Query('userId') userId?: string,
+    @Query('userId') queryUserId?: string,
     @Query('genres') genres?: string | string[],
     @Query('genreId') genreId?: string, // 🎛️ Género específico del Vibe Selector
     @Query('excludeIds') excludeIds?: string,
   ) {
     const startTime = Date.now();
+
+    // 🔐 AUTH: Extraer usuario autenticado (si existe)
+    // Prioridad: 1. Token JWT (req.user.id) -> 2. Query Param (userId)
+    const authenticatedUserId = req.user?.id;
+    const userId = authenticatedUserId || queryUserId;
+
     this.logger.log(`🚀 [BATCH API] Generando ${count} recomendaciones para semilla: ${seed}${genreId ? `, género: ${genreId}` : ''}`);
-    
+    this.logger.log(`👤 [BATCH API] Identidad: ${authenticatedUserId ? `Token (${authenticatedUserId})` : (queryUserId ? `Query (${queryUserId})` : 'Anónimo')}`);
+
+
     // Validar count
     const validCount = Math.min(Math.max(1, count), 20); // Entre 1 y 20
-    
+
     // Convertir genres a array si viene como string
-    const genresArray = genres 
+    const genresArray = genres
       ? (Array.isArray(genres) ? genres : [genres])
       : undefined;
-    
+
     // Parsear excludeIds
-    const excludeIdsArray = excludeIds 
+    const excludeIdsArray = excludeIds
       ? excludeIds.split(',').map(id => id.trim()).filter(id => id.length > 0)
       : [];
-    
+
     this.logger.log(`🚫 [BATCH API] ExcludeIds recibidos: ${excludeIdsArray.length} IDs - ${excludeIdsArray.slice(0, 5).map(id => id.substring(0, 8)).join(', ')}${excludeIdsArray.length > 5 ? '...' : ''}`);
-    
+
     // 🎛️ VIBE SELECTOR: Llamar al servicio con genreId si está presente
     const batchResult = await this.recommendationService.generatePlaylistBatch(
       seed,
@@ -180,23 +194,23 @@ export class PublicSongsController {
       excludeIdsArray,
       genreId, // 🎛️ Pasar genreId al servicio
     );
-    
+
     // ✅ NOTA: El Service ya valida correctamente usando effectiveExcludeIds (reducidos por exclusión adaptativa)
     // No necesitamos validar nuevamente aquí con excludeIds originales, ya que sería incorrecto para catálogos pequeños
     // El Service garantiza que las recomendaciones no estén en los effectiveExcludeIds que realmente se usaron
-    
+
     // Convertir a DTOs
     const songsDto = batchResult.songs.map(song => SongMapper.toDto(song));
-    
+
     const processingTime = Date.now() - startTime;
-    
+
     // 🎛️ VIBE SELECTOR: Loguear si hubo cambio a MIX
     if (batchResult.vibeChangedToMix) {
       this.logger.warn(`🎛️ [BATCH API] ⚠️ VIBE CAMBIÓ A MIX: Se agotaron las canciones de "${batchResult.originalGenre}"`);
     }
-    
+
     this.logger.log(`✅ [BATCH API] Completado en ${processingTime}ms: ${songsDto.length}/${validCount} recomendaciones válidas`);
-    
+
     return {
       songs: songsDto,
       count: songsDto.length,
@@ -216,7 +230,7 @@ export class PublicSongsController {
    * IMPORTANTE: Debe estar ANTES de @Get(':id') para que la ruta 'recommended' no sea interpretada como un ID
    */
   @Get('recommended/:songId')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '🎵 Recomendaciones estilo Spotify (público)',
     description: 'Sistema avanzado de recomendaciones que combina Content-Based Filtering, Collaborative Filtering, análisis de popularidad y scoring inteligente. Similar al algoritmo de Spotify.',
   })
@@ -236,41 +250,41 @@ export class PublicSongsController {
     this.logger.log(`🎵 [SPOTIFY-STYLE] Recomendación solicitada para: ${songId}`);
     this.logger.log(`👤 [SPOTIFY-STYLE] Usuario: ${userId || 'anónimo'}`);
     this.logger.log(`🏷️ [SPOTIFY-STYLE] Géneros: ${genres ? (Array.isArray(genres) ? genres.join(', ') : genres) : 'auto-detectar'}`);
-    
+
     // Convertir genres a array si viene como string
-    const genresArray = genres 
+    const genresArray = genres
       ? (Array.isArray(genres) ? genres : [genres])
       : undefined;
-    
+
     // Usar el nuevo servicio de recomendaciones estilo Spotify
     // 🚨 OFFSET: Pasar el offset al servicio para variar el cache (no afecta la lógica)
     const recommended = await this.recommendationService.getRecommendedSong(
-      songId, 
-      userId, 
+      songId,
+      userId,
       genresArray,
       offset // 🚨 Pasar offset para romper cache en llamadas paralelas
     );
-    
+
     if (!recommended) {
       this.logger.log(`❌ [SPOTIFY-STYLE] No hay recomendaciones disponibles`);
-      return { 
-        message: 'No hay canciones recomendadas disponibles', 
+      return {
+        message: 'No hay canciones recomendadas disponibles',
         song: null,
         algorithm: 'spotify-style-v1',
         processingTime: Date.now() - startTime
       };
     }
-    
+
     // Usar el mapper para convertir a DTO
     const songDto = SongMapper.toDto(recommended);
-    
+
     const processingTime = Date.now() - startTime;
     this.logger.log(`✅ [SPOTIFY-STYLE] Recomendación completada en ${processingTime}ms`);
     this.logger.log(`🎵 [SPOTIFY-STYLE] Recomendada: ${recommended.title}`);
     this.logger.log(`👤 [SPOTIFY-STYLE] Artista: ${recommended.artist?.stageName || 'Desconocido'}`);
     this.logger.log(`🏷️ [SPOTIFY-STYLE] Géneros: ${recommended.genres?.join(', ') || 'ninguno'}`);
-    
-    return { 
+
+    return {
       song: songDto,
       algorithm: 'spotify-style-v1',
       processingTime,
@@ -289,8 +303,8 @@ export class PublicSongsController {
   @Get(':id')
   @ApiOperation({ summary: 'Obtener canción por ID (optimizado para Flutter)' })
   @ApiParam({ name: 'id', description: 'ID único de la canción' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Canción obtenida exitosamente',
     type: SongResponseDto,
   })

@@ -5,6 +5,8 @@ import { Song } from '../../common/entities/song.entity';
 import { PlayHistory } from '../../common/entities/play-history.entity';
 import { Genre } from '../../common/entities/genre.entity';
 import { SongStatus } from '../../common/entities/song.entity';
+import { SongLike } from '../../common/entities/song-like.entity';
+import { ArtistFollower } from '../../common/entities/artist-follower.entity';
 import { Not } from 'typeorm';
 
 /**
@@ -51,6 +53,10 @@ export class RecommendationService {
     private readonly playHistoryRepository: Repository<PlayHistory>,
     @InjectRepository(Genre)
     private readonly genreRepository: Repository<Genre>,
+    @InjectRepository(SongLike)
+    private readonly songLikeRepository: Repository<SongLike>,
+    @InjectRepository(ArtistFollower)
+    private readonly artistFollowerRepository: Repository<ArtistFollower>,
   ) {
     // Limpiar historial expirado cada 10 minutos
     setInterval(() => {
@@ -1423,44 +1429,97 @@ export class RecommendationService {
    */
   private async calculateUserAffinityScore(userId: string, candidate: Song): Promise<number> {
     try {
-      // Verificar si el usuario ya escuchó canciones del mismo artista
-      const artistPlays = await this.playHistoryRepository
-        .createQueryBuilder('history')
-        .leftJoin('history.song', 'song')
-        .where('history.userId = :userId', { userId })
-        .andWhere('song.artistId = :artistId', { artistId: candidate.artistId })
-        .getCount();
-
-      // Verificar si el usuario escuchó canciones del mismo género
-      let genrePlays = 0;
-      if (candidate.genres && candidate.genres.length > 0) {
-        // Buscar canciones con géneros similares en el historial del usuario
-        const genreQuery = this.playHistoryRepository
-          .createQueryBuilder('history')
+      // 🚀 PARALELIZACIÓN DE CONSULTAS: Ejecutar todas las comprobaciones en paralelo
+      const [
+        artistPlays,
+        isFavorite,
+        isFollowingArtist,
+        genrePlays,
+        genreFavorites,
+        artistFavorites
+      ] = await Promise.all([
+        // 1. Historial: Canciones del mismo artista
+        this.playHistoryRepository.createQueryBuilder('history')
           .leftJoin('history.song', 'song')
-          .where('history.userId = :userId', { userId });
+          .where('history.userId = :userId', { userId })
+          .andWhere('song.artistId = :artistId', { artistId: candidate.artistId })
+          .getCount(),
 
-        const genreConditions = candidate.genres.map((_, index) =>
-          `LOWER(song.genres) LIKE :genre${index}`
-        ).join(' OR ');
+        // 2. Favoritos: ¿El usuario ya le dio like a esta canción?
+        this.songLikeRepository.count({
+          where: { userId, songId: candidate.id }
+        }).then(count => count > 0),
 
-        genreQuery.andWhere(`(${genreConditions})`);
+        // 3. Follows: ¿El usuario sigue al artista?
+        this.artistFollowerRepository.count({
+          where: { userId, artistId: candidate.artistId }
+        }).then(count => count > 0),
 
-        // Aplicar parámetros de géneros
-        candidate.genres.forEach((genre, index) => {
-          genreQuery.setParameter(`genre${index}`, `%${genre.toLowerCase()}%`);
-        });
+        // 4. Historial: Canciones del mismo género
+        (async () => {
+          if (!candidate.genres || candidate.genres.length === 0) return 0;
+          const genreQuery = this.playHistoryRepository.createQueryBuilder('history')
+            .leftJoin('history.song', 'song')
+            .where('history.userId = :userId', { userId });
 
-        genrePlays = await genreQuery.getCount();
-      }
+          const genreConditions = candidate.genres.map((_, index) =>
+            `LOWER(song.genres) LIKE :genre${index}`
+          ).join(' OR ');
+          genreQuery.andWhere(`(${genreConditions})`);
+          candidate.genres.forEach((genre, index) => {
+            genreQuery.setParameter(`genre${index}`, `%${genre.toLowerCase()}%`);
+          });
+          return genreQuery.getCount();
+        })(),
 
-      // Combinar factores con normalización mejorada
-      const artistAffinity = Math.min(1, artistPlays / 5); // Normalizar: 5+ reproducciones = score máximo
-      const genreAffinity = Math.min(1, genrePlays / 20); // Normalizar: 20+ reproducciones = score máximo
+        // 5. Afinidad de Género (Favoritos en este género)
+        (async () => {
+          if (!candidate.genres || candidate.genres.length === 0) return 0;
+          const q = this.songLikeRepository.createQueryBuilder('like')
+            .leftJoin('like.song', 'song')
+            .where('like.userId = :userId', { userId });
 
-      const finalScore = (artistAffinity * 0.6 + genreAffinity * 0.4);
+          const gConditions = candidate.genres.map((_, index) =>
+            `LOWER(song.genres) LIKE :favGenre${index}`
+          ).join(' OR ');
+          q.andWhere(`(${gConditions})`);
+          candidate.genres.forEach((genre, index) => {
+            q.setParameter(`favGenre${index}`, `%${genre.toLowerCase()}%`);
+          });
+          return q.getCount();
+        })(),
 
-      this.logger.log(`👤 Afinidad usuario: artista=${artistPlays} (${artistAffinity.toFixed(2)}), género=${genrePlays} (${genreAffinity.toFixed(2)}), final=${finalScore.toFixed(2)}`);
+        // 6. Afinidad de Artista (Favoritos de este artista)
+        this.songLikeRepository.createQueryBuilder('like')
+          .leftJoin('like.song', 'song')
+          .where('like.userId = :userId', { userId })
+          .andWhere('song.artistId = :artistId', { artistId: candidate.artistId })
+          .getCount()
+      ]);
+
+      // Normalización de factores
+      const artistPlayScore = Math.min(1, artistPlays / 5); // 5+ reproducciones = max
+      const genrePlayScore = Math.min(1, genrePlays / 20); // 20+ reproducciones = max
+
+      // Nuevos factores de "Operation Memory"
+      const genreAffinityScore = Math.min(1, genreFavorites / 10); // 10 likes en el género = max
+      const artistAffinityScore = Math.min(1, artistFavorites / 5); // 5 likes del artista = max
+
+      // Combinar historial con afinidad explícita (likes)
+      const combinedArtistScore = (artistPlayScore * 0.4) + (artistAffinityScore * 0.6);
+      const combinedGenreScore = (genrePlayScore * 0.4) + (genreAffinityScore * 0.6);
+
+      // Bonus directos
+      const favoriteBonus = isFavorite ? 0.5 : 0; // +0.5 si es favorita (muy fuerte)
+      const followBonus = isFollowingArtist ? 0.3 : 0; // +0.3 si sigue al artista
+
+      // Score final: Base ponderada + Bonus
+      // Base: 40% Género, 60% Artista (el artista pesa más en afinidad)
+      const baseScore = (combinedGenreScore * 0.4) + (combinedArtistScore * 0.6);
+
+      const finalScore = Math.min(1, baseScore + favoriteBonus + followBonus);
+
+      this.logger.log(`👤 Afinidad [${userId.substring(0, 8)}]: Base=${baseScore.toFixed(2)} (Art:${combinedArtistScore.toFixed(2)}, Gen:${combinedGenreScore.toFixed(2)}) + Bonus(Fav:${isFavorite}, Follow:${isFollowingArtist}) -> Final: ${finalScore.toFixed(2)}`);
 
       return finalScore;
     } catch (error) {

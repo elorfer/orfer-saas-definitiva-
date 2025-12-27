@@ -33,12 +33,13 @@ export default function AdsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showFrequencySettings, setShowFrequencySettings] = useState(false);
   const [newFrequency, setNewFrequency] = useState<number | null>(null);
+  const [selectedStatsAd, setSelectedStatsAd] = useState<AudioAd | null>(null);
 
   const { data, isLoading, refetch } = useAds(page, PAGE_SIZE, statusFilter || undefined);
   const deleteAd = useDeleteAd();
   const activateAd = useActivateAd();
   const pauseAd = usePauseAd();
-  
+
   // Hooks para frecuencia de anuncios
   const { data: frequencyData, isLoading: frequencyLoading } = useAdFrequency();
   const updateFrequency = useUpdateAdFrequency();
@@ -143,7 +144,7 @@ export default function AdsPage() {
               ✕
             </button>
           </div>
-          
+
           <div className="mt-6 flex items-center gap-6">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -174,7 +175,7 @@ export default function AdsPage() {
                 Valor actual: <span className="font-semibold text-amber-600">{currentFrequency}</span> canciones entre cada anuncio
               </p>
             </div>
-            
+
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleFrequencyUpdate}
@@ -201,10 +202,10 @@ export default function AdsPage() {
               </button>
             </div>
           </div>
-          
+
           <div className="mt-4 p-3 bg-white/60 rounded-lg border border-amber-100">
             <p className="text-xs text-gray-600">
-              💡 <strong>Tip:</strong> Un valor más alto (ej: 5-10) mejora la experiencia del usuario pero reduce los ingresos por publicidad. 
+              💡 <strong>Tip:</strong> Un valor más alto (ej: 5-10) mejora la experiencia del usuario pero reduce los ingresos por publicidad.
               Un valor más bajo (ej: 2-3) aumenta los ingresos pero puede afectar la retención de usuarios.
             </p>
           </div>
@@ -314,9 +315,9 @@ export default function AdsPage() {
                           <div>
                             <div className="text-sm font-medium text-gray-900">{ad.title}</div>
                             <div className="text-xs text-gray-500">
-                              {ad.targeting === 'all' ? 'Todos' : 
-                               ad.targeting === 'genre' ? 'Por género' :
-                               ad.targeting === 'artist' ? 'Por artista' : 'Por playlist'}
+                              {ad.targeting === 'all' ? 'Todos' :
+                                ad.targeting === 'genre' ? 'Por género' :
+                                  ad.targeting === 'artist' ? 'Por artista' : 'Por playlist'}
                             </div>
                           </div>
                         </div>
@@ -341,8 +342,8 @@ export default function AdsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => router.push(`/dashboard/ads/${ad.id}/stats`)}
-                            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                            onClick={() => setSelectedStatsAd(ad)}
+                            className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
                             title="Ver estadísticas"
                           >
                             <ChartBarIcon className="w-5 h-5" />
@@ -417,6 +418,123 @@ export default function AdsPage() {
           )}
         </>
       )}
+      )}
+
+      {/* Stats Modal */}
+      {selectedStatsAd && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden transform transition-all scale-100">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <ChartBarIcon className="w-6 h-6" />
+                    Estadísticas del Anuncio
+                  </h3>
+                  <p className="text-blue-100 mt-1 text-sm">{selectedStatsAd.title}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedStatsAd(null)}
+                  className="bg-white/20 hover:bg-white/30 rounded-full p-1 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Key Metrics Grid */}
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                <StatCard
+                  label="Reproducciones"
+                  value={selectedStatsAd.totalPlays.toString()}
+                  color="bg-green-50 text-green-700"
+                  icon={<PlayIcon className="w-5 h-5" />}
+                />
+                <StatCard
+                  label="Clicks"
+                  value={selectedStatsAd.totalClicks.toString()}
+                  color="bg-orange-50 text-orange-700"
+                  icon={<div className="w-5 h-5 font-bold text-center cursor-default">🖱️</div>}
+                />
+                <StatCard
+                  label="CTR"
+                  value={selectedStatsAd.totalPlays > 0
+                    ? `${((selectedStatsAd.totalClicks / selectedStatsAd.totalPlays) * 100).toFixed(2)}%`
+                    : '0.00%'}
+                  color="bg-blue-50 text-blue-700"
+                  icon={<ChartBarIcon className="w-5 h-5" />}
+                />
+              </div>
+
+              {/* Details List */}
+              <div className="space-y-4 bg-gray-50 rounded-xl p-4">
+                <DetailRow
+                  icon={<div className="w-5 h-5">👤</div>}
+                  label="Anunciante"
+                  value={selectedStatsAd.advertiserName}
+                />
+                <DetailRow
+                  icon={<div className="w-5 h-5">⏱️</div>}
+                  label="Duración"
+                  value={`${selectedStatsAd.durationSeconds} segundos`}
+                />
+                <DetailRow
+                  icon={<div className="w-5 h-5">⏭️</div>}
+                  label="Skippable"
+                  value={selectedStatsAd.isSkippable ? `Sí (tras ${selectedStatsAd.skipAfterSeconds}s)` : 'No'}
+                />
+                {selectedStatsAd.clickThroughUrl && (
+                  <div className="pt-2 border-t border-gray-200 mt-2">
+                    <p className="text-xs text-gray-500 mb-1">URL de destino</p>
+                    <a
+                      href={selectedStatsAd.clickThroughUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 text-sm truncate block"
+                    >
+                      {selectedStatsAd.clickThroughUrl}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-4 flex justify-end">
+              <button
+                onClick={() => setSelectedStatsAd(null)}
+                className="px-5 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors shadow-sm"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, color, icon }: { label: string, value: string, color: string, icon: React.ReactNode }) {
+  return (
+    <div className={`p-4 rounded-xl ${color} flex flex-col items-center justify-center text-center shadow-sm border border-transparent hover:border-current transition-colors`}>
+      <div className="mb-2 opacity-80">{icon}</div>
+      <div className="text-xl font-bold mb-0.5">{value}</div>
+      <div className="text-xs font-medium uppercase tracking-wide opacity-70">{label}</div>
+    </div>
+  );
+}
+
+function DetailRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <span className="text-gray-400">{icon}</span>
+        <span className="text-gray-600 font-medium text-sm">{label}</span>
+      </div>
+      <span className="text-gray-900 font-semibold text-sm">{value}</span>
     </div>
   );
 }

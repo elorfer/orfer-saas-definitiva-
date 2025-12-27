@@ -11,6 +11,7 @@ import 'core/widgets/optimized_scroll_behavior.dart';
 import 'core/providers/page_storage_provider.dart';
 import 'core/widgets/premium_status_listener.dart';
 import 'core/services/http_cache_service.dart';
+import 'core/services/playback_reporter_service.dart';
 
 // #region Error Handling
 
@@ -101,6 +102,8 @@ class _VintageMusicAppState extends ConsumerState<VintageMusicApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(goRouterProvider);
+    // 🕵️ Servicio de reportes de reproducción (background)
+    ref.watch(playbackReporterProvider);
     final pageStorageBucket = ref.watch(sharedPageStorageBucketProvider);
     final neumorphismTheme = NeumorphismTheme();
     

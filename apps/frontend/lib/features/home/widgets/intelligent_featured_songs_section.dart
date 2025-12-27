@@ -45,9 +45,12 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
     // ✅ OPTIMIZACIÓN: Carga diferida - solo cargar cuando el widget esté montado y visible
     if (!_hasInitialized) {
       _hasInitialized = true;
-      final featuredSongs = ref.read(intelligentFeaturedSongsProvider);
+      // 🚀 FIX: Eliminada la lógica de carga automática aquí para evitar bucles infinitos.
+      // El HomeScreen ya se encarga de llamar a refreshIntelligentRecommendations()
+      // Este widget debe ser puramente visual (Consumer).
       
-      // ✅ OPTIMIZACIÓN: Si ya hay datos (caché), no esperar nada
+      /* LÓGICA ANTERIOR (CAUSANTE DEL LOOP SI SE RECONSTRUYE)
+      final featuredSongs = ref.read(intelligentFeaturedSongsProvider);
       if (featuredSongs.isNotEmpty) return;
       
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -58,6 +61,7 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
           }
         }
       });
+      */
     }
   }
 

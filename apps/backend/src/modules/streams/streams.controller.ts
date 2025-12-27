@@ -14,11 +14,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '../../common/entities/user.entity';
 
 @ApiTags('streams')
+@ApiTags('streams')
 @Controller('streams')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class StreamsController {
-  constructor(private readonly streamsService: StreamsService) {}
+  constructor(private readonly streamsService: StreamsService) { }
 
   @Post('track-progress')
   @HttpCode(HttpStatus.OK)
@@ -58,6 +59,16 @@ export class StreamsController {
     @Body() body: { songId: string },
   ) {
     return this.streamsService.registerStream(user.id, body.songId);
+  }
+  @Post('skip')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Registrar salto de canción (Skip)' })
+  @ApiResponse({ status: 200, description: 'Skip registrado' })
+  async registerSkip(
+    @CurrentUser() user: User,
+    @Body() body: { songId: string, secondsPlayed: number },
+  ) {
+    return this.streamsService.trackSkip(user.id, body.songId, body.secondsPlayed);
   }
 }
 

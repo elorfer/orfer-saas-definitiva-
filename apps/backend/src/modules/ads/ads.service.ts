@@ -21,7 +21,7 @@ export class AdsService {
     private readonly audioAdRepository: Repository<AudioAd>,
     @InjectRepository(AdPlayLog)
     private readonly adPlayLogRepository: Repository<AdPlayLog>,
-  ) {}
+  ) { }
 
   /**
    * Crear un nuevo anuncio
@@ -151,11 +151,9 @@ export class AdsService {
   ): Promise<AudioAd | null> {
     const now = new Date();
 
-    this.logger.log(`[getNextAd] 📢 Iniciando selección de anuncio para usuario: ${userId || 'anónimo'}`);
-    this.logger.log(`[getNextAd] 📢 Contexto: genre=${context?.genre}, artist=${context?.artist}, playlistId=${context?.playlistId}`);
+    this.logger.log(`[getNextAd] 🌍 GLOBAL SHUFFLE MODE. Usuario: ${userId || 'anónimo'}. Ignorando targeting.`);
 
-    // 1. Obtener todos los anuncios activos que están dentro de sus fechas de campaña
-    // IMPORTANTE: Solo incluir anuncios que tengan audioUrl (archivo subido)
+    // 1. Obtener todos los anuncios activos (sin targeting)
     const activeAds = await this.audioAdRepository
       .createQueryBuilder('ad')
       .where('ad.status = :status', { status: AdStatus.ACTIVE })
@@ -165,147 +163,60 @@ export class AdsService {
       .andWhere("ad.audioUrl != ''")
       .getMany();
 
-    this.logger.log(`[getNextAd] 📢 Anuncios activos encontrados: ${activeAds.length}`);
-    
-    // ✅ DEBUG: Log detallado de cada anuncio activo
-    if (activeAds.length > 0) {
-      activeAds.forEach((ad, index) => {
-        this.logger.log(`[getNextAd] 📢 Anuncio ${index + 1}: ${ad.title} (ID: ${ad.id}, Status: ${ad.status}, Targeting: ${ad.targeting}, AudioUrl: ${ad.audioUrl ? 'SÍ' : 'NO'})`);
-      });
-    }
+    this.logger.debug(`[getNextAd] 🔍 Query Result - Active Ads Found: ${activeAds.length}`);
+    activeAds.forEach(ad => this.logger.debug(`   - Candidate: ${ad.title} (${ad.id})`));
 
     if (activeAds.length === 0) {
-      this.logger.warn('[getNextAd] ❌ No hay anuncios activos disponibles (sin audioUrl o fuera de fechas)');
+      this.logger.warn('[getNextAd] ❌ No hay anuncios activos disponibles (Query returned 0).');
       return null;
     }
 
-    // 2. Filtrar por targeting
-    // ✅ FIX: Separar anuncios específicos de anuncios ALL para mejor control
-    const specificTargetingAds = activeAds.filter((ad) => {
-      // Incluir solo si NO es ALL y coincide con el targeting
-      return ad.targeting !== AdTargeting.ALL && ad.matchesTargeting(context);
-    });
-    
-    const allTargetingAds = activeAds.filter((ad) => ad.targeting === AdTargeting.ALL);
+    this.logger.log(`[getNextAd] 📢 Pool de anuncios activos: ${activeAds.length}`);
 
-    this.logger.log(`[getNextAd] 📢 Anuncios con targeting específico: ${specificTargetingAds.length}`);
-    this.logger.log(`[getNextAd] 📢 Anuncios con targeting ALL: ${allTargetingAds.length}`);
+    // 2. Verificar frecuencia por hora (Protección de usuario)
+    let eligibleAds = activeAds;
 
-    // ✅ FIX: Priorizar anuncios específicos, pero incluir ALL si no hay específicos
-    let matchingAds: AudioAd[] = [];
-    
-    if (specificTargetingAds.length > 0) {
-      matchingAds = specificTargetingAds;
-      this.logger.log(`[getNextAd] 📢 Usando ${matchingAds.length} anuncios con targeting específico`);
-    } else if (allTargetingAds.length > 0) {
-      matchingAds = allTargetingAds;
-      this.logger.log(`[getNextAd] 📢 No hay anuncios específicos, usando ${matchingAds.length} anuncios con targeting ALL`);
-    } else {
-      this.logger.warn(`[getNextAd] ❌ No hay anuncios disponibles (ni específicos ni ALL)`);
-      return null;
-    }
-
-    // 3. Verificar frecuencia por hora (si hay userId)
-    let eligibleAds = matchingAds;
-    let adsExcludedByFrequency: AudioAd[] = [];
-    
     if (userId) {
+      this.logger.debug(`[getNextAd] 👤 Checking frequency for user: ${userId}`);
+      // ... Lógica de frecuencia simplificada ...
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-      // Obtener reproducciones del usuario en la última hora
       const recentPlays = await this.adPlayLogRepository.find({
-        where: {
-          userId,
-          playedAt: MoreThanOrEqual(oneHourAgo),
-        },
+        where: { userId, playedAt: MoreThanOrEqual(oneHourAgo) },
       });
 
-      this.logger.log(`[getNextAd] 📢 Reproducciones del usuario en última hora: ${recentPlays.length}`);
+      this.logger.debug(`[getNextAd] 🕒 Recent plays (last 1h): ${recentPlays.length}`);
 
-      // Contar reproducciones por anuncio en la última hora
       const playCountsByAd: Record<string, number> = {};
-      recentPlays.forEach((play) => {
-        playCountsByAd[play.adId] = (playCountsByAd[play.adId] || 0) + 1;
+      recentPlays.forEach(play => {
+        const adId = play.ad?.id;
+        if (adId) playCountsByAd[adId] = (playCountsByAd[adId] || 0) + 1;
       });
 
-      // Filtrar anuncios que no han excedido su frecuencia por hora
-      const beforeFreqFilter = eligibleAds.length;
-      adsExcludedByFrequency = [];
-      eligibleAds = matchingAds.filter((ad) => {
-        const playCount = playCountsByAd[ad.id] || 0;
-        const isEligible = playCount < ad.frequencyPerHour;
-        if (!isEligible) {
-          this.logger.log(`[getNextAd] 📢 Anuncio ${ad.id} excluido: frecuencia por hora excedida (${playCount}/${ad.frequencyPerHour})`);
-          adsExcludedByFrequency.push(ad);
-        }
-        return isEligible;
+      eligibleAds = activeAds.filter(ad => {
+        const plays = playCountsByAd[ad.id] || 0;
+        const passed = plays < ad.frequencyPerHour;
+        if (!passed) this.logger.debug(`   - Filtered out ${ad.title}: plays(${plays}) >= limit(${ad.frequencyPerHour})`);
+        return passed;
       });
-      
-      this.logger.log(`[getNextAd] 📢 Después de filtrar frecuencia por hora: ${eligibleAds.length} de ${beforeFreqFilter}`);
-      
-      // ✅ FIX: Si no hay anuncios elegibles pero hay anuncios excluidos por frecuencia, usarlos como fallback
-      if (eligibleAds.length === 0 && adsExcludedByFrequency.length > 0) {
-        this.logger.log(`[getNextAd] 📢 No hay anuncios elegibles, usando ${adsExcludedByFrequency.length} anuncios excluidos por frecuencia como fallback (permitiendo repetición)`);
-        eligibleAds = adsExcludedByFrequency;
+
+      this.logger.debug(`[getNextAd] 📉 Eligible after frequency check: ${eligibleAds.length}`);
+
+      if (eligibleAds.length === 0) {
+        this.logger.warn('[getNextAd] ⚠️ Todos los anuncios excedieron frecuencia horaria. Usando fallback con repetición.');
+        eligibleAds = activeAds; // Fallback extremo: permitir repetir si no hay nada más
       }
     }
 
-    // 4. Verificar límite diario (si hay userId)
-    let adsExcludedByDailyLimit: AudioAd[] = [];
-    if (userId && eligibleAds.length > 0) {
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
-
-      const todayPlays = await this.adPlayLogRepository.find({
-        where: {
-          userId,
-          playedAt: MoreThanOrEqual(todayStart),
-        },
-      });
-
-      this.logger.log(`[getNextAd] 📢 Reproducciones del usuario hoy: ${todayPlays.length}`);
-
-      const playCountsByAdToday: Record<string, number> = {};
-      todayPlays.forEach((play) => {
-        playCountsByAdToday[play.adId] = (playCountsByAdToday[play.adId] || 0) + 1;
-      });
-
-      const beforeDailyFilter = eligibleAds.length;
-      adsExcludedByDailyLimit = [];
-      eligibleAds = eligibleAds.filter((ad) => {
-        if (!ad.maxPlaysPerDay) return true; // Sin límite diario
-        const playCount = playCountsByAdToday[ad.id] || 0;
-        const isEligible = playCount < ad.maxPlaysPerDay;
-        if (!isEligible) {
-          this.logger.log(`[getNextAd] 📢 Anuncio ${ad.id} excluido: límite diario excedido (${playCount}/${ad.maxPlaysPerDay})`);
-          adsExcludedByDailyLimit.push(ad);
-        }
-        return isEligible;
-      });
-      
-      this.logger.log(`[getNextAd] 📢 Después de filtrar límite diario: ${eligibleAds.length} de ${beforeDailyFilter}`);
-      
-      // ✅ FIX: Si no hay anuncios elegibles pero hay anuncios excluidos por límite diario, usarlos como fallback
-      if (eligibleAds.length === 0 && adsExcludedByDailyLimit.length > 0) {
-        this.logger.log(`[getNextAd] 📢 No hay anuncios elegibles, usando ${adsExcludedByDailyLimit.length} anuncios excluidos por límite diario como fallback (permitiendo repetición)`);
-        eligibleAds = adsExcludedByDailyLimit;
-      }
+    // 3. SHUFFLE GLOBAL (La clave de la variedad)
+    // Fisher-Yates Shuffle para máxima aleatoriedad
+    for (let i = eligibleAds.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [eligibleAds[i], eligibleAds[j]] = [eligibleAds[j], eligibleAds[i]];
     }
 
-    if (eligibleAds.length === 0) {
-      this.logger.warn('[getNextAd] ❌ No hay anuncios elegibles después de aplicar todos los filtros');
-      return null;
-    }
+    const selectedAd = eligibleAds[0];
+    this.logger.log(`[getNextAd] 🎲 ✅ Anuncio seleccionado (Random): ${selectedAd.title} (ID: ${selectedAd.id})`);
 
-    // 5. Ordenar por prioridad (mayor prioridad primero)
-    eligibleAds.sort((a, b) => b.priority - a.priority);
-
-    // 6. Seleccionar aleatoriamente entre los top 3 (o todos si hay menos de 3)
-    const topAds = eligibleAds.slice(0, 3);
-    const randomIndex = Math.floor(Math.random() * topAds.length);
-    const selectedAd = topAds[randomIndex];
-
-    this.logger.log(`[getNextAd] ✅ Anuncio seleccionado: ${selectedAd.title} (ID: ${selectedAd.id}, prioridad: ${selectedAd.priority})`);
     return selectedAd;
   }
 
@@ -323,29 +234,49 @@ export class AdsService {
       artist?: string;
       playlistId?: string;
     },
-  ): Promise<AdPlayLog> {
-    const ad = await this.findOne(adId);
+  ): Promise<AdPlayLog | null> {
+    this.logger.log(`[logPlay] ⚙️ Processing in Service: AdId=${adId}, Duration=${durationPlayed}, User=${userId}`);
 
-    // Crear log de reproducción
-    const playLog = this.adPlayLogRepository.create({
-      adId,
-      userId,
-      durationPlayed,
-      wasCompleted,
-      wasSkipped,
-      wasClicked: false,
-      contextGenre: context?.genre,
-      contextArtist: context?.artist,
-      contextPlaylistId: context?.playlistId,
-    });
+    if (!adId) {
+      this.logger.warn(`[logPlay] 🛑 Intento de registrar reproducción con adId nulo o inválido. Usuario: ${userId}. Ignorando.`);
+      return null;
+    }
 
-    const savedLog = await this.adPlayLogRepository.save(playLog);
+    // Validar que durationPlayed sea un número válido
+    if (durationPlayed === null || durationPlayed === undefined || isNaN(durationPlayed)) {
+      this.logger.warn(`[logPlay] ⚠️ DurationPlayed inválido (${durationPlayed}) para anuncio ${adId}. Ajustando a 0.`);
+      durationPlayed = 0;
+    }
 
-    // Incrementar contador de reproducciones del anuncio
-    ad.totalPlays += 1;
-    await this.audioAdRepository.save(ad);
+    try {
+      const ad = await this.findOne(adId);
+      // ... continúa la lógica normal
 
-    return savedLog;
+      // Crear log de reproducción
+      const playLog = this.adPlayLogRepository.create({
+        ad: ad, // ✅ Usar relación explícita para TypeORM
+        userId,
+        durationPlayed,
+        wasCompleted,
+        wasSkipped,
+        wasClicked: false,
+        contextGenre: context?.genre,
+        contextArtist: context?.artist,
+        contextPlaylistId: context?.playlistId,
+      });
+
+      const savedLog = await this.adPlayLogRepository.save(playLog);
+
+      // Incrementar contador de reproducciones del anuncio
+      ad.totalPlays += 1;
+      await this.audioAdRepository.save(ad);
+
+      this.logger.log(`[logPlay] 👾 ESTADO: REPRODUCCIÓN GUARDADA CORRECTAMENTE 👾 | Ad: ${ad.title} | User: ${userId || 'Anon'}`);
+      return savedLog;
+    } catch (error) {
+      this.logger.warn(`[logPlay] ⚠️ Error al registrar reproducción para anuncio ${adId}: ${error.message}`);
+      return null;
+    }
   }
 
   /**
@@ -361,7 +292,7 @@ export class AdsService {
     // (asumimos que el click ocurre durante o después de una reproducción)
     const lastPlayLog = await this.adPlayLogRepository.findOne({
       where: {
-        adId,
+        ad: { id: adId }, // ✅ Query usar relación
         userId: userId || undefined,
       },
       order: {
@@ -376,7 +307,7 @@ export class AdsService {
     } else {
       // Crear un nuevo log solo para el click (caso raro)
       const clickLog = this.adPlayLogRepository.create({
-        adId,
+        ad: ad, // ✅ Crear usando relación
         userId,
         durationPlayed: 0,
         wasCompleted: false,
@@ -391,7 +322,7 @@ export class AdsService {
     await this.audioAdRepository.save(ad);
 
     return lastPlayLog || (await this.adPlayLogRepository.findOne({
-      where: { adId, userId: userId || undefined },
+      where: { ad: { id: adId }, userId: userId || undefined },
       order: { playedAt: 'DESC' },
     }))!;
   }
@@ -411,7 +342,7 @@ export class AdsService {
     const ad = await this.findOne(adId);
 
     const allLogs = await this.adPlayLogRepository.find({
-      where: { adId },
+      where: { ad: { id: adId } },
       order: { playedAt: 'DESC' },
       take: 100, // Últimas 100 reproducciones para estadísticas
     });
@@ -433,5 +364,6 @@ export class AdsService {
       recentPlays: allLogs.slice(0, 50),
     };
   }
+
 }
 

@@ -17,7 +17,7 @@ export class FeaturedService {
     private readonly artistRepository: Repository<Artist>,
     @InjectRepository(Playlist)
     private readonly playlistRepository: Repository<Playlist>,
-  ) {}
+  ) { }
 
   async getFeaturedSongs(limit: number = 10) {
     // Validar y limitar el límite para evitar consultas costosas
@@ -33,9 +33,11 @@ export class FeaturedService {
     });
 
     // Log resumido para diagnóstico (solo en modo debug)
+    /*
     if (featuredExplicit.length > 0) {
       this.logger.debug(`[getFeaturedSongs] Encontradas ${featuredExplicit.length} canciones destacadas`);
     }
+    */
 
     // Devolver SOLO las canciones explícitamente destacadas (puede ser menos que el límite)
     return featuredExplicit;
@@ -44,7 +46,7 @@ export class FeaturedService {
   async getFeaturedArtists(limit: number = 10) {
     // Validar y limitar el límite para evitar consultas costosas
     const validLimit = Math.min(Math.max(1, limit), 100);
-    
+
     // Artistas destacados (sin requerir imágenes, la app móvil puede manejar imágenes nulas)
     return this.artistRepository
       .createQueryBuilder('artist')
@@ -58,7 +60,7 @@ export class FeaturedService {
   async getFeaturedPlaylists(limit: number = 10) {
     // Validar y limitar el límite para evitar consultas costosas
     const validLimit = Math.min(Math.max(1, limit), 100);
-    
+
     // Cargar todas las relaciones necesarias para mapear correctamente a DTOs
     const playlists = await this.playlistRepository.find({
       where: { isFeatured: true, visibility: PlaylistVisibility.PUBLIC },
@@ -134,10 +136,10 @@ export class FeaturedService {
     if (!toValidate) {
       throw new NotFoundException('Artista no encontrado');
     }
-    
+
     // Ya no se requiere que tenga imágenes para ser destacado
     // La app móvil puede manejar artistas sin imágenes mostrando placeholders
-    
+
     // Usar update() para mejor rendimiento (una sola query)
     const updateResult = await this.artistRepository.update(
       { id: artistId },

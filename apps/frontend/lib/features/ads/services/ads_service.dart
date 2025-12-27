@@ -27,33 +27,56 @@ class AdsService {
     String? playlistId,
     required bool isPremium,
   }) async {
+    // 🛠️ DEBUG MODE: Forzar anuncio de prueba (mock)
+    // Esto permite probar la inserción sin depender del backend
+    const bool _forceDebugAd = false;
+    
     // Si es premium, no perder tiempo llamando a la API
-    if (isPremium) {
+    if (isPremium && !_forceDebugAd) {
       AppLogger.debug('[AdsService] Usuario premium, no se solicita anuncio');
       return null;
     }
 
+    // 🛠️ DEBUG: Retornar anuncio mock si el flag está activo
+    if (_forceDebugAd) {
+      AppLogger.warning('[AdsService] 🛠️ MOCK AD MODE ACTIVE: Retornando anuncio de prueba local');
+      return AudioAd(
+        id: 'debug-ad-123',
+        title: 'Anuncio de Prueba (Debug)',
+        audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // Audio público fiable
+        // durationSeconds: 30, // ❌ ERROR
+        duration: const Duration(seconds: 30), // ✅ FIX
+        advertiserName: 'Debug Advertiser',
+        isSkippable: true,
+        skipAfterSeconds: 5,
+        clickThroughUrl: 'https://google.com',
+        coverImageUrl: 'https://picsum.photos/500/500', // Imagen placeholder
+      );
+    }
+
     try {
       final queryParameters = <String, dynamic>{};
-      if (genre != null) queryParameters['genre'] = genre;
       if (artist != null) queryParameters['artist'] = artist;
       if (playlistId != null) queryParameters['playlistId'] = playlistId;
 
-      AppLogger.info('[AdsService] 📢 Llamando a: $_publicAdsPath/next con parámetros: genre=$genre, artist=$artist, playlistId=$playlistId');
+      // 🔍 DEBUG: Log URL completa
+      final fullUrl = '${_dio.options.baseUrl}$_publicAdsPath/next';
+      AppLogger.info('[AdsService] 📢 REQUEST: GET $fullUrl');
+      AppLogger.info('[AdsService] 📢 Params: $queryParameters');
       
       final response = await _dio.get(
         '$_publicAdsPath/next',
         queryParameters: queryParameters,
       );
       
-      AppLogger.info('[AdsService] 📢 Respuesta recibida: statusCode=${response.statusCode}');
+      AppLogger.info('[AdsService] 📢 RESPONSE STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data as Map<String, dynamic>;
         
         // El backend retorna { ad: {...} } o { ad: null }
         if (data['ad'] == null) {
-          AppLogger.debug('[AdsService] No hay anuncios disponibles');
+          AppLogger.warning('[AdsService] ⚠️ BACKEND RETURNED NULL AD (Valid 200 OK)');
           return null;
         }
 
@@ -143,9 +166,18 @@ class AdsService {
 
       return null;
     } catch (e, stackTrace) {
-      // No lanzar error, simplemente retornar null si falla
-      // Esto evita que errores de red bloqueen la reproducción
-      AppLogger.error('[AdsService] Error al obtener anuncio: $e', e, stackTrace);
+      // 🚨 ERROR DETAILED LOGGING
+      AppLogger.error('[AdsService] ❌ ERROR CRÍTICO al obtener anuncio: $e');
+      if (e is DioException) {
+         AppLogger.error('[AdsService] ❌ DioError Type: ${e.type}');
+         AppLogger.error('[AdsService] ❌ DioError Message: ${e.message}');
+         AppLogger.error('[AdsService] ❌ DioError Path: ${e.requestOptions.path}');
+         AppLogger.error('[AdsService] ❌ DioError Final URL: ${e.requestOptions.uri}');
+         if (e.response != null) {
+            AppLogger.error('[AdsService] ❌ Response Status: ${e.response?.statusCode}');
+            AppLogger.error('[AdsService] ❌ Response Data: ${e.response?.data}');
+         }
+      }
       return null;
     }
   }
@@ -223,6 +255,46 @@ class AdsService {
     } catch (e) {
       AppLogger.error('[AdsService] ❌ Error al obtener frecuencia: $e');
       return 3; // Valor por defecto en caso de error
+    }
+      return 3; // Valor por defecto en caso de error
+    }
+
+  // ===========================================================================
+  // 🔐 ADMIN METHODS (Require Auth)
+  // ===========================================================================
+  static const String _adminAdsPath = '/ads';
+
+  /// Obtener todos los anuncios (Admin)
+  Future<List<AudioAd>> getAllAds() async {
+    try {
+      final response = await _dio.get('$_adminAdsPath');
+      
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        if (data.containsKey('ads') && data['ads'] is List) {
+          final adsList = data['ads'] as List;
+          return adsList.map((json) => AudioAd.fromJson(json)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      AppLogger.error('[AdsService] ❌ Error al obtener anuncios (Admin): $e');
+      return [];
+    }
+  }
+
+  /// Obtener estadísticas detalladas de un anuncio (Admin)
+  Future<Map<String, dynamic>?> getAdStats(String adId) async {
+    try {
+      final response = await _dio.get('$_adminAdsPath/$adId/stats');
+      
+      if (response.statusCode == 200 && response.data != null) {
+        return response.data as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      AppLogger.error('[AdsService] ❌ Error al obtener estadísticas (Admin): $e');
+      return null;
     }
   }
 }

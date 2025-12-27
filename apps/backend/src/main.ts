@@ -12,13 +12,13 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const configService = new ConfigService();
   const isProduction = configService.get<string>('NODE_ENV') === 'production';
-  
+
   // ✅ OPTIMIZACIÓN PRODUCCIÓN: Configurar logger según entorno
   // En producción solo errores y warnings, en desarrollo todos los niveles
-  const loggerOptions: LogLevel[] = isProduction 
-    ? ['error', 'warn'] 
+  const loggerOptions: LogLevel[] = isProduction
+    ? ['error', 'warn']
     : ['log', 'error', 'warn', 'debug', 'verbose'];
-  
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: loggerOptions,
   });
@@ -38,7 +38,7 @@ async function bootstrap() {
       }
     },
   });
-  
+
   // Configurar servicio estático para portadas
   app.useStaticAssets(join(process.cwd(), 'uploads', 'covers'), {
     prefix: '/uploads/covers',
@@ -128,7 +128,7 @@ async function bootstrap() {
       const originHeader = req.headers?.origin || req.headers?.referer || 'unknown-origin';
       // Solo mostrar este log en desarrollo/diagnóstico para evitar spam en producción
       if (!isProduction) {
-        logger.debug(`[HTTP] Host: ${hostHeader} | Origin: ${originHeader}`);
+        // logger.debug(`[HTTP] Host: ${hostHeader} | Origin: ${originHeader}`);
       }
     } catch (e) {
       // no-op
@@ -146,6 +146,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+
 
   // Configurar WebSocket adapter para Socket.io
   app.useWebSocketAdapter(new IoAdapter(app));
@@ -182,7 +184,7 @@ async function bootstrap() {
   // Escuchar en todas las interfaces para permitir acceso desde emulador Android
   // El emulador usa 10.0.2.2 para acceder al localhost del host
   const host = configService.get('HOST', '0.0.0.0');
-  
+
   try {
     await app.listen(port, host);
   } catch (error: any) {
@@ -193,7 +195,7 @@ async function bootstrap() {
     }
     throw error;
   }
-  
+
   // ✅ OPTIMIZACIÓN PRODUCCIÓN: Logs de inicio más concisos según entorno
   if (isProduction) {
     logger.log(`🚀 Vintage Music Backend iniciado en ${host}:${port}`);

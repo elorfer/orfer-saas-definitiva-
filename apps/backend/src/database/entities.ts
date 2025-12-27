@@ -18,6 +18,7 @@ import { AppMessage } from '../common/entities/app-message.entity';
 import { AudioAd } from '../common/entities/audio-ad.entity';
 import { AdPlayLog } from '../common/entities/ad-play-log.entity';
 import { AppSetting } from '../common/entities/app-setting.entity';
+import { UserAffinity } from '../common/entities/user-affinity.entity';
 
 export const entities = [
   Album,
@@ -40,4 +41,5 @@ export const entities = [
   AudioAd,
   AdPlayLog,
   AppSetting,
+  UserAffinity,
 ];

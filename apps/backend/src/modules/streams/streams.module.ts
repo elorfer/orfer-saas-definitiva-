@@ -8,6 +8,7 @@ import { Song } from '../../common/entities/song.entity';
 import { Artist } from '../../common/entities/artist.entity';
 import { Stream } from '../../common/entities/stream.entity';
 import { UserListeningSession } from '../../common/entities/user-listening-session.entity';
+import { AffinityModule } from '../affinity/affinity.module';
 
 @Module({
   imports: [
@@ -16,8 +17,10 @@ import { UserListeningSession } from '../../common/entities/user-listening-sessi
       Song,
       Artist,
       Stream,
+      Stream,
       UserListeningSession,
     ]),
+    AffinityModule,
   ],
   controllers: [StreamsController],
   providers: [
@@ -25,7 +28,7 @@ import { UserListeningSession } from '../../common/entities/user-listening-sessi
       provide: 'REDIS_CLIENT',
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.get<string>('REDIS_URL');
-        
+
         if (redisUrl) {
           return new Redis(redisUrl, {
             retryStrategy: (times) => {
@@ -54,5 +57,5 @@ import { UserListeningSession } from '../../common/entities/user-listening-sessi
   ],
   exports: [StreamsService],
 })
-export class StreamsModule {}
+export class StreamsModule { }
 

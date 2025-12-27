@@ -8,31 +8,20 @@
     </domain-config>
     
     <!-- Permitir conexiones HTTP para desarrollo local -->
-    <!-- Emulador Android (10.0.2.2) -->
+    <!-- Emulador Android (10.0.2.2) y Localhost -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">10.0.2.2</domain>
-    </domain-config>
-    
-    <!-- Localhost -->
-    <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
     </domain-config>
-    
-    <!-- Rangos de IP locales comunes para desarrollo en dispositivos físicos -->
-    <!-- 192.168.x.x (redes domésticas comunes) -->
+
+    <!-- IPs locales para desarrollo WiFi -->
+    <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">192.168.0.0</domain>
         <domain includeSubdomains="true">192.168.1.0</domain>
         <domain includeSubdomains="true">192.168.2.0</domain>
-        <domain includeSubdomains="true">192.168.1.3</domain> <!-- ✅ IP específica del usuario -->
-    
-    <!-- 10.0.0.0/8 (redes privadas) -->
-    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">192.168.1.3</domain>
         <domain includeSubdomains="true">10.0.0.0</domain>
-    </domain-config>
-    
-    <!-- 172.16.0.0/12 (redes privadas) -->
-    <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">172.16.0.0</domain>
     </domain-config>
     
@@ -43,4 +32,3 @@
         </trust-anchors>
     </base-config>
 </network-security-config>
-

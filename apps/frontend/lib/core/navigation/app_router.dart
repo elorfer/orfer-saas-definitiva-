@@ -7,6 +7,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
+import '../../features/ads/screens/ad_stats_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/playlists/screens/playlists_screen.dart';
 import '../../features/playlists/screens/playlist_detail_screen.dart';
@@ -566,6 +567,17 @@ class GoRouterNotifier extends ChangeNotifier {
         GoRoute(
           path: '/',
           redirect: (_, __) => '/home',
+        ),
+        // ADMIN ROUTES
+        GoRoute(
+          path: '/admin/ads-stats',
+          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+            key: state.pageKey,
+            child: const AdStatsScreen(),
+            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+            transitionDuration: const Duration(milliseconds: 200),
+            reverseTransitionDuration: const Duration(milliseconds: 150),
+          ),
         ),
       ];
 

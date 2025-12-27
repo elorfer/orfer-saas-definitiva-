@@ -12,6 +12,9 @@ class AudioAd {
   final bool isSkippable;
   final int skipAfterSeconds;
 
+  final int totalPlays;
+  final int totalClicks;
+
   AudioAd({
     required this.id,
     required this.title,
@@ -23,6 +26,8 @@ class AudioAd {
     required this.duration,
     this.isSkippable = true,
     this.skipAfterSeconds = 5,
+    this.totalPlays = 0,
+    this.totalClicks = 0,
   });
 
   factory AudioAd.fromJson(Map<String, dynamic> json) {
@@ -57,6 +62,8 @@ class AudioAd {
       duration: Duration(seconds: durationSeconds ?? 0),
       isSkippable: isSkippable ?? true,
       skipAfterSeconds: skipAfterSeconds ?? 5,
+      totalPlays: json['totalPlays'] as int? ?? json['total_plays'] as int? ?? 0,
+      totalClicks: json['totalClicks'] as int? ?? json['total_clicks'] as int? ?? 0,
     );
   }
 

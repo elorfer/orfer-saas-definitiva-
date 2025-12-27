@@ -37,8 +37,8 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Si la lista está vacía al montar el widget, solicitar carga lazy
-      final featuredPlaylists = ref.read(featuredPlaylistsProvider);
-      if (featuredPlaylists.isEmpty && !_requestedLoad) {
+      final homeState = ref.read(homeStateProvider);
+      if (!homeState.hasLoadedPlaylists && homeState.featuredPlaylists.isEmpty && !_requestedLoad) {
         _requestedLoad = true;
         ref.read(homeStateProvider.notifier).loadFeaturedPlaylists();
       }

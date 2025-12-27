@@ -14,6 +14,7 @@ import { User } from '../../common/entities/user.entity';
 import { Stream } from '../../common/entities/stream.entity';
 import { UserListeningSession } from '../../common/entities/user-listening-session.entity';
 import { TrackProgressDto } from './dto/track-progress.dto';
+import { AffinityService } from '../affinity/affinity.service';
 
 const MIN_STREAM_DURATION_MS = 30000; // 30 segundos
 const RATE_LIMIT_WINDOW_MS = 30000; // 30 segundos entre streams del mismo usuario/canción
@@ -34,7 +35,8 @@ export class StreamsService {
     @Inject('REDIS_CLIENT')
     private readonly redis: Redis,
     private readonly dataSource: DataSource,
-  ) {}
+    private readonly affinityService: AffinityService,
+  ) { }
 
   /**
    * Track progress del usuario - valida si debe registrar stream
@@ -45,7 +47,7 @@ export class StreamsService {
     message?: string;
   }> {
     this.logger.debug(`[trackProgress] Usuario ${userId}, canción ${dto.songId}, progreso ${dto.progressMs}ms`);
-    
+
     // Validar que la canción existe
     const song = await this.songRepository.findOne({
       where: { id: dto.songId },
@@ -114,18 +116,19 @@ export class StreamsService {
     }
 
     // Validar si debe registrar stream (usar maxProgressMs de la sesión, no el progreso actual)
+
+    // ✅ OPTIMIZACIÓN LOG: Evitar log excesivo en cada validación
+    // this.logger.debug(`[StreamValidation] maxProgress=${session.maxProgressMs}ms`);
+
     const shouldRegister = this.shouldRegisterStream(
-      session.maxProgressMs, // ✅ Usar el máximo progreso alcanzado, no el progreso actual
+      session.maxProgressMs,
       dto.durationMs,
       session,
-      dto.volume ?? 1.0, // Default: volumen al máximo
-      dto.isForeground ?? true, // Default: asumir foreground
+      dto.volume ?? 1.0,
+      dto.isForeground ?? true,
     );
 
     if (!shouldRegister) {
-      this.logger.debug(
-        `[trackProgress] No debe registrar stream: maxProgressMs=${session.maxProgressMs}ms, isStreamValidated=${session.isStreamValidated}`,
-      );
       return {
         shouldRegisterStream: false,
         streamRegistered: false,
@@ -222,7 +225,7 @@ export class StreamsService {
   ): boolean {
     // Si ya fue validado, no volver a registrar
     if (session.isStreamValidated) {
-      this.logger.debug(`[StreamValidation] Stream ya validado para esta sesión ${session.id}`);
+      // this.logger.debug(`[StreamValidation] Stream ya validado para esta sesión ${session.id}`);
       return false;
     }
 
@@ -261,8 +264,26 @@ export class StreamsService {
     }
 
     // ✅ Validación pasada
-    this.logger.log(`[StreamValidation] ✅ Stream válido: ${maxProgressMs}ms en ${timeSinceStart}ms (sesión ${session.id})`);
+    this.logger.log(`[StreamValidation] 🎧 Stream válido! ${maxProgressMs}ms (sesión ${session.id})`);
+
+    // 🧠 OPERATION MEMORY: Trigger Afinidad
+    // Llamada asíncrona para no bloquear
+    this.affinityService.processStream(session.userId, session.songId);
+
     return true;
+  }
+
+  /**
+   * Registrar un "Skip" (canción saltada antes de tiempo)
+   * Impacto negativo en afinidad
+   */
+  async trackSkip(userId: string, songId: string, secondsPlayed: number): Promise<void> {
+    this.logger.log(`[Skip] ⏭️ Usuario ${userId} saltó canción ${songId} a los ${secondsPlayed}s`);
+
+    if (secondsPlayed < 5) {
+      this.logger.log(`[Affinity] 📉 Penalizando afinidad (SKIP RÁPIDO) para usuario ${userId} con canción ${songId}`);
+      await this.affinityService.processSkip(userId, songId, secondsPlayed);
+    }
   }
 
   /**

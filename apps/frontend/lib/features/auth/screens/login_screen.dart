@@ -515,7 +515,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ? 0 
                       : (mediaQuery.size.height - 
                          mediaQuery.padding.top - 
-                         mediaQuery.padding.bottom - 32),
+                         mediaQuery.padding.bottom - 32).clamp(0.0, double.infinity),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

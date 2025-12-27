@@ -23,6 +23,7 @@ class HomeState {
   final bool isLoading;
   final String? error;
   final bool isInitialized;
+  final bool hasLoadedPlaylists;
 
   const HomeState({
     this.featuredArtists = const [],
@@ -34,6 +35,7 @@ class HomeState {
     this.isLoading = false,
     this.error,
     this.isInitialized = false,
+    this.hasLoadedPlaylists = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -51,6 +53,7 @@ class HomeState {
       'isLoading': isLoading,
       'error': error,
       'isInitialized': isInitialized,
+      'hasLoadedPlaylists': hasLoadedPlaylists,
       'timestamp': DateTime.now().toIso8601String(),
     };
   }
@@ -91,6 +94,7 @@ class HomeState {
         isLoading: json['isLoading'] as bool? ?? false,
         error: json['error'] as String?,
         isInitialized: json['isInitialized'] as bool? ?? false,
+        hasLoadedPlaylists: json['hasLoadedPlaylists'] as bool? ?? false,
       );
     } catch (_) {
       return null;
@@ -107,6 +111,7 @@ class HomeState {
     bool? isLoading,
     String? error,
     bool? isInitialized,
+    bool? hasLoadedPlaylists,
   }) {
     return HomeState(
       featuredArtists: featuredArtists ?? this.featuredArtists,
@@ -118,6 +123,7 @@ class HomeState {
       isLoading: isLoading ?? this.isLoading,
       error: error,
       isInitialized: isInitialized ?? this.isInitialized,
+      hasLoadedPlaylists: hasLoadedPlaylists ?? this.hasLoadedPlaylists,
     );
   }
 
@@ -309,10 +315,16 @@ class HomeNotifier extends Notifier<HomeState> {
   Future<void> loadFeaturedPlaylists() async {
     try {
       final playlists = await _homeService.getFeaturedPlaylists(limit: 6);
-      state = state.copyWith(featuredPlaylists: playlists);
+      state = state.copyWith(
+        featuredPlaylists: playlists,
+        hasLoadedPlaylists: true, // ✅ MARCA COMO CARGADO para evitar bucles
+      );
       await _saveToCacheThrottled(state);
     } catch (e) {
-      state = state.copyWith(error: 'Error al cargar playlists: $e');
+      state = state.copyWith(
+        error: 'Error al cargar playlists: $e',
+        hasLoadedPlaylists: true, // ✅ Evitar reintentos infinitos si falla
+      );
     }
   }
 
@@ -397,6 +409,7 @@ class HomeNotifier extends Notifier<HomeState> {
         isLoading: decodedMap['isLoading'] as bool? ?? false,
         error: decodedMap['error'] as String?,
         isInitialized: decodedMap['isInitialized'] as bool? ?? false,
+        hasLoadedPlaylists: decodedMap['hasLoadedPlaylists'] as bool? ?? false,
       );
 
       if (!cachedState.isEmpty) {

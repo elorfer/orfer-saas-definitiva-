@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../utils/logger.dart';
 
@@ -9,16 +10,28 @@ class AppConfig {
   // URLs de configuración (usar `--dart-define` para `API_BASE_URL`)
 
   // Configuración de la API
-  // `baseUrl` debe ser `const` para respetar `--dart-define` en tiempo de compilación.
-  // Por conveniencia dejamos un `defaultValue` local seguro como respaldo.
-  static const String baseUrl = String.fromEnvironment(
+  // -----------------------------------------------------------------------------
+  // ESTRATEGIA DE RESOLUCIÓN DE URL (Prioridad):
+  // 1. --dart-define API_BASE_URL="..." (Variables de entorno en compilación)
+  // 2. Si es DEBUG:
+  //    a. Android Emulador: http://10.0.2.2:3001/api/v1
+  //    b. Desktop/Web/iOS: http://localhost:3001/api/v1
+  // 3. Si es RELEASE/PROFILE:
+  //    - Producción Default: AWS ALB URL
+  // -----------------------------------------------------------------------------
+  
+  static String get _localBaseUrl {
+    try {
+      if (Platform.isAndroid) return 'http://10.0.2.2:3001/api/v1';
+    } catch (_) {} // Fallback seguro para plataformas que no soportan dart:io
+    return 'http://localhost:3001/api/v1';
+  }
+
+  static const String _productionUrl = 'http://backend-alb-1038609925.us-east-1.elb.amazonaws.com/api/v1';
+
+  static String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // 🌍 HYBRID CONFIG:
-    // - DEBUG: Usar 10.0.2.2 (Emulator) porque Prod está dando 503 o es inestable para desarrollo.
-    // - RELEASE/PROFILE: Usar PROD por defecto.
-    defaultValue: kDebugMode 
-        ? 'http://10.0.2.2:3001/api/v1' 
-        : 'http://backend-alb-1038609925.us-east-1.elb.amazonaws.com/api/v1',
+    defaultValue: kDebugMode ? _localBaseUrl : _productionUrl,
   );
 
   // Llamar a este método desde `main()` para imprimir la URL que usa la app.

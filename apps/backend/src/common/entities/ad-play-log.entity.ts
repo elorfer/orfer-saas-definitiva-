@@ -13,8 +13,8 @@ export class AdPlayLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'ad_id' })
-  adId: string;
+  // @Column({ name: 'ad_id' }) -> Removed to rely on ManyToOne relation
+  // adId: string;
 
   @Column({ name: 'user_id', nullable: true })
   userId?: string; // null si es usuario anónimo

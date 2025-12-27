@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsNumber, Min, Max } from 'class-validator';
+import { IsString, IsNotEmpty, IsNumber, Min, Max, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class TrackProgressDto {
@@ -18,12 +18,14 @@ export class TrackProgressDto {
   durationMs: number;
 
   @ApiProperty({ description: 'Volumen del reproductor (0-1)', example: 0.8, required: false })
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(1)
   volume?: number;
 
   @ApiProperty({ description: 'Si la app está en primer plano', example: true, required: false })
+  @IsOptional()
   isForeground?: boolean;
 }
 
