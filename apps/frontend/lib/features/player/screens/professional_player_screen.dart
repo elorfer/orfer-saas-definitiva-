@@ -75,7 +75,9 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
     AudioEngineState state,
     DynamicPalette palette,
   ) {
-    final song = state.currentSong;
+    // ✅ FIX: Usar lastConfirmedSong para evitar parpadeos durante transiciones o inserciones
+    // lastConfirmedSong se actualiza de forma atómica y evita estados intermedios nulos
+    final song = state.lastConfirmedSong ?? state.currentSong;
     if (song == null) return _buildEmptyState(context);
 
     final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty
@@ -626,7 +628,8 @@ class ProfessionalMiniPlayer extends ConsumerWidget {
     AudioEngineState state,
     DynamicPalette palette,
   ) {
-    final song = state.currentSong!;
+    // ✅ FIX: Usar lastConfirmedSong para evitar parpadeos en mini player
+    final song = state.lastConfirmedSong ?? state.currentSong!;
     final engine = ref.read(advancedAudioEngineProvider);
     
     final coverUrl = song.coverArtUrl != null && song.coverArtUrl!.isNotEmpty

@@ -300,73 +300,98 @@ class IntelligentFeaturedService {
     
     final List<FeaturedSong> recommendations = [];
     
-    // 🚀 FASE 1 OPTIMIZADA: Obtener recomendaciones usando nuevo endpoint de batch
-    // El backend maneja internamente el batching y garantiza variedad
-    final initialCount = limit > 4 ? 4 : limit;
+    // 🚀 FASE 1 OPTIMIZADA: Obtener recomendaciones
+    // Estrategia: "Buffer First" -> "Network Batch" -> "Refill Buffer"
     
-    // 🚀 SPOTIFY-LEVEL: Verificar cache de semillas primero
-    final cachedSeeds = _cacheService.getCachedSeeds(currentSongId);
-    if (cachedSeeds != null && cachedSeeds.length >= initialCount) {
-      debugPrint('⚡ [IntelligentFeatured] Cache hit de semillas! Usando ${cachedSeeds.length} semillas cacheadas');
-      // Usar semillas cacheadas como base
-      for (final seed in cachedSeeds.take(initialCount)) {
-        if (!usedIds.contains(seed.id) && seed.isValidForPlayback) {
-          recommendations.add(FeaturedSong(
-            song: seed,
-            featuredReason: 'Recomendada por IA • ${_getRecommendationReason(recommendations.length)}',
-            rank: recommendations.length + 1,
-          ));
-          usedIds.add(seed.id);
-        }
-      }
-      
-      // Si tenemos suficientes recomendaciones del cache, saltar Fase 1
-      if (recommendations.length >= initialCount) {
-        debugPrint('✅ [IntelligentFeatured] Fase 1 completada desde cache: ${recommendations.length} canciones');
-      }
+    // 1. Intentar obtener del Buffer Local (RAM)
+    final bufferSongs = _cacheService.getFromBuffer(limit);
+    if (bufferSongs.isNotEmpty) {
+       for (final song in bufferSongs) {
+          if (!usedIds.contains(song.id) && song.isValidForPlayback) {
+             recommendations.add(FeaturedSong(
+               song: song,
+               featuredReason: 'Recomendada por IA • ${_getRecommendationReason(recommendations.length)}',
+               rank: recommendations.length + 1,
+             ));
+             usedIds.add(song.id);
+          }
+       }
+       debugPrint('✅ [IntelligentFeatured] 📦 Buffer Hit: ${recommendations.length} canciones recuperadas sin red');
     }
-    
-    final needsMoreSeeds = recommendations.length < initialCount;
+
+    final initialCount = limit > 4 ? 4 : limit;
+    // Si el buffer llenó todo, genial. Si no, necesitamos buscar más.
+    final needsMore = recommendations.length < initialCount;
     List<Song> initialResults = [];
     
-    if (needsMoreSeeds) {
-      final seedsToFetch = initialCount - recommendations.length;
-      debugPrint('🚀 [IntelligentFeatured] Fase 1: solicitando $seedsToFetch recomendaciones usando batch endpoint para canción ${currentSongId.substring(0, 8)}...');
-      debugPrint('🚀 [IntelligentFeatured] ⚠️ VERIFICACIÓN: Este es el NUEVO código usando generatePlaylistBatch()');
+    if (needsMore) {
+      // Calcular cuánto falta
+      final missingCount = initialCount - recommendations.length;
+      
+      // 🚀 BATCH FETCHING: Pedir siempre un lote grande (ej. 20) para llenar el buffer
+      // Si pedimos solo 'missingCount' (ej. 3), desperdiciamos la oportunidad de cachear
+      const int kBatchSize = 20; 
+      final fetchCount = missingCount < kBatchSize ? kBatchSize : missingCount;
+      
+      debugPrint('🚀 [IntelligentFeatured] Fase 1: solicitando $fetchCount canciones (Buffer Refill Strategy) para semilla ${currentSongId.substring(0, 8)}...');
       
       try {
-        // 🚀 NUEVO: Usar endpoint de batch en lugar de múltiples llamadas paralelas
-        // El backend maneja internamente el batching y garantiza variedad
-        debugPrint('🚀 [IntelligentFeatured] Llamando a generatePlaylistBatch() con seed=$currentSongId, count=$seedsToFetch');
-        debugPrint('GENRE_DEBUG IntelligentFeatured calling generatePlaylistBatch seed=$currentSongId count=$seedsToFetch');
-        final batchResult = await _recommendationService.generatePlaylistBatch(
+        var batchResult = await _recommendationService.generatePlaylistBatch(
           seedSongId: currentSongId,
-          count: seedsToFetch,
+          count: fetchCount, // Pedir lote grande
           user: user,
-          genres: null, // El backend detectará los géneros automáticamente
+          genres: null,
           excludeIds: usedIds.toList(),
-          useCache: false, // Desactivar cache local para forzar variedad
+          useCache: false, // Forzar fresco
         );
+        
+        // 🚀 SAFETY NET: Si no hay resultados y tenemos muchas exclusiones (catálogo pequeño)
+        // Reintentar con exclusiones relajadas (solo las últimas 10)
+        if (batchResult.songs.isEmpty && usedIds.length > 20) {
+           debugPrint('⚠️ [IntelligentFeatured] 0 resultados con ${usedIds.length} exclusiones. Posible catálogo pequeño. Reintentando con exclusiones relajadas...');
+           
+           // Relajar exclusiones: mantener solo las últimas 10 + semilla actual
+           final relaxedExclusions = usedIds.toList();
+           if (relaxedExclusions.length > 10) {
+             relaxedExclusions.removeRange(0, relaxedExclusions.length - 10);
+           }
+           if (!relaxedExclusions.contains(currentSongId)) {
+             relaxedExclusions.add(currentSongId);
+           }
+           
+           batchResult = await _recommendationService.generatePlaylistBatch(
+              seedSongId: currentSongId,
+              count: fetchCount,
+              user: user,
+              genres: null,
+              excludeIds: relaxedExclusions, // Exclusiones relajadas
+              useCache: false,
+           );
+           debugPrint('✅ [IntelligentFeatured] Fallback de catálogo pequeño: ${batchResult.songs.length} canciones recuperadas');
+        }
 
-        debugPrint('🚀 [IntelligentFeatured] generatePlaylistBatch() retornó ${batchResult.songs.length} canciones');
-
-        // Filtrar canciones válidas y no duplicadas
-        initialResults = batchResult.songs
+        // Separar lo que necesitamos de lo que guardaremos
+        final allFetched = batchResult.songs
             .where((song) => !usedIds.contains(song.id) && song.isValidForPlayback)
             .toList();
+            
+        // Tomar lo que necesitamos
+        initialResults = allFetched.take(missingCount).toList();
         
-        debugPrint('🚀 [IntelligentFeatured] Después de filtrar: ${initialResults.length} canciones válidas');
+        // El resto al buffer
+        final remainingForBuffer = allFetched.skip(missingCount).toList();
+        if (remainingForBuffer.isNotEmpty) {
+           _cacheService.addToBuffer(remainingForBuffer);
+           debugPrint('📥 [IntelligentFeatured] Guardando ${remainingForBuffer.length} canciones sobrantes en Buffer local');
+        }
         
-        // 🚀 SPOTIFY-LEVEL: Cachear semillas obtenidas
+        // Cachear semillas (para otros usos)
         if (initialResults.isNotEmpty) {
           _cacheService.cacheSeeds(currentSongId, initialResults);
         }
         
-        debugPrint('✅ [IntelligentFeatured] Fase 1: ${initialResults.length}/$seedsToFetch recomendaciones recibidas del batch');
       } catch (error, stackTrace) {
         debugPrint('❌ [IntelligentFeatured] Error en Fase 1 batch: $error');
-        debugPrint('   Tipo de error: ${error.runtimeType}');
-        debugPrint('   Stack: ${stackTrace.toString().split('\n').take(5).join('\n')}');
         initialResults = [];
       }
     }

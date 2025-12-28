@@ -131,7 +131,48 @@ class RecommendationCacheService {
       'seedCacheSize': _seedCache.length,
       'recommendationCacheSize': _recommendationCache.length,
       'usedIdsCount': _usedIdsInSession.length,
+      'bufferSize': _unusedBuffer.length,
     };
+  }
+
+  // 📦 BUFFER DE RECOMENDACIONES (RAM)
+  // Almacena canciones obtenidas del backend pero no usadas aún
+  // Evita "tirar a la basura" las canciones sobrantes de un batch de 20 cuando solo pedimos 5
+  final List<Song> _unusedBuffer = [];
+
+  /// Agregar canciones al buffer de no usados
+  void addToBuffer(List<Song> songs) {
+    if (songs.isEmpty) return;
+    
+    // Evitar duplicados en el buffer
+    final existingIds = _unusedBuffer.map((s) => s.id).toSet();
+    final newSongs = songs.where((s) => !existingIds.contains(s.id)).toList();
+    
+    if (newSongs.isNotEmpty) {
+      _unusedBuffer.addAll(newSongs);
+      AppLogger.debug('[RecommendationCache] 📥 Agregadas ${newSongs.length} canciones al buffer (Total: ${_unusedBuffer.length})');
+    }
+  }
+
+  /// Obtener canciones del buffer
+  /// Retorna hasta [count] canciones y las elimina del buffer
+  List<Song> getFromBuffer(int count) {
+    if (_unusedBuffer.isEmpty) return [];
+    
+    final takeCount = count > _unusedBuffer.length ? _unusedBuffer.length : count;
+    final result = _unusedBuffer.take(takeCount).toList();
+    
+    // Remover las usadas
+    _unusedBuffer.removeRange(0, takeCount);
+    
+    AppLogger.debug('[RecommendationCache] 📤 Recuperadas ${result.length} canciones del buffer (Restan: ${_unusedBuffer.length})');
+    return result;
+  }
+
+  /// Limpiar buffer
+  void clearBuffer() {
+    _unusedBuffer.clear();
+    AppLogger.debug('[RecommendationCache] 🗑️ Buffer limpiado');
   }
 }
 

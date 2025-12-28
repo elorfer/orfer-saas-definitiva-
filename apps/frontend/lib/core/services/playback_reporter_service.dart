@@ -68,44 +68,82 @@ class PlaybackReporterService {
   void _handlePositionUpdate(Duration position) {
       if (_currentSongId == null) return;
       
+      // 🔄 DETECCIÓN DE REPLAY / REWIND: Si la posición cae drásticamente (e.g. 30s -> 0s)
+      // Significa que el usuario reinició la canción o hizo seek al inicio.
+      // Debemos resetear el acumulado para evitar enviar "32s" como progreso inicial de la nueva sesión.
+      if (_lastPosition.inSeconds > 10 && position.inSeconds < 2) {
+        final drop = _lastPosition - position;
+        if (drop.inSeconds > 10) { // Confirmar caída grande
+           AppLogger.info('[PlaybackReporter] 🔄 Replay detectado (Reset de métricas). Drop: ${drop.inSeconds}s');
+           _accumulatedDuration = Duration.zero; // Reset acumulado
+           _playRegistered = false; // Permitir registrar un nuevo 'play'
+           _lastReportTime = null;
+        }
+      }
+      
       final delta = position - _lastPosition;
+      // Solo acumular si avanza (delta positivo) y no es un salto enorme (>2s)
       if (delta > Duration.zero && delta < const Duration(seconds: 2)) {
           _accumulatedDuration += delta;
       }
       _lastPosition = position;
   }
 
-  Future<void> _reportProgress() async {
-      if (_currentSongId == null || _accumulatedDuration.inSeconds < 5) return;
-      
+  // Flag para prevenir condiciones de carrera en reportes
+  bool _isReporting = false;
+
+  Future<void> _reportProgress({String? overrideSongId, Duration? overrideDuration}) async {
+      final targetSongId = overrideSongId ?? _currentSongId;
+      final targetDuration = overrideDuration ?? _accumulatedDuration;
+
+      // Guardias de seguridad
+      if (targetSongId == null || targetDuration.inSeconds < 5) return;
+      if (_isReporting) return; // 🔒 Evitar llamadas concurrentes
+      // ELIMINADO: if (_playRegistered && overrideSongId == null) return; 
+      // ✅ FIX: Permitir reportes continuos (Heartbeat) para mantener viva la sesión en el backend
+
       try {
           final authState = _ref.read(authStateProvider);
           if (!authState.isAuthenticated) return;
           
-          if (_accumulatedDuration.inSeconds >= 30 && !_playRegistered) {
-              AppLogger.info('[PlaybackReporter] ⏳ 30s alcanzados. Enviando validación de Stream...');
+          if (targetDuration.inSeconds >= 30) {
+              _isReporting = true; // 🔒 Bloquear
+              
+              final isFirstValidation = !_playRegistered;
+              if (isFirstValidation) {
+                 AppLogger.info('[PlaybackReporter] ⏳ 30s alcanzados. Enviando validación de Stream...');
+              } else if (overrideSongId == null) {
+                 // Solo loguear heartbeat si no es un override (transición)
+                 AppLogger.debug('[PlaybackReporter] 💓 Heartbeat: Actualizando progreso (${targetDuration.inSeconds}s)');
+              }
               
               final httpClient = HttpClientService();
               final response = await httpClient.post(
                 '/streams/track-progress', 
                 data: {
-                  'songId': _currentSongId,
-                  'progressMs': _accumulatedDuration.inMilliseconds,
-                  'durationMs': _accumulatedDuration.inMilliseconds,
+                  'songId': targetSongId,
+                  'progressMs': targetDuration.inMilliseconds,
+                  'durationMs': targetDuration.inMilliseconds, // TODO: Enviar duración total real si es posible
                   'volume': 1.0, 
                   'isForeground': true 
                 }
               );
               
               if (response.statusCode == 200 || response.statusCode == 201) {
-                  _playRegistered = true; 
-                  AppLogger.info('[PlaybackReporter] ✅ Stream reportado exitosamente');
+                  if (overrideSongId == null) {
+                    _playRegistered = true; // Solo marcar actual como registrado si no es override
+                  }
+                  if (isFirstValidation) {
+                    AppLogger.info('[PlaybackReporter] ✅ Stream reportado exitosamente');
+                  }
               } else {
                   AppLogger.warning('[PlaybackReporter] ⚠️ Fallo al reportar stream. Status: ${response.statusCode}');
               }
           }
       } catch (e) {
           AppLogger.error('[PlaybackReporter] Error reportando progreso: $e');
+      } finally {
+          _isReporting = false; // 🔓 Desbloquear
       }
   }
 
@@ -125,9 +163,20 @@ class PlaybackReporterService {
        }
   }
 
+  // Timestamp del último comando explícito de "Next"
+  DateTime? _lastManualSkipSignal;
+
+  /// Registra que el usuario presionó explícitamente "Siguiente".
+  /// Permite distinguir entre skips reales y glitches de reproducción o inserción de anuncios.
+  void reportManualSkip() {
+    _lastManualSkipSignal = DateTime.now();
+    AppLogger.debug('[PlaybackReporter] ⏭️ Señal manual de Skip recibida');
+  }
+
   void _handleSongChange(String newSongId) {
     final previousSongId = _currentSongId;
     final secondsPlayed = _accumulatedDuration.inSeconds;
+    final accumulatedSnapshot = _accumulatedDuration; // 📸 Snapshot para el reporte
 
     if (previousSongId != null && previousSongId.isNotEmpty) {
       // 🛡️ PROTECCIÓN: Verificar si estamos en periodo de gracia
@@ -142,15 +191,27 @@ class PlaybackReporterService {
       }
 
       if (!isProtected) {
-          // Lógica normal
-          // Si la canción anterior tuvo menos de 5s reproducidos, considerar skip
+          // Lógica INTELIGENTE de Skips
+          // Un "Skip Rápido" (< 5s) es muy penalizante.
+          // Pero si ocurre por error del sistema (0s), no debemos penalizar.
+          // Requerimos que haya habido una señal manual reciente O que la duración sea moderada (>3s)
+          
+          final isManualSkip = _lastManualSkipSignal != null && 
+                               DateTime.now().difference(_lastManualSkipSignal!) < const Duration(seconds: 2);
+          
           if (secondsPlayed < 5) {
-            _reportSkip(previousSongId, secondsPlayed);
+            if (secondsPlayed < 3 && !isManualSkip) {
+              // 🛡️ GLITCH GUARD: Si duró menos de 3s y NO fue manual, asumir glitch/auto-skip
+              AppLogger.warning('[PlaybackReporter] 🛡️ Ignorando posible glitch/auto-skip: $previousSongId (${secondsPlayed}s) - Sin señal manual');
+            } else {
+              // Es un skip manual real O duró entre 3-5s (usuario decidió saltar)
+              _reportSkip(previousSongId, secondsPlayed);
+            }
           } else {
-            // Si no se registró el play pero se alcanzaron 30s, forzar reporte
-            if (_accumulatedDuration.inSeconds >= 30 && !_playRegistered) {
-              _reportProgress();
-              _playRegistered = true;
+            // Si no se registró el play pero se alcanzaron 30s, forzar reporte con snapshot
+            if (secondsPlayed >= 30 && !_playRegistered) {
+              // 🚀 Usar snapshot explícito para evitar condiciones de carrera
+              _reportProgress(overrideSongId: previousSongId, overrideDuration: accumulatedSnapshot);
             }
           }
       }
@@ -161,7 +222,9 @@ class PlaybackReporterService {
     _accumulatedDuration = Duration.zero;
     _lastPosition = Duration.zero;
     _playRegistered = false;
+    _isReporting = false; // Reset flag por seguridad
     _lastReportTime = null;
+    // No reseteamos _lastManualSkipSignal aquí, su expiración se maneja por tiempo (diff)
   }
 
   void dispose() {

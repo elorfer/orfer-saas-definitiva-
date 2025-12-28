@@ -20,9 +20,18 @@ class AppConfig {
   //    - Producción Default: AWS ALB URL
   // -----------------------------------------------------------------------------
   
+  // 🛠️ CONFIGURACIÓN DE DESARROLLO
+  // Cambia esto a `true` si usas el Emulador de Android.
+  // Cambia esto a `false` si usas un Móvil Real (con adb reverse).
+  static const bool useAndroidEmulator = false;
+
   static String get _localBaseUrl {
     try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:3001/api/v1';
+      if (Platform.isAndroid) {
+        return useAndroidEmulator 
+            ? 'http://10.0.2.2:3001/api/v1' 
+            : 'http://localhost:3001/api/v1';
+      }
     } catch (_) {} // Fallback seguro para plataformas que no soportan dart:io
     return 'http://localhost:3001/api/v1';
   }

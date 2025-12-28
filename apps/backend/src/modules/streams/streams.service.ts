@@ -91,9 +91,9 @@ export class StreamsService {
       const isNewPlayback = dto.progressMs < 10000 && session.isStreamValidated; // Menos de 10s y ya validada
       const isLongPause = timeSinceLastUpdate > 60000 && session.isStreamValidated; // Más de 1 minuto pausado
 
-      if (isNewPlayback || isLongPause) {
+      if (isNewPlayback) {
         this.logger.debug(
-          `[trackProgress] Nueva reproducción detectada (progreso=${dto.progressMs}ms, sesión anterior validada). Creando nueva sesión.`,
+          `[trackProgress] Nueva reproducción detectada (Replay: progreso=${dto.progressMs}ms). Creando nueva sesión.`,
         );
         // Eliminar sesión anterior y crear una nueva
         await this.sessionRepository.remove(session);
@@ -104,6 +104,18 @@ export class StreamsService {
           startedAt: new Date(),
           lastProgressUpdate: new Date(),
         });
+        await this.sessionRepository.save(session);
+      } else if (isLongPause) {
+        // ✅ FIX: Si es una pausa larga pero NO es un replay (progreso avanzado), 
+        // es un RESUME. No borrar la sesión, solo actualizar timestamps.
+        // Esto evita que 'startedAt' se resetee y cause "Progreso Sospechoso".
+        this.logger.debug(
+          `[trackProgress] Resumiendo sesión validada tras pausa larga (${dto.progressMs}ms). Manteniendo sesión.`,
+        );
+        session.lastProgressUpdate = new Date();
+        if (dto.progressMs > session.maxProgressMs) {
+          session.maxProgressMs = dto.progressMs;
+        }
         await this.sessionRepository.save(session);
       } else {
         // Actualizar progreso máximo solo si es mayor

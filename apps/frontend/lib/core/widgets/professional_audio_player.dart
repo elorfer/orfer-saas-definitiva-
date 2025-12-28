@@ -1140,7 +1140,6 @@ class _AdArtworkBackground extends StatelessWidget {
   }
 }
 
-/// ✅ FASE 5: Widget para mostrar la carátula del anuncio
 class _AdCoverWidget extends StatelessWidget {
   final AudioAd ad;
 
@@ -1152,23 +1151,25 @@ class _AdCoverWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final coverSize = screenWidth * 0.85;
+    final coverSize = screenWidth * 0.95; // ✅ FIX: TAMAÑO IDÉNTICO A CANCIÓN (AlbumSwiper)
 
     return Container(
       width: coverSize,
       height: coverSize,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24), // ✅ FIX: RADIO IDÉNTICO A CANCIÓN
         boxShadow: [
+          // ✅ FIX: SOMBRA IDÉNTICA A CANCIÓN (para que no parezca flotar más alto)
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 20,
-            spreadRadius: 5,
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 50,
+            spreadRadius: -5,
+            offset: const Offset(0, 25),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24), // ✅ FIX: RADIO IDÉNTICO
         child: ad.coverImageUrl != null && ad.coverImageUrl!.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: UrlNormalizer.normalizeImageUrl(ad.coverImageUrl) ?? ad.coverImageUrl!,

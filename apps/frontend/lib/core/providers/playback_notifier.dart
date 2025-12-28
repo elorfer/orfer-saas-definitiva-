@@ -1808,7 +1808,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   Future<List<Song>> _generateInitialRecommendations(Song seedSong, {bool excludeSeedFromQueue = false}) async {
     try {
       // 🎯 FASE 1: Obtener excludeIds del servicio centralizado
-      final excludeLimit = 8;
+      // 🚀 AMNESIA FIX: Aumentado límite de 8 a 100 para evitar repeticiones de sesiones anteriores
+      final excludeLimit = 100;
       final playedIds = ref.read(playbackSessionProvider.notifier).getPlayedSongIds(limit: excludeLimit);
       // Incluir canciones actuales en la cola (playlist) para evitar duplicados en la transición
       final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
@@ -1898,9 +1899,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // Ahora usamos esas canciones (más la semilla) para generar más recomendaciones
       AppLogger.info('[PlaybackNotifier] 🔗 Iniciando Fase 2 completa en background...');
       
-      // ⚡ OPTIMIZACIÓN: Simplificar cálculo de excludeIds para hacer la transición más rápida
+      // ⚡ OPTIMIZACIÓN: Simplificar cálculo de excludeIds pero manteniendo memoria
       final sessionNotifier = ref.read(playbackSessionProvider.notifier);
-      final excludeLimit = excludeSeedFromQueue ? 10 : 8; // Reducido para ser más rápido
+      // 🚀 AMNESIA FIX: Aumentado límite a 100. Prioridad a la variedad sobre micro-optimización de lista.
+      final excludeLimit = 100;
       final playedIds = sessionNotifier.getPlayedSongIds(limit: excludeLimit);
       final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
       final excludeIds = excludeSeedFromQueue 
@@ -2304,8 +2306,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 3. Combinar ambas fuentes para máxima cobertura
       final allQueueIds = {...allAudioQueueIds, ...allStateQueueIds};
       
-      // 4. Obtener TODAS las canciones del historial reciente (no limitadas a 8)
-      final allPlayedIds = sessionNotifier.getPlayedSongIds(limit: 40); // Usar máximo del historial
+      // 4. Obtener TODAS las canciones del historial reciente (Max 100)
+      // 🚀 AMNESIA FIX: 40 -> 100 para asegurar que no se repitan canciones en sesiones largas
+      final allPlayedIds = sessionNotifier.getPlayedSongIds(limit: 100);
       
       // 5. Construir lista de exclusión completa
       final excludeIds = {...allQueueIds, ...allPlayedIds};
@@ -2908,6 +2911,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             newSongs: validLastResort,
             audioOperation: (sources) => service.appendToQueue(sources),
             replace: false,
+            allowDuplicates: true, // 🔓 ÚLTIMO RECURSO: Permitir duplicados siempre
           );
           AppLogger.info('[PlaybackNotifier] ✅ Emergencia (último recurso): ${validLastResort.length} canciones agregadas');
           _consecutiveFailures = 0;
@@ -2953,7 +2957,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         
         // 🛡️ FALLBACK DE AGOTAMIENTO: Intento C - Sin exclusiones
         if (validPopular.isEmpty) {
-          AppLogger.warning('[PlaybackNotifier] ⚠️ Aún sin resultados. Permitiendo todas las canciones disponibles.');
+          AppLogger.warning('[PlaybackNotifier] ⚠️ Aún sin resultados. Permitiendo todas las canciones disponibles (GOD MODE).');
           validPopular = popularSongs
               .where((s) => s.isValidForPlayback)
               .take(10)
@@ -2963,10 +2967,15 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
 
       if (validPopular.isNotEmpty) {
+        // DETECCIÓN: Si tuvimos que relajar filtros, permitimos duplicados en la cola
+        // para evitar que el filtro atómico rechace lo que acabamos de rescatar.
+        final wasRelaxed = validPopular.length < 10 || excludeIds.isNotEmpty; // Simple heurística o tracking explícito
+        
         await _updateQueueAtomically(
           newSongs: validPopular,
           audioOperation: (sources) => service.appendToQueue(sources),
           replace: false,
+          allowDuplicates: wasRelaxed, // 🔓 PERMITIR DUPLICADOS SI ES NECESARIO
         );
         AppLogger.info('[PlaybackNotifier] 🛡️ Fallback exitoso: ${validPopular.length} canciones populares agregadas');
         _consecutiveFailures = 0;
@@ -3751,44 +3760,16 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           
           // Verificar anuncios VÁLIDOS (solo los que están en el índice actual o después)
           // Un anuncio es válido si está en el índice actual (reproduciéndose) o después (pendiente)
-          for (int i = freshCurrentIndex; i < freshSequenceState.sequence.length; i++) {
-            final source = freshSequenceState.sequence[i];
-            if (source.tag is AudioAd) {
-              final existingAd = source.tag as AudioAd;
-              AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] Ya hay un anuncio válido en la cola (índice $i, actual: $freshCurrentIndex): ${existingAd.title} (ID: ${existingAd.id}) - Omitiendo inserción duplicada');
-              
-              // ✅ FIX CRÍTICO: Marcar la canción actual como procesada para evitar bucle infinito
-              if (triggerSongId != null) {
-                _lastSongIdWithAd = triggerSongId;
-                AppLogger.info('[PlaybackNotifier] 🛑 [ANUNCIOS] Canción marcada como procesada: $triggerSongId');
-              } else {
-                 AppLogger.warning('[PlaybackNotifier] ⚠️ triggerSongId es null, no se puede marcar como procesada');
-              }
-              
-              _isInsertingAd = false; // ✅ CRÍTICO: Liberar flag antes de retornar
-              return;
-            }
-          }
+          // ✅ FIX: Validación de duplicados delegada a _insertAdInQueue (Scope Local)
+          // Eliminado escaneo global que bloqueaba anuncios lejanos
+          AppLogger.info('[PlaybackNotifier] ⏭️ Delegando validación de duplicados a _insertAdInQueue (verificación de proximidad)');
         } else {
           // Si no hay huérfanos, verificar normalmente
           // Verificar anuncios VÁLIDOS (solo los que están en el índice actual o después)
           // Un anuncio es válido si está en el índice actual (reproduciéndose) o después (pendiente)
-          for (int i = currentIndex; i < sequenceState.sequence.length; i++) {
-            final source = sequenceState.sequence[i];
-            if (source.tag is AudioAd) {
-              final existingAd = source.tag as AudioAd;
-              AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] Ya hay un anuncio válido en la cola (índice $i, actual: $currentIndex): ${existingAd.title} (ID: ${existingAd.id}) - Omitiendo inserción duplicada');
-              
-              // ✅ FIX CRÍTICO: Marcar la canción actual como procesada para evitar bucle infinito
-              if (triggerSongId != null) {
-                _lastSongIdWithAd = triggerSongId;
-                AppLogger.info('[PlaybackNotifier] 🛑 [ANUNCIOS] Canción marcada como procesada: $triggerSongId');
-              }
-              
-              _isInsertingAd = false; // ✅ CRÍTICO: Liberar flag antes de retornar
-              return;
-            }
-          }
+            // ✅ FIX: Validación de duplicados delegada a _insertAdInQueue (Scope Local)
+            // Eliminado escaneo global que bloqueaba anuncios lejanos
+            AppLogger.info('[PlaybackNotifier] ⏭️ Delegando validación de duplicados a _insertAdInQueue (verificación de proximidad)');
         }
       }
       
@@ -3891,6 +3872,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
   /// ✅ OPTIMIZADO: Insertar anuncio de forma fluida sin delays innecesarios
   /// Confía en el stream listener para actualizar el estado en tiempo real
+  /// ✅ OPTIMIZADO: Insertar anuncio de forma fluida sin delays innecesarios
+  /// Confía en el stream listener para actualizar el estado en tiempo real
   Future<void> _insertAdInQueue(AudioAd ad) async {
     // ✅ PROTECCIÓN: Marcar que estamos insertando
     _isInsertingAd = true;
@@ -3906,66 +3889,42 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final currentIndex = service.player.currentIndex ?? 0;
       final targetIndex = currentIndex + 1;
       
-      // 🛑 PROTECCIÓN CRÍTICA: Verificar una vez más si ya hay un anuncio en la posición objetivo
+      // 🛠️ [FORCED FIX] Validación simplificada de duplicados
+      // Solo verificar la posición INMEDIATA y adyacentes próximas.
+      // Ignorar deliberadamente anuncios que estén lejos en la cola (índice 30 vs 6).
       final sequenceState = service.player.sequenceState;
-      if (targetIndex < sequenceState.sequence.length) {
-        final existingSource = sequenceState.sequence[targetIndex];
+      final sequence = sequenceState?.sequence ?? [];
+      
+      // 1. Verificar si la posición objetivo ya es un anuncio
+      if (targetIndex < sequence.length) {
+        final existingSource = sequence[targetIndex];
         if (existingSource.tag is AudioAd) {
           final existingAd = existingSource.tag as AudioAd;
-          AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] [GUARD-1] Ya hay un anuncio en el índice objetivo $targetIndex: ${existingAd.title} (ID: ${existingAd.id}) - Omitiendo inserción duplicada');
+          AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] [GUARD-SIMPLE] Ya hay un anuncio en el índice siguiente $targetIndex: ${existingAd.title} - Omitiendo');
           _isInsertingAd = false;
           return;
         }
       }
-      
-      // 🛑 PROTECCIÓN CRÍTICA: Verificar también en las posiciones adyacentes (por si el índice cambió durante la inserción)
-      for (int i = 0; i <= 2 && currentIndex + i < sequenceState.sequence.length; i++) {
+
+      // 2. Verificar duplicados SOLO en las próximas 3 posiciones (no en toda la cola)
+      // Esto evita que un anuncio al final de la cola bloquee uno nuevo
+      final checkLimit = 3;
+      for (int i = 1; i <= checkLimit; i++) {
         final checkIndex = currentIndex + i;
-        if (checkIndex != currentIndex) { // No verificar la posición actual
-          final checkSource = sequenceState.sequence[checkIndex];
-          if (checkSource.tag is AudioAd) {
-            final existingAd = checkSource.tag as AudioAd;
-            if (existingAd.id == ad.id) {
-              AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] [GUARD-2] El mismo anuncio ya está en la cola (índice $checkIndex): ${existingAd.title} - Omitiendo inserción duplicada');
-              _isInsertingAd = false;
-              return;
-            }
-          }
+        if (checkIndex < sequence.length) {
+           final source = sequence[checkIndex];
+           if (source.tag is AudioAd) {
+             final existingAd = source.tag as AudioAd;
+             if (existingAd.id == ad.id) {
+               AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] [GUARD-PROXIMITY] El mismo anuncio ya está cerca (índice $checkIndex): ${existingAd.title} - Omitiendo por proximidad');
+               _isInsertingAd = false;
+               return;
+             }
+           }
         }
       }
       
-      // ✅ FIX CRÍTICO: Verificar una última vez que el currentIndex no haya cambiado
-      // Si el índice cambió durante la inserción, podría crear un anuncio huérfano
-      final finalCurrentIndex = service.player.currentIndex ?? 0;
-      final finalTargetIndex = finalCurrentIndex + 1;
-      
-      // Si el índice cambió significativamente (más de 1 posición), abortar para evitar huérfanos
-      if ((finalCurrentIndex - currentIndex).abs() > 1) {
-        AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] [GUARD-3] El índice cambió durante la inserción (de $currentIndex a $finalCurrentIndex) - Abortando para evitar anuncio huérfano');
-        _isInsertingAd = false;
-        return;
-      }
-      
-      // Si el índice cambió en 1 posición (avanzó), usar el nuevo targetIndex
-      final actualTargetIndex = finalTargetIndex;
-      
-      // ✅ CRÍTICO: Obtener un sequenceState FRESCO después de verificar el índice final
-      final finalSequenceState = service.player.sequenceState;
-      
-      // Verificar una última vez que no haya anuncios en la nueva posición objetivo
-      if (actualTargetIndex < finalSequenceState.sequence.length) {
-        final finalCheckSource = finalSequenceState.sequence[actualTargetIndex];
-        if (finalCheckSource.tag is AudioAd) {
-          final existingAd = finalCheckSource.tag as AudioAd;
-          AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] [GUARD-4] Ya hay un anuncio en el índice objetivo final $actualTargetIndex: ${existingAd.title} (ID: ${existingAd.id}) - Omitiendo inserción duplicada');
-          _isInsertingAd = false;
-          return;
-        }
-      }
-      
-      // ✅ FIX CRÍTICO: Insertar anuncio PRIMERO, luego actualizar estado cuando esté confirmado
-      // Esto evita inconsistencias donde el estado dice que hay anuncio pero aún no está en la cola
-      AppLogger.info('[PlaybackNotifier] 📢 [ANUNCIOS] Insertando anuncio en la cola: ${ad.title} (índice objetivo: $actualTargetIndex, índice original: $targetIndex)');
+      AppLogger.info('[PlaybackNotifier] 🛠️ [FORCED FIX] Insertando anuncio en $targetIndex (Actual: $currentIndex). Ignorando posibles duplicados lejanos.');
       
       // ✅ OPTIMIZACIÓN: Insertar anuncio primero sin actualizar estado todavía
       // ❄️ HARD FREEZE: Congelar la UI antes de la operación destructiva en la cola
@@ -3975,7 +3934,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       
       bool success = false;
       try {
-         success = await _adInsertionManager!.insertAd(ad, actualTargetIndex);
+         success = await _adInsertionManager!.insertAd(ad, targetIndex);
       } finally {
          // 🔓 Descongelar con un pequeño delay para permitir que el stream se asiente
          Future.delayed(const Duration(milliseconds: 300), () {
@@ -3986,7 +3945,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
       
       if (!success) {
-        AppLogger.error('[PlaybackNotifier] ❌ [AD-ENGINE] _adInsertionManager.insertAd returned FALSE. Something went wrong inside the manager.');
+        AppLogger.error('[PlaybackNotifier] ❌ [AD-ENGINE] _adInsertionManager.insertAd returned FALSE.');
         _isInsertingAd = false;
         return;
       }
@@ -4001,34 +3960,22 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         AppLogger.info('[PlaybackNotifier] 📢 [ANUNCIOS] ID de canción guardado para evitar duplicados: $_lastSongIdWithAd');
       }
       
-      AppLogger.info('[PlaybackNotifier] 📢 [ANUNCIOS] Timestamp de inicio establecido después de inserción exitosa: $_adStartTime');
-      AppLogger.info('[PlaybackNotifier] 🎯 [PROXY SOURCE] Anuncio insertado en índice $actualTargetIndex - el reproductor nativo manejará la transición automáticamente');
-      
-      // 🎯 PATRÓN "PROXY SOURCE": El anuncio ya está en la cola
-      // El reproductor nativo avanzará automáticamente al anuncio cuando la canción termine
-      // El stream listener detectará el anuncio y actualizará el estado automáticamente
-      // NO necesitamos hacer seek ni pausar - dejar que el reproductor nativo haga su trabajo
+      AppLogger.info('[PlaybackNotifier] 📢 [ANUNCIOS] Timestamp de inicio establecido: $_adStartTime');
+      AppLogger.info('[PlaybackNotifier] 🎯 [PROXY SOURCE] Anuncio insertado en índice $targetIndex');
       
       // ✅ OPTIMIZACIÓN: Liberar flag inmediatamente después de insertar
       _isInsertingAd = false;
       state = state.copyWith(isInsertingAd: false); // ✅ Sincronizar estado
       
-      // ✅ FIX CRÍTICO: Forzar sincronización de la cola inmediatamente para que la UI vea el anuncio
+      // ✅ FIX CRÍTICO: Forzar sincronización de la cola inmediatamente
       if (_service != null) {
         _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
       }
       
-      // 🎯 FRECUENCIA DE ANUNCIOS: El contador NO se resetea aquí.
-      // Se reseteará solo cuando el anuncio se complete en _handleAdCompletion
-      // Esto asegura que si el usuario cierra la app antes de ver el anuncio, el contador se mantenga
-      AppLogger.info('[PlaybackNotifier] 📢 [FRECUENCIA] Anuncio insertado. Contador se reseteará al completar reproducción.');
-      
+      AppLogger.info('[PlaybackNotifier] 📢 [FRECUENCIA] Anuncio insertado. Contador se reseteará al completar.');
       AppLogger.info('[PlaybackNotifier] ✅ Flag _isInsertingAd liberado');
-      
-      // ✅ NOTA: El estado se actualizará automáticamente cuando el stream listener detecte el anuncio
-      // No necesitamos actualizar el estado aquí porque el reproductor aún está reproduciendo la canción actual
-      
       AppLogger.info('[PlaybackNotifier] ✅ Anuncio insertado exitosamente: ${ad.title}');
+      
     } catch (e, stackTrace) {
       AppLogger.error('[PlaybackNotifier] Error al insertar anuncio: $e', stackTrace);
       state = state.copyWith(
@@ -4438,6 +4385,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         AppLogger.info('[PlaybackNotifier] 🚫 Botón Siguiente desactivado durante reproducción de anuncio');
         return;
     }
+
+    // ✅ REPORTE MANUAL: Avisar al reporter que este es un skip explícito
+    // Esto evita que transiciones rápidas automáticas se confundan con skips manuales
+    try {
+      ref.read(playbackReporterProvider).reportManualSkip();
+      AppLogger.debug('[PlaybackNotifier] ⏭️ Reportando skip manual al reporter');
+    } catch (_) {}
 
     final now = DateTime.now();
     if (now.difference(_lastControlTap) < _controlDebounce) return;
@@ -5848,6 +5802,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     required Future<void> Function(List<AudioSource>) audioOperation,
     bool replace = false,
     bool waitForPrevious = false,
+    bool allowDuplicates = false, // 🔓 NUEVO FLAG: Permitir duplicados en casos de emergencia
   }) async {
     // 🚨 LOCK: Prevenir actualizaciones concurrentes
     if (_isUpdatingQueue) {
@@ -5901,12 +5856,21 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final currentStateQueueIds = state.currentQueue.map((s) => s.id).toSet();
       final allCurrentQueueIds = {...currentAudioQueueIds, ...currentStateQueueIds};
       
-      // Filtrar duplicados antes de agregar
-      final uniqueNewSongs = newSongs.where((s) => !allCurrentQueueIds.contains(s.id)).toList();
+      // Filtrar duplicados antes de agregar (a menos que se permitan explícitamente)
+      final uniqueNewSongs = allowDuplicates 
+          ? newSongs 
+          : newSongs.where((s) => !allCurrentQueueIds.contains(s.id)).toList();
       
       if (uniqueNewSongs.isEmpty) {
-        AppLogger.info('[PlaybackNotifier] ⚠️ Todas las canciones ya están en la cola, omitiendo agregado');
-        return; // No hay nada que agregar
+        // Si allowDuplicates es true, uniqueNewSongs = newSongs, así que esto solo pasa si newSongs era vacío
+        // O si no se permitían duplicados y todos fueron filtrados
+        if (allowDuplicates && newSongs.isNotEmpty) {
+           AppLogger.info('[PlaybackNotifier] ℹ️ Agregando ${newSongs.length} duplicados (GOD MODE activo)');
+           // Continuamos...
+        } else {
+           AppLogger.info('[PlaybackNotifier] ⚠️ Todas las canciones ya están en la cola, omitiendo agregado');
+           return; // No hay nada que agregar
+        }
       }
       
       if (uniqueNewSongs.length < newSongs.length) {
