@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio/just_audio.dart'; // ✅ Importar para SequenceState
 import '../models/song_model.dart';
 import '../services/audio_service.dart';
 import 'playback_notifier.dart';
@@ -48,4 +49,11 @@ final currentSongProviderFixed = Provider<Song?>((ref) {
 /// Provider para obtener solo el estado de reproducción (optimización)
 final isPlayingProviderFixed = Provider<bool>((ref) {
   return ref.watch(unifiedAudioProviderFixed).isPlaying;
+});
+
+/// ✅ RAW SOURCE OF TRUTH: Stream directo del player (Misma fuente que ProfessionalAudioPlayer)
+/// Usar esto en el MiniPlayer para garantizar sincronización exacta con el Player Grande (ProfessionalAudioPlayer)
+final rawSequenceStateProvider = StreamProvider<SequenceState?>((ref) {
+  final service = ref.watch(audioServiceProvider);
+  return service.player.sequenceStateStream;
 });

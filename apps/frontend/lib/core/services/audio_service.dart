@@ -55,6 +55,9 @@ class AudioService {
   static const _smoothUpdateInterval = Duration(milliseconds: 50); // 20 FPS
   static const _smoothInterpolationFactor = 0.15;
   
+  // ❄️ HARD FREEZE: Modo congelado (ignora actualizaciones de UI durante operaciones críticas)
+  bool _freezeMode = false;
+  
   // 🛡️ SEEKING GUARD: Bloqueo durante seek
   bool _isSeeking = false;
   Timer? _seekingGuardTimer;
@@ -255,6 +258,8 @@ class AudioService {
       if (_isSeeking) return;
       // 🎯 ZERO-JUMP: Ignorar posiciones durante cambio de track
       if (_zeroJumpMode) return;
+      // ❄️ HARD FREEZE: Ignorar posiciones si estamos congelados
+      if (_freezeMode) return;
       _targetPosition = position;
     });
 
@@ -264,6 +269,8 @@ class AudioService {
       
       // 🎯 ZERO-JUMP: Durante cambio de track, no hacer nada
       if (_zeroJumpMode) return;
+      // ❄️ HARD FREEZE: Si estamos congelados, no emitir NADA
+      if (_freezeMode) return;
       
       // 🛡️ SEEKING GUARD: Durante seek, usar posición del usuario
       if (_isSeeking && _userSeekPosition != null) {
@@ -346,6 +353,12 @@ class AudioService {
   
   /// 🔄 TRACK CHANGE: Resetear estado al cambiar de canción
   void _onTrackChanged(int newIndex) {
+    // ❄️ HARD FREEZE: Si estamos congelados, ignorar cambios de track (limpieza de anuncios)
+    if (_freezeMode) {
+      AppLogger.info('[AudioService] ❄️ HARD FREEZE: Ignorando cambio de track ($newIndex) - UI protegida');
+      return;
+    }
+    
     AppLogger.debug('[AudioService] 🔄 Track changed: $_lastKnownIndex -> $newIndex');
     
     // Si `Zero-Jump` ya fue activado por la ruta optimista
@@ -463,17 +476,22 @@ class AudioService {
     
     // Mantener guard activo 500ms más para evitar flicker del stream
     _seekingGuardTimer?.cancel();
-    _seekingGuardTimer = Timer(_seekingGuardDuration, () {
+    _seekingGuardTimer = Timer(const Duration(milliseconds: 600), () {
       _isSeeking = false;
       _userSeekPosition = null;
-      AppLogger.debug('[AudioService] 🛡️ Seeking guard desactivado');
-    });
-    
-    // Desbloquear persistencia después de delay
-    Timer(_persistenceDelayAfterSeek, () {
       _persistenceBlockedAfterSeek = false;
+      AppLogger.debug('[AudioService] 🛡️ Seeking guard liberado (final: ${finalPosition.inSeconds}s)');
     });
   }
+  
+  /// ❄️ HARD FREEZE: Activar/Desactivar modo congelado
+  /// Esto "tapa los ojos" a toda la UI (Seekbar, notificadores)
+  void setFreezeMode(bool freeze) {
+    if (_freezeMode == freeze) return;
+    _freezeMode = freeze;
+    AppLogger.info('[AudioService] ❄️ HARD FREEZE: ${freeze ? "ACTIVADO" : "DESACTIVADO"}');
+  }  
+
   
   /// Verificar si está en modo seeking
   bool get isSeeking => _isSeeking;

@@ -242,6 +242,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   }
   
   bool _subscriptionsPaused = false;
+  // ❄️ HARD FREEZE: Flag para congelar totalmente la UI durante operaciones delicadas (inserción de anuncios)
+  bool _isFreezingUI = false;
 
   /// Inicializar suscripciones a los streams del reproductor
   void _initSubscriptions() {
@@ -260,7 +262,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         }
 
         // 🛡️ PROTECCIÓN: Si se está reemplazando la cola, ignorar
-        if (_isReplacingQueue) return;
+        // ❄️ HARD FREEZE: Si la UI está congelada, ignorar cambios absolutos
+        if (_isReplacingQueue || _isFreezingUI) return;
 
         AppLogger.info('[PlaybackNotifier] 🔑 Master Key triggered: Índice cambió a $index');
         
@@ -286,7 +289,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     final seqSub = service.sequenceStateStream.listen((sequenceState) {
       // 🛡️ ESCUDO DE TRANSICIÓN: Si estamos en un salto manual, ignorar actualizaciones del stream
         // Esto evita el "Efecto Látigo" donde se muestra brevemente la canción anterior
-        if (_isManualSkipping) return;
+        // ❄️ HARD FREEZE: Ignorar cualquier cambio de secuencia si estamos congelados
+        if (_isManualSkipping || _isFreezingUI) return;
 
         if (sequenceState == null) return;
         
@@ -414,11 +418,23 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             if (seq[i].tag is AudioAd) {
               _isRemovingOrphanedAd = true;
               final idx = i;
+              
+              // ❄️ HARD FREEZE: Congelar UI durante limpieza de huérfanos posterior
+              AppLogger.info('[PlaybackNotifier] ❄️ Activando HARD FREEZE para limpieza post-ad...');
+              _isFreezingUI = true;
+              _service?.setFreezeMode(true);
+
               Future.microtask(() async {
                 try {
                   await _adInsertionManager!.removeAdAt(idx);
                 } catch (_) {} finally {
                   _isRemovingOrphanedAd = false;
+                  // 🔓 Descongelar con delay
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                     _isFreezingUI = false;
+                     _service?.setFreezeMode(false);
+                     AppLogger.info('[PlaybackNotifier] 🌡️ Desactivando HARD FREEZE (Post-Cleanup)');
+                  });
                 }
               });
               break;
@@ -822,6 +838,20 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
                             (_lastAdCompletionTime == null || 
                              DateTime.now().difference(_lastAdCompletionTime!) >= const Duration(seconds: 1));
         
+        // 🚀 SMART CHANGE DETECTION (Transactions)
+        // Si la canción es la misma y el índice es el mismo, pero el sequenceState cambió (ej. inserción de anuncio),
+        // NO debemos resetear el estado (posición, duración, etc.) para evitar el "latigazo".
+        if (isSameSong && !indexChanged && !shouldUpdate) {
+             AppLogger.debug('[PlaybackNotifier] 🛡️ Smart Change Detection: La canción es idéntica y no hubo cambio de índice. Ignorando reset de estado.');
+             // Aún así, podríamos querer actualizar la cola interna si cambió (ej. se insertó el anuncio)
+             // pero SIN notificar un cambio de canción "nueva".
+             if (state.currentQueue.length != (sequenceState.sequence.where((s) => s.tag is Song).length)) {
+                  AppLogger.info('[PlaybackNotifier] 🔄 Actualizando cola interna silenciosamente (diferencia de longitud detectada)');
+                  _syncQueueWithAudioService(sequenceState);
+             }
+             return; // 🛑 ABORTAR RESET
+        }
+
         // 🔍 DIAGNÓSTICO: Ver por qué no se actualiza el historial
         if (!shouldUpdate) {
             AppLogger.debug('[PlaybackNotifier] ⚠️ No actualizando estado (isSameSong=$isSameSong, indexChanged=$indexChanged)');
@@ -926,6 +956,27 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     // 3. Suscribirse a la posición (progreso)
     _subscriptions.add(
       service.positionStream.listen((position) {
+        
+        // 🛡️ SHIELD: Si estamos insertando un anuncio, ignorar actualizaciones de posición
+        // La inserción provoca que el player reporte posición 0 o errática brevemente.
+        // Mantener la última posición conocida (aprox 50%) evita que la barra salte.
+        // ❄️ HARD FREEZE: Bloqueo absoluto
+        if (_isInsertingAd || _isFreezingUI) {
+          return; 
+        }
+        
+        // 🛡️ AD SOFT START: Durante los primeros 300ms de un anuncio, forzar posición 0
+        // Esto evita que la barra salte erráticamente al iniciar el anuncio
+        if (state.isPlayingAd && _adStartTime != null) {
+          final timeSinceAdStart = DateTime.now().difference(_adStartTime!);
+          if (timeSinceAdStart < const Duration(milliseconds: 300)) {
+             // Forzar 0 visualmente
+             if (state.currentPosition != Duration.zero) {
+                state = state.copyWith(currentPosition: Duration.zero);
+             }
+             return;
+          }
+        }
       
         // MASTER DEBUG LOGGER
         if (position.inSeconds % 10 == 0 && position.inSeconds > 0) {
@@ -2493,8 +2544,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           !_isGeneratingRecommendations &&
           !_isInsertingAd &&           // ✅ FASE 3: Bloquear si hay anuncio en inserción
           !_isHandlingAdInsertion) {  // ✅ FASE 3: Bloquear si hay manejo de anuncio
-        // ✅ PROTECCIÓN CRÍTICA: Establecer flag inmediatamente para evitar múltiples ejecuciones simultáneas
-        _isPreloading = true;
+// ✅ PROTECCIÓN CRÍTICA: Establecer flag inmediatamente para evitar múltiples ejecuciones simultáneas
+        // _isPreloading = true; // ❌ BUG FIX: No establecer aquí porque _appendMoreAlgorithmSongs lo verifica y retorna si es true.
+        
         // 🚨 FORZAR precarga ignorando cooldown cuando es crítico (≤3 canciones)
         // ✅ FIX CRÍTICO: Usar Future.microtask para diferir la ejecución y evitar bloqueos en el timer
         Future.microtask(() async {
@@ -2502,10 +2554,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             await _appendMoreAlgorithmSongs(forceIgnoreCooldown: true);
           } catch (e) {
             AppLogger.error('[PlaybackNotifier] 🎯 FASE 2: Error en precarga proactiva: $e');
-          } finally {
-            // ✅ CRÍTICO: Liberar flag después de completar (o fallar) la precarga
-            _isPreloading = false;
-          }
+          } 
+          // ❌ No limpiar flag aquí, _appendMoreAlgorithmSongs ya lo gestiona internamente
         });
       } else if (remainingSongs <= preloadThreshold && (_isInsertingAd || _isHandlingAdInsertion)) {
         // ✅ FASE 3: Log informativo cuando el Monitor está bloqueado por inserción de anuncios
@@ -3641,40 +3691,58 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           }
         }
         
-        // ✅ FIX CRÍTICO: Si hay anuncios huérfanos, eliminarlos ANTES de verificar duplicados
-        // Esto evita que se inserten anuncios duplicados cuando hay huérfanos que no se eliminaron correctamente
-        if (hasOrphanedAds && _adInsertionManager != null && !_isRemovingOrphanedAd) {
-          _isRemovingOrphanedAd = true;
-          try {
-            // ✅ CRÍTICO: Usar Future.microtask para diferir la eliminación y evitar conflictos con el stream
-            // Esto previene el error "Cannot fire new event. Controller is already firing an event"
-            await Future.microtask(() async {
-              // Eliminar en orden inverso para evitar problemas con índices que cambian
-              for (int i = orphanedIndices.length - 1; i >= 0; i--) {
-                final index = orphanedIndices[i];
-                await _adInsertionManager!.removeAdAt(index);
-                AppLogger.info('[PlaybackNotifier] 🧹 [ANUNCIOS] Anuncio huérfano eliminado del índice $index');
-              }
-            });
-            AppLogger.info('[PlaybackNotifier] 🧹 [ANUNCIOS] ${orphanedIndices.length} anuncios huérfanos eliminados, continuando con verificación...');
-          } catch (e) {
-            AppLogger.error('[PlaybackNotifier] Error al eliminar anuncios huérfanos: $e');
-            // Si falla la eliminación, verificar TODA la cola (incluyendo huérfanos) antes de insertar
-            AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] Eliminación falló, verificando TODA la cola antes de insertar...');
-            final fullSequenceState = _service!.player.sequenceState;
-            for (int i = 0; i < fullSequenceState.sequence.length; i++) {
-              final source = fullSequenceState.sequence[i];
-              if (source.tag is AudioAd) {
-                final existingAd = source.tag as AudioAd;
-                AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] Detectado anuncio en cola (índice $i): ${existingAd.title} (ID: ${existingAd.id}) - Omitiendo inserción para evitar duplicado');
+          // ✅ FIX CRÍTICO: Si hay anuncios huérfanos, eliminarlos ANTES de verificar duplicados
+          // Esto evita que se inserten anuncios duplicados cuando hay huérfanos que no se eliminaron correctamente
+          if (hasOrphanedAds && _adInsertionManager != null && !_isRemovingOrphanedAd) {
+             _isRemovingOrphanedAd = true;
+             
+             // ❄️ HARD FREEZE: Congelar UI durante limpieza de huérfanos
+             // La eliminación cambia índices y provoca reset de la barra si no se congela
+             AppLogger.info('[PlaybackNotifier] ❄️ Activando HARD FREEZE para limpieza de huérfanos...');
+             _isFreezingUI = true;
+             _service?.setFreezeMode(true); // ✅ CONTROLAR AUDIO SERVICE
+
+             try {
+                // ✅ CRÍTICO: Usar Future.microtask para diferir la eliminación y evitar conflictos con el stream
+                // Esto previene el error "Cannot fire new event. Controller is already firing an event"
+                await Future.microtask(() async {
+                   // Eliminar en orden inverso para evitar problemas con índices que cambian
+                   for (int i = orphanedIndices.length - 1; i >= 0; i--) {
+                      final index = orphanedIndices[i];
+                      await _adInsertionManager!.removeAdAt(index);
+                      AppLogger.info('[PlaybackNotifier] 🧹 [ANUNCIOS] Anuncio huérfano eliminado del índice $index');
+                   }
+                });
+                AppLogger.info('[PlaybackNotifier] 🧹 [ANUNCIOS] ${orphanedIndices.length} anuncios huérfanos eliminados, continuando con verificación...');
+             } catch (e) {
+                AppLogger.error('[PlaybackNotifier] Error al eliminar anuncios huérfanos: $e');
+                // Si falla la eliminación, verificar TODA la cola (incluyendo huérfanos) antes de insertar
+                AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] Eliminación falló, verificando TODA la cola antes de insertar...');
+                final fullSequenceState = _service!.player.sequenceState;
+                for (int i = 0; i < fullSequenceState.sequence.length; i++) {
+                   final source = fullSequenceState.sequence[i];
+                   if (source.tag is AudioAd) {
+                      final existingAd = source.tag as AudioAd;
+                      AppLogger.warning('[PlaybackNotifier] 🛑 [ANUNCIOS] Detectado anuncio en cola (índice $i): ${existingAd.title} (ID: ${existingAd.id}) - Omitiendo inserción para evitar duplicado');
+                      _isRemovingOrphanedAd = false;
+                      _isInsertingAd = false; // ✅ CRÍTICO: Liberar flag antes de retornar
+                      
+                      // 🔓 Descongelar inmediatamente si retornamos temprano
+                      _isFreezingUI = false;
+                      _service?.setFreezeMode(false); // ✅ DESCONGELAR AUDIO SERVICE
+                      AppLogger.info('[PlaybackNotifier] 🌡️ Desactivando HARD FREEZE (Early Return)');
+                      return;
+                   }
+                }
+             } finally {
                 _isRemovingOrphanedAd = false;
-                _isInsertingAd = false; // ✅ CRÍTICO: Liberar flag antes de retornar
-                return;
-              }
-            }
-          } finally {
-            _isRemovingOrphanedAd = false;
-          }
+                // 🔓 Descongelar con un pequeño delay
+                Future.delayed(const Duration(milliseconds: 300), () {
+                   _isFreezingUI = false;
+                   _service?.setFreezeMode(false); // ✅ DESCONGELAR AUDIO SERVICE
+                   AppLogger.info('[PlaybackNotifier] 🌡️ Desactivando HARD FREEZE (Cleanup Complete)');
+                });
+             }
           
           // ✅ CRÍTICO: Obtener el estado FRESCO después de eliminar huérfanos
           // porque los índices pueden haber cambiado
@@ -3900,7 +3968,22 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       AppLogger.info('[PlaybackNotifier] 📢 [ANUNCIOS] Insertando anuncio en la cola: ${ad.title} (índice objetivo: $actualTargetIndex, índice original: $targetIndex)');
       
       // ✅ OPTIMIZACIÓN: Insertar anuncio primero sin actualizar estado todavía
-      final success = await _adInsertionManager!.insertAd(ad, actualTargetIndex);
+      // ❄️ HARD FREEZE: Congelar la UI antes de la operación destructiva en la cola
+      AppLogger.info('[PlaybackNotifier] ❄️ Activando HARD FREEZE para inserción de anuncio...');
+      _isFreezingUI = true;
+      _service?.setFreezeMode(true); // ✅ CONTROLAR AUDIO SERVICE
+      
+      bool success = false;
+      try {
+         success = await _adInsertionManager!.insertAd(ad, actualTargetIndex);
+      } finally {
+         // 🔓 Descongelar con un pequeño delay para permitir que el stream se asiente
+         Future.delayed(const Duration(milliseconds: 300), () {
+            _isFreezingUI = false;
+            _service?.setFreezeMode(false); // ✅ DESCONGELAR AUDIO SERVICE
+            AppLogger.info('[PlaybackNotifier] 🌡️ Desactivando HARD FREEZE');
+         });
+      }
       
       if (!success) {
         AppLogger.error('[PlaybackNotifier] ❌ [AD-ENGINE] _adInsertionManager.insertAd returned FALSE. Something went wrong inside the manager.');
@@ -4862,8 +4945,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     
     final currentSong = currentSource.tag as Song;
     
-    // B. LÓGICA DE UMBRAL (1% para pruebas, restaurar a 50% para prod)
-    if (progressPercent >= 0.01) {
+    // B. LÓGICA DE UMBRAL (50% para producción)
+    if (progressPercent >= 0.5) {
        if (!_adTriggeredSongs.contains(currentSong.id)) {
           AppLogger.info('[PlaybackNotifier] 🚀 Umbral de anuncio alcanzado para: ${currentSong.title} (Plays: $_songsPlayedCount)');
           _executeAdTrigger(currentSong.id);
@@ -4884,8 +4967,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     _songsPlayedCount++;
     
     // 🧠 LOGIC FIX: Usar módulo para repetir cada N canciones
-    // FORCE DEBUG: Ignorar frecuencia del admin, usar 1 para test
-    final frequency = 1; // _adFrequencyFromAdmin > 0 ? _adFrequencyFromAdmin : 1;
+    final frequency = _adFrequencyFromAdmin > 0 ? _adFrequencyFromAdmin : 1;
     final shouldTrigger = _songsPlayedCount % frequency == 0;
     
     AppLogger.info('[PlaybackNotifier] 🧮 Verificando frecuencia de anuncios: $_songsPlayedCount / $frequency (Trigger: $shouldTrigger)');

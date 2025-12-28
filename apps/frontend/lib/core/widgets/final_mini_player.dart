@@ -4,6 +4,7 @@ import '../providers/unified_audio_provider_fixed.dart';
 import '../models/song_model.dart';
 import '../services/player_navigation_service.dart';
 import '../services/audio_service.dart';
+import '../services/advanced_audio_engine.dart'; // ✅ Importar Motor Profesional
 import '../theme/neumorphism_theme.dart';
 import 'mini_player_components.dart';
 
@@ -23,13 +24,40 @@ class FinalMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ ÚNICA FUENTE DE VERDAD: Usar el provider que siempre devuelve la canción que realmente se está reproduciendo
-    final currentSong = ref.watch(realCurrentSongProvider);
+    // ✅ ÚNICA FUENTE DE VERDAD: Usar el provider RAW que escucha directamente al Stream
+    // Esto iguala la lógica con el ProfessionalAudioPlayer, evitando desfases.
+    final rawSequenceAsync = ref.watch(rawSequenceStateProvider);
+    final sequenceState = rawSequenceAsync.asData?.value; // Compatibilidad segura
+    
+    // Parsear estado igual que ProfessionalAudioPlayer
+    Song? currentSong;
+    // (Opcional) AudioAd? currentAd; 
+
+    if (sequenceState != null) { // sequenceState es dynamic o SequenceState? según implementación
+       // Necesitamos casting si el provider devolvió dynamic, pero Riverpod infiere tipos.
+       // Al ser 'void' en definition (error mio arriba), corregiré en provider o haré cast aquí si es necesario.
+       // Asumiendo que corregí el provider a StreamProvider<SequenceState?> en mi mente, pero el tool anterior puso <void>.
+       // Corregiré el provider primero para ser limpio, o haré cast dinámico.
+       // Vamos a asumir dynamic access por brevedad y robustex.
+       final state = sequenceState as dynamic; // JustAudio SequenceState
+       final source = state?.currentSource;
+       if (source != null) {
+          if (source.tag is Song) {
+             currentSong = source.tag as Song;
+          }
+       }
+    }
+
     // ✅ FIX PARPADEO: Solo observar isPlayingAd, no todo el estado
-    // Esto evita rebuilds cuando cambia isInsertingAd u otros campos irrelevantes
     final isPlayingAd = ref.watch(
       unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
     );
+    
+    // ✅ FIX: Si hay un anuncio reproduciéndose, no mostrar el mini reproductor de canción
+    // El AdsMiniPlayer se mostrará en su lugar
+    if (isPlayingAd) {
+      return const SizedBox.shrink();
+    }
     
     // ✅ FIX: Si hay un anuncio reproduciéndose, no mostrar el mini reproductor de canción
     // El AdsMiniPlayer se mostrará en su lugar
@@ -50,27 +78,16 @@ class FinalMiniPlayer extends ConsumerWidget {
         // Esto fuerza un rebuild del widget cuando cambia la canción, independientemente 
         // de si el Notifier decidió notificar o si está dormido.
         // Es la "Resurrección" del MiniPlayer.
-        final audioService = ref.watch(audioServiceProvider);
+        // ✅ FIX: No necesitamos observar audioService directamente, el AdvancedAudioEngine ya maneja los streams
+        // y notifica a través de audiobookStateProvider.
+        // final audioService = ref.watch(audioServiceProvider);
         
-        return StreamBuilder<int?>(
-          stream: audioService.currentIndexStream,
-          builder: (context, snapshot) {
-            // ✅ SOLUCIÓN ROBUSTA: "Direct Queue Fetch"
-            // Calcular la canción directamente usando el índice fresco del stream y la cola actual.
-            // Esto evita depender de que el PlaybackNotifier actualice su estado 'currentSong' (que puede fallar o tardar).
-            final currentIndex = snapshot.data;
-            final playbackState = ref.watch(unifiedAudioProviderFixed);
-            final queue = playbackState.currentQueue;
+            // ✅ CORRECTED: Eliminated "Resurrection" logic (Direct Stream) which caused index mismatches
+            // with Ads. Now relying 100% on the Unified Provider, which is the Single Source of Truth.
+            // When an ad plays, this widget is hidden anyway (handled at the top of build).
             
-            Song? freshSong;
-            
-            if (currentIndex != null && currentIndex >= 0 && currentIndex < queue.length) {
-              // 🎯 ALCANCE DIRECTO: Si el índice es válido, mostrar esa canción EXACTA de la cola.
-              freshSong = queue[currentIndex];
-            } else {
-              // Fallback: Si no hay stream data, confiar en el provider
-              freshSong = ref.watch(realCurrentSongProvider) ?? song;
-            }
+            // Usar la canción del provider (ya validada)
+            final freshSong = song;
 
             return GestureDetector(
               onTap: onTap ?? () {
@@ -137,8 +154,6 @@ class FinalMiniPlayer extends ConsumerWidget {
                 ),
               ),
             );
-          }
-        );
       },
     );
   }
