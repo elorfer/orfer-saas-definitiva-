@@ -242,13 +242,13 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 64,
               color: NeumorphismTheme.textSecondary,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Error al cargar favoritos',
               style: AppTextStyles.subtitleLarge,
             ),
@@ -302,12 +302,12 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                 },
               ),
               const SizedBox(height: 32),
-              const Text(
+              Text(
                 'No tienes favoritos aún',
                 style: AppTextStyles.emptyStateTitle,
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Agrega canciones a tus favoritos\ntocando el corazón ❤️',
                 style: AppTextStyles.emptyStateBody,
                 textAlign: TextAlign.center,
@@ -326,27 +326,29 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
       ), // ✅ Scroll estilo iPhone (igual que Home)
       clipBehavior: Clip.none, // Evitar clipping innecesario
       slivers: [
-        // Header mejorado con gradiente
+        // Header mejorado con diseño limpio
         SliverToBoxAdapter(
-          child: Container(
-            margin: const EdgeInsets.all(16.0),
-            padding: const EdgeInsets.all(20.0), // ⚡ GAMA BAJA: Reducido
-            decoration: BoxDecoration(
-              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15), // ⚡ GAMA BAJA: Sin gradient ni boxShadow
-              borderRadius: const BorderRadius.all(Radius.circular(20)),
-            ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24), // Margen externo
             child: Row(
               children: [
-                // ⚡ GAMA BAJA: Icono simplificado sin gradient ni sombra
+                // Icono principal grande
                 Container(
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.red.shade500, // ⚡ Sin gradient
+                    color: Colors.red.shade500,
                     shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: const Icon(
-                    Icons.favorite,
+                    Icons.favorite_rounded, // Icono redondeado más moderno
                     color: Colors.white,
                     size: 28,
                   ),
@@ -357,14 +359,14 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Mis Favoritos',
                         style: AppTextStyles.titleLarge,
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.music_note,
                             size: 16,
                             color: NeumorphismTheme.textSecondary,
@@ -543,7 +545,7 @@ class _FavoriteSongItem extends ConsumerWidget {
                         const SizedBox(height: 4), // ✅ Reducido de 6 a 4
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.person_outline,
                               size: 14,
                               color: NeumorphismTheme.textSecondary,
@@ -568,31 +570,7 @@ class _FavoriteSongItem extends ConsumerWidget {
                     songId: song.id,
                     song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
                     iconColor: Colors.red,
-                    iconSize: 20, // ✅ Reducido de 22 a 20
-                  ),
-                  const SizedBox(width: 6), // ✅ Reducido de 8 a 6
-                  // Botón de información (navega a detalles de la canción)
-                  Container(
-                    width: 36, // ⚡ GAMA BAJA: Reducido
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: NeumorphismTheme.coffeeMedium, // ⚡ Sin gradient ni boxShadow
-                      shape: BoxShape.circle,
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: onTap, // Navegar a información de la canción
-                        borderRadius: const BorderRadius.all(Radius.circular(20)), // ✅ Reducido de 22 a 20
-                        child: const Center(
-                          child: Icon(
-                            Icons.info_outline_rounded,
-                            color: Colors.white,
-                            size: 20, // ✅ Reducido de 22 a 20
-                          ),
-                        ), // Ya es const
-                      ),
-                    ),
+                    iconSize: 24, // ✅ Aumentado ligeramente para mejor tacto
                   ),
                 ],
               ),

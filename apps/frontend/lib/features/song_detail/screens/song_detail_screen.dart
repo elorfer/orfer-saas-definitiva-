@@ -19,6 +19,10 @@ import '../../artists/services/artists_api.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/utils/data_normalizer.dart';
 import '../../../core/utils/number_formatter.dart';
+import '../../../core/providers/offline_manager_provider.dart';
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/models/user_model.dart'; // For User/SubscriptionStatus
+import '../../premium/widgets/premium_upsell_dialog.dart';
 
 /// Pantalla de detalle de canción estilo Spotify con diseño moderno
 class SongDetailScreen extends ConsumerStatefulWidget {
@@ -671,13 +675,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         decoration: BoxDecoration(
           color: _shimmerBaseColor, // Color del tema claro
           borderRadius: const BorderRadius.all(Radius.circular(32)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+          // boxShadow removido
         ),
       ),
     );
@@ -717,9 +715,9 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         Container(
           width: 24,
           height: 24,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            boxShadow: NeumorphismTheme.floatingCardShadow, // Misma sombra que el real
+            // boxShadow removido
           ),
           child: Shimmer.fromColors(
             baseColor: _shimmerBaseColor,
@@ -813,15 +811,9 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       return Container(
         width: imageSize,
         height: imageSize,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(32)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(32)),
+          // boxShadow removido
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(32)),
@@ -870,15 +862,9 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       return Container(
         width: imageSize,
         height: imageSize,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(32)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.all(Radius.circular(32)),
+          // boxShadow removido
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(32)),
@@ -925,7 +911,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
         decoration: BoxDecoration(
           color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
           shape: BoxShape.circle,
-          boxShadow: NeumorphismTheme.floatingCardShadow,
+          // boxShadow removido
         ),
       ),
     );
@@ -944,7 +930,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        boxShadow: NeumorphismTheme.floatingCardShadow,
+        // boxShadow removido
       ),
       child: ClipOval(
         child: CachedNetworkImage(
@@ -1063,7 +1049,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                         children: [
                                           Text(
                                             song.title ?? 'Sin título',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 28,
                                               fontWeight: FontWeight.bold,
                                               color: NeumorphismTheme.textPrimary,
@@ -1080,7 +1066,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                           crossAxisAlignment: CrossAxisAlignment.baseline,
                                           textBaseline: TextBaseline.alphabetic,
                                           children: [
-                                            const Text(
+                                            Text(
                                               'Sencillo',
                                               style: TextStyle(
                                                 fontSize: 13,
@@ -1090,7 +1076,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                               ),
                                             ),
                                             if (song.genres != null && song.genres!.isNotEmpty) ...[
-                                              const Text(
+                                              Text(
                                                 ' • ',
                                                 style: TextStyle(
                                                   fontSize: 13,
@@ -1101,7 +1087,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                               ),
                                               Text(
                                                 song.genres!.first.toLowerCase(),
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 13,
                                                   color: NeumorphismTheme.textLight,
                                                   fontWeight: FontWeight.w400,
@@ -1125,7 +1111,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                             const SizedBox(width: 3),
                                             Text(
                                               NumberFormatter.format(song.totalStreams),
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12,
                                                 color: NeumorphismTheme.textSecondary,
                                                 fontWeight: FontWeight.w500,
@@ -1161,7 +1147,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                         child: IconButton(
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
-                                          icon: const Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
+                                          icon: Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
                                           onPressed: () {
                                             // Menú de opciones - funcionalidad pendiente
                                           },
@@ -1208,7 +1194,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                             const SizedBox(width: 8),
                                             Text(
                                               artist?.displayName ?? 'Artista desconocido',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 15,
                                                 color: NeumorphismTheme.textSecondary,
                                                 fontWeight: FontWeight.w500,
@@ -1246,7 +1232,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                           onTap: _navigateToArtist,
                                           child: Text(
                                             'Más de ${artist.displayName}',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 20,
                                               fontWeight: FontWeight.bold,
                                               color: NeumorphismTheme.coffeeMedium,
@@ -1255,7 +1241,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                         ),
                                         TextButton(
                                           onPressed: _navigateToArtist,
-                                          child: const Text(
+                                          child: Text(
                                             'Mostrar todo',
                                             style: TextStyle(
                                               color: NeumorphismTheme.textSecondary,
@@ -1349,13 +1335,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                             height: imageSize,
                             decoration: BoxDecoration(
                               borderRadius: const BorderRadius.all(Radius.circular(32)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.2),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
+                              // boxShadow removido
                             ),
                             child: ClipRRect(
                               borderRadius: const BorderRadius.all(Radius.circular(32)),
@@ -1420,7 +1400,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     children: [
                                       Text(
                                         song.title ?? 'Sin título',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 28,
                                           fontWeight: FontWeight.bold,
                                           color: NeumorphismTheme.textPrimary,
@@ -1437,7 +1417,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                       crossAxisAlignment: CrossAxisAlignment.baseline,
                                       textBaseline: TextBaseline.alphabetic,
                                       children: [
-                                        const Text(
+                                        Text(
                                           'Sencillo',
                                           style: TextStyle(
                                             fontSize: 13,
@@ -1447,7 +1427,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                           ),
                                         ),
                                         if (song.genres != null && song.genres!.isNotEmpty) ...[
-                                          const Text(
+                                          Text(
                                             ' • ',
                                             style: TextStyle(
                                               fontSize: 13,
@@ -1458,7 +1438,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                           ),
                                           Text(
                                             song.genres!.first.toLowerCase(),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 13,
                                               color: NeumorphismTheme.textLight,
                                               fontWeight: FontWeight.w400,
@@ -1482,7 +1462,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                         const SizedBox(width: 3),
                                         Text(
                                           NumberFormatter.format(song.totalStreams),
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 12,
                                             color: NeumorphismTheme.textSecondary,
                                             fontWeight: FontWeight.w500,
@@ -1500,6 +1480,104 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.start, // Alineación al inicio para alinear con título
                                 children: [
+                                  // Botón Descargar (Offline)
+                                  Transform.translate(
+                                    offset: const Offset(0, -4),
+                                    child: Consumer(
+                                      builder: (context, ref, _) {
+                                        final offlineState = ref.watch(offlineManagerProvider);
+                                        final isDownloaded = offlineState.downloadedSongs.containsKey(song.id);
+                                        final isDownloading = offlineState.downloadingIds.contains(song.id);
+                                        final progress = offlineState.downloadProgress[song.id] ?? 0.0;
+
+                                        if (isDownloading) {
+                                           return Container(
+                                             margin: const EdgeInsets.symmetric(horizontal: 8),
+                                             width: 24,
+                                             height: 24,
+                                              child: CircularProgressIndicator(
+                                                value: progress,
+                                                strokeWidth: 2,
+                                                color: NeumorphismTheme.coffeeMedium,
+                                              ),
+                                           );
+                                        }
+
+                                        return IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: Icon(
+                                            isDownloaded ? Icons.download_done_rounded : Icons.download_rounded,
+                                            color: isDownloaded ? Colors.green : NeumorphismTheme.textPrimary,
+                                            size: 28,
+                                          ),
+                                          onPressed: () {
+                                            final user = ref.read(currentUserProvider);
+                                            final isPremium = user != null && 
+                                                (user.subscriptionStatus == SubscriptionStatus.premium || 
+                                                 user.subscriptionStatus == SubscriptionStatus.vip);
+
+                                            if (!isPremium) {
+                                              // OPTIMIZACIÓN: Animación fluida igual que en Drawer
+                                              showGeneralDialog(
+                                                context: context,
+                                                barrierDismissible: true,
+                                                barrierLabel: 'Cerrar',
+                                                barrierColor: Colors.black54,
+                                                pageBuilder: (context, animation, secondaryAnimation) => const PremiumUpsellDialog(),
+                                                transitionBuilder: (context, animation, secondaryAnimation, child) {
+                                                  // ⚡ OPTIMIZATION LOW-END: 
+                                                  // Removed ScaleTransition (Expensive).
+                                                  // Used SlideTransition (Cheap).
+                                                  final curvedAnimation = CurvedAnimation(
+                                                    parent: animation,
+                                                    curve: Curves.easeOut,
+                                                  );
+                                                  
+                                                  return SlideTransition(
+                                                    position: Tween<Offset>(
+                                                      begin: const Offset(0, 0.1), 
+                                                      end: Offset.zero,
+                                                    ).animate(curvedAnimation),
+                                                    child: FadeTransition(
+                                                      opacity: curvedAnimation,
+                                                      child: child,
+                                                    ),
+                                                  );
+                                                },
+                                                transitionDuration: const Duration(milliseconds: 150), // Ultra Fast
+                                              );
+                                              return;
+                                            }
+
+                                            if (isDownloaded) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: const Text('Canción disponible offline'),
+                                                  duration: const Duration(milliseconds: 1500),
+                                                  behavior: SnackBarBehavior.floating,
+                                                  backgroundColor: NeumorphismTheme.accent,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                ),
+                                              );
+                                            } else {
+                                              ref.read(offlineManagerProvider.notifier).downloadSong(song);
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: const Text('Iniciando descarga...'),
+                                                  duration: const Duration(milliseconds: 1500),
+                                                  behavior: SnackBarBehavior.floating,
+                                                  backgroundColor: NeumorphismTheme.textPrimary,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
                                   Transform.translate(
                                     offset: const Offset(0, -4), // Subir más el botón
                                     child: FavoriteButton(
@@ -1515,7 +1593,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     child: IconButton(
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
-                                      icon: const Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
+                                      icon: Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
                                       onPressed: () {},
                                     ),
                                   ),
@@ -1554,7 +1632,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                   const SizedBox(width: 8),
                                   Text(
                                     artist?.displayName ?? 'Artista desconocido',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 15,
                                       color: NeumorphismTheme.textSecondary,
                                       fontWeight: FontWeight.w500,
@@ -1581,7 +1659,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     onTap: _navigateToArtist,
                                     child: Text(
                                       'Más de ${artist.displayName}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                         color: NeumorphismTheme.coffeeMedium,
@@ -1590,7 +1668,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                   ),
                                   TextButton(
                                     onPressed: _navigateToArtist,
-                                    child: const Text(
+                                    child: Text(
                                       'Mostrar todo',
                                       style: TextStyle(
                                         color: NeumorphismTheme.textSecondary,
@@ -1654,7 +1732,7 @@ class _BackButton extends StatelessWidget {
         ],
       ),
       child: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: NeumorphismTheme.textPrimary, size: 24),
+        icon: Icon(Icons.arrow_back_rounded, color: NeumorphismTheme.textPrimary, size: 24),
         onPressed: onPressed,
         // OPTIMIZADO: tooltip para accesibilidad sin costo de rendimiento
         tooltip: 'Volver',
@@ -1689,7 +1767,7 @@ class _MenuButton extends StatelessWidget {
         boxShadow: NeumorphismTheme.floatingCardShadow,
       ),
       child: IconButton(
-        icon: const Icon(Icons.more_vert, color: NeumorphismTheme.textPrimary),
+        icon: Icon(Icons.more_vert, color: NeumorphismTheme.textPrimary),
         onPressed: onPressed,
         // OPTIMIZADO: tooltip para accesibilidad sin costo de rendimiento
         tooltip: 'Más opciones',
@@ -1741,7 +1819,7 @@ class _PlayPauseButtonLarge extends ConsumerWidget {
         width: 52,
         height: 52,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [

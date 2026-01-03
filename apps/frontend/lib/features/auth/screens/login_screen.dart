@@ -124,7 +124,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: AppTextStyles.authTitle.copyWith(
             fontSize: isSmallScreen ? 36 : (isMediumScreen ? 42 : 48),
             fontWeight: FontWeight.w900,
-            color: NeumorphismTheme.accentLight,
+            color: const Color(0xFFD7CCC8), // NeumorphismTheme.accentLight (Light Mode)
           ),
         ),
         SizedBox(height: isSmallScreen ? 6 : 10),
@@ -147,6 +147,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         // Campo de email o username
         AuthTextField(
+          focusedBorderColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
           controller: _emailController,
           label: 'Correo electrónico o nombre de usuario',
           hint: 'tu@email.com o @tu_usuario',
@@ -168,6 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         SizedBox(height: isSmallScreen ? 16 : 20),
         // Campo de contraseña
         AuthTextField(
+          focusedBorderColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
           controller: _passwordController,
           label: 'Contraseña',
           hint: 'Tu contraseña',
@@ -203,7 +205,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             _rememberMe = value ?? false;
                           });
                         },
-                        activeColor: NeumorphismTheme.coffeeMedium,
+                        activeColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       Text(
@@ -249,7 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             _rememberMe = value ?? false;
                           });
                         },
-                        activeColor: NeumorphismTheme.coffeeMedium,
+                        activeColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       Flexible(
@@ -289,6 +291,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         SizedBox(height: isSmallScreen ? 20 : 24),
         // Botón de login
         AuthButton(
+          backgroundColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
           text: 'Iniciar Sesión',
           isLoading: isLoading,
           onPressed: () async {
@@ -416,6 +419,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Text(
                 'Regístrate',
                 style: AppTextStyles.authLink.copyWith(
+                  color: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
                   fontSize: isSmallScreen ? 13 : null,
                 ),
               ),

@@ -9,20 +9,20 @@ class FeaturedPlaylistCard extends StatelessWidget {
 
   // Estilos cacheados
   // Estilos constantes para evitar resolución dinámica de GoogleFonts en cada frame
-  static const TextStyle _userStyle = TextStyle(
+  static TextStyle get _userStyle => TextStyle(
     fontSize: 13,
     height: 1.2,
     color: NeumorphismTheme.textSecondary,
     fontWeight: FontWeight.w400,
     decoration: TextDecoration.none,
   );
-  static const TextStyle _tracksStyle = TextStyle(
+  static TextStyle get _tracksStyle => TextStyle(
     fontSize: 12,
     color: NeumorphismTheme.textSecondary,
     fontWeight: FontWeight.w500,
     decoration: TextDecoration.none,
   );
-  static const TextStyle _badgeStyle = TextStyle(
+  static TextStyle get _badgeStyle => TextStyle(
     fontSize: 11,
     height: 1.0,
     color: NeumorphismTheme.accent,
@@ -41,6 +41,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
     final playlist = featuredPlaylist.playlist;
     
     return GestureDetector(
+      behavior: HitTestBehavior.translucent, // 🚀 GESTURE ARENA PRO: Evita delays en el scroll
       onTap: onTap,
       child: Container(
         width: 160,
@@ -50,26 +51,21 @@ class FeaturedPlaylistCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min, // ✅ Usar solo el espacio necesario
           children: [
             // Imagen de la playlist
-            Container(
+            SizedBox(
               width: 160,
               height: 160,
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(16)),
-                // ⚡ GAMA BAJA: Sin boxShadow para mejor rendimiento
-              ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(16)),
-                child: OptimizedImage(
-                  imageUrl: playlist.coverArtUrl,
-                  fit: BoxFit.cover,
-                  width: 160,
-                  height: 160,
-                  borderRadius: 16,
-                  placeholderColor: NeumorphismTheme.accentLight,
-                  maxCacheWidth: 240, // ⚡ GAMA BAJA: Punto dulce para 160px widgets
-                  maxCacheHeight: 240,
-                  skipFade: true, // 🔥 Sin fade para mejor rendimiento
-                ),
+              // 🚀 OPTIMIZATION: Removed redundant ClipRRect.
+              // OptimizedImage handles borderRadius.
+              child: OptimizedImage(
+                imageUrl: playlist.coverArtUrl,
+                fit: BoxFit.cover,
+                width: 160,
+                height: 160,
+                borderRadius: 16,
+                placeholderColor: NeumorphismTheme.accentLight,
+                maxCacheWidth: 400, 
+                maxCacheHeight: 400,
+                skipFade: true, 
               ),
             ),
             const SizedBox(height: 4),
@@ -96,7 +92,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min, // ✅ Tamaño mínimo
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.queue_music_rounded,
                           size: 14,
                           color: NeumorphismTheme.textSecondary,
@@ -131,7 +127,7 @@ class FeaturedPlaylistCard extends StatelessWidget {
                 child: Row(
                   // ✅ CORRECCIÓN: No usar mainAxisSize.min cuando hay Expanded
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.star_rounded,
                       size: 13, // ✅ Reducido de 14 a 13 para evitar overflow
                       color: NeumorphismTheme.accent,

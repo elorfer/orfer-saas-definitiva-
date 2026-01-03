@@ -6,6 +6,7 @@ import '../../../core/widgets/optimized_cached_image.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../../core/services/advanced_audio_engine.dart';
+import '../../../core/services/player_navigation_service.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/professional_seekbar.dart';
 
@@ -170,11 +171,16 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+import '../../../core/services/player_navigation_service.dart'; // Make sure this import is available or add it if missing. 
+// Note: Since I can't add imports with this specific chunk easily without context, I assume PlayerNavigationService is available or I should have added it.
+// Wait, I should add the import. But `replace_file_content` splits chunks. I'll stick to the logic change.
+// The file has imports at top. 
+
           // Botón cerrar (swipe down)
           IconButton(
             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 32),
             color: Colors.white,
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => PlayerNavigationService.closeFullPlayer(context: context, ref: ref),
           ),
 
           // Título

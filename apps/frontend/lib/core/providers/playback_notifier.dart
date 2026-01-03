@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,8 @@ import '../services/home_service.dart';
 import '../providers/play_history_provider.dart';
 import '../providers/playback_session_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/offline_manager_provider.dart';
+import '../models/user_model.dart';
 import '../utils/logger.dart';
 import 'playback_state.dart';
 import 'ad_insertion_manager.dart';
@@ -143,6 +146,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   // 📢 STRUKY AD-ENGINE V1.1 STATE
   final Set<String> _adTriggeredSongs = {}; // Control de disparo único
   bool _isAdRequestInFlight = false; // 🔒 IDEMPOTENCIA: Lock para petición en vuelo
+  // 🔒 LOCK: Prevents background syncs from overwriting optimistic UI state during manual transitions
+  bool _isTransitioning = false; 
   String? _currentSongId; // ⚛️ ATOMIC STATE: Para detectar cambios de canción
   Timer? _failsafeTimer; // Mecanismo de respaldo (Heartbeat)
 
@@ -244,6 +249,183 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   bool _subscriptionsPaused = false;
   // ❄️ HARD FREEZE: Flag para congelar totalmente la UI durante operaciones delicadas (inserción de anuncios)
   bool _isFreezingUI = false;
+
+  /// 🚀 INSTANT PLAY: Precarga inteligente para inicio inmediato
+  /// Estrategia: "Local-First" -> Buscar en disco, si no, red.
+  Future<void> prefetch(User user) async {
+    AppLogger.info('[PlaybackNotifier] ⚡ Iniciando secuencia de Adrenalina (Instant Play)...');
+    
+    // 1. Configurar buffer agresivo para arranque rápido
+    // Solo para la primera carga, luego se puede relajar si es necesario
+    try {
+      // Nota: AudioLoadConfiguration se configura en el servicio, pero podemos intentar
+      // forzar un estado óptimo aquí si el servicio expone métodos, o confiamos en el default.
+    } catch (_) {}
+
+    // 2. Estrategia Local-First (Búnker)
+    final offlineManager = ref.read(offlineManagerProvider.notifier);
+    
+    // TODO: Implementar getStartupSongs en OfflineManager
+    // Por ahora, simulamos obteniendo canciones descargadas
+    final downloadedSongs = ref.read(offlineManagerProvider).downloadedSongs.values.toList();
+    
+    if (downloadedSongs.isNotEmpty) {
+      // Priorizar canciones recientes si es posible
+      final seedSong = downloadedSongs.first; 
+      AppLogger.info('[PlaybackNotifier] 🏁 Encontrada canción local para inicio rápido: ${seedSong.title}');
+      
+      // Preparar reproductor inmediatamente (Warm-up)
+      await _warmUpPlayer(seedSong, isLocal: true);
+      return;
+    }
+    
+    // 3. Fallback a Red (Algoritmo)
+    AppLogger.info('[PlaybackNotifier] 🌐 Sin contenido local. Solicitando semilla al backend...');
+    try {
+      // Disparar en background
+      _initAlgorithmWithLowLatency(user);
+    } catch (e) {
+      AppLogger.error('[PlaybackNotifier] Falló prefetch de red', e);
+    }
+  }
+
+  /// Calentamiento del reproductor (Low-Level)
+  Future<void> _warmUpPlayer(Song song, {bool isLocal = false}) async {
+    if (_service == null) return;
+    
+    try {
+      // Convertir a AudioSource
+      final source = await _service!.createAudioSource(song); // Asumimos que este método existe o es accesible logicamente
+      
+      if (source != null) {
+        // 🚀 PRELOAD: La clave del Instant Play
+        // Cargar el recurso pero NO reproducir todavía (play=false)
+        await _service!.player.setAudioSource(source, preload: true);
+        AppLogger.info('[PlaybackNotifier] 🔥 Reproductor pre-cargado y listo (Local: $isLocal)');
+        
+        // Actualizar estado para que la UI muestre la canción lista
+        state = state.copyWith(
+          currentSong: song,
+          currentQueue: [song], // Cola temporal de 1
+          playbackMode: isLocal ? PlaybackMode.offline : PlaybackMode.algorithm,
+        );
+      }
+    } catch (e) {
+       AppLogger.error('[PlaybackNotifier] Error en warm-up', e);
+    }
+  }
+
+  /// Reproducir canción específica (Smart Injection + Ninja Mode)
+  Future<void> playSpecificSong(Song song, {String? contextId}) async {
+    AppLogger.info('[PlaybackNotifier] 🎵 playSpecificSong: ${song.title} (Context: $contextId)');
+    _activateTransitionShield(); // 🛡️ Activar escudo
+    _isTransitioning = true; // 🔒 LOCK SYNC: Bloquear syncs de fondo
+
+    // 🥷 NINJA MODE: Revelar player inmediatamente (Optimistic UI)
+    // También seteamos currentSong para que PersistentNavigation no oculte el player
+    state = state.copyWith(
+      isMiniPlayerVisible: true,
+      currentSong: song, // ⚡ Optimistic Set
+      lastConfirmedSong: song,
+      isBuffering: true,
+      // ✅ FIX: Force clear ad state to ensure immediate visibility
+      isPlayingAd: false,
+      clearCurrentAd: true,
+    );
+    AppLogger.info('[PlaybackNotifier] 🥷 Ninja Mode: Player revealed (isMiniPlayerVisible: true) for ${song.title}');
+
+    try {
+      // ⚡ INYECCIÓN INSTANTÁNEA: Si hay una cola activa, usar inserción rápida
+      if (service.hasActiveQueue && song.isValidForPlayback) {
+        try {
+          AppLogger.info('[PlaybackNotifier] ⚡ Intentando inyección instantánea en playSpecificSong');
+          
+          final source = await _resolveSource(song);
+          final success = await service.insertSongAtStart(source);
+          
+          if (success) {
+            // 🔄 SINCRONIZACIÓN INMEDIATA
+            await Future.delayed(const Duration(milliseconds: 50));
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+            
+            state = state.copyWith(
+              currentSong: song,
+              lastConfirmedSong: song,
+              isBuffering: true, // Mostrar carga
+              isMiniPlayerVisible: true, // 🥷 Asegurar visibilidad
+              contextId: contextId, // Actualizar contexto si existe
+              playbackMode: PlaybackMode.algorithm, // Asumir algoritmo/single por defecto
+            );
+            
+            await service.play();
+            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+            
+            AppLogger.info('[PlaybackNotifier] ✅ Cambio instantáneo completado');
+            return;
+          }
+        } catch (e) {
+          AppLogger.warning('[PlaybackNotifier] Inyección fallo, usando fallback: $e');
+        }
+      }
+      
+      // Fallback: Método estándar (Reemplazo total de cola)
+      AppLogger.info('[PlaybackNotifier] 🔄 Usando playFixedQueue (fallback)');
+      await playFixedQueue([song], song, contextId: contextId);
+      
+    } catch (e, stackTrace) {
+      AppLogger.error('[PlaybackNotifier] ❌ Error al reproducir canción: $e', stackTrace);
+      state = state.copyWith(isLoading: false);
+      rethrow;
+    }
+  }
+
+  /// Reproducir/Pausar
+  Future<void> play() async {
+    _isProcessingPlayPause = true;
+    state = state.copyWith(isProcessingPlayPause: true);
+    
+    // 🥷 NINJA MODE: Si el usuario toca Play, mostramos el player
+    if (!state.isMiniPlayerVisible && state.hasSong) {
+      state = state.copyWith(isMiniPlayerVisible: true);
+    }
+
+    try {
+      if (state.isPlaying) {
+        await _service?.player.pause();
+      } else {
+        await _service?.player.play();
+      }
+    } catch (e) {
+      AppLogger.error('[PlaybackNotifier] Error en play/pause', e);
+    } finally {
+      _isProcessingPlayPause = false;
+      state = state.copyWith(isProcessingPlayPause: false);
+    }
+  }
+
+  /// Iniciar algoritmo con prioridad de latencia
+  Future<void> _initAlgorithmWithLowLatency(User user) async {
+     // Implementación simplificada de playAlgorithmStart pero optimizada para arranque
+     // Pedir solo 1 canción para ser lo más rápido posible
+     try {
+       final featuredSongs = await _intelligentService.getIntelligentFeaturedSongs(
+         limit: 1, // Solo 1 para velocidad máxima
+         user: user,
+       );
+       
+       final recommendations = featuredSongs.map((f) => f.song).toList();
+       
+       if (recommendations.isNotEmpty) {
+         await _warmUpPlayer(recommendations.first, isLocal: false);
+         
+         // Una vez asegurada la primera, cargar más en background
+         _appendMoreAlgorithmSongs(forceIgnoreCooldown: true);
+       }
+     } catch (e) {
+       AppLogger.error('[PlaybackNotifier] Error en algoritmo low-latency', e);
+     }
+  }
+
 
   /// Inicializar suscripciones a los streams del reproductor
   void _initSubscriptions() {
@@ -927,6 +1109,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         // El botón play/pause ya no depende de esto, usa el stream directamente
         state = state.copyWith(isPlaying: isPlaying);
         AppLogger.debug('[PlaybackNotifier] Stream actualizó isPlaying: $isPlaying');
+        
+        // 🛡️ FAILSAFE DE VISIBILIDAD: Si está sonando y NO es anuncio, mostrar player
+        // Esto corrige casos donde el trigger inicial se pierde
+        if (isPlaying && !state.isPlayingAd && !state.isMiniPlayerVisible && state.hasSong) {
+             AppLogger.warning('[PlaybackNotifier] 🛡️ FAILSAFE ACTIVADO: Forzando visibilidad del MiniPlayer (Estaba oculto mientras sonaba)');
+             state = state.copyWith(isMiniPlayerVisible: true);
+        }
       }),
     );
     
@@ -1236,6 +1425,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         contextId: contextId,
         // 🚨 RESET: Habilitar siempre el algoritmo al iniciar nueva playlist
         shouldStartAlgorithmAfterQueue: true,
+        // 🥷 NINJA MODE: Mostrar MiniPlayer explícitamente y asignar canción inicial (UI Optimista)
+        isMiniPlayerVisible: true,
+        currentSong: startSong, // ⚡ Optimistic Set: Para que PersistentNavigation no oculte el player
+        lastConfirmedSong: startSong,
       );
 
       // Detener monitor de algoritmo si estaba activo
@@ -1287,8 +1480,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 🚨 ACTUALIZACIÓN ATÓMICA: Cargar cola de forma sincronizada
       _isUpdatingQueue = true;
       try {
-        // Convertir canciones válidas a AudioSource
-        final sources = validPlaylist.map((s) => s.toAudioSource()).toList();
+        // Convertir canciones válidas a AudioSource (Soporte Offline)
+        final sources = await Future.wait(validPlaylist.map((s) => _resolveSource(s)));
         final startIndex = validPlaylist.indexWhere((s) => s.id == startSong.id);
 
         // Cargar cola en el reproductor
@@ -1354,6 +1547,76 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       AppLogger.info('[PlaybackNotifier] Cola fija cargada: ${playlist.length} canciones, iniciando en: ${startSong.title}');
     } catch (e, stackTrace) {
       AppLogger.error('[PlaybackNotifier] Error al cargar cola fija: $e', stackTrace);
+      state = state.copyWith(isLoading: false);
+      rethrow;
+    }
+  }
+
+  /// 🛡️ MODO BÚNKER: Reproducir cola offline (solo archivos locales)
+  /// 
+  /// Desactiva todas las funciones de red (algoritmo, radio, etc.)
+  /// y garantiza que solo se reproduzcan los archivos proporcionados.
+  Future<void> playOfflineQueue(
+    List<Song> offlineSongs, {
+    int initialIndex = 0,
+    bool autoPlay = true, // ✅ Control de reproducción automática
+  }) async {
+    try {
+      if (offlineSongs.isEmpty) {
+        throw Exception('La lista offline está vacía');
+      }
+
+      AppLogger.info('[PlaybackNotifier] 🛡️ INICIANDO MODO OFFLINE (BÚNKER)');
+      AppLogger.info('[PlaybackNotifier] 🛡️ Canciones: ${offlineSongs.length}, Índice inicial: $initialIndex, AutoPlay: $autoPlay');
+
+      // 1. Limpiar estado anterior
+      state = state.copyWith(
+        isLoading: true,
+        playbackMode: PlaybackMode.offline, // ✅ MODO OFFLINE
+        contextId: 'offline_downloads',
+        shouldStartAlgorithmAfterQueue: false, // 🚫 SIN ALGORITMO
+      );
+
+      // Detener cualquier monitor de red/algoritmo
+      _stopAlgorithmMonitor();
+      _stopQueueProtection();
+      _isGeneratingRecommendations = false;
+      _prefetchedInitialSongs = null;
+
+      // 2. Preparar fuentes de audio (reutilizamos _resolveSource que ya prioriza local)
+      _isUpdatingQueue = true;
+      try {
+        final sources = await Future.wait(offlineSongs.map((s) => _resolveSource(s)));
+        
+        // 3. Cargar en reproductor
+        await service.loadNewQueue(sources, initialIndex);
+        _lastKnownIndex = initialIndex;
+
+        // 4. Actualizar estado
+        state = state.copyWith(
+          currentQueue: offlineSongs,
+          isLoading: false,
+          currentSong: offlineSongs[initialIndex],
+          lastConfirmedSong: offlineSongs[initialIndex],
+          isBuffering: false, // Reset inicial
+        );
+
+        // 5. Reproducir (opcional)
+        if (autoPlay) {
+          await service.play();
+        }
+        
+        // Sincronizar
+        _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
+
+        AppLogger.info('[PlaybackNotifier] ✅ Modo Offline iniciado correctamente: ${state.currentSong?.title}');
+
+      } finally {
+        _isUpdatingQueue = false;
+      }
+
+    } catch (e, stackTrace) {
+      AppLogger.error('[PlaybackNotifier] ❌ Error al iniciar Modo Offline: $e', stackTrace);
       state = state.copyWith(isLoading: false);
       rethrow;
     }
@@ -1475,7 +1738,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           // ✅ FIX CRÍTICO: Cuando venimos de una playlist (excludeSeedFromQueue=true),
           // SIEMPRE usar loadNewQueue para REEMPLAZAR completamente la cola anterior.
           
-          final sources = songsToLoad.map((s) => s.toAudioSource()).toList();
+          // Convertir canciones válidas a AudioSource (Soporte Offline)
+          final sources = await Future.wait(songsToLoad.map((s) => _resolveSource(s)));
           final firstSong = songsToLoad.isNotEmpty ? songsToLoad.first : seedSong;
           
           // ✅ FIX ORDEN: Desactivar Shuffle para asegurar que la primera canción visual (A)
@@ -1558,7 +1822,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         _isUpdatingQueue = true;
         try {
           // ⚡ OPTIMIZACIÓN: Si hay cola activa, usar inyección instantánea para evitar Release/Init
-          final seedSource = seedSong.toAudioSource();
+          // ✅ REFACTOR OFF-LINE: Resolver fuente asíncronamente
+          final seedSource = await _resolveSource(seedSong);
           
           if (service.hasActiveQueue) {
             // Guardar estado de reproducción antes de insertar
@@ -4141,65 +4406,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
   // ============== Controles Comunes ==============
 
-  /// Reproducir una canción individual (modo simple)
-  Future<void> playSong(Song song) async {
-    print('[AGENT DEBUG] playSong START: ${song.title}'); // ENTRY LOG
-    _activateTransitionShield(); // 🛡️ Activar escudo
-    try {
-      AppLogger.info('[PlaybackNotifier] 🎵 Reproduciendo canción individual: ${song.title}');
-      
-      // ⚡ INYECCIÓN INSTANTÁNEA: Si hay una cola activa, usar inserción rápida
-      if (service.hasActiveQueue && song.isValidForPlayback) {
-        try {
-          AppLogger.info('[PlaybackNotifier] ⚡ Intentando inyección instantánea en playSong');
-          
-          final source = song.toAudioSource();
-          final success = await service.insertSongAtStart(source);
-          
-          if (success) {
-            // 🔄 SINCRONIZACIÓN INMEDIATA: Esperar que just_audio actualice su estado
-            await Future.delayed(const Duration(milliseconds: 50));
-            
-            // Sincronizar cola primero para obtener el estado real
-            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
-            
-            // Actualizar estado basándose en la sincronización
-            // ✅ CORRECCIÓN: NO resetear currentPosition a 0 manualmente
-            // Dejar que el stream de posición lo actualice para evitar parpadeos
-            state = state.copyWith(
-              currentSong: song,
-              lastConfirmedSong: song,
-              // NO actualizar currentPosition aquí - el stream lo hará automáticamente
-              isBuffering: true,
-            );
-            
-            // Reproducir inmediatamente
-            AppLogger.info('[PlaybackNotifier] ▶️ Iniciando reproducción tras inyección instantánea');
-            await service.play();
-            
-            // Sincronizar una vez más después de reproducir
-            _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
-            
-            AppLogger.info('[PlaybackNotifier] ✅ Cambio instantáneo de canción completado');
-            return; // Salir aquí, ya completamos la reproducción
-          } else {
-            AppLogger.info('[PlaybackNotifier] Inyección instantánea falló, usando método estándar');
-            // Continuar con el método estándar
-          }
-        } catch (e, stackTrace) {
-          AppLogger.error('[PlaybackNotifier] Error en inyección instantánea, usando método estándar: $e', e, stackTrace);
-          // Continuar con el método estándar
-        }
-      }
-      
-      // Método estándar (cuando no hay cola activa o la inyección falló)
-      AppLogger.info('[PlaybackNotifier] 🔄 Usando playFixedQueue (fallback)');
-      await playFixedQueue([song], song);
-    } catch (e, stackTrace) {
-      AppLogger.error('[PlaybackNotifier] ❌ Error al reproducir canción: $e', stackTrace);
-      rethrow;
-    }
-  }
+
 
   /// Alternar play/pause - FUENTE ÚNICA DE VERDAD
   /// ✅ SOLO EJECUTAR LA ACCIÓN: El stream de just_audio es la única fuente de verdad
@@ -4379,19 +4586,21 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   /// Siguiente canción
   /// Si estamos en una cola fija y llegamos al final, activa Radio Infinita automáticamente
   /// 🎯 DETECCIÓN MANUAL: En modo algoritmo, fuerza recarga inmediata si quedan pocas canciones
-  Future<void> next() async {
+  Future<void> next({bool isManual = false}) async {
     // 🛑 UI POLISH: Desactivar botón 'Siguiente' durante anuncios
     if (state.isPlayingAd) {
         AppLogger.info('[PlaybackNotifier] 🚫 Botón Siguiente desactivado durante reproducción de anuncio');
         return;
     }
 
-    // ✅ REPORTE MANUAL: Avisar al reporter que este es un skip explícito
+    // ✅ REPORTE MANUAL: Avisar al reporter SOLO si es un skip explícito
     // Esto evita que transiciones rápidas automáticas se confundan con skips manuales
-    try {
-      ref.read(playbackReporterProvider).reportManualSkip();
-      AppLogger.debug('[PlaybackNotifier] ⏭️ Reportando skip manual al reporter');
-    } catch (_) {}
+    if (isManual) {
+      try {
+        ref.read(playbackReporterProvider).reportManualSkip();
+        AppLogger.debug('[PlaybackNotifier] ⏭️ Reportando skip manual al reporter');
+      } catch (_) {}
+    }
 
     final now = DateTime.now();
     if (now.difference(_lastControlTap) < _controlDebounce) return;
@@ -4400,6 +4609,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     
     // ✅ FIX ELITE: Verificar Y activar bloqueo INMEDIATAMENTE al inicio
     // ANTES de cualquier operación que pueda disparar el listener del stream
+    // 🛡️ MODO OFFLINE: Si estamos en modo offline, tratar como fixedQueue pero sin triggers de algoritmo
     if (state.playbackMode == PlaybackMode.fixedQueue && state.shouldStartAlgorithmAfterQueue) {
       final sequenceState = service.player.sequenceState;
       final playerCurrentIndex = sequenceState.currentIndex ?? 0;
@@ -4624,14 +4834,32 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     // Avanzar normalmente (solo si no es caso crítico que ya se manejó arriba)
     try {
       if (service.player.hasNext) {
+        // ⚡ UI OPTIMISTA: Actualizar estado visualmente ANTES de llamar al servicio
+        // Esto elimina la percepción de latencia
+        final currentIndex = state.currentIndex; // Usar índice del estado (más seguro que sequenceState)
+        if (currentIndex < state.currentQueue.length - 1) {
+           final nextSong = state.currentQueue[currentIndex + 1];
+           
+           // Actualizar UI inmediatamente
+           state = state.copyWith(
+             currentSong: nextSong,
+             // currentIndex se calcula automáticamente del currentSong y currentQueue
+             lastConfirmedSong: nextSong,
+             currentPosition: Duration.zero,
+             isBuffering: true, // Mostrar carga sutil
+           );
+           AppLogger.info('[PlaybackNotifier] ⚡ UI Optimista actualizada a: ${nextSong.title}');
+        }
+
         await service.next();
         
         // 🛑 FIX: Limpiar flag _isInsertingAd después de avanzar
         _isInsertingAd = false;
         
-        // ⚡ SINCRONIZACIÓN INMEDIATA: Forzar actualización del estado después de cambio manual
-        // 🛑 FIX: NO sincronizar si hay un anuncio pre-cargado - evita resetear posición
-        await Future.delayed(const Duration(milliseconds: 50)); // Pequeño delay para que just_audio actualice
+        // ⚡ SINCRONIZACIÓN: Ya no necesitamos esperar, la UI ya está actualizada.
+        // Solo sincronizamos asíncronamente para asegurar consistencia final.
+        // Usamos microtask para no bloquear.
+        Future.microtask(() => _syncQueueWithAudioService(service.player.sequenceState, forceSync: false));
         
         // Verificar si acabamos de entrar a un anuncio
         final afterNextSource = service.player.sequenceState.currentSource;
@@ -4645,11 +4873,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             state = state.copyWith(currentPosition: currentPos);
           }
           AppLogger.info('[PlaybackNotifier] 🛡️ Anuncio detectado después de next(), manteniendo estado pre-cargado');
-        } else {
-          // Si NO es un anuncio, sincronizar normalmente
-          _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
-          AppLogger.debug('[PlaybackNotifier] ⚡ Estado sincronizado inmediatamente después de next()');
-        }
+        } 
+        // Eliminado else { _syncQueue... } porque ya hicimos la UI Optimista y sincronización asíncrona
       } else {
         AppLogger.info('[PlaybackNotifier] ℹ️ No hay siguiente canción disponible');
         
@@ -4691,13 +4916,30 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     }
     
     if (_service != null && _service!.player.hasPrevious) {
+       // ⚡ UI OPTIMISTA: Actualizar estado visualmente ANTES de llamar al servicio
+      final currentIndex = state.currentIndex;
+      if (currentIndex > 0) {
+          final prevSong = state.currentQueue[currentIndex - 1];
+          // Actualizar UI inmediatamente
+          state = state.copyWith(
+            currentSong: prevSong,
+            // currentIndex se calcula automáticamente
+            lastConfirmedSong: prevSong,
+            currentPosition: Duration.zero,
+            isBuffering: true,
+          );
+          AppLogger.info('[PlaybackNotifier] ⚡ UI Optimista (Anterior) actualizada a: ${prevSong.title}');
+      }
+
       await _service!.previous();
-    }
-    
-    // ⚡ SINCRONIZACIÓN INMEDIATA: Forzar actualización del estado
-    await Future.delayed(const Duration(milliseconds: 50));
-    if (_service != null) {
-      _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
+      
+      // ⚡ SINCRONIZACIÓN ASÍNCRONA: Ya no esperamos con delay fijo
+      // Verificamos la verdad final después
+      Future.microtask(() {
+        if (_service != null) {
+          _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: false);
+        }
+      });
     }
     
     _isProcessingPrevious = false;
@@ -5877,8 +6119,11 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         AppLogger.info('[PlaybackNotifier] ⚠️ ${newSongs.length - uniqueNewSongs.length} canciones duplicadas filtradas antes de agregar');
       }
       
-      // Convertir canciones únicas a AudioSource
-      final sources = uniqueNewSongs.map((s) => s.toAudioSource()).toList();
+      // Convertir canciones únicas a AudioSource de forma asíncrona
+      // ✅ REFACTOR OFF-LINE: Usar Future.wait para resolver fuentes en paralelo
+      final sources = await Future.wait(
+        uniqueNewSongs.map((s) => _resolveSource(s))
+      );
       
       // Ejecutar operación de audio
       await audioOperation(sources);
@@ -6021,9 +6266,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         
         // ⚡ INYECCIÓN INSTANTÁNEA: Si hay una cola activa, usar inserción rápida
         if (service.hasActiveQueue && song.isValidForPlayback) {
-          try {
+            try {
             AppLogger.info('[PlaybackNotifier] ⚡ Usando inyección instantánea para cambio rápido de canción');
-            final source = song.toAudioSource();
+            // ✅ REFACTOR OFF-LINE: Resolver fuente asíncronamente
+            final source = await _resolveSource(song);
             final success = await service.insertSongAtStart(source);
             
             if (success) {
@@ -6046,6 +6292,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
                 lastConfirmedSong: song,
                 // NO actualizar currentPosition aquí - el stream lo hará automáticamente
                 isBuffering: true,
+                // 🥷 NINJA MODE: Mostrar MiniPlayer explícitamente
+                isMiniPlayerVisible: true,
                 // currentQueue ya fue actualizado por _syncQueueWithAudioService
               );
               
@@ -6068,7 +6316,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
       
       // Método estándar (cuando no hay cola activa o la inyección falló)
-      await playSong(song);
+      await playSpecificSong(song);
       }
       
       // ⚡ OPTIMIZACIÓN: Actualizar estado de buffering de forma asíncrona sin bloquear
@@ -6084,10 +6332,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     } catch (e, stackTrace) {
         AppLogger.error('[PlaybackNotifier] Error in playFromCard: $e', e, stackTrace);
     } finally {
+      AppLogger.info('[PlaybackNotifier] 🏁 playFromCard finalized. Visible: ${state.isMiniPlayerVisible}, Playing: ${state.isPlaying}, Song: ${state.currentSong?.title}');
       // ⚡ OPTIMIZACIÓN: Reducir delay de liberación de flag para respuesta más rápida
       // El flag solo necesita mantenerse el tiempo mínimo necesario
       Future.delayed(const Duration(milliseconds: 100), () { 
         _isProcessingPlayFromCard = false; 
+        _isTransitioning = false; // 🔓 RELEASE LOCK
       });
     }
   }
@@ -6306,11 +6556,73 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     }
     _subscriptions.clear();
   }
+  /// Convierte una canción a AudioSource de forma asíncrona, 
+  /// comprobando si existe una versión offline para usuarios Premium.
+  /// 🚀 CORE RESOLVER: Determina la fuente de audio (Offline vs Stream)
+  /// Sigue la jerarquía: Premium + Archivo Local -> Stream
+  Future<AudioSource> _resolveSource(Song song) async {
+    try {
+      AppLogger.debug('[PlaybackNotifier] 🔍 Resolving audio source for: ${song.title} (${song.id})');
+      
+      final user = ref.read(currentUserProvider);
+      final isPremium = user != null && 
+          (user.subscriptionStatus == SubscriptionStatus.premium || 
+           user.subscriptionStatus == SubscriptionStatus.vip);
+
+      if (isPremium) {
+        final offlineManager = ref.read(offlineManagerProvider.notifier);
+        
+        // Verificar existencia en Hive primero (rápido)
+        final isDownloaded = offlineManager.isDownloaded(song.id);
+        if (isDownloaded) {
+             AppLogger.info('[PlaybackNotifier] 📥 Song is marked as downloaded in Hive. Attempting decryption...');
+             
+             final decryptedPath = await offlineManager.getDecryptedFilePath(song.id);
+             
+             if (decryptedPath != null) {
+               final file = File(decryptedPath);
+               if (await file.exists()) {
+                  final size = await file.length();
+                  AppLogger.info('[PlaybackNotifier] 📁 Playing Offline: $decryptedPath ($size bytes)');
+                  return AudioSource.file(
+                    decryptedPath,
+                    tag: song,
+                  );
+               } else {
+                  AppLogger.warning('[PlaybackNotifier] ⚠️ Decrypted file not found at path: $decryptedPath');
+               }
+             } else {
+                AppLogger.warning('[PlaybackNotifier] ⚠️ Decryption returned null path for ${song.title}');
+             }
+        } else {
+            // AppLogger.debug('[PlaybackNotifier] Song not downloaded or not found in Hive.');
+        }
+      } else {
+         AppLogger.info('[PlaybackNotifier] User is not premium, skipping offline check.');
+      }
+
+      // 🛡️ MODO BÚNKER (Offline): Si no se encontró archivo local, NO hacer fallback a stream
+      if (state.playbackMode == PlaybackMode.offline) {
+         AppLogger.error('[PlaybackNotifier] 🛡️ [OFFLINE-MODE] Archivo no encontrado. Fallback de red BLOQUEADO para: ${song.title}');
+         throw Exception('Modo Offline: Archivo no encontrado localmente');
+      }
+
+      // Fallback a streaming
+      AppLogger.info('[PlaybackNotifier] ☁️ Playing Stream: ${song.title}');
+      return song.toAudioSource();
+      
+    } catch (e) {
+      AppLogger.error('[PlaybackNotifier] ⚠️ Error resolviendo fuente offline, usando fallback stream: $e');
+      return song.toAudioSource();
+    }
+  }
 } // Cierre de clase PlaybackNotifier
 
 /// Provider que la UI consumirá
 /// El AudioService se obtiene dentro del build() del notifier
-final playbackNotifierProviderFactory = NotifierProvider<PlaybackNotifier, PlaybackState>(() {
+/// Provider que la UI consumirá
+/// El AudioService se obtiene dentro del build() del notifier
+final playbackNotifierProvider = NotifierProvider<PlaybackNotifier, PlaybackState>(() {
   return PlaybackNotifier();
 });
 

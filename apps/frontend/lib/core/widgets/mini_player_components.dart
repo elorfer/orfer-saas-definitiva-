@@ -37,7 +37,7 @@ class _MiniPlayerAlbumImage extends ConsumerWidget {
       child: Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: NeumorphismTheme.coffeeMedium,
         ),
@@ -175,8 +175,8 @@ class _MiniPlayerPlayButton extends ConsumerWidget {
           child: Container(
             width: 36,
             height: 36,
-            decoration: const BoxDecoration(
-              color: NeumorphismTheme.coffeeMedium,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.isDark ? NeumorphismTheme.accent : NeumorphismTheme.coffeeMedium,
               shape: BoxShape.circle,
             ),
             child: Material(
@@ -204,7 +204,7 @@ class _MiniPlayerPlayButton extends ConsumerWidget {
                 child: Center(
                   child: Icon(
                     showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    color: Colors.white,
+                    color: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white,
                     size: 18,
                   ),
                 ),
@@ -252,7 +252,7 @@ class _MiniPlayerProgressBar extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: value,
                   backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
-                  valueColor: const AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+                  valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
                   borderRadius: const BorderRadius.all(Radius.circular(1.0)),
                 ),
               ),

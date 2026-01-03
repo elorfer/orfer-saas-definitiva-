@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/home_provider.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/models/playlist_model.dart';
 
 import 'featured_playlist_card.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/theme/neumorphism_theme.dart';
+import 'package:animate_do/animate_do.dart';
 
 /// ✅ OPTIMIZADO: ConsumerStatefulWidget con precache basado en visibilidad
 /// Usa directamente los providers para evitar rebuilds innecesarios
@@ -48,6 +52,8 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
   @override
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
     
     // 🔥 FIX: Usar select() directamente para evitar rebuilds innecesarios durante scroll
     // Solo observar isLoading si realmente lo necesitamos para mostrar skeleton
@@ -78,24 +84,17 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Título simplificado
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            'Playlists',
-            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF3D2E20),
-              decoration: TextDecoration.none,
-            ),
-          ),
+        // Header estandarizado
+        SectionHeader(
+          title: 'Playlists',
+          // No "Ver más" needed for playlists yet, or could link to library
         ),
         
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         
         // Lista horizontal de playlists optimizada
         _buildPlaylistsList(featuredPlaylists),
+        
       ],
     );
   }
@@ -107,17 +106,17 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.only(left: 24, right: 8),
-        cacheExtent: 500, // 🚀 Aumentado para scroll horizontal "Premium" fluido y persistente
-        physics: const BouncingScrollPhysics(),
+        cacheExtent: 300, // 🚀 OPTIMIZACIÓN: Reducido para evitar trabajo excesivo de GPU
+        physics: const BouncingScrollPhysics(), // 🚀 Bouncing para consistencia con el Home
         itemExtent: 176.0,
         addAutomaticKeepAlives: false,
-        addRepaintBoundaries: true,
+        addRepaintBoundaries: false, // 🚀 OPTIMIZATION: Manual control below with keys
         addSemanticIndexes: false,
         itemCount: featuredPlaylists.length,
         itemBuilder: (context, index) {
           final featuredPlaylist = featuredPlaylists[index];
           return RepaintBoundary(
-            key: ValueKey('playlist_${featuredPlaylist.playlist.id}'),
+            key: ValueKey('playlist_boundary_${featuredPlaylist.playlist.id}'),
             child: FeaturedPlaylistCard(
               key: ValueKey('playlist_card_${featuredPlaylist.playlist.id}'),
               featuredPlaylist: featuredPlaylist,
@@ -137,20 +136,19 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            'Playlists', // Match title 'Playlists' from build method or 'Playlists Destacadas' if intended, but keeping 'Playlists' matches the build method header.
-            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-            style: const TextStyle(
-              fontSize: 22, // Match build method
+            'Playlists',
+            style: TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF3D2E20), // Match build method
+              color: NeumorphismTheme.textPrimary,
               decoration: TextDecoration.none,
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16), // ✅ Sincronizado con real (16)
         // ⚡ Lista skeleton estática - sin animaciones Shimmer
         SizedBox(
-          height: 220,
+          height: 252, // ✅ Sincronizado con real (252)
           child: Row(
             children: [
               const SizedBox(width: 24),
@@ -161,27 +159,27 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
                     Container(
                       width: 160,
                       height: 160,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFDED1C4), // 🚀 Sólido
-                        borderRadius: BorderRadius.all(Radius.circular(16)),
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.shimmerBaseColor,
+                        borderRadius: const BorderRadius.all(Radius.circular(16)),
                       ),
                     ),
-                    const SizedBox(height: 4), // Match 4px Spacer
+                    const SizedBox(height: 4),
                     Container(
-                      height: 16, // Match 16px Row height
+                      height: 16,
                       width: 120,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEAE2D9), // 🚀 Sólido
-                        borderRadius: BorderRadius.all(Radius.circular(4)),
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.shimmerBaseColor,
+                        borderRadius: const BorderRadius.all(Radius.circular(4)),
                       ),
                     ),
                     const SizedBox(height: 6),
                      Container(
-                      height: 18, // Badge placeholder
+                      height: 18,
                       width: 100,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEAE2D9), // 🚀 Sólido
-                        borderRadius: BorderRadius.all(Radius.circular(4)),
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.shimmerBaseColor,
+                        borderRadius: const BorderRadius.all(Radius.circular(4)),
                       ),
                     ),
                   ],
@@ -214,43 +212,36 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
         ),
         const SizedBox(height: 16),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Color(0xFFEFE7DE), // 🚀 Sólido
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.playlist_play,
-                    size: 48,
-                    color: Color(0xFFBCAAA4), // 🚀 Sólido
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.playlist_play,
+                  size: 48,
+                  color: const Color(0xFFBCAAA4).withValues(alpha: 0.5), // 🚀 Sólido
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No hay playlists destacadas',
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF8B7A6A), // 🚀 Sólido
+                    decoration: TextDecoration.none,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay playlists destacadas',
-                    // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF8B7A6A), // 🚀 Sólido
-                      decoration: TextDecoration.none,
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Descubre nuevas playlists más tarde',
+                  // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: const Color(0xFF8B7A6A).withValues(alpha: 0.5),
+                    decoration: TextDecoration.none,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Descubre nuevas playlists más tarde',
-                    // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.5),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

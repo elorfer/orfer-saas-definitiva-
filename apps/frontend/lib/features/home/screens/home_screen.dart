@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Added for theme reactivity
 
-import '../../../core/widgets/ultra_light_profile_drawer.dart';
+import '../../../core/widgets/struky_drawer_menu.dart';
+import '../../../core/widgets/struky_zoom_drawer.dart';
 import '../../../core/utils/intersection_observer.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/services/http_cache_service.dart';
@@ -103,22 +105,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
+    // 🚀 Listen to theme changes to force background update
+    ref.watch(themeProvider);
+
     // 🚀 OPTIMIZACIÓN: Usar statusBarHeight cacheado para evitar MediaQuery en cada build
     final statusBarHeight = _cachedStatusBarHeight ?? MediaQuery.paddingOf(context).top;
     
     // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
-    return Scaffold(
+    // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
+    
+    // 🚀 INTEGRACIÓN STRUKY ZOOM DRAWER
+    // Reemplazamos el Scaffold con Drawer tradicional por el ZoomDrawer
+    return StrukyZoomDrawer(
+      // 1. EL MENÚ DEL FONDO
+      menuScreen: const StrukyDrawerMenu(),
+      
+      // 2. LA PANTALLA PRINCIPAL (Tu Scaffold original)
+      mainScreen: Scaffold(
         key: const ValueKey('home_screen_scaffold'),
         backgroundColor: Colors.transparent,
-        drawer: const UltraLightProfileDrawer(),
-        drawerEdgeDragWidth: 20,
-        drawerEnableOpenDragGesture: true,
+        // drawer: const UltraLightProfileDrawer(), // ELIMINADO: Ya no usamos este drawer
+        // drawerEdgeDragWidth: 20,
+        // drawerEnableOpenDragGesture: true,
         body: AnnotatedRegion<SystemUiOverlayStyle>(
           value: _overlayStyle, // 🚀 Used static constant
           child: Stack(
             children: [
               // 🚀 CAPA 0: Fondo fijo con gradiente (Isolado para el Raster)
-              const Positioned.fill(
+              Positioned.fill(
                 child: RepaintBoundary(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -143,14 +157,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 color: Colors.white,
                 backgroundColor: NeumorphismTheme.coffeeMedium,
                 child: SafeArea(
-                    child: CustomScrollView(
-                      key: const PageStorageKey<String>('home_screen_scroll'), // 🚀 SCROLL NORMAL
-                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                      cacheExtent: 250, // 🚀 Ajustado para balancear memoria y fluidez
-                      slivers: <Widget>[
+                 // 🚀 SCROLL PHYSICS: BouncingScrollPhysics para sensación nativa iOS/Android 12+
+            // Permite el "overscroll" elástico que pidio el usuario
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    cacheExtent: 500, // 🚀 BALANCED: Pre-renderiza lo necesario sin sobrecargar la GPU
+                    slivers: <Widget>[
                     const SliverPadding(
                       padding: EdgeInsets.only(
-                        top: 16.0, 
+                        top: 24.0, // ✅ Aumentado para más aire
                         left: 24.0,
                         right: 24.0,
                       ),
@@ -158,7 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         child: HomeHeader(key: ValueKey('home_header')), // 🚀 Using extracted widget
                       ),
                     ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)), // ✅ Aumentado de 8 a 24 para bajar "Novedades"
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       sliver: SliverToBoxAdapter(
@@ -195,7 +212,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               ),
             ),
-          ],
+
+
+            ],
+          ),
         ),
       ),
     ); 

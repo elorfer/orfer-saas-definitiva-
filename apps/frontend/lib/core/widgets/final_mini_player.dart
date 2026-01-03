@@ -24,30 +24,11 @@ class FinalMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ ÚNICA FUENTE DE VERDAD: Usar el provider RAW que escucha directamente al Stream
-    // Esto iguala la lógica con el ProfessionalAudioPlayer, evitando desfases.
-    final rawSequenceAsync = ref.watch(rawSequenceStateProvider);
-    final sequenceState = rawSequenceAsync.asData?.value; // Compatibilidad segura
+    // ✅ ÚNICA FUENTE DE VERDAD: Usar el provider unificado que prioriza el estado del Notifier
+    // Esto garantiza que el MiniPlayer aparezca INMEDIATAMENTE al dar Play (UI Optimista)
+    // sin esperar a que el stream de audio emita el primer evento.
+    final currentSong = ref.watch(realCurrentSongProvider);
     
-    // Parsear estado igual que ProfessionalAudioPlayer
-    Song? currentSong;
-    // (Opcional) AudioAd? currentAd; 
-
-    if (sequenceState != null) { // sequenceState es dynamic o SequenceState? según implementación
-       // Necesitamos casting si el provider devolvió dynamic, pero Riverpod infiere tipos.
-       // Al ser 'void' en definition (error mio arriba), corregiré en provider o haré cast aquí si es necesario.
-       // Asumiendo que corregí el provider a StreamProvider<SequenceState?> en mi mente, pero el tool anterior puso <void>.
-       // Corregiré el provider primero para ser limpio, o haré cast dinámico.
-       // Vamos a asumir dynamic access por brevedad y robustex.
-       final state = sequenceState as dynamic; // JustAudio SequenceState
-       final source = state?.currentSource;
-       if (source != null) {
-          if (source.tag is Song) {
-             currentSong = source.tag as Song;
-          }
-       }
-    }
-
     // ✅ FIX PARPADEO: Solo observar isPlayingAd, no todo el estado
     final isPlayingAd = ref.watch(
       unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
@@ -55,8 +36,9 @@ class FinalMiniPlayer extends ConsumerWidget {
     
     // ✅ FIX: Si hay un anuncio reproduciéndose, no mostrar el mini reproductor de canción
     // El AdsMiniPlayer se mostrará en su lugar
-    if (isPlayingAd) {
-      return const SizedBox.shrink();
+    // DEBUG LOGS
+    if (currentSong == null || isPlayingAd) {
+      // print('[FinalMiniPlayer] Hidden because: Song=${currentSong?.title}, Ad=$isPlayingAd');
     }
     
     // ✅ FIX: Si hay un anuncio reproduciéndose, no mostrar el mini reproductor de canción
@@ -67,6 +49,16 @@ class FinalMiniPlayer extends ConsumerWidget {
     
     // Si no hay canción, no mostrar nada
     if (currentSong == null) {
+      return const SizedBox.shrink();
+    }
+
+    // 🥷 NINJA MODE: Verificar visibilidad explícita
+    final isVisible = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isMiniPlayerVisible),
+    );
+    
+    if (!isVisible) {
+      // print('[FinalMiniPlayer] Hidden because isVisible=false (Song: ${currentSong.title})');
       return const SizedBox.shrink();
     }
 

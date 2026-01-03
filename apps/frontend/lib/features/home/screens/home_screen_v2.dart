@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/providers/intelligent_featured_provider.dart';
-import '../../../core/widgets/ultra_light_profile_drawer.dart';
+// import '../../../core/widgets/ultra_light_profile_drawer.dart'; // Legacy
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../widgets/v2/sliver_featured_artists_section.dart';
@@ -54,9 +54,9 @@ class _HomeScreenV2State extends ConsumerState<HomeScreenV2> with AutomaticKeepA
     
     return Scaffold(
       backgroundColor: Colors.transparent,
-      drawer: const UltraLightProfileDrawer(),
+      // drawer: const UltraLightProfileDrawer(), // Fix: Removed broken reference
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: CustomScrollView(
@@ -116,7 +116,7 @@ class _HomeScreenV2State extends ConsumerState<HomeScreenV2> with AutomaticKeepA
                 final isCollapsed = constraints.maxHeight <= kToolbarHeight + (MediaQuery.of(context).padding.top);
                 return AnimatedOpacity( duration: const Duration(milliseconds: 200),
                   opacity: isCollapsed ? 1.0 : 0.0,
-                  child: const Text('Vintage Music', style: AppTextStyles.userName),
+                  child: Text('Vintage Music', style: AppTextStyles.userName),
                 );
               },
             ),
@@ -138,7 +138,7 @@ class _HomeScreenV2State extends ConsumerState<HomeScreenV2> with AutomaticKeepA
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Bienvenido', style: AppTextStyles.welcomeText),
+                      Text('Bienvenido', style: AppTextStyles.welcomeText),
                       Text(userFirstName, style: AppTextStyles.userName),
                     ],
                   ),
@@ -203,7 +203,7 @@ class _AppBarAvatar extends StatelessWidget {
       child: Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: NeumorphismTheme.coffeeMedium,
         ),

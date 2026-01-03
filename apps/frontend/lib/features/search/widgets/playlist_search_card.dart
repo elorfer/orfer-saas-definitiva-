@@ -66,7 +66,7 @@ class PlaylistSearchCard extends StatelessWidget {
                               skipFade: true,
                             )
                           : Container(
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 gradient: NeumorphismTheme.imagePlaceholderGradient,
                               ),
                               child: const Icon(

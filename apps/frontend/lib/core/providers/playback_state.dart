@@ -13,6 +13,7 @@ enum RepeatMode {
 enum PlaybackMode {
   algorithm,   // Modo algoritmo (recomendaciones)
   fixedQueue,  // Modo cola fija (playlist/artista)
+  offline,     // 🛡️ MODO BÚNKER: Solo archivos locales, sin red, sin algoritmo
   none,        // Sin modo activo
 }
 
@@ -35,10 +36,15 @@ class PlaybackState {
   final RepeatMode repeatMode;
   final String? contextId; // ID del contexto actual (playlistId o artistId)
   final bool shouldStartAlgorithmAfterQueue; // Bandera para iniciar algoritmo al finalizar cola fija
+  
+  // Flags de UI
+  final bool isMiniPlayerVisible; // 🥷 NINJA MODE: Control de visibilidad independiente de la carga de audio
+
   // Flags de control optimista
   final bool isProcessingPlayPause;
   final bool isProcessingNext;
   final bool isProcessingPrevious;
+  
   // Estado de anuncios
   final AudioAd? currentAd;
   final bool isPlayingAd;
@@ -64,6 +70,7 @@ class PlaybackState {
     this.isProcessingPlayPause = false,
     this.isProcessingNext = false,
     this.isProcessingPrevious = false,
+    this.isMiniPlayerVisible = false, // Default false para arranque limpio
     this.currentAd,
     this.isPlayingAd = false,
     this.isInsertingAd = false,
@@ -145,6 +152,7 @@ class PlaybackState {
     bool? isProcessingPlayPause,
     bool? isProcessingNext,
     bool? isProcessingPrevious,
+    bool? isMiniPlayerVisible, // Nuevo parámetro
     AudioAd? currentAd,
     bool? isPlayingAd,
     bool? isInsertingAd,
@@ -173,6 +181,7 @@ class PlaybackState {
       isProcessingPlayPause: isProcessingPlayPause ?? this.isProcessingPlayPause,
       isProcessingNext: isProcessingNext ?? this.isProcessingNext,
       isProcessingPrevious: isProcessingPrevious ?? this.isProcessingPrevious,
+      isMiniPlayerVisible: isMiniPlayerVisible ?? this.isMiniPlayerVisible, // Mantener o actualizar
       // ✅ FIX CRÍTICO: Usar flag para permitir establecer null explícitamente
       currentAd: clearCurrentAd ? null : (currentAd ?? this.currentAd),
       isPlayingAd: isPlayingAd ?? this.isPlayingAd,
@@ -203,6 +212,7 @@ class PlaybackState {
         other.isProcessingPlayPause == isProcessingPlayPause &&
         other.isProcessingNext == isProcessingNext &&
         other.isProcessingPrevious == isProcessingPrevious &&
+        other.isMiniPlayerVisible == isMiniPlayerVisible &&
         other.currentAd?.id == currentAd?.id &&
         other.isPlayingAd == isPlayingAd &&
         other.isInsertingAd == isInsertingAd;
@@ -231,7 +241,7 @@ class PlaybackState {
       isProcessingPlayPause,
       isProcessingNext,
       isProcessingPrevious,
-      Object.hash(currentAd?.id, isPlayingAd, isInsertingAd), // Combinar campos de anuncios
+      Object.hash(isMiniPlayerVisible, currentAd?.id, isPlayingAd, isInsertingAd), // Combinar campos de anuncios y visibilidad
     );
   }
 
@@ -240,4 +250,3 @@ class PlaybackState {
     return 'PlaybackState(song: ${currentSong?.title}, playing: $isPlaying, progress: ${(progress * 100).toStringAsFixed(1)}%)';
   }
 }
-

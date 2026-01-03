@@ -104,8 +104,6 @@ class _ArtistSongCard extends StatelessWidget {
                   ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.all(Radius.circular(12)),
                 child: OptimizedImage(
                   imageUrl: song.coverArtUrl,
                   fit: BoxFit.cover,
@@ -118,7 +116,6 @@ class _ArtistSongCard extends StatelessWidget {
                   skipFade: true, // ✅ Sin fade para mejor rendimiento
                   lazyLoad: true, // ✅ Lazy loading
                 ),
-              ),
             ),
             
             const SizedBox(height: 8),

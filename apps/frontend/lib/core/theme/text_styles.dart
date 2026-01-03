@@ -5,210 +5,212 @@ import 'neumorphism_theme.dart';
 /// Reemplaza GoogleFonts.inter() para evitar cargas repetidas en cada build
 class AppTextStyles {
   // Títulos grandes
-  static const TextStyle titleLarge = TextStyle(
+  static TextStyle get titleLarge => TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.bold,
     color: NeumorphismTheme.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8, // 🚀 PREMIUM: Tighter tracking for large titles
   );
 
-  static const TextStyle titleMedium = TextStyle(
+  static TextStyle get titleMedium => TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.bold,
     color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.6, // 🚀 PREMIUM: Tight tracking
   );
 
-  static const TextStyle titleSmall = TextStyle(
+  static TextStyle get titleSmall => TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.bold,
     color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.4, // 🚀 PREMIUM: Tight tracking
   );
 
   // Subtítulos
-  static const TextStyle subtitleLarge = TextStyle(
+  static TextStyle get subtitleLarge => TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,
   );
 
-  static const TextStyle subtitleMedium = TextStyle(
+  static TextStyle get subtitleMedium => TextStyle(
     fontSize: 17,
     fontWeight: FontWeight.w700,
     color: NeumorphismTheme.textPrimary,
     letterSpacing: -0.3,
   );
 
-  static const TextStyle subtitleSmall = TextStyle(
+  static TextStyle get subtitleSmall => TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,
   );
 
   // Cuerpo de texto
-  static const TextStyle bodyLarge = TextStyle(
+  static TextStyle get bodyLarge => TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w500,
     color: NeumorphismTheme.textPrimary,
   );
 
-  static const TextStyle bodyMedium = TextStyle(
+  static TextStyle get bodyMedium => TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w500,
     color: NeumorphismTheme.textSecondary,
   );
 
-  static const TextStyle bodySmall = TextStyle(
+  static TextStyle get bodySmall => TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     color: NeumorphismTheme.textSecondary,
   );
 
   // Texto secundario
-  static const TextStyle caption = TextStyle(
+  static TextStyle get caption => TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: NeumorphismTheme.textSecondary,
   );
 
-  static const TextStyle overline = TextStyle(
+  static TextStyle get overline => TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: NeumorphismTheme.textLight,
   );
 
   // Variantes específicas
-  static const TextStyle songTitle = TextStyle(
+  static TextStyle get songTitle => TextStyle(
     fontSize: 17,
     fontWeight: FontWeight.w700,
     color: NeumorphismTheme.textPrimary,
     letterSpacing: -0.3,
   );
 
-  static const TextStyle artistName = TextStyle(
+  static TextStyle get artistName => TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     color: NeumorphismTheme.textSecondary,
   );
 
-  static const TextStyle welcomeText = TextStyle(
+  static TextStyle get welcomeText => TextStyle(
     fontSize: 14,
     color: NeumorphismTheme.textSecondary,
     fontWeight: FontWeight.w500,
   );
 
-  static const TextStyle userName = TextStyle(
+  static TextStyle get userName => TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.bold,
     color: NeumorphismTheme.textPrimary,
   );
 
-  static const TextStyle emptyStateTitle = TextStyle(
+  static TextStyle get emptyStateTitle => TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.bold,
     color: NeumorphismTheme.textPrimary,
   );
 
-  static const TextStyle emptyStateBody = TextStyle(
+  static TextStyle get emptyStateBody => TextStyle(
     fontSize: 16,
     color: NeumorphismTheme.textSecondary,
     height: 1.5,
   );
 
   // Estilos para búsqueda
-  static const TextStyle searchTitle = TextStyle(
+  static TextStyle get searchTitle => TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.bold,
     color: NeumorphismTheme.textPrimary,
     letterSpacing: -0.5,
   );
 
-  static const TextStyle searchSubtitle = TextStyle(
+  static TextStyle get searchSubtitle => TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w500,
     color: NeumorphismTheme.textSecondary,
   );
 
-  static const TextStyle searchInput = TextStyle(
+  static TextStyle get searchInput => TextStyle(
     fontSize: 16,
     color: NeumorphismTheme.textPrimary,
   );
 
-  static const TextStyle searchHint = TextStyle(
+  static TextStyle get searchHint => TextStyle(
     fontSize: 16,
     color: NeumorphismTheme.textLight,
   );
 
-  static const TextStyle searchSectionTitle = TextStyle(
+  static TextStyle get searchSectionTitle => TextStyle(
     fontSize: 22,
     fontWeight: FontWeight.bold,
     color: NeumorphismTheme.textPrimary,
   );
 
-  static const TextStyle searchErrorTitle = TextStyle(
+  static TextStyle get searchErrorTitle => TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,
   );
 
-  static const TextStyle searchErrorBody = TextStyle(
+  static TextStyle get searchErrorBody => TextStyle(
     fontSize: 14,
     color: NeumorphismTheme.textSecondary,
   );
 
-  static const TextStyle searchEmptyTitle = TextStyle(
+  static TextStyle get searchEmptyTitle => TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.coffeeDark,
   );
 
-  static const TextStyle searchEmptySubtitle = TextStyle(
+  static TextStyle get searchEmptySubtitle => TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w400,
     color: NeumorphismTheme.coffeeMedium,
   );
 
   // Estilos para auth (texto blanco)
-  static const TextStyle authTitle = TextStyle(
+  static TextStyle get authTitle => TextStyle(
     fontSize: 32,
     fontWeight: FontWeight.bold,
     color: Colors.white,
   );
 
-  static const TextStyle authSubtitle = TextStyle(
+  static TextStyle get authSubtitle => TextStyle(
     fontSize: 16,
     color: Colors.white,
   );
 
-  static const TextStyle authFormTitle = TextStyle(
+  static TextStyle get authFormTitle => TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.bold,
     color: Colors.white,
   );
 
-  static const TextStyle authFormSubtitle = TextStyle(
+  static TextStyle get authFormSubtitle => TextStyle(
     fontSize: 16,
     color: Colors.white,
   );
 
-  static const TextStyle authLink = TextStyle(
+  static TextStyle get authLink => TextStyle(
     fontSize: 14,
     color: NeumorphismTheme.coffeeMedium,
     fontWeight: FontWeight.w600,
   );
 
-  static const TextStyle authText = TextStyle(
+  static TextStyle get authText => TextStyle(
     fontSize: 14,
     color: Colors.grey,
   );
 
-  static const TextStyle authTextSecondary = TextStyle(
+  static TextStyle get authTextSecondary => TextStyle(
     fontSize: 14,
     color: Colors.grey,
     fontWeight: FontWeight.w500,
   );
 
   // Estilos para artist_page (reemplazo de Theme.of(context).textTheme.titleMedium)
-  static const TextStyle sectionTitle = TextStyle(
+  static TextStyle get sectionTitle => TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,

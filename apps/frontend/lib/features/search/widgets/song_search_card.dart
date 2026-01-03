@@ -61,7 +61,7 @@ class SongSearchCard extends ConsumerWidget {
                       : Container(
                           width: 48,
                           height: 48,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             gradient: NeumorphismTheme.imagePlaceholderGradient,
                           ),
                           child: const Icon(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/intelligent_featured_provider.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/theme/neumorphism_theme.dart';
@@ -25,20 +26,6 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
     with AutomaticKeepAliveClientMixin {
   bool _hasInitialized = false;
 
-  static const _titleStyle = TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w800,
-    color: Color(0xFF3D2E20),
-    decoration: TextDecoration.none,
-  );
-
-  static const _seeMoreStyle = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    color: NeumorphismTheme.accentDark,
-    decoration: TextDecoration.none,
-  );
-  
   @override
   void initState() {
     super.initState();
@@ -72,6 +59,9 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
   Widget build(BuildContext context) {
     super.build(context);
     
+    // 🚀 Refresh on Theme Change (Fixes colors not updating)
+    ref.watch(themeProvider);
+
     // ✅ OPTIMIZACIÓN: Solo observar si hay canciones para decidir qué widget base mostrar.
     // Los estados de carga y error se verifican internamente solo si no hay canciones.
     final hasSongs = ref.watch(intelligentFeaturedSongsProvider.select((s) => s.isNotEmpty));
@@ -96,7 +86,12 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
             'Para Ti',
-            style: _titleStyle,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: NeumorphismTheme.textPrimary,
+              decoration: TextDecoration.none,
+            ),
           ),
         ),
         const SizedBox(height: 4),
@@ -166,7 +161,12 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                       ),
                       child: const Text(
                         'Ver más',
-                        style: _seeMoreStyle,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: NeumorphismTheme.accentDark,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
                     ),
                   ),
@@ -416,42 +416,6 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
 
   // ✅ Decoración ligera - sin gradientes pesados ni sombras excesivas
   // ✅ Decoración ultra-ligera: Fondo blanco sólido y borde mínimo
-  static final BoxDecoration _cardDecoration = BoxDecoration(
-    color: Colors.white,
-    borderRadius: const BorderRadius.all(Radius.circular(16)),
-    border: Border.all(
-      color: const Color(0x148B7A6A),
-      width: 1,
-    ),
-  );
-  
-  static const BoxDecoration _imageDecoration = BoxDecoration(
-    color: Colors.transparent,
-    borderRadius: BorderRadius.all(Radius.circular(12)),
-  );
-
-  static const _songTitleStyle = TextStyle(
-    fontSize: 17,
-    fontWeight: FontWeight.w700,
-    color: NeumorphismTheme.textPrimary,
-    letterSpacing: -0.3,
-    decoration: TextDecoration.none,
-  );
-
-  static const _artistNameStyle = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
-    color: NeumorphismTheme.textSecondary,
-    decoration: TextDecoration.none,
-  );
-
-  static const _reasonStyle = TextStyle(
-    fontSize: 11,
-    color: Color(0x99756860),
-    fontStyle: FontStyle.italic,
-    decoration: TextDecoration.none,
-  );
-
   @override
   Widget build(BuildContext context) {
     final song = featuredSong.song;
@@ -459,16 +423,50 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
         ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
         : null;
     
+    // 🎨 Dynamic Styles
+    final cardDecoration = BoxDecoration(
+      color: NeumorphismTheme.surface,
+      borderRadius: const BorderRadius.all(Radius.circular(16)),
+      border: Border.all(
+        color: NeumorphismTheme.isDark 
+            ? Colors.white.withValues(alpha: 0.05) 
+            : const Color(0x148B7A6A),
+        width: 1,
+      ),
+    );
+
+    const songTitleStyle = TextStyle(
+      fontSize: 17,
+      fontWeight: FontWeight.w700,
+      color: NeumorphismTheme.textPrimary,
+      letterSpacing: -0.3,
+      decoration: TextDecoration.none,
+    );
+
+    const artistNameStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      color: NeumorphismTheme.textSecondary,
+      decoration: TextDecoration.none,
+    );
+
+    final reasonStyle = TextStyle(
+      fontSize: 11,
+      color: NeumorphismTheme.textSecondary.withValues(alpha: 0.6),
+      fontStyle: FontStyle.italic,
+      decoration: TextDecoration.none,
+    );
+
     return Container(
       key: ValueKey('intelligent_song_${song.id}'),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: _cardDecoration,
+      decoration: cardDecoration,
       child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: const BorderRadius.all(Radius.circular(16)),
             onTap: onTap,
-            splashColor: const Color(0x1A8B7A6A),
+            splashColor: NeumorphismTheme.accent.withValues(alpha: 0.1),
             highlightColor: Colors.transparent,
             child: Padding(
               padding: const EdgeInsets.all(14.0),
@@ -478,7 +476,10 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
                   Container(
                     width: 60,
                     height: 60,
-                    decoration: _imageDecoration,
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
                       child: ClipRRect(
                       borderRadius: const BorderRadius.all(Radius.circular(12)),
                       clipBehavior: Clip.antiAlias,
@@ -505,7 +506,7 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
                       children: [
                         Text(
                           song.title ?? 'Sin título',
-                          style: _songTitleStyle,
+                          style: songTitleStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -526,14 +527,14 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
                                               ? song.artist!.displayName
                                               : 'Artista Desconocido'),
                                       isVerified: song.artist!.isVerifiedValue,
-                                      textStyle: _artistNameStyle,
+                                      textStyle: artistNameStyle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       badgeSize: 12.0,
                                     )
                                   : const Text(
                                       'Artista Desconocido',
-                                      style: _artistNameStyle,
+                                      style: artistNameStyle,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -545,7 +546,7 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           featuredSong.featuredReason!,
-                          style: _reasonStyle,
+                          style: reasonStyle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

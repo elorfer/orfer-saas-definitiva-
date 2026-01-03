@@ -20,9 +20,10 @@ class AppConfig {
   //    - Producción Default: AWS ALB URL
   // -----------------------------------------------------------------------------
   
-  // 🛠️ CONFIGURACIÓN DE DESARROLLO
+  // 🛠️ CONFIGURACIÓN DE DESARROLLO Y PERFIL (PROFILE)
   // Cambia esto a `true` si usas el Emulador de Android.
   // Cambia esto a `false` si usas un Móvil Real (con adb reverse).
+  // Nota: Esto controlará la IP tanto en 'flutter run' como en 'flutter run --profile'
   static const bool useAndroidEmulator = false;
 
   static String get _localBaseUrl {
@@ -40,7 +41,8 @@ class AppConfig {
 
   static String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: kDebugMode ? _localBaseUrl : _productionUrl,
+    // 🚀 FIX: Usar URL local también en Profile Mode y RELEASE (temporalmente para benchmark local)
+    defaultValue: (kDebugMode || kProfileMode || kReleaseMode) ? _localBaseUrl : _productionUrl,
   );
 
   // Llamar a este método desde `main()` para imprimir la URL que usa la app.

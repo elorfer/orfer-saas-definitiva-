@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 
-class HomeMessageBanner extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/theme_provider.dart';
+
+class HomeMessageBanner extends ConsumerWidget {
   final String message;
   final DateTime? updatedAt;
 
@@ -18,15 +21,19 @@ class HomeMessageBanner extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: NeumorphismTheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color(0xFFF3EBE3), // 🚀 Sólido
+            color: NeumorphismTheme.isDark 
+                ? const Color(0x1FFFFFFF) 
+                : const Color(0xFFF3EBE3),
             width: 1,
           ),
         ),
@@ -52,7 +59,7 @@ class HomeMessageBanner extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF2E6), // 🚀 Sólido (Naranja muy pálido)
+                      color: NeumorphismTheme.accent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(

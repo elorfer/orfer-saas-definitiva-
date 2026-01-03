@@ -13,10 +13,18 @@ class FeaturedArtistsFullScreen extends ConsumerWidget {
     final featuredArtists = ref.watch(featuredArtistsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Compositores Destacados'),
-        backgroundColor: NeumorphismTheme.coffeeMedium,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Compositores Destacados',
+          style: TextStyle(
+            color: NeumorphismTheme.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: NeumorphismTheme.background,
+        foregroundColor: NeumorphismTheme.textPrimary,
         elevation: 0,
+        scrolledUnderElevation: 0, // ✅ Fix: No cambiar color al scrollear
+        surfaceTintColor: Colors.transparent, // ✅ Fix: Sin tinte de superficie
       ),
       backgroundColor: NeumorphismTheme.background,
       body: featuredArtists.isEmpty

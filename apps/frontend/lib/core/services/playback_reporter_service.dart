@@ -11,7 +11,7 @@ import 'http_client_service.dart';
 /// 
 /// Reglas:
 /// 1. Play válido: > 30 segundos de reproducción acumulada.
-/// 2. Skip: Salto antes de 5 segundos.
+/// 2. Skip: Salto antes de 30 segundos (Penalización ampliada).
 /// 3. Reporta al endpoint /streams/track-progress y /streams/skip.
 class PlaybackReporterService {
   final Ref _ref;
@@ -199,17 +199,25 @@ class PlaybackReporterService {
           final isManualSkip = _lastManualSkipSignal != null && 
                                DateTime.now().difference(_lastManualSkipSignal!) < const Duration(seconds: 2);
           
-          if (secondsPlayed < 5) {
+          if (secondsPlayed < 30) {
+            // 🛡️ NO REPORTAR SKIP si ya se registró como Play (seguridad contra race conditions)
+            if (_playRegistered) {
+               AppLogger.warning('[PlaybackReporter] 🛡️ Skip ignorado: Ya se había registrado como Play (Race condition prevenida)');
+               return;
+            }
+
             if (secondsPlayed < 3 && !isManualSkip) {
               // 🛡️ GLITCH GUARD: Si duró menos de 3s y NO fue manual, asumir glitch/auto-skip
               AppLogger.warning('[PlaybackReporter] 🛡️ Ignorando posible glitch/auto-skip: $previousSongId (${secondsPlayed}s) - Sin señal manual');
             } else {
-              // Es un skip manual real O duró entre 3-5s (usuario decidió saltar)
+              // Es un skip manual real O duró entre 3-30s (usuario decidió saltar)
+              // AHORA: Todo salto antes de los 30s es penalizado. Sin "Zona Neutra".
               _reportSkip(previousSongId, secondsPlayed);
             }
           } else {
-            // Si no se registró el play pero se alcanzaron 30s, forzar reporte con snapshot
-            if (secondsPlayed >= 30 && !_playRegistered) {
+            // Si duró 30s o más, es un STREAM VÁLIDO.
+            // Si no se registró el play por heartbeat, forzar reporte con snapshot ahora.
+            if (!_playRegistered) {
               // 🚀 Usar snapshot explícito para evitar condiciones de carrera
               _reportProgress(overrideSongId: previousSongId, overrideDuration: accumulatedSnapshot);
             }

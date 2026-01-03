@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/providers/library_coordinator.dart';
+import '../../../core/providers/offline_manager_provider.dart'; // ✅ Importar OfflineManager
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/utils/url_normalizer.dart';
@@ -46,10 +47,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     final recentlyPlayed = ref.watch(libraryRecentlyPlayedProvider);
     final isLoading = ref.watch(libraryIsLoadingProvider);
     final isSyncing = ref.watch(libraryIsSyncingProvider);
+    // ✅ Offline Count
+    final downloadsCount = ref.watch(
+      offlineManagerProvider.select((state) => state.downloadedSongs.length),
+    );
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: NestedScrollView(
@@ -88,7 +93,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: _buildFeaturedCard(stats.totalFavorites),
+                          child: _buildFeaturedCard(downloadsCount), // ✅ Pasar downloadsCount
                         ),
                       ),
                       
@@ -119,7 +124,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       systemOverlayStyle: SystemUiOverlayStyle.dark,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: NeumorphismTheme.backgroundGradient,
           ),
           child: SafeArea(
@@ -132,7 +137,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                   Container(
                     width: 56,
                     height: 56,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -161,7 +166,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                       children: [
                         Row(
                           children: [
-                            const Text(
+                            Text(
                               'Tu Biblioteca',
                               style: TextStyle(
                                 fontSize: 28,
@@ -173,7 +178,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                             // Indicador de sincronización
                             if (isSyncing) ...[
                               const SizedBox(width: 8),
-                              const SizedBox(
+                              SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
@@ -187,7 +192,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                         const SizedBox(height: 4),
                         Text(
                           '${stats.totalRecentlyPlayed} escuchadas · ${stats.totalFavorites} favoritas · ${stats.totalFollowedArtists} artistas',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: NeumorphismTheme.textSecondary,
@@ -211,7 +216,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
           color: NeumorphismTheme.textPrimary,
@@ -232,7 +237,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Actividad reciente',
                   style: TextStyle(
                     fontSize: 22,
@@ -244,7 +249,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                 if (recentlyPlayed.isNotEmpty)
                   GestureDetector(
                     onTap: () => context.push('/recently-played'),
-                    child: const Text(
+                    child: Text(
                       'Ver todo',
                       style: TextStyle(
                         fontSize: 14,
@@ -292,7 +297,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         borderRadius: const BorderRadius.all(Radius.circular(20)),
         boxShadow: NeumorphismTheme.softShadow,
       ),
-      child: const Center(
+      child: Center(
         child: Text(
           'Cuando reproduzcas música, aparecerá aquí',
           style: TextStyle(
@@ -312,6 +317,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
         label: 'Favoritas',
         value: '${stats.totalFavorites}',
         route: '/favorites',
+      ),
+      _CategoryData(
+        icon: Icons.playlist_play_rounded,
+        label: 'Mis Playlists',
+        value: '0', // Placeholder por ahora
+        route: '/playlists',
+      ),
+      _CategoryData(
+        icon: Icons.person_rounded,
+        label: 'Artistas seguidos',
+        value: '${stats.totalFollowedArtists}',
+        route: '/followed-artists',
       ),
       _CategoryData(
         icon: Icons.history_rounded,
@@ -348,71 +365,74 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
     );
   }
 
-  /// Card destacada
-  Widget _buildFeaturedCard(int favoritesCount) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.all(Radius.circular(24)),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.coffeeDark.withValues(alpha: 0.9),
-            NeumorphismTheme.coffeeMedium.withValues(alpha: 0.85),
+  /// Card destacada (Reemplazada por Descargas)
+  Widget _buildFeaturedCard(int downloadsCount) {
+    return GestureDetector(
+      onTap: () => context.push('/downloads'),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              NeumorphismTheme.accentDark.withValues(alpha: 0.9),
+              NeumorphismTheme.accent.withValues(alpha: 0.85),
+            ],
+          ),
+          boxShadow: NeumorphismTheme.floatingShadow,
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.2),
+              ),
+              child: const Icon(
+                Icons.download_done_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   const Text(
+                    'Música Descargada',
+                    style: TextStyle(
+                      fontSize: 19, // Ligeramente más grande
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    downloadsCount == 0
+                        ? 'Toca para ver tu música offline'
+                        : '$downloadsCount canciones listas para escuchar',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white54,
+              size: 20,
+            ),
           ],
         ),
-        boxShadow: NeumorphismTheme.floatingShadow,
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.15),
-            ),
-            child: const Icon(
-              Icons.favorite_rounded,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Tus favoritos del mes',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  favoritesCount == 0
-                      ? 'Empieza a marcar canciones como favoritas'
-                      : 'Tus mejores $favoritesCount canciones guardadas',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.85),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.arrow_forward_ios_rounded,
-            color: Colors.white54,
-            size: 20,
-          ),
-        ],
       ),
     );
   }
@@ -487,77 +507,82 @@ class _RecentSongCard extends StatelessWidget {
         ? UrlNormalizer.normalizeImageUrl(song.coverArtUrl)
         : null;
 
-    return Container(
-      width: 126,
-      decoration: BoxDecoration(
-        color: NeumorphismTheme.surface,
-        borderRadius: const BorderRadius.all(Radius.circular(18)),
-        boxShadow: NeumorphismTheme.softShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(18),
-              topRight: Radius.circular(18),
+    return GestureDetector(
+      onTap: () {
+        context.push('/song/${song.id}', extra: song);
+      },
+      child: Container(
+        width: 126,
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(18)),
+          boxShadow: NeumorphismTheme.softShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(18),
+                topRight: Radius.circular(18),
+              ),
+              child: SizedBox(
+                height: 96,
+                width: double.infinity,
+                child: cover != null && cover.isNotEmpty
+                    ? OptimizedImage(
+                        imageUrl: cover,
+                        width: 126,
+                        height: 96,
+                        fit: BoxFit.cover,
+                        maxCacheWidth: 252,
+                        maxCacheHeight: 192,
+                        skipFade: true,
+                        lazyLoad: false,
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          gradient: NeumorphismTheme.imagePlaceholderGradient,
+                        ),
+                        child: const Icon(
+                          Icons.music_note_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+              ),
             ),
-            child: SizedBox(
-              height: 96,
-              width: double.infinity,
-              child: cover != null && cover.isNotEmpty
-                  ? OptimizedImage(
-                      imageUrl: cover,
-                      width: 126,
-                      height: 96,
-                      fit: BoxFit.cover,
-                      maxCacheWidth: 252,
-                      maxCacheHeight: 192,
-                      skipFade: true,
-                      lazyLoad: false,
-                    )
-                  : Container(
-                      decoration: const BoxDecoration(
-                        gradient: NeumorphismTheme.imagePlaceholderGradient,
-                      ),
-                      child: const Icon(
-                        Icons.music_note_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
+            Padding(
+              // Reducir padding vertical ligeramente para evitar overflow por 1px
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    song.title ?? 'Sin título',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: NeumorphismTheme.textPrimary,
                     ),
-            ),
-          ),
-          Padding(
-            // Reducir padding vertical ligeramente para evitar overflow por 1px
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  song.title ?? 'Sin título',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: NeumorphismTheme.textPrimary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  song.artist?.displayName ?? 'Artista desconocido',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: NeumorphismTheme.textSecondary,
+                  const SizedBox(height: 2),
+                  Text(
+                    song.artist?.displayName ?? 'Artista desconocido',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: NeumorphismTheme.textSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -610,7 +635,7 @@ class _CategoryCard extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: NeumorphismTheme.textPrimary,
@@ -621,7 +646,7 @@ class _CategoryCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     value,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       color: NeumorphismTheme.textSecondary,
                     ),
@@ -671,7 +696,7 @@ class _MetricCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
                   color: NeumorphismTheme.textPrimary,
@@ -682,7 +707,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               color: NeumorphismTheme.textSecondary,
             ),
@@ -700,7 +725,7 @@ class _LibraryLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: CircularProgressIndicator(
         color: NeumorphismTheme.coffeeMedium,
       ),

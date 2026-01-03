@@ -135,7 +135,7 @@ class _AdProgressBarState extends ConsumerState<_AdProgressBar>
           return LinearProgressIndicator(
             value: progress.clamp(0.0, 1.0),
             backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.1),
-            valueColor: const AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+            valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
             minHeight: 2,
           );
         },
@@ -347,7 +347,7 @@ class AdsMiniPlayer extends ConsumerWidget {
             child: Container(
               width: 40, // ✅ 40px (Match FinalMiniPlayer)
               height: 40,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle, // ✅ Circle (Match FinalMiniPlayer)
                 color: NeumorphismTheme.coffeeMedium,
               ),
@@ -380,7 +380,7 @@ class AdsMiniPlayer extends ConsumerWidget {
         shape: BoxShape.circle, // ✅ Circle
         color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
       ),
-      child: const Icon(
+      child: Icon(
         Icons.campaign_rounded,
         color: NeumorphismTheme.coffeeMedium,
         size: 20, // ✅ Match FinalMiniPlayer icon size

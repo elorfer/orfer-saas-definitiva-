@@ -185,17 +185,31 @@ class _SmoothSeekbarState extends ConsumerState<SmoothSeekbar>
         ? Duration.zero 
         : const Duration(milliseconds: 50);
 
+    // 🆕 FIX PERFORMANCE: Simular opacidad con alpha directamente en los colores
+    final double opacityFactor = widget.enabled ? 1.0 : 0.5;
+
     // Colores (sin buffer)
-    final progressColor = widget.activeColor ?? NeumorphismTheme.coffeeMedium;
-    final bgColor = widget.inactiveColor ?? NeumorphismTheme.textSecondary.withValues(alpha: 0.2);
+    final progressColor = (widget.activeColor ?? NeumorphismTheme.coffeeMedium)
+        .withValues(alpha: (widget.activeColor?.a ?? 1.0) * opacityFactor);
+        
+    final baseBgColor = widget.inactiveColor ?? NeumorphismTheme.textSecondary.withValues(alpha: 0.2);
+    final bgColor = baseBgColor.withValues(alpha: baseBgColor.a * opacityFactor);
+    
+    final thumbColorBase = widget.thumbColor ?? progressColor;
+    // El thumbColor ya tiene la opacidad aplicada si usa progressColor, si no, aplicarla
+    final effectiveThumbColor = widget.thumbColor != null 
+        ? thumbColorBase.withValues(alpha: thumbColorBase.a * opacityFactor)
+        : progressColor; // Ya tiene el factor aplicado
 
     // Posición para mostrar
     final displayPosition = _isDragging
         ? Duration(milliseconds: (duration.inMilliseconds * _dragProgress).round())
         : position;
 
-    return Opacity(
-      opacity: widget.enabled ? 1.0 : 0.5,
+    // OPTIMIZACIÓN: Opacidad simulada con alpha en los colores del SliderTheme
+    // Evita crear un layer costoso para el widget Opacity
+    return IgnorePointer(
+      ignoring: !widget.enabled,
       child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -268,15 +282,15 @@ class _SmoothSeekbarState extends ConsumerState<SmoothSeekbar>
                             child: Container(
                               width: widget.thumbRadius * 2,
                               height: widget.thumbRadius * 2,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: widget.thumbColor ?? progressColor,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: (widget.thumbColor ?? progressColor).withValues(alpha: 0.5),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: effectiveThumbColor,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: effectiveThumbColor.withValues(alpha: 0.5 * opacityFactor),
+                                      blurRadius: 8,
+                                      spreadRadius: 2,
+                                    ),
                                 ],
                               ),
                             ),
@@ -325,7 +339,7 @@ class _SmoothSeekbarState extends ConsumerState<SmoothSeekbar>
               children: [
                 Text(
                   _formatDuration(displayPosition),
-                  style: widget.timeStyle ?? const TextStyle(
+                  style: widget.timeStyle ?? TextStyle(
                     fontSize: 12,
                     color: NeumorphismTheme.textSecondary,
                     fontWeight: FontWeight.w500,
@@ -333,7 +347,7 @@ class _SmoothSeekbarState extends ConsumerState<SmoothSeekbar>
                 ),
                 Text(
                   _formatDuration(duration),
-                  style: widget.timeStyle ?? const TextStyle(
+                  style: widget.timeStyle ?? TextStyle(
                     fontSize: 12,
                     color: NeumorphismTheme.textSecondary,
                     fontWeight: FontWeight.w500,

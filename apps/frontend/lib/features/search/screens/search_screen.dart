@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/providers/search_provider.dart';
@@ -272,6 +273,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     final query = ref.watch(searchProvider.select((state) => state.query));
     final results = ref.watch(searchProvider.select((state) => state.results));
 
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
+
     // ✅ OPTIMIZACIÓN: Actualizar cache de URLs solo cuando cambian los resultados (no en cada build)
     final resultsLength = (results?.artists.length ?? 0) + (results?.songs.length ?? 0) + (results?.playlists.length ?? 0) + (results?.genres.length ?? 0);
     if (resultsLength != _cachedResultsCount && results != null) {
@@ -288,7 +292,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         key: const ValueKey('search_screen_scaffold'),
         resizeToAvoidBottomInset: false, // ✅ Evitar que el teclado empuje el contenido
         body: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: NeumorphismTheme.backgroundGradient,
           ),
           child: SafeArea(
@@ -1008,8 +1012,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: NeumorphismTheme.surface.withValues(alpha: 0.6),
-            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            color: NeumorphismTheme.surface, // 🚀 OPTIMIZACIÓN: Color dinámico
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+            border: Border.all(
+              color: NeumorphismTheme.isDark 
+                  ? Colors.white.withValues(alpha: 0.05) 
+                  : Colors.transparent,
+              width: 1,
+            ),
             // ⚡ GAMA BAJA: Sin boxShadow
           ),
           child: Row(
@@ -1022,7 +1032,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   style: AppTextStyles.searchTitle.copyWith(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: NeumorphismTheme.coffeeMedium,
+                    color: NeumorphismTheme.accentDark,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -1080,6 +1090,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                       style: AppTextStyles.searchTitle.copyWith(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
+                        color: NeumorphismTheme.textPrimary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1089,6 +1100,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                       song.artist?.stageName ?? 'Artista desconocido',
                       style: AppTextStyles.searchSubtitle.copyWith(
                         fontSize: 13,
+                        color: NeumorphismTheme.textSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

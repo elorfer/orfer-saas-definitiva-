@@ -489,7 +489,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                 onSwipe: (direction) {
                                   final audioNotifier = ref.read(unifiedAudioProviderFixed.notifier);
                                   if (direction == SwipeDirection.left) {
-                                    audioNotifier.next();
+                                    audioNotifier.next(isManual: true);
                                   } else {
                                     audioNotifier.previous();
                                   }
@@ -668,7 +668,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                         size: 42,
                                         isLocked: isPlayingAd,
                                         onTap: () async {
-                                          await ref.read(unifiedAudioProviderFixed.notifier).next();
+                                          await ref.read(unifiedAudioProviderFixed.notifier).next(isManual: true);
                                         },
                                       ),
                                     ),
@@ -680,8 +680,8 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                             final repeatMode = ref.watch(
                                               unifiedAudioProviderFixed.select((state) => state.repeatMode),
                                             );
-                                            IconData icon;
-                                            Color color;
+                                            IconData icon = Icons.repeat_rounded; // ✅ Inicialización por defecto
+                                            Color color = Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7); // ✅ Inicialización por defecto
                                             switch (repeatMode) {
                                               case RepeatMode.off:
                                                 icon = Icons.repeat_rounded;
@@ -1012,7 +1012,8 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
                     // 🆕 FIX PARPADEO: Key por canción para forzar estado nuevo al cambiar canción
                     SmoothSeekbar(
                       key: ValueKey('smooth_seekbar_${currentSong ?? 'none'}'),
-              enabled: !isPlayingAd, // 🛑 Deshabilitar durante anuncios
+              // 🛑 Deshabilitar durante anuncios
+              showTimes: false, // 🛑 FIX: Desactivar tiempos internos para evitar duplicados con _ProgressControl
               height: 40,
               trackHeight: 4.0,
               thumbRadius: 6.0,

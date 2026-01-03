@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../models/auth_models.dart';
 import '../config/api_config.dart';
@@ -21,7 +22,9 @@ class AuthService {
   final HttpClientService _httpClient = HttpClientService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
+      encryptedSharedPreferences: false,
+      sharedPreferencesName: 'vintage_auth_store', // ✅ FIX: Usar archivo dedicado para evitar conflictos
+      resetOnError: true, 
     ),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
@@ -91,17 +94,43 @@ class AuthService {
   /// Cargar datos de autenticación guardados
   Future<void> _loadStoredAuthData() async {
     try {
-      final token = await _secureStorage.read(key: _tokenKey);
-      final userData = await _secureStorage.read(key: _userKey);
+      AppLogger.debug('[AuthService] 📂 Cargando datos de autenticación guardados...');
+      
+      // Intentar primero con SecureStorage
+      String? token = await _secureStorage.read(key: _tokenKey);
+      String? userData = await _secureStorage.read(key: _userKey);
+
+      // Si falla SecureStorage, intentar con SharedPreferences (Fallback)
+      if (token == null || userData == null) {
+        AppLogger.warning('[AuthService] ⚠️ SecureStorage vacío/falló. Intentando SharedPreferences (Fallback)...');
+        final prefs = await SharedPreferences.getInstance();
+        token = prefs.getString(_tokenKey);
+        userData = prefs.getString(_userKey);
+        
+        if (token != null) AppLogger.info('[AuthService] ✅ Token recuperado desde SharedPreferences');
+      }
 
       if (token != null && userData != null) {
+        AppLogger.debug('[AuthService] 🔑 Token encontrado (longitud: ${token.length})');
+        
         _accessToken = token;
-        // Normalizar datos del usuario al cargar desde almacenamiento
-        final userJson = jsonDecode(userData) as Map<String, dynamic>;
-        final normalizedData = DataNormalizer.normalizeUser(userJson);
-        _currentUser = User.fromJson(normalizedData);
+        
+        try {
+          // Normalizar datos del usuario al cargar desde almacenamiento
+          final userJson = jsonDecode(userData) as Map<String, dynamic>;
+          final normalizedData = DataNormalizer.normalizeUser(userJson);
+          
+          _currentUser = User.fromJson(normalizedData);
+          AppLogger.info('[AuthService] ✅ Sesión restaurada exitosamente para: ${_currentUser?.email}');
+        } catch (parseError, stackTrace) {
+          AppLogger.error('[AuthService] ❌ Error parseando datos de usuario guardados', parseError, stackTrace);
+          rethrow; // Relanzar para limpiar datos corruptos
+        }
+      } else {
+         AppLogger.info('[AuthService] ℹ️ No hay sesión guardada en ningún almacenamiento');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('[AuthService] ❌ Error fatal cargando persistencia', e, stackTrace);
       // Si hay error al cargar datos, limpiar todo
       await _clearAuthData();
     }
@@ -472,24 +501,58 @@ class AuthService {
 
   /// Guardar datos de autenticación
   Future<void> _saveAuthData(AuthResponse authResponse) async {
-    _accessToken = authResponse.accessToken;
-    _currentUser = authResponse.user;
+    try {
+      AppLogger.debug('[AuthService] 💾 Guardando datos de autenticación...');
+      _accessToken = authResponse.accessToken;
+      _currentUser = authResponse.user;
 
-    await _secureStorage.write(key: _tokenKey, value: _accessToken);
-    await _secureStorage.write(key: _userKey, value: jsonEncode(_currentUser!.toJson()));
-    
-    // Actualizar token en HttpClientService para que se use en futuras peticiones
-    await _httpClient.updateAuthToken(_accessToken);
+      // 1. Guardar en SecureStorage (Principal)
+      await _secureStorage.write(key: _tokenKey, value: _accessToken);
+      final userJson = jsonEncode(_currentUser!.toJson());
+      await _secureStorage.write(key: _userKey, value: userJson);
+      
+      // 2. Guardar en SharedPreferences (Backup/Fallback)
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_tokenKey, _accessToken!);
+        await prefs.setString(_userKey, userJson);
+        AppLogger.debug('[AuthService] ✅ Backup guardado en SharedPreferences');
+      } catch (e) {
+        AppLogger.warning('[AuthService] ⚠️ Falló backup en SharedPreferences: $e');
+      }
+
+      AppLogger.debug('[AuthService] ✅ Datos guardados exitosamente');
+      
+      // Actualizar token en HttpClientService para que se use en futuras peticiones
+      await _httpClient.updateAuthToken(_accessToken);
+    } catch (e, stackTrace) {
+      AppLogger.error('[AuthService] ❌ Error guardando datos de autenticación', e, stackTrace);
+      rethrow;
+    }
   }
 
   /// Limpiar datos de autenticación
   Future<void> _clearAuthData() async {
+    AppLogger.warning('[AuthService] 🧹 Limpiando datos de autenticación...');
     _accessToken = null;
     _currentUser = null;
 
-    await _secureStorage.delete(key: _tokenKey);
-    await _secureStorage.delete(key: _userKey);
-    await _secureStorage.delete(key: _refreshTokenKey);
+    try {
+      // 1. Limpiar SecureStorage
+      await _secureStorage.delete(key: _tokenKey);
+      await _secureStorage.delete(key: _userKey);
+      await _secureStorage.delete(key: _refreshTokenKey);
+      
+      // 2. Limpiar SharedPreferences (Backup)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenKey);
+      await prefs.remove(_userKey);
+      await prefs.remove(_refreshTokenKey);
+      
+      AppLogger.debug('[AuthService] ✅ Storage limpiado (Secure + Shared)');
+    } catch (e) {
+      AppLogger.error('[AuthService] ⚠️ Error limpiando storage (ignorable)', e);
+    }
     
     // Limpiar token en HttpClientService
     await _httpClient.clearAuthToken();

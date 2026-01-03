@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/providers/theme_provider.dart';
 
 /// Pantalla de suscripción Premium que presenta los beneficios
 /// y motiva al usuario a convertirse en premium.
@@ -34,9 +35,12 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
   Widget build(BuildContext context) {
     super.build(context);
 
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
@@ -96,7 +100,7 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
         child: Column(
           children: [
             Icon(
-              Icons.star_rounded,
+              Icons.diamond_rounded,
               size: _iconSize,
               color: NeumorphismTheme.coffeeMedium,
             ),
@@ -124,22 +128,11 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
         width: double.infinity,
         padding: const EdgeInsets.all(_borderRadius),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              NeumorphismTheme.coffeeMedium.withValues(alpha: 0.15),
-              NeumorphismTheme.coffeeDark.withValues(alpha: 0.08),
-            ],
-          ),
+          color: NeumorphismTheme.isDark 
+              ? NeumorphismTheme.surface 
+              : const Color(0xFFF2EFEC), // 🚀 OPTIMIZACIÓN: Dinámico
           borderRadius: const BorderRadius.all(Radius.circular(_borderRadius)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          // boxShadow removido
         ),
         child: Column(
           children: [
@@ -204,12 +197,11 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
         width: double.infinity,
         padding: const EdgeInsets.all(_borderRadius),
         decoration: BoxDecoration(
-          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.12),
+          color: NeumorphismTheme.isDark 
+              ? NeumorphismTheme.surface 
+              : const Color(0xFFF5F2EF), // 🚀 OPTIMIZACIÓN: Dinámico
           borderRadius: const BorderRadius.all(Radius.circular(_borderRadius)),
-          border: Border.all(
-            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-            width: 2,
-          ),
+          // Border removido para evitar costo de renderizado
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,15 +259,11 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
         width: double.infinity,
         padding: const EdgeInsets.all(_borderRadius),
         decoration: BoxDecoration(
-          color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.3),
+          color: NeumorphismTheme.isDark 
+              ? NeumorphismTheme.surface 
+              : const Color(0xFFF7F5F3), // 🚀 OPTIMIZACIÓN: Dinámico
           borderRadius: const BorderRadius.all(Radius.circular(_borderRadius)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          // boxShadow removido
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,6 +281,10 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
               ),
             ),
             const SizedBox(height: 24),
+            _buildBenefitItem(
+              icon: Icons.download_rounded,
+              text: 'Música sin conexión a internet',
+            ),
             _buildBenefitItem(
               icon: Icons.explore_rounded,
               text: 'Descubre canciones exclusivas antes que nadie',
@@ -339,7 +331,7 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
         width: double.infinity,
         height: _buttonHeight + 4,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
@@ -348,22 +340,11 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
             ],
           ),
           borderRadius: const BorderRadius.all(Radius.circular(_buttonBorderRadius)),
-          boxShadow: [
-            BoxShadow(
-              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-              spreadRadius: 2,
-            ),
-            BoxShadow(
-              color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
+        // 🚀 OPTIMIZACIÓN: Sin sombras pesadas
         child: Material(
-          color: Colors.transparent,
+          color: Colors.transparent, 
+          borderRadius: const BorderRadius.all(Radius.circular(_buttonBorderRadius)),
           child: InkWell(
             onTap: _handleSubscribeTap,
             borderRadius: const BorderRadius.all(Radius.circular(_buttonBorderRadius)),
@@ -371,9 +352,9 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.star_rounded,
-                    color: Colors.white,
+                   Icon(
+                    Icons.diamond_rounded,
+                    color: NeumorphismTheme.isDark ? const Color(0xFF2D2420) : Colors.white,
                     size: 24,
                   ),
                   const SizedBox(width: 8),
@@ -382,7 +363,7 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: NeumorphismTheme.isDark ? const Color(0xFF2D2420) : Colors.white,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -397,9 +378,12 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
     return Container(
       width: double.infinity,
       height: _buttonHeight,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(_buttonBorderRadius)),
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.isDark ? NeumorphismTheme.surface : Colors.white,
+        borderRadius: const BorderRadius.all(Radius.circular(_buttonBorderRadius)),
+        border: Border.all(
+          color: NeumorphismTheme.isDark ? NeumorphismTheme.accent.withValues(alpha: 0.2) : Colors.transparent,
+        ),
       ),
       child: Material(
         color: Colors.transparent,
@@ -412,7 +396,7 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: NeumorphismTheme.coffeeDark,
+                color: NeumorphismTheme.isDark ? NeumorphismTheme.accent : NeumorphismTheme.coffeeDark,
                 letterSpacing: 0.3,
               ),
             ),
@@ -428,7 +412,9 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
         child: Container(
           padding: const EdgeInsets.all(_borderRadius),
           decoration: BoxDecoration(
-            color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.4),
+            color: NeumorphismTheme.isDark 
+                ? NeumorphismTheme.surface 
+                : const Color(0xFFF0EBE6), // 🚀 OPTIMIZACIÓN: Dinámico
             borderRadius: const BorderRadius.all(Radius.circular(20)),
           ),
           child: Column(
@@ -485,15 +471,11 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
         width: double.infinity,
         padding: const EdgeInsets.all(_borderRadius),
         decoration: BoxDecoration(
-          color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.5),
+          color: NeumorphismTheme.isDark 
+              ? NeumorphismTheme.surface 
+              : const Color(0xFFF7F5F3), // 🚀 OPTIMIZACIÓN: Dinámico
           borderRadius: const BorderRadius.all(Radius.circular(_borderRadius)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          // boxShadow removido
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

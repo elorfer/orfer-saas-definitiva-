@@ -2,16 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/home_provider.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/models/song_model.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import 'featured_song_card.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/widgets/section_header.dart';
+import 'package:animate_do/animate_do.dart';
 
 class FeaturedSongsSection extends ConsumerWidget {
   const FeaturedSongsSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
+
     // ✅ OPTIMIZACIÓN: Los providers ya usan select() internamente
     // Solo se reconstruye cuando cambian estos valores específicos
     final featuredSongs = ref.watch(featuredSongsProvider);
@@ -29,60 +35,34 @@ class FeaturedSongsSection extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Título de la sección
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Canciones Destacadas',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3D2E20),
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  // Navegar a búsqueda para ver todas las canciones destacadas
-                  context.push('/search');
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: NeumorphismTheme.accentDark, // ✅ Marrón oscuro del tema
-                ),
-                child: Text(
-                  'Ver todas',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: NeumorphismTheme.accentDark, // ✅ Marrón oscuro del tema
-                    decoration: TextDecoration.none,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        // Header estandarizado
+        SectionHeader(
+          title: 'Canciones Destacadas',
+          actionLabel: 'Ver todas',
+          onTapMore: () => context.push('/search'),
         ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         
         // Lista vertical de canciones optimizada (máximo 4)
-        // Usar Column con Expanded para evitar shrinkWrap (mejor rendimiento)
-        ...featuredSongs.take(4).toList().asMap().entries.map((entry) {
-          final index = entry.key;
-          final featuredSong = entry.value;
-          return RepaintBoundary(
-            key: ValueKey('song_${featuredSong.song.id}'), // Key estable para optimización
-            child: FeaturedSongCard(
-              key: ValueKey('song_card_${featuredSong.song.id}'), // Key estable
-              featuredSong: featuredSong,
-              precacheAudio: index < 2, // Solo precargar audio de los primeros visibles
-              onTap: () {
-                _onSongTap(context, featuredSong.song);
-              },
-            ),
-          );
+        // Lista vertical de canciones optimizada (máximo 4)
+        // Usar spread operator direactamente sobre el iterable
+        ...Iterable.generate(featuredSongs.length.clamp(0, 4), (index) {
+          final featuredSong = featuredSongs[index];
+          return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24), 
+              child: RepaintBoundary(
+                key: ValueKey('song_${featuredSong.song.id}'), 
+                child: FeaturedSongCard(
+                  key: ValueKey('song_card_${featuredSong.song.id}'), 
+                  featuredSong: featuredSong,
+                  precacheAudio: index < 2, 
+                  onTap: () {
+                    _onSongTap(context, featuredSong.song);
+                  },
+                ),
+              ),
+            );
         }),
         
         // Botón para ver más canciones
@@ -123,23 +103,23 @@ class FeaturedSongsSection extends ConsumerWidget {
               Container(
                 height: 24,
                 width: 180,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE4D6C8), // 🚀 Sólido
-                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.shimmerBaseColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
               ),
               Container(
                 height: 14,
                 width: 60,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE4D6C8), // 🚀 Sólido
-                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.shimmerBaseColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8), // ✅ Sincronizado con real (8)
         // Usar Column en lugar de ListView.builder con shrinkWrap (mejor rendimiento)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -149,24 +129,20 @@ class FeaturedSongsSection extends ConsumerWidget {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
                   borderRadius: const BorderRadius.all(Radius.circular(16)),
-                   border: Border.all(
-                    color: const Color(0xFFEEE4DA),
-                    width: 1,
-                  ),
+                  // No border
                 ),
               child: Row(
                 children: [
                   Container(
                     width: 56,
                     height: 56,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF3EBE3), // 🚀 Sólido
-                      borderRadius: BorderRadius.all(Radius.circular(12)), // Match card 10/12 radius mixing
+                    decoration: BoxDecoration(
+                      color: NeumorphismTheme.shimmerBaseColor,
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
                     ),
                   ),
-                  const SizedBox(width: 16), // Match 16px
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,39 +150,38 @@ class FeaturedSongsSection extends ConsumerWidget {
                         Container(
                           height: 15,
                           width: double.infinity,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF3EBE3), // 🚀 Sólido
-                            borderRadius: BorderRadius.all(Radius.circular(4)),
+                          decoration: BoxDecoration(
+                            color: NeumorphismTheme.shimmerBaseColor,
+                            borderRadius: const BorderRadius.all(Radius.circular(4)),
                           ),
                         ),
-                        const SizedBox(height: 6), // Match 4px + lineheight approx
+                        const SizedBox(height: 6),
                         Container(
                           height: 12,
-                          width: 120, // Artist name
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEEE4DA), // 🚀 Sólido
-                            borderRadius: BorderRadius.all(Radius.circular(4)),
+                          width: 120,
+                          decoration: BoxDecoration(
+                            color: NeumorphismTheme.shimmerBaseColor,
+                            borderRadius: const BorderRadius.all(Radius.circular(4)),
                           ),
                         ),
-                        const SizedBox(height: 6), // Match 4px
+                        const SizedBox(height: 6),
                         Container(
                           height: 10,
-                          width: 80, // Meta info
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEEE4DA), // 🚀 Sólido
-                            borderRadius: BorderRadius.all(Radius.circular(4)),
+                          width: 80,
+                          decoration: BoxDecoration(
+                            color: NeumorphismTheme.shimmerBaseColor,
+                            borderRadius: const BorderRadius.all(Radius.circular(4)),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Play button placeholder (32px)
                   Container(
                     width: 32,
                     height: 32,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF3EBE3), // 🚀 Sólido
+                    decoration: BoxDecoration(
+                      color: NeumorphismTheme.shimmerBaseColor,
                       shape: BoxShape.circle,
                     ),
                   ),

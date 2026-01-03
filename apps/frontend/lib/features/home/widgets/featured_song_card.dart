@@ -31,7 +31,7 @@ class FeaturedSongCard extends ConsumerStatefulWidget {
 }
 
 class _FeaturedSongCardState extends ConsumerState<FeaturedSongCard> {
-  static const TextStyle _titleStyle = TextStyle(
+  static TextStyle get _titleStyle => TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,
@@ -74,18 +74,9 @@ class _FeaturedSongCardState extends ConsumerState<FeaturedSongCard> {
         (s) => s.currentSong?.id == song.id && s.isPlaying,
       ),
     );
-    return RepaintBoundary(
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          border: Border.all(
-            color: NeumorphismTheme.accent.withValues(alpha: 0.08),
-            width: 1,
-          ),
-        ),
-        child: Material(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
@@ -98,25 +89,21 @@ class _FeaturedSongCardState extends ConsumerState<FeaturedSongCard> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  Container(
+                  SizedBox(
                     width: 56,
                     height: 56,
-                    decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.all(Radius.circular(12)),
-                      child: OptimizedImage(
-                        imageUrl: song.coverArtUrl,
-                        fit: BoxFit.cover,
-                        width: 56,
-                        height: 56,
-                        borderRadius: 12,
-                        placeholderColor: NeumorphismTheme.accentLight,
-                        maxCacheWidth: 140,
-                        maxCacheHeight: 140,
-                        skipFade: true,
-                      ),
+                    // 🚀 OPTIMIZATION: Removed redundant ClipRRect. 
+                    // OptimizedImage handles borderRadius internally.
+                    child: OptimizedImage(
+                      imageUrl: song.coverArtUrl,
+                      fit: BoxFit.cover,
+                      width: 56,
+                      height: 56,
+                      borderRadius: 12, // Internal clipping
+                      placeholderColor: NeumorphismTheme.accentLight,
+                      maxCacheWidth: 140,
+                      maxCacheHeight: 140,
+                      skipFade: true,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -154,7 +141,7 @@ class _FeaturedSongCardState extends ConsumerState<FeaturedSongCard> {
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.play_arrow_rounded,
                                   size: 16,
                                   color: NeumorphismTheme.accent,
@@ -184,8 +171,7 @@ class _FeaturedSongCardState extends ConsumerState<FeaturedSongCard> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   String _getArtistName(Song song) {

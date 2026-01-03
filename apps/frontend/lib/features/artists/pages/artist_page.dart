@@ -8,6 +8,7 @@ import '../../../core/config/api_config.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/models/artist_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/providers/playback_state.dart';
@@ -708,6 +709,9 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     // Actualizar estado de admin fuera de build (optimización)
     _updateAdminState(isAdmin);
 
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
+
     // Usar dimensiones cacheadas (ya calculadas en didChangeDependencies)
     final screenWidth = _cachedScreenWidth ?? MediaQuery.of(context).size.width;
     final coverHeight = _cachedCoverHeight ?? (screenWidth / 2.4);
@@ -906,13 +910,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      // boxShadow removido para performance
                     ),
                     child: ClipOval(
                       child: OptimizedImage(
@@ -995,9 +993,9 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                                 children: [
                                   TextSpan(
                                     text: NumberFormatter.format(totalFollowers),
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
-                                      color: Color(0xFF5D4037), // Marrón fuerte
+                                      color: NeumorphismTheme.isDark ? NeumorphismTheme.accent : const Color(0xFF5D4037),
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -1005,7 +1003,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                                     text: ' $followerText',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: Colors.grey[600],
+                                      color: NeumorphismTheme.textSecondary,
                                       fontWeight: FontWeight.normal,
                                     ),
                                   ),
@@ -1053,7 +1051,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               _bio,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              style: TextStyle(fontSize: 14, color: NeumorphismTheme.textPrimary),
             ),
           ),
           const SizedBox(height: 8), // Reducido de 12 a 8
@@ -1074,11 +1072,11 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             ),
           ),
           const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               'Sin biografía',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(fontSize: 14, color: NeumorphismTheme.textSecondary),
             ),
           ),
           const SizedBox(height: 12),
@@ -1103,12 +1101,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Row(
               children: [
-                const Icon(Icons.phone, size: 16, color: Colors.black54),
+                Icon(Icons.phone, size: 16, color: NeumorphismTheme.textSecondary),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
                     _phone!,
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                    style: TextStyle(fontSize: 14, color: NeumorphismTheme.textPrimary),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
@@ -1133,16 +1131,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
               style: Theme.of(context).textTheme.titleMedium,
             ),
             // ✅ OPTIMIZACIÓN: Widget separado con RepaintBoundary para evitar rebuilds innecesarios
-            Opacity(
-              opacity: _allProcessedSongs.isNotEmpty ? 1.0 : 0.0,
-              child: IgnorePointer(
-                ignoring: _allProcessedSongs.isEmpty,
-                child: _PlayAllButton(
-                  artistId: widget.artist.id,
-                  onTap: _onPlayAll,
-                ),
+            // ✅ OPTIMIZACIÓN: Eliminado Opacity costoso. Si no hay canciones, no mostrar nada.
+            if (_allProcessedSongs.isNotEmpty)
+              _PlayAllButton(
+                artistId: widget.artist.id,
+                onTap: _onPlayAll,
               ),
-            ),
           ],
         ),
       );
@@ -1152,13 +1146,13 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
   Widget _buildEmptySongs() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.music_off, color: Colors.black45),
-          SizedBox(width: 8),
+          Icon(Icons.music_off, color: NeumorphismTheme.textSecondary),
+          const SizedBox(width: 8),
           Text(
             'Este artista aún no tiene canciones subidas',
-            style: TextStyle(color: Colors.black54),
+            style: TextStyle(color: NeumorphismTheme.textSecondary),
           ),
         ],
       ),
@@ -1238,7 +1232,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: const Text(
+                child: Text(
                   'Ver más canciones',
                   style: TextStyle(
                     fontSize: 14,
@@ -1393,20 +1387,16 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     });
   }
 
-  // ✅ Skeleton loader para el header - OPTIMIZADO: Más liviano
+  // ✅ Skeleton loader para el header - OPTIMIZADO: Más liviano (Static colors)
   Widget _buildHeaderSkeleton(double screenWidth, double coverHeight) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Portada skeleton - simple sin gradiente
+        // Portada skeleton
         AspectRatio(
-          aspectRatio: 1.2, // ✅ AspectRatio 1.2 (más alto)
-          child: Shimmer.fromColors(
-            baseColor: Colors.grey[200]!,
-            highlightColor: Colors.grey[100]!,
-            child: Container(
-              color: Colors.grey[200],
-            ),
+          aspectRatio: 1.2,
+          child: Container(
+            color: NeumorphismTheme.shimmerBaseColor,
           ),
         ),
         // Avatar y nombre skeleton
@@ -1415,16 +1405,15 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Shimmer.fromColors(
-                baseColor: Colors.grey[200]!,
-                highlightColor: Colors.grey[100]!,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey[200],
-                    border: Border.all(color: Colors.white, width: 3),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: NeumorphismTheme.shimmerBaseColor,
+                  border: Border.all(
+                    color: NeumorphismTheme.isDark ? Colors.transparent : Colors.white, 
+                    width: 3
                   ),
                 ),
               ),
@@ -1434,16 +1423,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
-                    Shimmer.fromColors(
-                      baseColor: Colors.grey[200]!,
-                      highlightColor: Colors.grey[100]!,
-                      child: Container(
-                        width: screenWidth * 0.5,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        ),
+                    Container(
+                      width: screenWidth * 0.5,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.shimmerBaseColor,
+                        borderRadius: const BorderRadius.all(Radius.circular(8)),
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -1457,7 +1442,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     );
   }
 
-  // ✅ Skeleton loader para la biografía - OPTIMIZADO: Más liviano
+  // ✅ Skeleton loader para la biografía - OPTIMIZADO: Más liviano (Static colors)
   Widget _buildBiographySkeleton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1465,32 +1450,24 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Título
-          Shimmer.fromColors(
-            baseColor: Colors.grey[200]!,
-            highlightColor: Colors.grey[100]!,
-            child: Container(
-              width: 100,
-              height: 20,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        ),
+          Container(
+            width: 100,
+            height: 20,
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.shimmerBaseColor,
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
             ),
           ),
           const SizedBox(height: 6),
-          // Líneas de texto - solo 2 líneas en lugar de 3
+          // Líneas de texto
           ...List.generate(2, (index) => Padding(
             padding: EdgeInsets.only(bottom: index < 1 ? 8 : 0),
-            child: Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: double.infinity,
-                height: 16,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        ),
+            child: Container(
+              width: double.infinity,
+              height: 16,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.shimmerBaseColor,
+                borderRadius: const BorderRadius.all(Radius.circular(8)),
               ),
             ),
           )),
@@ -1500,50 +1477,35 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     );
   }
 
-  // ✅ Skeleton loader para tarjetas de canciones - OPTIMIZADO: Más liviano
+  // ✅ Skeleton loader para tarjetas de canciones - OPTIMIZADO: Más liviano (Static colors)
   Widget _buildSongSkeleton() {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: NeumorphismTheme.surface,
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
             // Número skeleton
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: 32,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: const BorderRadius.all(Radius.circular(6)),
-                ),
+            Container(
+              width: 32,
+              height: 20,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.shimmerBaseColor,
+                borderRadius: const BorderRadius.all(Radius.circular(6)),
               ),
             ),
             const SizedBox(width: 12),
             // Portada skeleton
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
-                ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.shimmerBaseColor,
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
               ),
             ),
             const SizedBox(width: 12),
@@ -1552,29 +1514,21 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Shimmer.fromColors(
-                    baseColor: Colors.grey[200]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(
-                      width: double.infinity,
-                      height: 18,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        ),
+                  Container(
+                    width: double.infinity,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: NeumorphismTheme.shimmerBaseColor,
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Shimmer.fromColors(
-                    baseColor: Colors.grey[200]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(
-                      width: 120,
-                      height: 14,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: const BorderRadius.all(Radius.circular(8)),
-                        ),
+                  Container(
+                    width: 120,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: NeumorphismTheme.shimmerBaseColor,
+                      borderRadius: const BorderRadius.all(Radius.circular(8)),
                     ),
                   ),
                 ],
@@ -1582,16 +1536,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
             ),
             const SizedBox(width: 8),
             // Botón play skeleton
-            Shimmer.fromColors(
-              baseColor: Colors.grey[200]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  shape: BoxShape.circle,
-                ),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: NeumorphismTheme.shimmerBaseColor,
+                shape: BoxShape.circle,
               ),
             ),
           ],
@@ -1644,23 +1594,8 @@ class _PlayAllButton extends ConsumerWidget {
     return RepaintBoundary(
       child: Container(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              NeumorphismTheme.coffeeMedium,
-              NeumorphismTheme.coffeeDark,
-            ],
-          ),
-          borderRadius: const BorderRadius.all(Radius.circular(20)),
-          boxShadow: [
-            BoxShadow(
-              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-              spreadRadius: 0,
-            ),
-          ],
+          color: NeumorphismTheme.isDark ? NeumorphismTheme.accent : NeumorphismTheme.coffeeMedium,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
         child: Material(
           color: Colors.transparent,
@@ -1674,16 +1609,16 @@ class _PlayAllButton extends ConsumerWidget {
                 children: [
                   Icon(
                     showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    color: Colors.white,
+                    color: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white,
                     size: 18,
                   ),
                   const SizedBox(width: 6),
-                  const Text(
+                  Text(
                     'Reproducir todo',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white,
                     ),
                   ),
                 ],
@@ -1711,20 +1646,20 @@ class _SongRowWidget extends ConsumerWidget {
     required this.onPlaySong,
   });
 
-  // ✅ OPTIMIZACIÓN: Estilos de texto cacheados para evitar llamadas a GoogleFonts en cada build
-  static const TextStyle _songTitleStyle = TextStyle(
+  // ✅ OPTIMIZACIÓN: Estilos dinámicos
+  TextStyle get _songTitleStyle => TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textPrimary,
     fontFamily: 'Inter',
   );
-  static const TextStyle _songNumberStyle = TextStyle(
+  TextStyle get _songNumberStyle => TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textSecondary,
     fontFamily: 'Inter',
   );
-  static TextStyle get _songNumberStyleDisabled => TextStyle(
+  TextStyle get _songNumberStyleDisabled => TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
@@ -1776,15 +1711,15 @@ class _SongRowWidget extends ConsumerWidget {
       height: 72, // ✅ User fix: Altura fija consistente (80 total - 8 margin)
       margin: const EdgeInsets.only(bottom: 8), // Reducido de 12 a 8
       decoration: BoxDecoration(
-        color: NeumorphismTheme.surface.withValues(alpha: isAvailable ? 1.0 : 0.7),
+        color: NeumorphismTheme.surface.withValues(alpha: isAvailable ? 1.0 : 0.7), // ⚡ OPTIMIZACIÓN: Color dinámico
         borderRadius: const BorderRadius.all(Radius.circular(16)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08 * contentOpacity), // Opacidad reducida
-            blurRadius: 8, // Blur 8
-            offset: const Offset(0, 2), // Offset 0, 2
-          ),
-        ],
+         border: Border.all(
+          color: NeumorphismTheme.isDark 
+              ? Colors.white.withValues(alpha: 0.05) 
+              : Colors.transparent,
+          width: 1,
+        ),
+        // boxShadow removido
       ),
       child: Material(
         color: Colors.transparent,
@@ -1808,11 +1743,11 @@ class _SongRowWidget extends ConsumerWidget {
                     child: Text(
                       '${index + 1}',
                       style: (isAvailable 
-                          ? _SongRowWidget._songNumberStyle 
-                          : _SongRowWidget._songNumberStyleDisabled).copyWith(
+                          ? _songNumberStyle 
+                          : _songNumberStyleDisabled).copyWith(
                             color: (isAvailable 
-                              ? _SongRowWidget._songNumberStyle.color 
-                              : _SongRowWidget._songNumberStyleDisabled.color)
+                              ? _songNumberStyle.color 
+                              : _songNumberStyleDisabled.color)
                               ?.withValues(alpha: isAvailable ? 1.0 : 0.5)
                           ),
                     ),
@@ -1820,29 +1755,37 @@ class _SongRowWidget extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 // Portada optimizada
-                Opacity(
-                  opacity: contentOpacity, // Mantener opacidad solo en imagen si es necesario, o usar color filter
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.all(Radius.circular(12)),
-                    child: processedSong.normalizedCoverUrl != null
-                        ? OptimizedImage(
-                            imageUrl: processedSong.normalizedCoverUrl,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                            isLargeCover: false,
-                            // 🔥 OPTIMIZADO: Tamaños de cache reducidos para mejor rendimiento con muchas imágenes
-                            maxCacheWidth: 96, // 2x el tamaño de visualización (48 * 2)
-                            maxCacheHeight: 96,
-                            useThumbnail: true, // Usar thumbnails cuando estén disponibles
-                            skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
-                          )
-                        : Container(
-                            width: 48,
-                            height: 48,
-                            color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                            child: const Icon(Icons.music_note, color: Colors.white30),
+                // Portada optimizada con Overlay en lugar de Opacity
+                ClipRRect(
+                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                  child: Stack(
+                    children: [
+                      processedSong.normalizedCoverUrl != null
+                          ? OptimizedImage(
+                              imageUrl: processedSong.normalizedCoverUrl,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              isLargeCover: false,
+                              maxCacheWidth: 96,
+                              maxCacheHeight: 96,
+                              useThumbnail: true,
+                              skipFade: true,
+                            )
+                          : Container(
+                              width: 48,
+                              height: 48,
+                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                              child: const Icon(Icons.music_note, color: Colors.white30),
+                            ),
+                      // Overlay para simular opacidad (más barato que Opacity widget)
+                      if (!isAvailable)
+                        Positioned.fill(
+                          child: Container(
+                            color: NeumorphismTheme.surface.withValues(alpha: 0.5),
                           ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16), // ✅ Más espacio (12 -> 16)
@@ -1855,12 +1798,12 @@ class _SongRowWidget extends ConsumerWidget {
                       Text(
                         song.title ?? 'Sin título',
                         style: (isAvailable 
-                            ? _SongRowWidget._songTitleStyle 
-                            : _SongRowWidget._songTitleStyle.copyWith(
+                            ? _songTitleStyle 
+                            : _songTitleStyle.copyWith(
                                 color: NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
                               )).copyWith(
                                 color: (isAvailable 
-                                  ? _SongRowWidget._songTitleStyle.color 
+                                  ? _songTitleStyle.color 
                                   : NeumorphismTheme.textPrimary.withValues(alpha: 0.6))
                                   ?.withValues(alpha: contentOpacity)
                               ),
@@ -1988,7 +1931,7 @@ class _BackButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: NeumorphismTheme.background,
         shape: BoxShape.circle,
-        boxShadow: NeumorphismTheme.floatingCardShadow,
+        // boxShadow removido
       ),
       child: Material(
         color: Colors.transparent,
@@ -1996,7 +1939,7 @@ class _BackButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           customBorder: const CircleBorder(),
-          child: const Padding(
+          child: Padding(
             padding: EdgeInsets.all(8), // ✅ Reducido de 12 a 8 para botón más pequeño
             child: Icon(
               Icons.arrow_back_rounded,

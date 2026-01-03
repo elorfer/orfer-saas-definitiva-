@@ -3,12 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/home_provider.dart';
 
+import '../../../core/providers/theme_provider.dart';
+
 import '../../../core/models/artist_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/verified_badge.dart';
 import 'featured_artist_card.dart';
+import '../../../core/widgets/section_header.dart';
+import 'package:animate_do/animate_do.dart';
 
 class FeaturedArtistsSection extends ConsumerStatefulWidget {
   const FeaturedArtistsSection({super.key});
@@ -32,6 +36,8 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
   @override
   Widget build(BuildContext context) {
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
     
     final featuredArtists = ref.watch(featuredArtistsProvider);
     final isLoading = featuredArtists.isEmpty && ref.watch(homeStateProvider.select((state) => state.isLoading));
@@ -51,112 +57,39 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header simplificado
-        const SizedBox(height: 28),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Compositores',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: NeumorphismTheme.textPrimary,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  context.push('/compositores');
-                },
-                child: const Text(
-                  'Ver Más',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: NeumorphismTheme.textPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
+        // Header estandarizado
+        const SizedBox(height: 24),
+        SectionHeader(
+          title: 'Compositores',
+          onTapMore: () => context.push('/compositores'),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 12),
+        // Listado horizontal de artistas (Estilo "Stories")
         SizedBox(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Container(
-              padding: const EdgeInsets.all(20), // Padding interno para que los items no toquen los bordes
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+          height: 140, // Altura suficiente para avatar + nombre
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+              itemCount: featuredArtists.length,
+              padding: const EdgeInsets.symmetric(horizontal: 24), // Padding alineado con header
+              physics: const BouncingScrollPhysics(),
+              itemBuilder: (context, index) {
+                final artist = featuredArtists[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16), // Espacio entre items
+                  child: RepaintBoundary(
+                    key: ValueKey('artist_boundary_${artist.artist.id}'),
+                    child: FeaturedArtistCard(
+                      key: ValueKey('artist_card_${artist.artist.id}'),
+                      featuredArtist: artist,
+                      onTap: () => GoRouter.of(context).push('/artist/${artist.artist.id}'),
+                    ),
                   ),
-                ],
-              ),
-              child: Consumer(
-                builder: (context, ref, _) {
-                  final featuredArtists = ref.watch(featuredArtistsProvider);
-                  
-                  return GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      shrinkWrap: true, // Importante para que se ajuste al contenido
-                      addAutomaticKeepAlives: true,
-                      addRepaintBoundaries: false,
-                      padding: EdgeInsets.zero,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 0.8, // Ajustado para items transparentes
-                      ),
-                      itemCount: 6,
-                      itemBuilder: (context, index) {
-                        if (index < featuredArtists.length) {
-                          final artist = featuredArtists[index];
-                          return FeaturedArtistCard(
-                            key: ValueKey('artist_card_${artist.artist.id}'),
-                            featuredArtist: artist,
-                            onTap: () => GoRouter.of(context).push('/artist/${artist.artist.id}'),
-                          );
-                        } else {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF3EBE3),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                width: 60,
-                                height: 12,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFEAE2D9),
-                                  borderRadius: BorderRadius.all(Radius.circular(4)),
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                      },
-                    );
-                },
-              ),
+                );
+              },
             ),
           ),
-        ),
-        ],
+
+      ],
     );
   }
 
@@ -169,7 +102,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header simplificado skeleton
-        const SizedBox(height: 28),
+        const SizedBox(height: 24), // ✅ Sincronizado con real (24)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -178,77 +111,33 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
               Container(
                 height: 24,
                 width: 160,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE4D6C8), // 🚀 Sólido
-                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.shimmerBaseColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
               ),
               Container(
                 height: 14,
                 width: 60,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE4D6C8), // 🚀 Sólido
-                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                decoration: BoxDecoration(
+                  color: NeumorphismTheme.shimmerBaseColor,
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 4),
-        // Grid skeleton (simulado con Container + GridView static)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 12,
-                childAspectRatio: 0.8,
-              ),
-              itemCount: 6,
-              itemBuilder: (context, index) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 90, // Match 90px from FeaturedArtistCard
-                      height: 90,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFF3EBE3),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      height: 14,
-                      width: 70,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEAE2D9),
-                        borderRadius: BorderRadius.all(Radius.circular(4)),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+        const SizedBox(height: 12), // ✅ Sincronizado con real (12)
+        // Horizontal Scroll Skeleton
+        SizedBox(
+          height: 140,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 5,
+            separatorBuilder: (context, index) => const SizedBox(width: 16),
+            itemBuilder: (context, index) => const _ArtistSkeletonItem(),
           ),
         ),
       ],
@@ -259,7 +148,7 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Compositores Destacados',
           style: TextStyle(
             fontSize: 20,
@@ -269,23 +158,21 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
           ),
         ),
         const SizedBox(height: 16),
-        Container(
-          height: 160,
-          decoration: const BoxDecoration(
-            color: Color(0xFFEEE4DA), // 🚀 Sólido
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-          child: const Center(
+        const SizedBox(height: 16),
+        // Open Layout Empty State
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.person_search_rounded,
                   size: 40,
-                  color: Color(0xFF8B7A6A),
+                  color: const Color(0xFF8B7A6A).withValues(alpha: 0.5),
                 ),
-                SizedBox(height: 12),
-                Text(
+                const SizedBox(height: 12),
+                const Text(
                   'No hay compositores destacados',
                   style: TextStyle(
                     fontSize: 15,
@@ -294,8 +181,8 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
+                const SizedBox(height: 4),
+                const Text(
                   'Vuelve más tarde para descubrir nuevos talentos',
                   style: TextStyle(
                     fontSize: 12,
@@ -306,6 +193,35 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
                 ),
               ],
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+class _ArtistSkeletonItem extends StatelessWidget {
+  const _ArtistSkeletonItem();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: NeumorphismTheme.shimmerBaseColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: 60,
+          height: 12,
+          decoration: BoxDecoration(
+            color: NeumorphismTheme.shimmerBaseColor,
+            borderRadius: const BorderRadius.all(Radius.circular(4)),
           ),
         ),
       ],

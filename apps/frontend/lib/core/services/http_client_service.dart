@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../config/app_config.dart';
 import 'http_cache_service.dart';
@@ -18,7 +19,9 @@ class HttpClientService {
   Dio? _dio;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
+      encryptedSharedPreferences: false, // ✅ FIX: Alinear con AuthService
+      sharedPreferencesName: 'vintage_auth_store', // ✅ FIX: Usar el mismo archivo que AuthService
+      resetOnError: true,
     ),
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
@@ -153,7 +156,17 @@ class HttpClientService {
 
           // Agregar token de autenticación si existe
           try {
-            final token = await _secureStorage.read(key: AppConfig.tokenKey);
+            // Intentar leer de SecureStorage
+            String? token = await _secureStorage.read(key: AppConfig.tokenKey);
+            
+            // Fallback: Si no hay token o falla, intentar SharedPreferences
+            if (token == null) {
+               try {
+                 final prefs = await SharedPreferences.getInstance();
+                 token = prefs.getString(AppConfig.tokenKey);
+               } catch (_) {}
+            }
+
             if (token != null && token.isNotEmpty) {
               options.headers['Authorization'] = 'Bearer $token';
             }

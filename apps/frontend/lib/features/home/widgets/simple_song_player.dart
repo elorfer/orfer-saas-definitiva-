@@ -54,7 +54,7 @@ class SimpleSongPlayer extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () async {
                     AppLogger.info('[SimpleSongPlayer] 🎵 Reproduciendo: ${song.title}');
-                    await ref.read(unifiedAudioProviderFixed.notifier).playSong(song);
+                    await ref.read(unifiedAudioProviderFixed.notifier).playSpecificSong(song);
                   },
                   icon: const Icon(Icons.play_arrow),
                   label: const Text('Reproducir'),

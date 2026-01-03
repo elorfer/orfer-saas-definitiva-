@@ -149,7 +149,7 @@ class SongCardExample extends ConsumerWidget {
                             await ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
                           } else {
                             // Si es una canción diferente, reproducirla
-                            await ref.read(unifiedAudioProviderFixed.notifier).playSong(song);
+                            await ref.read(unifiedAudioProviderFixed.notifier).playSpecificSong(song);
                           }
                         } catch (e) {
                           AppLogger.error('[SongCardExample] Error: $e');
@@ -222,7 +222,7 @@ class SongListExample extends ConsumerWidget {
           onTap: () async {
             try {
               // 🚀 USAR EL PROVIDER UNIFICADO CORREGIDO
-              await ref.read(unifiedAudioProviderFixed.notifier).playSong(song);
+              await ref.read(unifiedAudioProviderFixed.notifier).playSpecificSong(song);
               
               // Opcional: Navegar al reproductor completo
               // Navigator.of(context).pushNamed('/player');

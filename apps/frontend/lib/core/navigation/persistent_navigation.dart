@@ -3,6 +3,9 @@ import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../models/user_model.dart'; // Import user model
+import '../providers/auth_provider.dart'; // Import auth provider
+import '../providers/theme_provider.dart'; // Import theme provider
 import '../providers/unified_audio_provider_fixed.dart';
 import '../services/player_navigation_service.dart';
 import '../widgets/final_mini_player.dart';
@@ -55,9 +58,37 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
     
     // Obtener índice actual del navigationShell (ya viene de GoRouter)
     final currentIndex = widget.navigationShell.currentIndex;
+    
+    // 🚀 Refresh UI on Theme Change
+    ref.watch(themeProvider);
+    // Invalidate cached styles to force refresh
+    _cachedSelectedStyle = null;
+    _cachedUnselectedStyle = null;
+
     final playbackState = ref.watch(unifiedAudioProviderFixed);
     final currentSong = playbackState.currentSong;
     final isPlayingAd = playbackState.isPlayingAd;
+
+    // 🔥 LISTENER DE CAMBIO A PREMIUM (Nuevo: Post-Flash Bug Fix)
+    // Detectar cuando el usuario pasa de Free -> Premium y redirigir
+    ref.listen<User?>(currentUserProvider, (previous, next) {
+        if (previous != null && next != null) {
+            final wasPremium = previous.subscriptionStatus == SubscriptionStatus.premium || 
+                               previous.subscriptionStatus == SubscriptionStatus.vip;
+            final isPremium = next.subscriptionStatus == SubscriptionStatus.premium || 
+                              next.subscriptionStatus == SubscriptionStatus.vip;
+
+            // Si NO era premium y AHORA SÍ es premium -> Navegar a celebración
+            if (!wasPremium && isPremium) {
+                // Usar microtask para evitar conflictos de build
+                Future.microtask(() {
+                    if (context.mounted) {
+                        context.push('/premium/activated');
+                    }
+                });
+            }
+        }
+    });
     
     final navBarHeight = _cachedNavBarHeight ?? 80.0;
 
@@ -110,8 +141,8 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOutCubic,
-            // Solo mostramos player de música si no hay anuncio sonando
-            bottom: (!isPlayingAd && currentSong != null) 
+            // Solo mostramos player de música si no hay anuncio sonando y es visible explícitamente
+            bottom: (!isPlayingAd && currentSong != null && playbackState.isMiniPlayerVisible) 
                 ? navBarHeight 
                 : -(navBarHeight + 100), // Ocultar completamente fuera de pantalla
             left: 0,
@@ -148,7 +179,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
       height: totalHeight,
       width: double.infinity,
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: NeumorphismTheme.background,
           boxShadow: [
             BoxShadow(
@@ -171,29 +202,29 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _buildNavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
+                icon: Icons.grid_view_rounded,
+                activeIcon: Icons.grid_view_rounded,
                 label: 'Inicio',
                 isSelected: currentIndex == 0,
                 onTap: () => _navigateToTab(0),
               ),
               _buildNavItem(
-                icon: Icons.search_outlined,
-                activeIcon: Icons.search,
+                icon: Icons.search_rounded,
+                activeIcon: Icons.search_rounded,
                 label: 'Buscar',
                 isSelected: currentIndex == 1,
                 onTap: () => _navigateToTab(1),
               ),
               _buildNavItem(
-                icon: Icons.library_music_outlined,
-                activeIcon: Icons.library_music,
+                icon: Icons.collections_bookmark_rounded,
+                activeIcon: Icons.collections_bookmark_rounded,
                 label: 'Biblioteca',
                 isSelected: currentIndex == 2,
                 onTap: () => _navigateToTab(2),
               ),
               _buildNavItem(
-                icon: Icons.star_outline,
-                activeIcon: Icons.star,
+                icon: Icons.diamond_outlined,
+                activeIcon: Icons.diamond_rounded,
                 label: 'Premium',
                 isSelected: currentIndex == 3,
                 onTap: () => _navigateToTab(3),
@@ -232,7 +263,8 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
                   isSelected ? activeIcon : icon,
                   size: 30,
                   color: isSelected
-                      ? NeumorphismTheme.coffeeDark
+                      // ✅ FIX: Dynamic colors for active state
+                      ? (NeumorphismTheme.isDark ? const Color(0xFFD7CCC8) : NeumorphismTheme.coffeeDark)
                       : NeumorphismTheme.textSecondary,
                 ),
                 const SizedBox(height: 3),
@@ -285,7 +317,8 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
       _cachedSelectedStyle ??= GoogleFonts.inter(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        color: NeumorphismTheme.coffeeDark,
+        // ✅ FIX: Dynamic colors for active label
+        color: NeumorphismTheme.isDark ? const Color(0xFFD7CCC8) : NeumorphismTheme.coffeeDark,
         height: 1.1,
       );
       return _cachedSelectedStyle!;

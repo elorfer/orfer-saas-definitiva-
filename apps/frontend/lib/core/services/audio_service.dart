@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/song_model.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -19,8 +20,21 @@ import '../utils/logger.dart';
 /// ═══════════════════════════════════════════════════════════════════════════
 
 class AudioService {
-  // Instancia única del reproductor
-  final AudioPlayer player = AudioPlayer();
+  // Instancia única del reproductor con configuración agresiva para "Instant Play"
+  final AudioPlayer player = AudioPlayer(
+    audioLoadConfiguration: const AudioLoadConfiguration(
+      androidLoadControl: AndroidLoadControl(
+        // Buffer inicial agresivo: 5 segundos para empezar, pero intentando reproducir cuanto antes
+        minBufferDuration: Duration(seconds: 5),
+        maxBufferDuration: Duration(seconds: 50),
+        bufferForPlaybackDuration: Duration(milliseconds: 500), // Iniciar rápidamente (500ms)
+        bufferForPlaybackAfterRebufferDuration: Duration(seconds: 2),
+      ),
+      darwinLoadControl: DarwinLoadControl(
+        automaticallyWaitsToMinimizeStalling: false, // Arriesgarse para iniciar rápido
+      ),
+    ),
+  );
   
   // ═══════════════════════════════════════════════════════════════════════
   // 🎛️ AUDIO SESSION - Manejo de foco e interrupciones
@@ -703,6 +717,47 @@ class AudioService {
   /// Limpiar caché de precargas
   void clearPreloadCache() => _preloadedSongIds.clear();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ⚡ SINCRONIZACIÓN POR EVENTOS (Optimización)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Esperar hasta que se cumpla una condición en el estado del reproductor
+  /// 
+  /// Reemplaza a Future.delayed() arbitrarios.
+  /// Retorna true si la condición se cumplió, false si hubo timeout.
+  Future<bool> _waitForCondition(
+    bool Function(PlayerState) condition, {
+    Duration timeout = const Duration(milliseconds: 500),
+    String debugLabel = 'Condition',
+  }) async {
+    // 1. Chequeo inmediato (Fast Path ⚡)
+    if (condition(player.playerState)) return true;
+
+    try {
+      // 2. Esperar al stream (Event Path)
+      await player.playerStateStream
+          .firstWhere(condition)
+          .timeout(timeout);
+      return true;
+    } catch (e) {
+      AppLogger.warning('[AudioService] ⚠️ Timeout esperando $debugLabel (${timeout.inMilliseconds}ms)');
+      return false;
+    }
+  }
+
+  /// Helper específico para esperar un ProcessingState
+  Future<bool> _waitForProcessingState(
+    ProcessingState state, {
+    Duration timeout = const Duration(milliseconds: 500),
+  }) {
+    return _waitForCondition(
+      (s) => s.processingState == state,
+      timeout: timeout,
+      debugLabel: 'ProcessingState.$state',
+    );
+  }
+
+
   /// Cargar una nueva cola de canciones
   /// 
   /// [sources]: Lista de AudioSource a reproducir
@@ -711,51 +766,25 @@ class AudioService {
     try {
       AppLogger.info('[AudioService] Cargando cola: ${sources.length} canciones, índice inicial: $initialIndex');
       
-      // 🚨 DETENER COMPLETAMENTE EL REPRODUCTOR para evitar "Loading interrupted"
-      // 🛡️ PROTECCIÓN: Esperar a que just_audio termine cualquier operación en curso antes de detener
-      // ⚡ OPTIMIZACIÓN: Reducir delays para minimizar pausa perceptible
+      // 🚨 DETENER COMPLETAMENTE EL REPRODUCTOR
+      // ⚡ OPTIMIZACIÓN: Usar eventos en lugar de delays fijos
       try {
-        // ⚡ OPTIMIZACIÓN: Reducido de 100ms a 50ms
-        await Future.delayed(const Duration(milliseconds: 50));
-        
-        // Verificar el estado del reproductor antes de intentar detenerlo
-        final playerState = player.playerState;
-        if (playerState.processingState == ProcessingState.loading ||
-            playerState.processingState == ProcessingState.buffering) {
-          // Si está cargando o buffering, esperar más tiempo
-          AppLogger.debug('[AudioService] Reproductor en estado ${playerState.processingState}, esperando...');
-          await Future.delayed(const Duration(milliseconds: 150)); // Reducido de 200ms
-        }
-        
-        // Pausar primero (más suave que stop)
-        try {
-          await player.pause();
-        } catch (e) {
-          // Si falla pause, intentar stop directamente
-          AppLogger.debug('[AudioService] Error al pausar, intentando stop: $e');
-        }
-        
-        // Luego detener
-        try {
+        // 1. Si está cargando/buffering, esperar a que termine o falle (max 200ms)
+        final state = player.playerState;
+        if (state.processingState != ProcessingState.idle) {
+          if (player.playing) {
+             await player.pause();
+          }
+           // Stop trigger
           await player.stop();
-        } catch (e) {
-          // Si falla stop, puede ser que ya esté detenido
-          AppLogger.debug('[AudioService] Error al detener (puede ser normal si ya está detenido): $e');
-        }
-        
-        // ⚡ OPTIMIZACIÓN: Reducido de 200ms a 100ms para minimizar pausa
-        await Future.delayed(const Duration(milliseconds: 100));
-        
-        // Verificar que el reproductor esté realmente detenido
-        final finalPlayerState = player.playerState;
-        if (finalPlayerState.processingState == ProcessingState.loading) {
-          AppLogger.warning('[AudioService] Reproductor aún cargando después de detener, esperando más...');
-          await Future.delayed(const Duration(milliseconds: 300)); // Reducido de 500ms
+          
+          // 2. Esperar confirmación de IDLE (Event Driven)
+          // Esto es mucho más rápido que un delay fijo de 200ms si el dispositivo es rápido
+          await _waitForProcessingState(ProcessingState.idle, timeout: const Duration(milliseconds: 200));
         }
       } catch (e) {
-        // Ignorar errores al detener (puede que no haya nada reproduciendo o que just_audio esté ocupado)
-        // Este error es común cuando just_audio está procesando otro evento
-        AppLogger.debug('[AudioService] Error al detener (puede ser normal si just_audio está ocupado): $e');
+        // Ignorar errores al detener
+        AppLogger.debug('[AudioService] Error al detener (safe ignore): $e');
       }
       
       // ⚠️ DEUDA TÉCNICA: ConcatenatingAudioSource está deprecado en just_audio 0.10.5
@@ -1143,13 +1172,18 @@ class AudioService {
       // 🔄 CRÍTICO: Guardar estado de reproducción ANTES de insertar
       // seek() y seekToPrevious() pueden pausar el reproductor automáticamente
       final wasPlaying = player.playing;
+      final initialQueueLength = player.sequence?.length ?? 0;
       
       // Insertar la nueva canción en el índice 0
       await currentSource.insert(0, source);
       
-      // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice su sequenceState después de insertar
-      // ⚡ OPTIMIZACIÓN: Delay mínimo (15ms) para reducir latencia mientras permitimos que just_audio actualice
-      await Future.delayed(const Duration(milliseconds: 15));
+      // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice su sequenceState
+      // ⚡ OPTIMIZACIÓN: Usar evento en lugar de delay
+      await _waitForCondition(
+        (state) => (player.sequence?.length ?? 0) > initialQueueLength,
+        timeout: const Duration(milliseconds: 100),
+        debugLabel: 'Sequence Update',
+      );
       
       // ⚡ OPTIMIZACIÓN: Usar seek() con index: 0 para saltar directamente al inicio
       // Nota: Después de insert(0, source), el índice actual siempre se incrementa,
@@ -1370,6 +1404,36 @@ class AudioService {
       return player.audioSource is ConcatenatingAudioSource;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Helper para crear AudioSource desde modelo Song
+  Future<AudioSource?> createAudioSource(Song song) async {
+    try {
+      if (song.fileUrl == null || song.fileUrl!.isEmpty) return null;
+      
+      // Determinar si es local o remoto
+      final isLocal = !song.fileUrl!.startsWith('http');
+      final uri = isLocal ? Uri.file(song.fileUrl!) : Uri.parse(song.fileUrl!);
+      
+      // 🚀 REAL CACHE: Usar LockCachingAudioSource para network
+      if (!isLocal) {
+        return LockCachingAudioSource(
+          uri,
+          tag: song, // Importante: metadatos
+          // Opcional: configurar cacheFile si quisiéramos control manual,
+          // pero just_audio maneja una cache default eficiente.
+        );
+      } else {
+        // Para archivos locales, usar AudioSource.uri estándar (ya están "en caché")
+        return AudioSource.uri(
+          uri,
+          tag: song, 
+        );
+      }
+    } catch (e) {
+      AppLogger.error('[AudioService] Error creando AudioSource para ${song.title}: $e');
+      return null;
     }
   }
 

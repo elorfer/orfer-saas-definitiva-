@@ -14,7 +14,7 @@ class ComposerPromoScreen extends ConsumerWidget {
       body: Stack(
         children: [
           // Background Gradient (Same as Home for consistency)
-          const Positioned.fill(
+          Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: NeumorphismTheme.backgroundGradient,
@@ -31,7 +31,7 @@ class ComposerPromoScreen extends ConsumerWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded, color: NeumorphismTheme.coffeeDark),
+                      icon: Icon(Icons.arrow_back_ios_new_rounded, color: NeumorphismTheme.coffeeDark),
                       onPressed: () => context.pop(),
                     ),
                   ),

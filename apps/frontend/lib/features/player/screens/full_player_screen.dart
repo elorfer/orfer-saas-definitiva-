@@ -83,7 +83,7 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
           });
         }
       });
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: NeumorphismTheme.background,
         body: Center(
           child: CircularProgressIndicator(),

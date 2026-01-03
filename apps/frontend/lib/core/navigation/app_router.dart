@@ -1,4 +1,5 @@
 import '../../features/privacy/privacy_screen.dart';
+import '../../features/offline/screens/downloads_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +32,7 @@ import '../../features/player/screens/full_player_screen.dart';
 import '../../features/song_detail/screens/song_detail_screen.dart';
 import '../../core/models/song_model.dart';
 import '../providers/auth_provider.dart';
+import '../services/app_initializer.dart';
 import 'persistent_navigation.dart';
 import 'page_transitions.dart' show SpotifyPageTransitions, createCustomTransitionPage, createNoTransitionPage;
 
@@ -59,9 +61,18 @@ class GoRouterNotifier extends ChangeNotifier {
   GoRouterNotifier(this.ref) {
     // ✅ OPTIMIZACIÓN: fireImmediately: false para evitar trabajo innecesario al inicio
     // El estado de auth se leerá cuando realmente se necesite (en getters)
+    // ✅ OPTIMIZACIÓN: fireImmediately: false para evitar trabajo innecesario al inicio
+    // El estado de auth se leerá cuando realmente se necesite (en getters)
     _authSubscription = ref.listen<AuthState>(
       authStateProvider,
-      (_, __) => notifyListeners(),
+      (previous, next) {
+        // 🚀 INSTANT PLAY TRIGGER
+        // Si el usuario pasa de no autenticado a autenticado, disparar prefetch
+        if (next.isAuthenticated && (previous == null || !previous.isAuthenticated)) {
+           AppInitializer.onUserAuthenticated(ref);
+        }
+        notifyListeners();
+      },
       fireImmediately: false, // Optimización: no ejecutar inmediatamente
     );
     
@@ -520,6 +531,48 @@ class GoRouterNotifier extends ChangeNotifier {
                     return createCustomTransitionPage<void>(
                       key: state.pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
                       child: ArtistPage(artist: artistLite),
+                      transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                      transitionDuration: const Duration(milliseconds: 200),
+                      reverseTransitionDuration: Duration.zero,
+                    );
+                  },
+                ),
+                // Downloads (Premium) - Moved to end to preserve Library as default
+                GoRoute(
+                  path: '/downloads',
+                  pageBuilder: (context, state) => createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const DownloadsScreen(),
+                     transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+                    transitionDuration: const Duration(milliseconds: 200),
+                    reverseTransitionDuration: const Duration(milliseconds: 150),
+                  ),
+                ),
+                // Downloads Song Detail
+                GoRoute(
+                  path: '/downloads/song/:id',
+                  pageBuilder: (context, state) {
+                    final songId = state.pathParameters['id'] ?? '';
+                    final extra = state.extra;
+                    Song? song;
+                    
+                    if (extra is Song) {
+                      song = extra;
+                    } else {
+                      song = Song(
+                        id: songId,
+                        status: SongStatus.published,
+                        isExplicit: false,
+                        totalStreams: 0,
+                        totalLikes: 0,
+                        totalShares: 0,
+                        featured: false,
+                      );
+                    }
+                    
+                    return createCustomTransitionPage<void>(
+                      key: state.pageKey,
+                      child: SongDetailScreen(song: song),
                       transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
                       transitionDuration: const Duration(milliseconds: 200),
                       reverseTransitionDuration: Duration.zero,

@@ -95,6 +95,7 @@ dependencies:
   http_cache_hive_store: ^5.0.1
   flutter_cache_manager: ^3.4.1
   marquee: ^2.3.0
+  encrypt: ^5.0.3
   # qr_code_scanner: ^1.0.1  # Temporalmente deshabilitado por problema de namespace
 
 dev_dependencies:

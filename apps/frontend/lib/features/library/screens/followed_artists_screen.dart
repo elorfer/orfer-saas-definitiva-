@@ -44,7 +44,7 @@ class _FollowedArtistsScreenState extends ConsumerState<FollowedArtistsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
+          icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(

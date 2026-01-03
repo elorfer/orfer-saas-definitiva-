@@ -175,7 +175,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // OPTIMIZACIÓN: Evitar redimensionamiento cuando aparece el teclado para reducir lag
       resizeToAvoidBottomInset: false,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: NeumorphismTheme.backgroundGradient,
         ),
         child: SafeArea(
@@ -322,7 +322,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             keyboardType: TextInputType.emailAddress,
                             prefixIcon: Icons.email_outlined,
                             suffixIcon: _isCheckingEmail
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: Padding(
@@ -370,7 +370,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             hint: '@tu_usuario',
                             prefixIcon: Icons.alternate_email,
                             suffixIcon: _isCheckingUsername
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: Padding(

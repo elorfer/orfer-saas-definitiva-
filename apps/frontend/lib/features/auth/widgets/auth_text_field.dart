@@ -15,6 +15,7 @@ class AuthTextField extends StatelessWidget {
   final bool readOnly;
   final int? maxLines;
   final int? maxLength;
+  final Color? focusedBorderColor;
 
   const AuthTextField({
     super.key,
@@ -31,6 +32,7 @@ class AuthTextField extends StatelessWidget {
     this.readOnly = false,
     this.maxLines = 1,
     this.maxLength,
+    this.focusedBorderColor,
   });
 
   // Constantes para optimización
@@ -107,8 +109,8 @@ class AuthTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: _borderRadius,
-              borderSide: const BorderSide(
-                color: NeumorphismTheme.coffeeMedium,
+              borderSide: BorderSide(
+                color: focusedBorderColor ?? NeumorphismTheme.coffeeMedium,
                 width: 2,
               ),
             ),

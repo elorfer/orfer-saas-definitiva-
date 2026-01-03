@@ -6,7 +6,7 @@ import 'playback_notifier.dart';
 
 /// Provider unificado del reproductor de audio
 /// Usa el nuevo sistema de AudioService único
-final unifiedAudioProviderFixed = playbackNotifierProviderFactory;
+final unifiedAudioProviderFixed = playbackNotifierProvider;
 
 /// ✅ ÚNICA FUENTE DE VERDAD: Provider que siempre devuelve la canción que REALMENTE se está reproduciendo
 /// Combina el estado de Riverpod con el reproductor de audio para máxima confiabilidad

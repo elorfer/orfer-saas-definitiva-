@@ -63,9 +63,9 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Inicializar el servicio de autenticación
   Future<void> _initialize() async {
     try {
-      // Timeout de 3 segundos para evitar bloqueos
+      // Timeout de 8 segundos para evitar falsos negativos en dispositivos lentos
       await _authService.initialize().timeout(
-        const Duration(seconds: 3),
+        const Duration(seconds: 8),
         onTimeout: () {
           // Si toma mucho tiempo, continuar sin inicializar
           return;

@@ -83,7 +83,7 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
     if (!_canSkip) return;
 
     try {
-      final playbackNotifier = ref.read(playbackNotifierProviderFactory.notifier);
+      final playbackNotifier = ref.read(playbackNotifierProvider.notifier);
       await playbackNotifier.skipAd();
     } catch (e) {
       // Error ya manejado en el notifier

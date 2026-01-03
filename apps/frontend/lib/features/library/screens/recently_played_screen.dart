@@ -165,7 +165,7 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
         backgroundColor: NeumorphismTheme.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
+          icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -276,14 +276,17 @@ class _SongHistoryItem extends ConsumerWidget {
     // ✅ OPTIMIZACIÓN: Usar URL directamente, OptimizedImage se encarga de normalizarla
     final coverUrl = song.coverArtUrl;
 
-    return Opacity(
-      opacity: isAvailable ? 1.0 : 0.5, // Reducir opacidad si no está disponible
+    // OPTIMIZACIÓN: Opacidad simulada con color alpha para evitar `saveLayer`
+    return IgnorePointer(
+      ignoring: !isAvailable,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8), // ✅ Reducido de 12 a 8
         decoration: BoxDecoration(
-          color: NeumorphismTheme.surface,
+          color: NeumorphismTheme.surface.withOpacity(isAvailable ? 1.0 : 0.5),
           borderRadius: const BorderRadius.all(Radius.circular(16)),
-          boxShadow: NeumorphismTheme.floatingCardShadow,
+          boxShadow: NeumorphismTheme.floatingCardShadow.map((s) => s.copyWith(
+            color: s.color.withOpacity(isAvailable ? s.color.opacity : s.color.opacity * 0.5)
+          )).toList(),
         ),
         child: Material(
           color: Colors.transparent,

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 // OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
 import 'package:shimmer/shimmer.dart';
 import '../../../core/providers/playlist_provider.dart';
+import '../../../core/providers/saved_playlists_provider.dart';
 import '../../../core/models/playlist_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
@@ -122,110 +123,188 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
       }
     }
 
-    return Scaffold(
-      key: const ValueKey('playlists_scaffold'), // Key estable para evitar rebuilds
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Playlists',
-          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        key: const ValueKey('playlists_scaffold'),
+        backgroundColor: NeumorphismTheme.background,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: NeumorphismTheme.background,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            'Playlists',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: NeumorphismTheme.textPrimary,
+            ),
+          ),
+          centerTitle: false,
+          bottom: TabBar(
+            labelColor: NeumorphismTheme.coffeeMedium,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: NeumorphismTheme.coffeeMedium,
+            tabs: [
+              Tab(text: 'Mis Playlists'),
+              Tab(text: 'Explorar'),
+            ],
           ),
         ),
-        centerTitle: false,
-      ),
-      body: SafeArea(
-        bottom: true,
-        child: firstPageAsync.when(
-          data: (_) {
-            if (allPlaylists.isEmpty) {
-              return _buildEmptyState();
-            }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() {
-                      _currentPage = 1;
-                      _hasMore = true;
-                    });
-                    ref.invalidate(playlistsProvider((page: 1, limit: _pageSize)));
-                  },
-                  child: CustomScrollView(
-                    controller: _scrollController,
-                    cacheExtent: 500, // Optimizado: grid de playlists, reducir de 800 a 500 para mejor uso de memoria
-                    physics: const SmoothScrollPhysics(), // Scroll más rápido y fluido
-                    slivers: [
-                  // Grid de playlists
-                  SliverPadding(
-                    padding: const EdgeInsets.all(16),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 0.75,
+        body: SafeArea(
+          bottom: true,
+          child: TabBarView(
+            children: [
+              // -----------------------------------------------------------------
+              // TAB 1: MIS PLAYLISTS (GUARDADAS)
+              // -----------------------------------------------------------------
+              Consumer(
+                builder: (context, ref, _) {
+                  final savedState = ref.watch(savedPlaylistsProvider);
+                  
+                  if (savedState.isLoading) {
+                     return Center(child: CircularProgressIndicator(color: NeumorphismTheme.coffeeMedium));
+                  }
+                  
+                  if (savedState.playlists.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.favorite_border, size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Aún no tienes playlists guardadas',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Explora y dale "Like" a las playlists que te gusten',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                        ],
                       ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          if (index >= allPlaylists.length) {
-                            return _isLoadingMore
-                                ? RepaintBoundary(
-                                    child: _buildShimmerCard(),
-                                  )
-                                : null;
-                          }
-                          final playlist = allPlaylists[index];
-                          return RepaintBoundary(
-                            child: _PlaylistCard(
-                              key: ValueKey('playlist_${playlist.id}'), // Key estable para optimización
-                              playlist: playlist,
-                              onTap: () {
-                                context.push('/playlist/${playlist.id}');
-                              },
-                            ),
-                          );
+                    );
+                  }
+                  
+                  return CustomScrollView(
+                     physics: const SmoothScrollPhysics(),
+                     slivers: [
+                       SliverPadding(
+                         padding: const EdgeInsets.all(16),
+                         sliver: SliverGrid(
+                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                             crossAxisCount: 2,
+                             crossAxisSpacing: 16,
+                             mainAxisSpacing: 16,
+                             childAspectRatio: 0.75,
+                           ),
+                           delegate: SliverChildBuilderDelegate(
+                             (context, index) {
+                               final playlist = savedState.playlists[index];
+                               return RepaintBoundary(
+                                 child: _PlaylistCard(
+                                   key: ValueKey('saved_playlist_${playlist.id}'),
+                                   playlist: playlist,
+                                   onTap: () => context.push('/playlist/${playlist.id}'),
+                                 ),
+                               );
+                             },
+                             childCount: savedState.playlists.length,
+                           ),
+                         ),
+                       ),
+                     ],
+                   );
+                },
+              ),
+              
+              // -----------------------------------------------------------------
+              // TAB 2: EXPLORAR (BACKEND)
+              // -----------------------------------------------------------------
+              firstPageAsync.when(
+                data: (_) {
+                  if (allPlaylists.isEmpty) {
+                    return _buildEmptyState();
+                  }
+
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          setState(() {
+                            _currentPage = 1;
+                            _hasMore = true;
+                          });
+                          ref.invalidate(playlistsProvider((page: 1, limit: _pageSize)));
                         },
-                        childCount: allPlaylists.length + (_isLoadingMore ? 4 : 0),
-                        // 🔥 OPTIMIZACIONES PARA GRANDES VOLÚMENES:
-                        addAutomaticKeepAlives: false, // No mantener vivos items fuera de la vista (ahorra memoria)
-                        addRepaintBoundaries: false, // Ya tenemos RepaintBoundary manual (evita duplicación)
-                        addSemanticIndexes: false, // Desactivar índices semánticos (mejor rendimiento)
-                      ),
-                    ),
-                  ),
-
-                  // Loading indicator al final
-                  if (_isLoadingMore)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: NeumorphismTheme.coffeeMedium,
+                        child: CustomScrollView(
+                          controller: _scrollController,
+                          cacheExtent: 500,
+                          physics: const SmoothScrollPhysics(),
+                          slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: SliverGrid(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 0.75,
+                            ),
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (index >= allPlaylists.length) {
+                                  return _isLoadingMore
+                                      ? RepaintBoundary(
+                                          child: _buildShimmerCard(),
+                                        )
+                                      : null;
+                                }
+                                final playlist = allPlaylists[index];
+                                return RepaintBoundary(
+                                  child: _PlaylistCard(
+                                    key: ValueKey('playlist_${playlist.id}'),
+                                    playlist: playlist,
+                                    onTap: () {
+                                      context.push('/playlist/${playlist.id}');
+                                    },
+                                  ),
+                                );
+                              },
+                              childCount: allPlaylists.length + (_isLoadingMore ? 4 : 0),
+                              addAutomaticKeepAlives: false,
+                              addRepaintBoundaries: false,
+                              addSemanticIndexes: false,
+                            ),
                           ),
                         ),
-                      ),
-                    ),
 
-                  // Padding inferior
-                  const SliverPadding(
-                    padding: EdgeInsets.only(bottom: 16),
-                  ),
-                ],
+                        if (_isLoadingMore)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: NeumorphismTheme.coffeeMedium,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        const SliverPadding(
+                          padding: EdgeInsets.only(bottom: 16),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                loading: () => _buildLoadingState(),
+                error: (error, stack) => _buildErrorState(error),
               ),
-            );
-          },
-          loading: () => _buildLoadingState(),
-          error: (error, stack) => _buildErrorState(error),
+            ],
+          ),
         ),
       ),
     );
@@ -245,19 +324,19 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
           Text(
             'No hay playlists disponibles',
             // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.grey,
+              color: NeumorphismTheme.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Las playlists aparecerán aquí cuando estén disponibles',
             // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: Colors.grey,
+              color: NeumorphismTheme.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -301,14 +380,10 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
   }
 
   Widget _buildShimmerCard() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey[300]!,
-      highlightColor: Colors.grey[100]!,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.shimmerBaseColor,
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
       ),
     );
   }
@@ -431,10 +506,10 @@ class _PlaylistCard extends StatelessWidget {
           Text(
             (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
             // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: NeumorphismTheme.textPrimary,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -446,9 +521,9 @@ class _PlaylistCard extends StatelessWidget {
           Text(
             '${playlist.totalTracks ?? 0} canciones',
             // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Colors.grey,
+              color: NeumorphismTheme.textSecondary,
             ),
           ),
         ],

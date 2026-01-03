@@ -27,7 +27,7 @@ class SliverIntelligentSongsSection extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Para Ti',
                   style: TextStyle(
                     fontSize: 22,
@@ -38,7 +38,7 @@ class SliverIntelligentSongsSection extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () => context.push('/intelligent-recommendations'),
-                  child: const Text('Ver más', style: TextStyle(color: NeumorphismTheme.coffeeMedium)),
+                  child: Text('Ver más', style: TextStyle(color: NeumorphismTheme.coffeeMedium)),
                 ),
               ],
             ),

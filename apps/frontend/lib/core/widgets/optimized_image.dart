@@ -211,6 +211,8 @@ class _OptimizedImageState extends State<OptimizedImage> {
         'Accept': 'image/webp,image/jpeg,image/png;q=0.9,*/*;q=0.8',
         'Cache-Control': 'max-age=7776000', // ✅ 90 días en segundos
       },
+      // ⚡ "RIGIDEZ TOTAL": Eliminar fades que causan sensación de "distorsión" al scrollear rápido
+      // Cuando la imagen entra en el viewport, debe aparecer INSTANTÁNEAMENTE si está en memoria.
     );
     
     // Precargar imagen en memoria con tamaño optimizado

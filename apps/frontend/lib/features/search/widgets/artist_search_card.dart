@@ -66,7 +66,7 @@ class ArtistSearchCard extends StatelessWidget {
                               skipFade: true,
                             )
                           : Container(
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 gradient: NeumorphismTheme.imagePlaceholderGradient,
                               ),
                               child: const Icon(
@@ -95,7 +95,7 @@ class ArtistSearchCard extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.people_outline,
                             size: 14,
                             color: NeumorphismTheme.textSecondary,
@@ -112,7 +112,7 @@ class ArtistSearchCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 // Icono de flecha
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
                   color: NeumorphismTheme.textSecondary,
                   size: 24,

@@ -160,10 +160,10 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
         final newFavoriteIds = Set<String>.from(state.favoriteIds)..add(songId);
         final newFavorites = List<Song>.from(state.favorites);
         
-        // ✅ CRÍTICO: Si tenemos los datos de la canción, agregarla a la lista completa
-        // Esto asegura que aparezca inmediatamente en la pantalla de favoritos
+        // ✅ CRÍTICO: Si tenemos los datos de la canción, agregarla al PRINCIPIO de la lista
+        // Esto asegura que aparezca en la cima (Newest First) inmediatamente
         if (songData != null && !newFavorites.any((s) => s.id == songId)) {
-          newFavorites.add(songData);
+          newFavorites.insert(0, songData);
         }
         
         state = state.copyWith(
@@ -196,7 +196,7 @@ class FavoritesNotifier extends Notifier<FavoritesState> {
             if (fetchedSong != null && ref.mounted) {
               // Agregar la canción a la lista si todavía no está
               if (!state.favorites.any((s) => s.id == songId)) {
-                final updatedFavorites = List<Song>.from(state.favorites)..add(fetchedSong);
+                final updatedFavorites = List<Song>.from(state.favorites)..insert(0, fetchedSong);
                 state = state.copyWith(favorites: updatedFavorites, totalCount: updatedFavorites.length);
               }
             }

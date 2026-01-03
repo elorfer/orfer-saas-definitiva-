@@ -6,8 +6,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/providers/theme_provider.dart';
 // OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
 import '../../../core/providers/playlist_provider.dart';
+import '../../../core/providers/saved_playlists_provider.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/providers/playback_state.dart';
 import '../../../core/providers/secondary_screens_scroll_provider.dart';
@@ -561,7 +563,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     // Si no ha cargado, mostrar skeleton
     if (!_hasLoadedOnce || _playlist == null) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: NeumorphismTheme.background,
         body: SafeArea(
           bottom: true,
           child: CustomScrollView(
@@ -587,8 +589,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
 
     final playlist = _playlist!;
 
+    // 🚀 Refresh on Theme Change
+    ref.watch(themeProvider);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: NeumorphismTheme.background, // 🚀 FIX: Dynamic Background
       body: SafeArea(
         bottom: true,
         child: CustomScrollView(
@@ -605,9 +610,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             SliverAppBar(
               expandedHeight: 300,
               pinned: true,
-              backgroundColor: NeumorphismTheme.coffeeDark, // ✅ Fondo marrón oscuro cuando está colapsado
+              backgroundColor: NeumorphismTheme.isDark ? NeumorphismTheme.background : NeumorphismTheme.coffeeDark, // ✅ Fondo adaptativo: Background en Dark, Brown en Light
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: Icon(
+                  Icons.arrow_back, 
+                  color: NeumorphismTheme.isDark ? NeumorphismTheme.textPrimary : Colors.white
+                ),
                 onPressed: () => context.pop(),
               ),
               flexibleSpace: FlexibleSpaceBar(
@@ -649,10 +657,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 title: Text(
                   (playlist.name?.isNotEmpty == true) ? playlist.name! : 'Playlist',
                   // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: NeumorphismTheme.isDark ? NeumorphismTheme.textPrimary : Colors.white,
                   ),
                 ),
                 titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
@@ -666,14 +674,13 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Información de la playlist
+                  // Información de la playlist
                     if (playlist.description != null && playlist.description!.isNotEmpty) ...[
                       Text(
                         playlist.description!,
-                        // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.grey[700],
+                          color: NeumorphismTheme.textSecondary,
                           height: 1.5,
                         ),
                       ),
@@ -684,37 +691,34 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     Row(
                       children: [
                         if (playlist.user != null) ...[
-                          const Icon(Icons.person_outline, size: 16, color: Colors.grey),
+                          Icon(Icons.person_outline, size: 16, color: NeumorphismTheme.textSecondary),
                           const SizedBox(width: 4),
                           Text(
                             playlist.user?.firstName ?? 'Usuario',
-                            // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey,
+                              color: NeumorphismTheme.textSecondary,
                             ),
                           ),
                           const SizedBox(width: 16),
                         ],
-                        const Icon(Icons.queue_music, size: 16, color: Colors.grey),
+                        Icon(Icons.queue_music, size: 16, color: NeumorphismTheme.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           '${playlist.totalSongs} canciones',
-                          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey,
+                            color: NeumorphismTheme.textSecondary,
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                        Icon(Icons.access_time, size: 16, color: NeumorphismTheme.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           playlist.durationFormatted,
-                          // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey,
+                            color: NeumorphismTheme.textSecondary,
                           ),
                         ),
                       ],
@@ -724,54 +728,83 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
 
                     // Botón de reproducir todo - con verificación de contextId
                     // ✅ OPTIMIZACIÓN: Usar select() para evitar rebuilds innecesarios
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final contextId = ref.watch(
-                          unifiedAudioProviderFixed.select((state) => state.contextId),
-                        );
-                        final playbackMode = ref.watch(
-                          unifiedAudioProviderFixed.select((state) => state.playbackMode),
-                        );
-                        final isPlaying = ref.watch(
-                          unifiedAudioProviderFixed.select((state) => state.isPlaying),
-                        );
-                        final isSameContext = contextId == widget.playlistId &&
-                                             playbackMode == PlaybackMode.fixedQueue;
-                        final showPause = isSameContext && isPlaying;
-                        
-                        return SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              if (_displayedSongs.isNotEmpty) {
-                                _onPlayAll(context, _displayedSongs);
-                              }
-                            },
-                            icon: Icon(
-                              showPause ? Icons.pause : Icons.play_arrow,
-                              color: Colors.white,
-                            ), // No puede ser const porque depende de showPause
-                            label: Text(
-                              'Reproducir todo',
-                              // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final contextId = ref.watch(
+                            unifiedAudioProviderFixed.select((state) => state.contextId),
+                          );
+                          final playbackMode = ref.watch(
+                            unifiedAudioProviderFixed.select((state) => state.playbackMode),
+                          );
+                          final isPlaying = ref.watch(
+                            unifiedAudioProviderFixed.select((state) => state.isPlaying),
+                          );
+                          final isSameContext = contextId == widget.playlistId &&
+                                               playbackMode == PlaybackMode.fixedQueue;
+                          final showPause = isSameContext && isPlaying;
+                          
+                          // Watch saved state
+                          final savedState = ref.watch(savedPlaylistsProvider);
+                          final isSaved = savedState.savedIds.contains(widget.playlistId);
+
+                          return Row(
+                            children: [
+                              // Like Button
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: NeumorphismTheme.surface,
+                                  borderRadius: const BorderRadius.all(Radius.circular(12)),
+                                  boxShadow: NeumorphismTheme.softShadow,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    isSaved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                    color: isSaved ? Colors.red : Colors.grey,
+                                  ),
+                                  onPressed: () {
+                                    ref.read(savedPlaylistsProvider.notifier).toggleSave(playlist);
+                                  },
+                                ),
                               ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: NeumorphismTheme.coffeeMedium,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                              const SizedBox(width: 16),
+                              // Play Button
+                              Expanded(
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      if (_displayedSongs.isNotEmpty) {
+                                        _onPlayAll(context, _displayedSongs);
+                                      }
+                                    },
+                                    icon: Icon(
+                                      showPause ? Icons.pause : Icons.play_arrow,
+                                      color: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white,
+                                    ), 
+                                    label: Text(
+                                      'Reproducir todo',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: NeumorphismTheme.isDark ? NeumorphismTheme.accent : NeumorphismTheme.coffeeMedium,
+                                      foregroundColor: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white, // Text/Icon color adaptation
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                                      ),
+                                      elevation: 2,
+                                    ),
+                                  ),
+                                ),
                               ),
-                              elevation: 2,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                            ],
+                          );
+                        },
+                      ),
 
                     const SizedBox(height: 24),
 
@@ -779,10 +812,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                     Text(
                       'Canciones',
                       // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: NeumorphismTheme.textPrimary,
                       ),
                     ),
 
@@ -872,7 +905,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Center(
         child: _loadingMore
-            ? const SizedBox(
+            ? SizedBox(
                 height: 40,
                 child: Center(
                   child: CircularProgressIndicator(
@@ -889,7 +922,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                 child: Text(
                   'Ver más canciones',
                   // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: NeumorphismTheme.coffeeMedium,
@@ -1313,31 +1346,36 @@ class _SongListItem extends ConsumerWidget {
   final Future<void> Function()? onPlay;
 
   // OPTIMIZACIÓN: Estilos constantes para evitar recreación por ítem
+  // NOTA: Colores dinámicos se manejan en el build() para soportar Dark Mode
   static const TextStyle _indexStyle = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w500,
-    color: Colors.grey,
+    // color se asigna dinámicamente
   );
-  static const TextStyle _titleStyle = TextStyle(
+  
+  static const TextStyle _baseTitleStyle = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: Colors.black87,
+    // color se asigna dinámicamente
   );
-  static const TextStyle _artistStyle = TextStyle(
+  
+  static const TextStyle _baseSubtitleStyle = TextStyle(
     fontSize: 14,
-    color: Colors.grey,
+    // color se asigna dinámicamente
   );
+  
   static const TextStyle _durationStyle = TextStyle(
     fontSize: 11,
-    color: Colors.grey,
     fontWeight: FontWeight.w500,
     height: 0.95,
+     // color se asigna dinámicamente
   );
+  
   static const TextStyle _streamsStyle = TextStyle(
     fontSize: 10,
-    color: Colors.grey,
     fontWeight: FontWeight.w500,
     height: 0.95,
+     // color se asigna dinámicamente
   );
 
   const _SongListItem({
@@ -1363,10 +1401,16 @@ class _SongListItem extends ConsumerWidget {
       size: 36,
     );
     
+    // Colores dinámicos
+    final indexColor = NeumorphismTheme.textSecondary;
+    final titleColor = NeumorphismTheme.textPrimary;
+    final subtitleColor = NeumorphismTheme.textSecondary;
+    final metaColor = NeumorphismTheme.textLight;
+
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10), // Reducido de 12 a 10
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         child: Row(
           children: [
             // Número de posición
@@ -1374,7 +1418,7 @@ class _SongListItem extends ConsumerWidget {
               width: 32,
               child: Text(
                 '$index',
-                style: _indexStyle,
+                style: _indexStyle.copyWith(color: indexColor),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -1418,14 +1462,14 @@ class _SongListItem extends ConsumerWidget {
                 children: [
                   Text(
                     song.title ?? 'Canción sin título',
-                  style: _titleStyle,
+                    style: _baseTitleStyle.copyWith(color: titleColor),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _getArtistName(song),
-                  style: _artistStyle,
+                    style: _baseSubtitleStyle.copyWith(color: subtitleColor),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1459,12 +1503,12 @@ class _SongListItem extends ConsumerWidget {
                     // Duración - Tamaño legible
                     Text(
                       song.durationFormatted,
-                      style: _durationStyle,
+                      style: _durationStyle.copyWith(color: metaColor),
                     ),
                     // ✅ Reproducciones - Tamaño legible sin padding extra
                     Text(
                       '▶ ${NumberFormatter.format(song.totalStreams)}',
-                      style: _streamsStyle,
+                      style: _streamsStyle.copyWith(color: metaColor),
                     ),
                   ],
                 ),

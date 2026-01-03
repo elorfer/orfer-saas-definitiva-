@@ -4,48 +4,91 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Theme moderno "Soft UI" + Glassmorphism
 /// Evolución del Neumorphism hacia algo más limpio y funcional
+/// Theme moderno "Soft UI" + Glassmorphism
+/// Evolución del Neumorphism hacia algo más limpio y funcional
 class NeumorphismTheme {
-  // Paleta de colores "Clean Coffee" - Más suave y moderna
-  static const Color background = Color(0xFFF5F2F0); // Gris cálido muy claro
-  static const Color surface = Color(0xFFFFFFFF); // Blanco puro para superficies
-  static const Color accent = Color(0xFF8D6E63); // Café suave
-  static const Color accentDark = Color(0xFF5D4037); // Café oscuro
-  static const Color accentLight = Color(0xFFD7CCC8); // Café muy claro
-  
-  // Colores de texto
-  static const Color textPrimary = Color(0xFF2D2420); // Casi negro cálido
-  static const Color textSecondary = Color(0xFF756860); // Gris cálido medio
-  static const Color textLight = Color(0xFFA89C94); // Gris cálido claro
-  
+  // Singleton management for Theme Mode
+  static ThemeMode _currentMode = ThemeMode.light;
+  static bool get isDark => _currentMode == ThemeMode.dark;
+
+  static void setThemeMode(ThemeMode mode) {
+    _currentMode = mode;
+  }
+
+  // --- Dynamic Color Palette ---
+
+  // Background: Light (Beige) / Dark (Deep Coffee)
+  static Color get background => isDark 
+      ? const Color(0xFF1E1B19) // Café muy oscuro (casi negro)
+      : const Color(0xFFF5F2F0); // Gris cálido muy claro
+
+  // Surface: Light (White) / Dark (Dark Coffee)
+  static Color get surface => isDark
+      ? const Color(0xFF2C2624) // Café oscuro para superficies
+      : const Color(0xFFFFFFFF); // Blanco puro
+
+  // Accent: Light (Coffee) / Dark (Light Coffee/Gold)
+  static Color get accent => isDark
+      ? const Color(0xFFD7CCC8) // Beige claro (invertido)
+      : const Color(0xFF8D6E63); // Café suave
+
+  // Accent Dark: Used for heavy contrasts
+  static Color get accentDark => isDark
+      ? const Color(0xFF8D6E63) // Café suave (invertido)
+      : const Color(0xFF5D4037); // Café oscuro
+
+  // Accent Light: Used for subtle highlights
+  static Color get accentLight => isDark
+      ? const Color(0xFF4E4540) // Café medio oscuro
+      : const Color(0xFFD7CCC8); // Café muy claro
+
+  // Text Colors
+  static Color get textPrimary => isDark
+      ? const Color(0xFFF2EFE9) // Blanco cálido lechoso
+      : const Color(0xFF2D2420); // Casi negro cálido
+      
+  static Color get textSecondary => isDark
+      ? const Color(0xFFBCAAA4) // Beige medio-oscuro
+      : const Color(0xFF756860); // Gris cálido medio
+      
+  static Color get textLight => isDark
+      ? const Color(0xFF8D7F78) // Café grisáceo
+      : const Color(0xFFA89C94); // Gris cálido claro
+
   // Gradiente de fondo sutil
-  static const LinearGradient backgroundGradient = LinearGradient(
+  static LinearGradient get backgroundGradient => LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFFF2EFE9), // Slightly darker than FDFBF9
-      Color(0xFFE8E2DD), // Slightly darker than F5F2F0
-    ],
+    colors: isDark 
+    ? [
+        const Color(0xFF1E1B19),
+        const Color(0xFF25211E),
+      ]
+    : [
+        const Color(0xFFF2EFE9), // Slightly darker than FDFBF9
+        const Color(0xFFE8E2DD), // Slightly darker than F5F2F0
+      ],
   );
 
-  // Gradiente para placeholders de imágenes (usado en widgets de búsqueda y otros)
-  static const LinearGradient imagePlaceholderGradient = LinearGradient(
+  // Gradiente para placeholders
+  static LinearGradient get imagePlaceholderGradient => LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      accent, // coffeeMedium
-      accentDark, // coffeeDark
+      accent,
+      accentDark,
     ],
   );
 
-  // Colores para efectos Shimmer (skeleton loaders)
-  static const Color shimmerBaseColor = Color(0xFFE0E0E0);
-  static const Color shimmerHighlightColor = Color(0xFFF5F5F5);
-  static const Color shimmerContentColor = Color(0xFFF0F0F0);
+  // Colores para efectos Shimmer
+  static Color get shimmerBaseColor => isDark ? const Color(0xFF2C2624) : const Color(0xFFE0E0E0);
+  static Color get shimmerHighlightColor => isDark ? const Color(0xFF3E3532) : const Color(0xFFF5F5F5);
+  static Color get shimmerContentColor => isDark ? const Color(0xFF362F2C) : const Color(0xFFF0F0F0);
 
   /// Sombras "Soft UI" - Sutiles y difusas
   static List<BoxShadow> get softShadow => [
     BoxShadow(
-      color: const Color(0x08000000), // Sombra ultra-fina
+      color: isDark ? const Color(0x40000000) : const Color(0x08000000), // Sombra más visible en dark
       offset: const Offset(0, 2),
       blurRadius: 4,
       spreadRadius: 0,
@@ -55,7 +98,7 @@ class NeumorphismTheme {
   /// Sombra para elementos flotantes (Player, Dialogs)
   static List<BoxShadow> get floatingShadow => [
     BoxShadow(
-      color: const Color(0x125D4037),
+      color: isDark ? const Color(0x80000000) : const Color(0x125D4037),
       offset: const Offset(0, 10),
       blurRadius: 20,
       spreadRadius: -5,
@@ -63,22 +106,19 @@ class NeumorphismTheme {
   ];
 
   // --- Backward Compatibility / Legacy Members ---
-  // Estos miembros se mantienen para evitar romper el código existente
-  // que aún no ha sido migrado al nuevo sistema de diseño.
-
-  static const Color coffeeMedium = accent;
-  static const Color coffeeDark = accentDark;
-  static const Color beigeMedium = accentLight; // Aproximación
-
+  static Color get coffeeMedium => accent;
+  static Color get coffeeDark => accentDark;
+  static Color get beigeMedium => accentLight;
+  
   static List<BoxShadow> get neumorphismShadow => softShadow;
   static List<BoxShadow> get floatingCardShadow => floatingShadow;
 
-  /// Decoración Glassmorphism (requiere ClipRRect + BackdropFilter en el widget padre)
+  /// Decoración Glassmorphism
   static BoxDecoration glassDecoration({double opacity = 0.7}) {
     return BoxDecoration(
-      color: Colors.white.withValues(alpha: opacity),
+      color: (isDark ? const Color(0xFF1E1B19) : Colors.white).withValues(alpha: opacity),
       border: Border.all(
-        color: Colors.white.withValues(alpha: 0.5),
+        color: (isDark ? Colors.white : Colors.white).withValues(alpha: isDark ? 0.05 : 0.5),
         width: 1.0,
       ),
     );
@@ -88,35 +128,41 @@ class NeumorphismTheme {
   static BoxDecoration get cardDecoration {
     return BoxDecoration(
       color: surface,
-      borderRadius: const BorderRadius.all(Radius.circular(16)), // Más compacto
+      borderRadius: const BorderRadius.all(Radius.circular(16)),
       border: Border.all(
-        color: const Color(0x0D000000),
+        color: isDark ? const Color(0x1FFFFFFF) : const Color(0x0D000000),
         width: 1,
       ),
     );
   }
 
   ThemeData get theme {
+    // Definir base theme según modo para defaults de Material
+    final base = isDark ? ThemeData.dark() : ThemeData.light();
+    
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: isDark ? Brightness.dark : Brightness.light,
       
       // Color Scheme
-      colorScheme: const ColorScheme.light(
+      colorScheme: ColorScheme(
+        brightness: isDark ? Brightness.dark : Brightness.light,
         primary: accent,
+        onPrimary: isDark ? const Color(0xFF2D2420) : Colors.white,
         secondary: accentDark,
-        surface: surface,
-        error: Color(0xFFE57373),
-        onPrimary: Colors.white,
         onSecondary: Colors.white,
+        surface: surface,
         onSurface: textPrimary,
+        surfaceContainerHighest: isDark ? const Color(0xFF3E3532) : const Color(0xFFF0EBE6),
+        error: const Color(0xFFE57373),
+        onError: Colors.white,
       ),
       
       scaffoldBackgroundColor: background,
       
-      // Typography: Inter, limpia y legible
+      // Typography
       textTheme: GoogleFonts.interTextTheme(
-        ThemeData.light().textTheme,
+        base.textTheme,
       ).apply(
         bodyColor: textPrimary,
         displayColor: textPrimary,
@@ -176,7 +222,7 @@ class NeumorphismTheme {
           color: textPrimary,
           letterSpacing: -0.5,
         ),
-        iconTheme: const IconThemeData(
+        iconTheme: IconThemeData(
           color: textPrimary,
           size: 24,
         ),
@@ -187,8 +233,8 @@ class NeumorphismTheme {
         color: surface,
         elevation: 0,
         shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: const BorderRadius.all(Radius.circular(20)),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -197,11 +243,11 @@ class NeumorphismTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: accent,
-          foregroundColor: Colors.white,
+          foregroundColor: isDark ? const Color(0xFF2D2420) : Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(30)),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(30)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           textStyle: GoogleFonts.inter(

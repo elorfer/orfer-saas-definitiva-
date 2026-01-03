@@ -7,13 +7,20 @@ import '../utils/logger.dart';
 /// Servicio centralizado para manejar la navegación del reproductor
 /// ✅ MEJOR PRÁCTICA: Separar lógica de navegación de los widgets UI
 class PlayerNavigationService {
+  // 🔒 LOCK: Prevents double navigation (ghost events / fast taps)
+  static bool _isNavigating = false;
+
   /// Abrir el reproductor extendido de forma segura
   /// Maneja toda la lógica de estado y navegación en un solo lugar
   static Future<void> openFullPlayer({
     required BuildContext context,
     required WidgetRef ref,
   }) async {
+    // 🛡️ RE-ENTRANCY GUARD
+    if (_isNavigating) return;
+    
     try {
+      _isNavigating = true;
       final audioState = ref.read(unifiedAudioProviderFixed);
       
       // Verificar condiciones para abrir
@@ -21,7 +28,8 @@ class PlayerNavigationService {
       final isNotExpanded = !audioState.isPlayerExpanded;
       
       if (!hasContent || !isNotExpanded) {
-        AppLogger.debug('[PlayerNavigationService] No se puede abrir reproductor: hasContent=$hasContent, isNotExpanded=$isNotExpanded');
+        // AppLogger.debug('[PlayerNavigationService] No se puede abrir reproductor: hasContent=$hasContent, isNotExpanded=$isNotExpanded');
+        _isNavigating = false; // Release lock early
         return;
       }
       
@@ -34,6 +42,9 @@ class PlayerNavigationService {
       }
     } catch (e, stackTrace) {
       AppLogger.error('[PlayerNavigationService] Error al abrir reproductor: $e', stackTrace);
+    } finally {
+      // 🔓 RELEASE LOCK
+      _isNavigating = false;
     }
   }
   

@@ -29,7 +29,7 @@ class SliverFeaturedArtistsSection extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Compositores',
                   style: TextStyle(
                     fontSize: 22,
@@ -40,7 +40,7 @@ class SliverFeaturedArtistsSection extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () => context.push('/compositores'),
-                  child: const Text('Ver todos', style: TextStyle(color: NeumorphismTheme.coffeeMedium)),
+                  child: Text('Ver todos', style: TextStyle(color: NeumorphismTheme.coffeeMedium)),
                 ),
               ],
             ),
@@ -98,7 +98,7 @@ class _SliverArtistTile extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           artist.artist.stageName ?? 'Artista',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: NeumorphismTheme.textPrimary,

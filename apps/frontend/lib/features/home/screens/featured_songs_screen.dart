@@ -495,7 +495,7 @@ class _BlurSongCard extends ConsumerWidget {
                             placeholderColor: NeumorphismTheme.accentLight,
                             errorWidget: Container(
                               color: NeumorphismTheme.accentLight.withValues(alpha: 0.4),
-                              child: const Icon(Icons.music_note, color: NeumorphismTheme.textSecondary),
+                              child: Icon(Icons.music_note, color: NeumorphismTheme.textSecondary),
                             ),
                           ),
                         ),
@@ -519,7 +519,7 @@ class _BlurSongCard extends ConsumerWidget {
                         const SizedBox(height: 3), // ✅ Reducir espaciado (4 -> 3)
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.person_outline,
                               size: 13, // ✅ Más pequeño que Home (14 -> 13)
                               color: NeumorphismTheme.textSecondary,
