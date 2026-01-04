@@ -9,33 +9,12 @@ import 'playback_notifier.dart';
 final unifiedAudioProviderFixed = playbackNotifierProvider;
 
 /// ✅ ÚNICA FUENTE DE VERDAD: Provider que siempre devuelve la canción que REALMENTE se está reproduciendo
-/// Combina el estado de Riverpod con el reproductor de audio para máxima confiabilidad
-/// Este provider debe ser usado por TODOS los reproductores (mini y grande) para garantizar consistencia
+/// ✅ FIX FLICKER: Solo usa el estado del Notifier, NO lee del player.sequenceState
+/// El sequenceState puede contener datos transitorios durante skips que causan parpadeo
 final realCurrentSongProvider = Provider<Song?>((ref) {
-  // 1. Obtener solo la canción del estado (fuente principal)
-  // ✅ OPTIMIZACIÓN: Usar select para evitar rebuilds por cambios de posición/volumen
+  // ✅ FUENTE ÚNICA: Usar select para evitar rebuilds por cambios de posición/volumen
+  // Priorizar lastConfirmedSong (set optimísticamente) sobre currentSong
   final currentSong = ref.watch(unifiedAudioProviderFixed.select((s) => s.lastConfirmedSong ?? s.currentSong));
-  
-  // 2. Verificar qué canción REALMENTE se está reproduciendo en el reproductor de audio
-  final audioService = ref.watch(audioServiceProvider);
-  final sequenceState = audioService.player.sequenceState;
-  final realCurrentSource = sequenceState.currentSource;
-  
-    // 3. ✅ FUENTE DE VERDAD REAL: Priorizar el estado confirmado por el Notifier
-    // El Notifier escucha el stream de eventos, que es más rápido y preciso que la propiedad sincrónica sequenceState.
-    // Si tenemos una canción confirmada en el estado, LA USAMOS.
-    if (currentSong != null) {
-      return currentSong;
-    }
-
-    // Solo si el estado no tiene canción (o es null), intentamos recuperar desde el reproductor
-    // Esto sirve como fallback en inicialización o casos extremos.
-    if (realCurrentSource != null && realCurrentSource.tag is Song) {
-      final realCurrentSong = realCurrentSource.tag as Song;
-      return realCurrentSong;
-    }
-  
-  // 4. Si no hay canción en el reproductor pero hay en el estado, usar la del estado
   return currentSong;
 });
 

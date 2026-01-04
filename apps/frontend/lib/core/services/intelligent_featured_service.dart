@@ -62,7 +62,8 @@ class IntelligentFeaturedService {
       }
 
       // 2. Obtener canciones destacadas estáticas (base sólida)
-      final staticFeatured = await _getStaticFeaturedSongs();
+      // ✅ OPTIMIZACIÓN Adrenalina: Si limit es 1, pedir solo 1 canción estática
+      final staticFeatured = await _getStaticFeaturedSongs(limit: limit == 1 ? 1 : _maxStaticFeatured);
       debugPrint('📌 [IntelligentFeatured] Canciones estáticas: ${staticFeatured.length}');
 
       // 3. 🎯 FORZAR RECOMENDACIONES DINÁMICAS SI HAY currentSongId (modo algoritmo)
@@ -117,8 +118,9 @@ class IntelligentFeaturedService {
         } else {
           debugPrint('⚠️ [IntelligentFeatured] No se obtuvieron recomendaciones dinámicas, usando estáticas como fallback');
         }
-      } else if (staticFeatured.length < 4) {
-        // Solo agregar recomendaciones dinámicas si hay menos de 4 estáticas (modo normal, no algoritmo)
+      } else if (staticFeatured.length < limit && staticFeatured.length < 4) {
+        // Solo agregar recomendaciones dinámicas si no llegamos al límite solicitado
+        // y hay pocas canciones estáticas para mostrar (modo normal)
         final remainingSlots = limit - staticFeatured.length;
         if (remainingSlots > 0) {
           // Combinar excludeIds externos con los IDs de canciones estáticas
@@ -133,10 +135,10 @@ class IntelligentFeaturedService {
             currentSongId: currentSongId,
             excludeIds: combinedExcludeIds,
           );
-          debugPrint('🤖 [IntelligentFeatured] Recomendaciones dinámicas: ${dynamicRecommendations.length}');
+          debugPrint('🤖 [IntelligentFeatured] Recomendaciones dinámicas para rellenar: ${dynamicRecommendations.length}');
         }
       } else {
-        debugPrint('✅ [IntelligentFeatured] Suficientes canciones estáticas (${staticFeatured.length}), no agregar dinámicas');
+        debugPrint('✅ [IntelligentFeatured] Suficientes canciones (${staticFeatured.length}) para cubrir el límite de $limit');
       }
 
       // 4. Combinar y diversificar
@@ -175,10 +177,10 @@ class IntelligentFeaturedService {
 
   /// 📌 OBTENER CANCIONES DESTACADAS ESTÁTICAS
   /// Estas son las canciones marcadas como destacadas por el administrador
-  Future<List<FeaturedSong>> _getStaticFeaturedSongs() async {
+  Future<List<FeaturedSong>> _getStaticFeaturedSongs({int? limit}) async {
     try {
       final staticSongs = await _homeService.getFeaturedSongs(
-        limit: _maxStaticFeatured,
+        limit: limit ?? _maxStaticFeatured,
         forceRefresh: false,
       );
       

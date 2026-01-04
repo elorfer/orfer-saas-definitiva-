@@ -119,50 +119,54 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             ),
           ),
           
-          // 📢 Mini Player de Anuncios (Animación Slide-Up)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic, // Curva "Apple-like" más natural
-            bottom: isPlayingAd ? navBarHeight : -(navBarHeight + 20),
-            left: 0,
-            right: 0,
-            child: RepaintBoundary(
-              child: AdsMiniPlayer(
-                // ✅ MEJOR PRÁCTICA: Usar servicio centralizado (el widget tiene fallback)
-                onTap: () => PlayerNavigationService.openFullPlayer( // Nota: AdsMiniPlayer debe soportar onTap externo
-                  context: context,
-                  ref: ref,
-                ),
-              ),
-            ),
-          ),
-
-          // 🎵 Mini Player de Música (Animación Slide-Up)
+          // 🎵 UNIFIED MINI PLAYER: CrossFade entre anuncio y canción
+          // ✅ ANTI-FLICKER: Usar crossfade en lugar de dos animaciones separadas
+          // Esto elimina el parpadeo durante la transición
+          // 🏆 SPOTIFY-LEVEL: Solo mostrar cuando hay sesión activa (usuario dio play explícito)
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOutCubic,
-            // Solo mostramos player de música si no hay anuncio sonando y es visible explícitamente
-            bottom: (!isPlayingAd && currentSong != null && playbackState.isMiniPlayerVisible) 
+            // 🏆 SPOTIFY-LEVEL: Logica de Visibilidad Robusta
+            // 1. isSessionActive: Usuario dio play explícito
+            // 2. isPlaying: Si hay sonido físico, SIEMPRE mostrar (Failsafe)
+            // 3. isLoading: Mostrar inmediatamente al cargar para feedback visual
+            bottom: ((playbackState.isSessionActive || playbackState.isPlaying || playbackState.isLoading) && (isPlayingAd || currentSong != null)) 
                 ? navBarHeight 
-                : -(navBarHeight + 100), // Ocultar completamente fuera de pantalla
+                : -(navBarHeight + 100),
             left: 0,
             right: 0,
             child: RepaintBoundary(
-              child: FinalMiniPlayer(
-                onTap: () {
-                  try {
-                    final audioState = ref.read(unifiedAudioProviderFixed);
-                    if (audioState.currentSong != null && 
-                        !audioState.isPlayerExpanded) {
-                      ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                      if (context.mounted) {
-                        context.push('/player');
+              child: AnimatedCrossFade(
+                duration: const Duration(milliseconds: 200), // Transición rápida
+                // ✅ FIX DESYNC: Solo mostrar AdsMiniPlayer si AMBOS flags están activos
+                // isPlayingAd indica el estado lógico, currentAd != null verifica que hay datos
+                crossFadeState: (isPlayingAd && playbackState.currentAd != null)
+                    ? CrossFadeState.showFirst 
+                    : CrossFadeState.showSecond,
+                firstChild: AdsMiniPlayer(
+                  onTap: () => PlayerNavigationService.openFullPlayer(
+                    context: context,
+                    ref: ref,
+                  ),
+                ),
+                secondChild: FinalMiniPlayer(
+                  onTap: () {
+                    try {
+                      final audioState = ref.read(unifiedAudioProviderFixed);
+                      if (audioState.currentSong != null && 
+                          !audioState.isPlayerExpanded) {
+                        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+                        if (context.mounted) {
+                          context.push('/player');
+                        }
                       }
+                    } catch (e) {
+                      AppLogger.error('[PersistentNavigation] Error: $e');
                     }
-                  } catch (e) {
-                    AppLogger.error('[PersistentNavigation] Error: $e');
-                  }
-                },
+                  },
+                ),
+                // ✅ OPTIMIZACIÓN: Mantener el tamaño del más grande para evitar saltos
+                sizeCurve: Curves.easeInOut,
               ),
             ),
           ),

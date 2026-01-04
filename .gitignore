@@ -81,3 +81,5 @@ uploads/**/*
 *.tmp
 *.temp
 *.bak
+
+backups/

@@ -74,10 +74,10 @@ class _AdProgressBarState extends ConsumerState<_AdProgressBar>
         ? widget.ad.duration 
         : (totalDuration.inMilliseconds > 0 ? totalDuration : widget.ad.duration);
         
-    // Usar posición segura
-    // Si el estado es obsoleto y la posición es mayor que la duración del anuncio,
-    // es casi seguro que es la posición de la canción anterior -> Forzar 0.
-    final effectivePosition = (isStateStale && currentPosition > widget.ad.duration)
+    // ✅ FIX CRÍTICO: Si el estado es obsoleto (duración del player no coincide con la del anuncio),
+    // la posición reportada tampoco es confiable (pertenece a la canción anterior).
+    // Forzamos a 0 para que empiece desde el principio visualmente hasta que el audio sincronice.
+    final effectivePosition = isStateStale
         ? Duration.zero
         : currentPosition;
     
@@ -173,7 +173,7 @@ class _AdSkipOrCounter extends ConsumerWidget {
         ? ad.duration 
         : (totalDuration.inMilliseconds > 0 ? totalDuration : ad.duration);
         
-    final effectivePosition = (isStateStale && currentPosition > ad.duration)
+    final effectivePosition = isStateStale
         ? Duration.zero
         : currentPosition;
         

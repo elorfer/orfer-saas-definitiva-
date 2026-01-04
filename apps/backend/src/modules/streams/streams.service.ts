@@ -13,6 +13,7 @@ import { Artist } from '../../common/entities/artist.entity';
 import { User } from '../../common/entities/user.entity';
 import { Stream } from '../../common/entities/stream.entity';
 import { UserListeningSession } from '../../common/entities/user-listening-session.entity';
+import { PlayHistory } from '../../common/entities/play-history.entity';
 import { TrackProgressDto } from './dto/track-progress.dto';
 import { AffinityService } from '../affinity/affinity.service';
 
@@ -32,6 +33,8 @@ export class StreamsService {
     private readonly streamRepository: Repository<Stream>,
     @InjectRepository(UserListeningSession)
     private readonly sessionRepository: Repository<UserListeningSession>,
+    @InjectRepository(PlayHistory)
+    private readonly playHistoryRepository: Repository<PlayHistory>,
     @Inject('REDIS_CLIENT')
     private readonly redis: Redis,
     private readonly dataSource: DataSource,
@@ -85,30 +88,43 @@ export class StreamsService {
       });
       await this.sessionRepository.save(session);
     } else {
-      // Si la sesión ya fue validada y el progreso actual es muy bajo (nueva reproducción),
-      // crear una nueva sesión
+      // Si la sesión ya fue validada, verificar si es una nueva reproducción
       const timeSinceLastUpdate = Date.now() - session.lastProgressUpdate.getTime();
-      const isNewPlayback = dto.progressMs < 10000 && session.isStreamValidated; // Menos de 10s y ya validada
-      const isLongPause = timeSinceLastUpdate > 60000 && session.isStreamValidated; // Más de 1 minuto pausado
+      const timeSinceValidation = session.streamValidatedAt
+        ? Date.now() - session.streamValidatedAt.getTime()
+        : Infinity;
 
-      if (isNewPlayback) {
-        this.logger.debug(
-          `[trackProgress] Nueva reproducción detectada (Replay: progreso=${dto.progressMs}ms). Creando nueva sesión.`,
+      // ✅ NUEVA LÓGICA: Una canción puede ser re-contabilizada si:
+      // 1. El progreso es bajo (< 10s) Y ya fue validada -> REPLAY desde inicio
+      // 2. Han pasado más de 30s desde la última validación -> NUEVA ESCUCHA
+      const isNewPlayback = dto.progressMs < 10000 && session.isStreamValidated;
+      const isNewListening = session.isStreamValidated && timeSinceValidation > 30000; // Más de 30s desde validación
+      const isLongPause = timeSinceLastUpdate > 60000 && session.isStreamValidated;
+
+      if (isNewPlayback || isNewListening) {
+        this.logger.log(
+          `[trackProgress] 🔄 Nueva reproducción detectada. Reseteando sesión. ` +
+          `(Progreso: ${dto.progressMs}ms, Tiempo desde validación: ${Math.round(timeSinceValidation / 1000)}s)`,
         );
         // Eliminar sesión anterior y crear una nueva
         await this.sessionRepository.remove(session);
+
+        // ✅ FIX: Ajustar startedAt para reflejar el progreso ya acumulado
+        // Esto evita que el sistema anti-fraude detecte "progreso sospechoso"
+        // cuando el usuario ya tenía progreso acumulado antes de crear la sesión
+        const adjustedStartedAt = new Date(Date.now() - dto.progressMs);
+
         session = this.sessionRepository.create({
           userId,
           songId: dto.songId,
           maxProgressMs: dto.progressMs,
-          startedAt: new Date(),
+          startedAt: adjustedStartedAt,
           lastProgressUpdate: new Date(),
         });
         await this.sessionRepository.save(session);
       } else if (isLongPause) {
-        // ✅ FIX: Si es una pausa larga pero NO es un replay (progreso avanzado), 
+        // Si es una pausa larga pero NO es un replay (progreso avanzado), 
         // es un RESUME. No borrar la sesión, solo actualizar timestamps.
-        // Esto evita que 'startedAt' se resetee y cause "Progreso Sospechoso".
         this.logger.debug(
           `[trackProgress] Resumiendo sesión validada tras pausa larga (${dto.progressMs}ms). Manteniendo sesión.`,
         );
@@ -124,6 +140,43 @@ export class StreamsService {
           session.lastProgressUpdate = new Date();
           await this.sessionRepository.save(session);
         }
+      }
+    }
+
+    // 🎯 ACTUALIZAR PLAY_HISTORY: Para tracking de usuarios activos en tiempo real
+    // Esto debe hacerse SIEMPRE que el usuario tenga 30+ segundos, independientemente de si ya validó el stream
+    if (session.maxProgressMs >= MIN_STREAM_DURATION_MS) {
+      try {
+        // 🎯 OPTIMIZADO: Buscar si ya existe un registro reciente (últimos 60 segundos)
+        // Esto reduce las escrituras a BD de ~6/min a ~1/min por usuario activo
+        const recentPlayHistory = await this.playHistoryRepository
+          .createQueryBuilder('ph')
+          .where('ph.userId = :userId', { userId })
+          .andWhere('ph.songId = :songId', { songId: dto.songId })
+          .andWhere('ph.playedAt >= :recentTime', {
+            recentTime: new Date(Date.now() - 60000) // Últimos 60 segundos
+          })
+          .getOne();
+
+        if (!recentPlayHistory) {
+          // Crear nuevo registro en play_history
+          const playHistory = this.playHistoryRepository.create({
+            userId,
+            songId: dto.songId,
+            durationPlayed: Math.floor(session.maxProgressMs / 1000),
+            completed: session.maxProgressMs >= MIN_STREAM_DURATION_MS,
+          });
+          await this.playHistoryRepository.save(playHistory);
+          this.logger.log(
+            `[PlayHistory] 📊 NUEVO registro guardado: usuario ${userId.substring(0, 8)}..., canción ${dto.songId.substring(0, 8)}... (${session.maxProgressMs}ms)`,
+          );
+        } else {
+          this.logger.debug(
+            `[PlayHistory] ⏭️ Registro reciente existe, saltando (dedup 60s)`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(`[PlayHistory] ❌ Error guardando registro: ${error.message}`);
       }
     }
 
@@ -193,6 +246,16 @@ export class StreamsService {
         durationListened: MIN_STREAM_DURATION_MS / 1000,
       });
       await manager.save(Stream, stream);
+
+      // 🎯 REGISTRO EN PLAY_HISTORY: Para que el admin pueda contar usuarios activos en tiempo real
+      const playHistory = manager.create(PlayHistory, {
+        userId,
+        songId,
+        durationPlayed: MIN_STREAM_DURATION_MS / 1000,
+        completed: true, // Marcamos como completado porque alcanzó los 30s
+      });
+      await manager.save(PlayHistory, playHistory);
+      this.logger.debug(`[PlayHistory] Registro creado para usuario ${userId}, canción ${songId}`);
 
       // Incrementar contador de canción
       await manager.increment(Song, { id: songId }, 'totalStreams', 1);

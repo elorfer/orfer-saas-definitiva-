@@ -10,7 +10,7 @@ class GeneratingMusicIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isGenerating = ref.watch(
-      playbackNotifierProviderFactory.select((state) => state.isGeneratingMusic),
+      playbackNotifierProvider.select((state) => state.isGeneratingMusic),
     );
 
     return AnimatedSwitcher(
@@ -65,7 +65,7 @@ class GeneratingMusicIndicatorCompact extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isGenerating = ref.watch(
-      playbackNotifierProviderFactory.select((state) => state.isGeneratingMusic),
+      playbackNotifierProvider.select((state) => state.isGeneratingMusic),
     );
 
     return AnimatedSwitcher(

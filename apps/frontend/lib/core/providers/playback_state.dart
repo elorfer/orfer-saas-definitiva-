@@ -39,6 +39,7 @@ class PlaybackState {
   
   // Flags de UI
   final bool isMiniPlayerVisible; // 🥷 NINJA MODE: Control de visibilidad independiente de la carga de audio
+  final bool isSessionActive; // 🏆 SPOTIFY-LEVEL: Sesión de escucha activa (usuario dio play explícitamente)
 
   // Flags de control optimista
   final bool isProcessingPlayPause;
@@ -49,6 +50,9 @@ class PlaybackState {
   final AudioAd? currentAd;
   final bool isPlayingAd;
   final bool isInsertingAd; // ✅ FIX: Flag para blindaje de carátula durante inserción
+  
+  // 🛡️ ANTI-FLICKER: Cache de última carátula válida para evitar parpadeos durante transiciones
+  final String? lastKnownCoverUrl;
 
   const PlaybackState({
     this.playbackMode = PlaybackMode.none,
@@ -71,9 +75,11 @@ class PlaybackState {
     this.isProcessingNext = false,
     this.isProcessingPrevious = false,
     this.isMiniPlayerVisible = false, // Default false para arranque limpio
+    this.isSessionActive = false, // 🏆 SPOTIFY-LEVEL: Default false hasta que usuario active play
     this.currentAd,
     this.isPlayingAd = false,
     this.isInsertingAd = false,
+    this.lastKnownCoverUrl,
   });
 
   /// Calcular progreso de 0.0 a 1.0
@@ -100,15 +106,23 @@ class PlaybackState {
   /// 🛡️ BLINDAJE DE CARÁTULA: Getter prioritario para la URL de la portada
   /// Si hay un anuncio reproduciéndose O insertándose, devuelve estrictamente la imagen del anuncio.
   /// Esto evita el "spoiler visual" de la siguiente canción durante la transición.
+  /// 🛡️ ANTI-FLICKER: Usa caché para evitar parpadeos durante transiciones rápidas.
   String? get currentCoverUrl {
-    // Si estamos insertando un anuncio, intentamos mostrar su carátula si ya la tenemos
+    String? url;
+    
+    // Prioridad 1: Anuncio insertándose o reproduciéndose
     if (isInsertingAd && currentAd != null) {
-      return currentAd!.coverImageUrl;
+      url = currentAd!.coverImageUrl;
+    } else if (isPlayingAd && currentAd != null) {
+      url = currentAd!.coverImageUrl;
+    } else {
+      // Prioridad 2: Canción actual
+      url = currentSong?.coverArtUrl;
     }
-    if (isPlayingAd && currentAd != null) {
-      return currentAd!.coverImageUrl;
-    }
-    return currentSong?.coverArtUrl;
+    
+    // 🛡️ ANTI-FLICKER: Si no hay URL válida, usar la última conocida
+    // Esto previene parpadeos durante transiciones de estado rápidas en debug mode
+    return url ?? lastKnownCoverUrl;
   }
 
   /// 🛡️ DICTATOR GETTER: Título prioritario
@@ -152,15 +166,35 @@ class PlaybackState {
     bool? isProcessingPlayPause,
     bool? isProcessingNext,
     bool? isProcessingPrevious,
-    bool? isMiniPlayerVisible, // Nuevo parámetro
+    bool? isMiniPlayerVisible,
+    bool? isSessionActive, // 🏆 SPOTIFY-LEVEL: Control de sesión activa
     AudioAd? currentAd,
     bool? isPlayingAd,
     bool? isInsertingAd,
+    String? lastKnownCoverUrl,
     // ✅ FIX CRÍTICO: Flags para permitir establecer null explícitamente
     bool clearCurrentAd = false,
     bool clearCurrentSong = false,
     bool clearLastConfirmedSong = false,
   }) {
+    // 🛡️ ANTI-FLICKER: Calcular la nueva URL de carátula para el caché
+    String? newCoverUrl = lastKnownCoverUrl;
+    if (newCoverUrl == null) {
+      // Auto-calcular desde los valores nuevos o actuales
+      final effectiveSong = clearCurrentSong ? null : (currentSong ?? this.currentSong);
+      final effectiveAd = clearCurrentAd ? null : (currentAd ?? this.currentAd);
+      final effectiveIsPlayingAd = isPlayingAd ?? this.isPlayingAd;
+      final effectiveIsInsertingAd = isInsertingAd ?? this.isInsertingAd;
+      
+      if ((effectiveIsInsertingAd || effectiveIsPlayingAd) && effectiveAd != null) {
+        newCoverUrl = effectiveAd.coverImageUrl;
+      } else if (effectiveSong != null) {
+        newCoverUrl = effectiveSong.coverArtUrl;
+      }
+    }
+    // Usar la nueva o mantener la anterior si no hay nueva
+    newCoverUrl ??= this.lastKnownCoverUrl;
+    
     return PlaybackState(
       playbackMode: playbackMode ?? this.playbackMode,
       currentQueue: currentQueue ?? this.currentQueue,
@@ -181,11 +215,12 @@ class PlaybackState {
       isProcessingPlayPause: isProcessingPlayPause ?? this.isProcessingPlayPause,
       isProcessingNext: isProcessingNext ?? this.isProcessingNext,
       isProcessingPrevious: isProcessingPrevious ?? this.isProcessingPrevious,
-      isMiniPlayerVisible: isMiniPlayerVisible ?? this.isMiniPlayerVisible, // Mantener o actualizar
-      // ✅ FIX CRÍTICO: Usar flag para permitir establecer null explícitamente
+      isMiniPlayerVisible: isMiniPlayerVisible ?? this.isMiniPlayerVisible,
+      isSessionActive: isSessionActive ?? this.isSessionActive, // 🏆 SPOTIFY-LEVEL
       currentAd: clearCurrentAd ? null : (currentAd ?? this.currentAd),
       isPlayingAd: isPlayingAd ?? this.isPlayingAd,
       isInsertingAd: isInsertingAd ?? this.isInsertingAd,
+      lastKnownCoverUrl: newCoverUrl, // 🛡️ ANTI-FLICKER: Siempre mantener un caché válido
     );
   }
 

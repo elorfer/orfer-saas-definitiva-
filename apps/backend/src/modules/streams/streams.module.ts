@@ -8,6 +8,7 @@ import { Song } from '../../common/entities/song.entity';
 import { Artist } from '../../common/entities/artist.entity';
 import { Stream } from '../../common/entities/stream.entity';
 import { UserListeningSession } from '../../common/entities/user-listening-session.entity';
+import { PlayHistory } from '../../common/entities/play-history.entity';
 import { AffinityModule } from '../affinity/affinity.module';
 
 @Module({
@@ -17,8 +18,8 @@ import { AffinityModule } from '../affinity/affinity.module';
       Song,
       Artist,
       Stream,
-      Stream,
       UserListeningSession,
+      PlayHistory,
     ]),
     AffinityModule,
   ],

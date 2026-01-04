@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, LessThan } from 'typeorm';
 import { PlayHistory } from '../../common/entities/play-history.entity';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 interface ActiveUser {
   userId: string;
@@ -13,12 +14,17 @@ interface ActiveUser {
 @Injectable()
 export class RealtimeService {
   private readonly logger = new Logger(RealtimeService.name);
-  
+
   // Almacenar usuarios activos en memoria (para conexiones WebSocket de admin)
   private activeUsers = new Map<string, ActiveUser>();
 
   // Para tracking de usuarios activos reales (basado en play_history)
   private readonly ACTIVE_THRESHOLD_MINUTES = 5; // Usuario activo si reprodujo algo en los últimos 5 minutos
+
+  // 🎯 CACHE: Evitar consultas repetidas a la BD
+  private cachedActiveCount: number = 0;
+  private cacheLastUpdated: Date = new Date(0);
+  private readonly CACHE_TTL_MS = 30000; // Cache válido por 30 segundos
 
   constructor(
     @InjectRepository(PlayHistory)
@@ -27,6 +33,29 @@ export class RealtimeService {
   ) {
     // Limpiar usuarios inactivos cada minuto
     setInterval(() => this.cleanupInactiveUsers(), 60000);
+  }
+
+  /**
+   * 🗑️ LIMPIEZA AUTOMÁTICA: Borrar registros de play_history mayores a 1 hora
+   * Esto reduce costos de almacenamiento significativamente
+   * Se ejecuta cada hora
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async cleanupOldPlayHistory() {
+    try {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7); // 🎯 ULTRA ECONÓMICO: Solo 7 días de historial
+
+      const result = await this.playHistoryRepository.delete({
+        playedAt: LessThan(cutoff),
+      });
+
+      if (result.affected && result.affected > 0) {
+        this.logger.log(`🗑️ [Cleanup] Eliminados ${result.affected} registros antiguos de play_history`);
+      }
+    } catch (error) {
+      this.logger.error(`[Cleanup] Error limpiando play_history: ${error.message}`);
+    }
   }
 
   /**
@@ -72,22 +101,36 @@ export class RealtimeService {
 
   /**
    * Obtener conteo de usuarios realmente activos (reprodujeron música recientemente)
+   * 🎯 OPTIMIZADO: Usa cache para evitar consultas frecuentes a la BD
    */
   async getRealActiveUsersCount(): Promise<number> {
     try {
+      // 🎯 CACHE CHECK: Si el cache es válido, retornar sin consultar BD
+      const now = Date.now();
+      if (now - this.cacheLastUpdated.getTime() < this.CACHE_TTL_MS) {
+        return this.cachedActiveCount;
+      }
+
       const threshold = new Date();
       threshold.setMinutes(threshold.getMinutes() - this.ACTIVE_THRESHOLD_MINUTES);
 
       const result = await this.playHistoryRepository
         .createQueryBuilder('ph')
-        .select('COUNT(DISTINCT ph.user_id)', 'count')
-        .where('ph.played_at >= :threshold', { threshold })
+        .select('COUNT(DISTINCT ph.userId)', 'count')
+        .where('ph.playedAt >= :threshold', { threshold })
         .getRawOne();
 
-      return parseInt(result?.count || '0', 10);
+      const count = parseInt(result?.count || '0', 10);
+
+      // 🎯 ACTUALIZAR CACHE
+      this.cachedActiveCount = count;
+      this.cacheLastUpdated = new Date();
+
+      this.logger.debug(`RealActiveUsersCount: ${count} (Threshold: ${threshold.toISOString()})`);
+      return count;
     } catch (error) {
       this.logger.error(`Error obteniendo usuarios activos reales: ${error.message}`);
-      return 0;
+      return this.cachedActiveCount; // Retornar cache en caso de error
     }
   }
 
@@ -101,12 +144,12 @@ export class RealtimeService {
 
       const result = await this.playHistoryRepository
         .createQueryBuilder('ph')
-        .select('ph.user_id', 'userId')
-        .addSelect('MAX(ph.played_at)', 'lastPlay')
+        .select('ph.userId', 'userId')
+        .addSelect('MAX(ph.playedAt)', 'lastPlay')
         .addSelect('COUNT(*)', 'playCount')
-        .where('ph.played_at >= :threshold', { threshold })
-        .groupBy('ph.user_id')
-        .orderBy('MAX(ph.played_at)', 'DESC')
+        .where('ph.playedAt >= :threshold', { threshold })
+        .groupBy('ph.userId')
+        .orderBy('MAX(ph.playedAt)', 'DESC')
         .limit(limit)
         .getRawMany();
 

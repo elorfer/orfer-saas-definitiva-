@@ -250,8 +250,14 @@ class HomeService {
             normalizedList.add(normalizedSong);
           }
 
-          // Parsear todas las canciones en un isolate para no bloquear el UI thread
-          final songs = await Song.parseList(normalizedList);
+          // Parsear las canciones. Si es solo una (caso Adrenalina), saltar compute para ahorrar overhead.
+          List<Song> songs;
+          if (normalizedList.length == 1) {
+            songs = [Song.fromJson(normalizedList.first)];
+          } else {
+            // Parsear todas las canciones en un isolate para no bloquear el UI thread
+            songs = await Song.parseList(normalizedList);
+          }
 
           final parsedSongs = <FeaturedSong>[];
           for (int i = 0; i < songs.length; i++) {

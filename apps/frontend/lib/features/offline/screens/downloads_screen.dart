@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/offline_manager_provider.dart';
-import '../../../core/providers/unified_audio_provider_fixed.dart'; // Para reproducir
 import '../../../core/providers/playback_notifier.dart'; // ✅ Importar PlaybackNotifier
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/optimized_image.dart';
@@ -126,9 +125,11 @@ class DownloadsScreen extends ConsumerWidget {
                                         context.push('/downloads/song/${song.id}', extra: song);
                                       }
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                                      );
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                        );
+                                      }
                                     }
                                   },
                                 ),

@@ -11,6 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RealtimeService } from './realtime.service';
+import { Interval } from '@nestjs/schedule';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -35,24 +36,24 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   constructor(
     private readonly jwtService: JwtService,
     private readonly realtimeService: RealtimeService,
-  ) {}
+  ) { }
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
       this.logger.log(`🔌 Intento de conexión desde: ${client.handshake.address} (${client.id})`);
       this.logger.debug(`Handshake auth: ${JSON.stringify(client.handshake.auth)}`);
       this.logger.debug(`Handshake query: ${JSON.stringify(client.handshake.query)}`);
-      
+
       // Verificar autenticación JWT desde query params o headers
-      const token = client.handshake.auth?.token || 
-                   client.handshake.query?.token as string;
+      const token = client.handshake.auth?.token ||
+        client.handshake.query?.token as string;
 
       if (!token) {
         this.logger.warn(`⚠️ Cliente intentó conectar sin token: ${client.id}`);
         client.disconnect();
         return;
       }
-      
+
       this.logger.debug(`✅ Token encontrado para cliente: ${client.id}`);
 
       // Verificar y decodificar el token
@@ -64,7 +65,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         client.disconnect();
         return;
       }
-      
+
       if (!payload || !payload.sub) {
         this.logger.warn(`Token sin payload válido para cliente: ${client.id}`);
         client.disconnect();
@@ -90,9 +91,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         // Unir admin a la sala 'admin' para recibir eventos de monitoreo
         client.join('admin');
         await this.realtimeService.addActiveUser(client.userId, client.id);
-        
-        // Enviar conteo actual de usuarios activos solo a admins
-        const activeUsersCount = await this.realtimeService.getActiveUsersCount();
+
+        // Enviar conteo actual de usuarios realmente activos (listeners) a admins
+        const activeUsersCount = await this.realtimeService.getRealActiveUsersCount();
         this.server.to('admin').emit('activeUsersCount', { count: activeUsersCount });
 
         this.logger.log(`Admin conectado: ${client.userId} (${client.id})`);
@@ -119,9 +120,9 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       // Solo actualizar estadísticas de admin si era admin
       if (client.userRole === 'admin') {
         await this.realtimeService.removeActiveUser(client.userId, client.id);
-        
-        // Enviar conteo actualizado solo a admins
-        const activeUsersCount = await this.realtimeService.getActiveUsersCount();
+
+        // Enviar conteo actualizado de usuarios realmente activos a admins
+        const activeUsersCount = await this.realtimeService.getRealActiveUsersCount();
         this.server.to('admin').emit('activeUsersCount', { count: activeUsersCount });
 
         this.logger.log(`Admin desconectado: ${client.userId} (${client.id})`);
@@ -133,14 +134,17 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   @SubscribeMessage('requestActiveUsers')
   async handleRequestActiveUsers(@ConnectedSocket() client: AuthenticatedSocket) {
-    const activeUsersCount = await this.realtimeService.getActiveUsersCount();
+    const activeUsersCount = await this.realtimeService.getRealActiveUsersCount();
     client.emit('activeUsersCount', { count: activeUsersCount });
   }
 
-  // Método para emitir actualización de usuarios activos (llamado externamente)
+  // Método para emitir actualización de usuarios activos (llamado externamente o vía Interval)
+  // 🎯 OPTIMIZADO: Cada 30 segundos en lugar de 15 para reducir carga
+  @Interval(30000)
   async broadcastActiveUsersCount() {
-    const count = await this.realtimeService.getActiveUsersCount();
+    const count = await this.realtimeService.getRealActiveUsersCount();
     this.server.to('admin').emit('activeUsersCount', { count });
+    this.logger.debug(`📢 Broadcast: ${count} usuarios reales activos`);
   }
 
   /**
@@ -151,19 +155,19 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   notifyPremiumStatusChange(userId: string, subscriptionStatus: string): void {
     const userRoom = `user:${userId}`;
     const isConnected = this.isUserConnected(userId);
-    
+
     this.logger.log(`📢 Emitiendo notificación premium a usuario ${userId}`);
     this.logger.log(`   - Sala: ${userRoom}`);
     this.logger.log(`   - Estado: ${subscriptionStatus}`);
     this.logger.log(`   - Usuario conectado: ${isConnected}`);
     this.logger.log(`   - Sockets del usuario: ${this.userSockets.get(userId)?.size ?? 0}`);
-    
+
     const eventData = {
       userId,
       subscriptionStatus,
       timestamp: new Date().toISOString(),
     };
-    
+
     this.server.to(userRoom).emit('premiumStatusChanged', eventData);
     this.logger.log(`✅ Notificación premium enviada a sala ${userRoom}: ${JSON.stringify(eventData)}`);
   }

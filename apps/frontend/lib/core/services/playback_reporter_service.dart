@@ -130,11 +130,26 @@ class PlaybackReporterService {
               );
               
               if (response.statusCode == 200 || response.statusCode == 201) {
-                  if (overrideSongId == null) {
-                    _playRegistered = true; // Solo marcar actual como registrado si no es override
-                  }
-                  if (isFirstValidation) {
-                    AppLogger.info('[PlaybackReporter] ✅ Stream reportado exitosamente');
+                  final responseData = response.data as Map<String, dynamic>?;
+                  final streamRegistered = responseData?['streamRegistered'] as bool? ?? false;
+                  final message = responseData?['message'] as String? ?? '';
+                  
+                  if (streamRegistered) {
+                    if (overrideSongId == null) {
+                      _playRegistered = true; // Solo marcar actual como registrado si no es override
+                    }
+                    if (isFirstValidation) {
+                      AppLogger.success('[PlaybackReporter] ✅ Stream REGISTRADO Y CONTABILIZADO: $targetSongId');
+                    }
+                  } else {
+                    // El backend respondió OK pero NO registró el stream (ya validado o rate-limit)
+                    if (isFirstValidation) {
+                      AppLogger.warning('[PlaybackReporter] ⚠️ Stream NO contabilizado: $message');
+                    }
+                    // Aún así marcamos como registered para evitar spam de requests
+                    if (overrideSongId == null) {
+                      _playRegistered = true;
+                    }
                   }
               } else {
                   AppLogger.warning('[PlaybackReporter] ⚠️ Fallo al reportar stream. Status: ${response.statusCode}');
@@ -178,7 +193,11 @@ class PlaybackReporterService {
     final secondsPlayed = _accumulatedDuration.inSeconds;
     final accumulatedSnapshot = _accumulatedDuration; // 📸 Snapshot para el reporte
 
-    if (previousSongId != null && previousSongId.isNotEmpty) {
+    // ✅ FIX CRÍTICO: Reset del estado ANTES de cualquier return
+    // Esto previene corrupción de estado si hay returns tempranos
+    final shouldResetState = previousSongId != null && previousSongId.isNotEmpty;
+    
+    if (shouldResetState) {
       // 🛡️ PROTECCIÓN: Verificar si estamos en periodo de gracia
       bool isProtected = false;
       if (_ignoreSkipsUntil != null) {
@@ -203,10 +222,8 @@ class PlaybackReporterService {
             // 🛡️ NO REPORTAR SKIP si ya se registró como Play (seguridad contra race conditions)
             if (_playRegistered) {
                AppLogger.warning('[PlaybackReporter] 🛡️ Skip ignorado: Ya se había registrado como Play (Race condition prevenida)');
-               return;
-            }
-
-            if (secondsPlayed < 3 && !isManualSkip) {
+               // ✅ NO hacer return aquí, continuar con el reset de estado
+            } else if (secondsPlayed < 3 && !isManualSkip) {
               // 🛡️ GLITCH GUARD: Si duró menos de 3s y NO fue manual, asumir glitch/auto-skip
               AppLogger.warning('[PlaybackReporter] 🛡️ Ignorando posible glitch/auto-skip: $previousSongId (${secondsPlayed}s) - Sin señal manual');
             } else {
@@ -225,7 +242,7 @@ class PlaybackReporterService {
       }
     }
 
-    // Reset del estado para la nueva canción
+    // ✅ SIEMPRE resetear el estado para la nueva canción (movido aquí para garantizar ejecución)
     _currentSongId = newSongId;
     _accumulatedDuration = Duration.zero;
     _lastPosition = Duration.zero;

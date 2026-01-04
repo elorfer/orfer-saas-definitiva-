@@ -38,6 +38,7 @@ import '../../features/ads/models/audio_ad_model.dart';
 /// Estado de reproducción del motor de audio
 class AudioEngineState {
   final Song? currentSong;
+  final Song? lastConfirmedSong;
   final AudioAd? currentAd;
   final List<Song> queue;
   final int currentIndex;
@@ -56,6 +57,7 @@ class AudioEngineState {
 
   const AudioEngineState({
     this.currentSong,
+    this.lastConfirmedSong,
     this.currentAd,
     this.queue = const [],
     this.currentIndex = 0,
@@ -102,6 +104,7 @@ class AudioEngineState {
 
   AudioEngineState copyWith({
     Song? currentSong,
+    Song? lastConfirmedSong,
     AudioAd? currentAd,
     List<Song>? queue,
     int? currentIndex,
@@ -121,9 +124,11 @@ class AudioEngineState {
     bool clearCurrentAd = false,
     bool clearPalette = false,
     bool clearError = false,
+    bool clearLastConfirmedSong = false,
   }) {
     return AudioEngineState(
       currentSong: clearCurrentSong ? null : (currentSong ?? this.currentSong),
+      lastConfirmedSong: clearLastConfirmedSong ? null : (lastConfirmedSong ?? this.lastConfirmedSong),
       currentAd: clearCurrentAd ? null : (currentAd ?? this.currentAd),
       queue: queue ?? this.queue,
       currentIndex: currentIndex ?? this.currentIndex,

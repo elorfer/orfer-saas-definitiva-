@@ -75,7 +75,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
         child: Drawer(
           backgroundColor: NeumorphismTheme.background,
           child: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: NeumorphismTheme.backgroundGradient,
             ),
             child: SafeArea(
@@ -104,7 +104,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                         Container(
                           width: 60, // ⚡ GAMA BAJA: Reducido
                           height: 60,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             // ⚡ GAMA BAJA: Color sólido sin sombra
                             color: NeumorphismTheme.coffeeMedium,
                             shape: BoxShape.circle,
@@ -120,7 +120,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                         // Nombre del usuario
                         Text(
                           userName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16, // ⚡ GAMA BAJA
                             fontWeight: FontWeight.bold,
                             color: NeumorphismTheme.textPrimary,
@@ -135,7 +135,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                         // Email del usuario
                         Text(
                           userEmail,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12, // ⚡ GAMA BAJA
                             color: NeumorphismTheme.textSecondary,
                             fontWeight: FontWeight.w500,
@@ -171,7 +171,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                               const SizedBox(width: 4),
                               Text(
                                 userRole,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: NeumorphismTheme.coffeeMedium,
@@ -188,8 +188,8 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                   const SizedBox(height: 24),
                   
                   // ⚡ GAMA BAJA: Sección de configuración
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       'Configuración',
                       style: TextStyle(
@@ -256,7 +256,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                               const SizedBox(width: 8),
                               Text(
                                 'Cerrar Sesión',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.red,
@@ -321,7 +321,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: NeumorphismTheme.textPrimary,
@@ -391,7 +391,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           // ⚡ GAMA BAJA: Color sólido sin gradiente ni sombra
           color: NeumorphismTheme.coffeeMedium,
           borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -438,7 +438,7 @@ class _PremiumProfileDrawerState extends ConsumerState<PremiumProfileDrawer> {
                     context.go('/premium');
                   },
                   borderRadius: const BorderRadius.all(Radius.circular(10)),
-                  child: const Center(
+                  child: Center(
                     child: Text(
                       'Ver planes',
                       style: TextStyle(

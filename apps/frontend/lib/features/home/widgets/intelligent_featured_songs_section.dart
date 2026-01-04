@@ -125,7 +125,7 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(
+                          const SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
@@ -133,7 +133,7 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                               color: Color(0xFF8B7A6A),
                             ),
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             'Actualizando recomendaciones...',
                             style: TextStyle(
@@ -159,7 +159,7 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                         foregroundColor: NeumorphismTheme.accentDark,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Ver más',
                         style: TextStyle(
                           fontSize: 14,
@@ -435,7 +435,7 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
       ),
     );
 
-    const songTitleStyle = TextStyle(
+    final songTitleStyle = TextStyle(
       fontSize: 17,
       fontWeight: FontWeight.w700,
       color: NeumorphismTheme.textPrimary,
@@ -443,7 +443,7 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
       decoration: TextDecoration.none,
     );
 
-    const artistNameStyle = TextStyle(
+    final artistNameStyle = TextStyle(
       fontSize: 14,
       fontWeight: FontWeight.w500,
       color: NeumorphismTheme.textSecondary,
@@ -513,7 +513,7 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.person_outline,
                               size: 14,
                               color: NeumorphismTheme.textSecondary,
@@ -532,7 +532,7 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                       badgeSize: 12.0,
                                     )
-                                  : const Text(
+                                  : Text(
                                       'Artista Desconocido',
                                       style: artistNameStyle,
                                       maxLines: 1,

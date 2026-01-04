@@ -7,8 +7,8 @@ import '../../../core/theme/text_styles.dart';
 import '../models/audio_ad_model.dart';
 
 /// Botón de skip para anuncios con countdown
-/// Solo se muestra cuando el anuncio es skippable y ha pasado el tiempo mínimo
-class AdsSkipButton extends ConsumerStatefulWidget {
+/// ✅ FIX: Usa el tiempo de reproducción real del estado para sincronización perfecta
+class AdsSkipButton extends ConsumerWidget {
   final AudioAd ad;
 
   const AdsSkipButton({
@@ -16,72 +16,7 @@ class AdsSkipButton extends ConsumerStatefulWidget {
     required this.ad,
   });
 
-  @override
-  ConsumerState<AdsSkipButton> createState() => _AdsSkipButtonState();
-}
-
-class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
-  Timer? _countdownTimer;
-  int _remainingSeconds = 0;
-  bool _canSkip = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _remainingSeconds = widget.ad.skipAfterSeconds;
-    _startCountdown();
-  }
-
-  @override
-  void didUpdateWidget(AdsSkipButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // ✅ FIX: Si cambió el anuncio, resetear el countdown
-    if (oldWidget.ad.id != widget.ad.id || 
-        oldWidget.ad.skipAfterSeconds != widget.ad.skipAfterSeconds) {
-      _countdownTimer?.cancel();
-      _remainingSeconds = widget.ad.skipAfterSeconds;
-      _canSkip = _remainingSeconds <= 0;
-      if (_canSkip) {
-        // Ya se puede saltar, no iniciar timer
-        return;
-      }
-      _startCountdown();
-    }
-  }
-
-  @override
-  void dispose() {
-    _countdownTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startCountdown() {
-    if (_remainingSeconds <= 0) {
-      setState(() {
-        _canSkip = true;
-      });
-      return;
-    }
-
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-
-      setState(() {
-        _remainingSeconds--;
-        if (_remainingSeconds <= 0) {
-          _canSkip = true;
-          timer.cancel();
-        }
-      });
-    });
-  }
-
-  Future<void> _handleSkip() async {
-    if (!_canSkip) return;
-
+  Future<void> _handleSkip(WidgetRef ref) async {
     try {
       final playbackNotifier = ref.read(playbackNotifierProvider.notifier);
       await playbackNotifier.skipAd();
@@ -91,16 +26,25 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // ✅ FIX: Usar la posición real del audio para sincronizar con los demás widgets
+    final playbackState = ref.watch(playbackNotifierProvider);
+    final currentPositionSeconds = playbackState.currentPosition.inSeconds;
+    
+    // Calcular segundos restantes basado en la posición real del audio
+    final skipAfterSeconds = ad.skipAfterSeconds;
+    final remainingSeconds = (skipAfterSeconds - currentPositionSeconds).clamp(0, skipAfterSeconds);
+    final canSkip = currentPositionSeconds >= skipAfterSeconds;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _canSkip ? _handleSkip : null,
+        onTap: canSkip ? () => _handleSkip(ref) : null,
         borderRadius: const BorderRadius.all(Radius.circular(20)),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: _canSkip
+            color: canSkip
                 ? NeumorphismTheme.coffeeMedium
                 : NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
             borderRadius: const BorderRadius.all(Radius.circular(20)),
@@ -115,15 +59,15 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
               Icon(
                 Icons.skip_next,
                 size: 16,
-                color: _canSkip ? Colors.white : NeumorphismTheme.textSecondary,
+                color: canSkip ? Colors.white : NeumorphismTheme.textSecondary,
               ),
               const SizedBox(width: 4),
               Text(
-                _canSkip ? 'Saltar' : '$_remainingSeconds',
+                canSkip ? 'Saltar' : '$remainingSeconds',
                 style: AppTextStyles.caption.copyWith(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: _canSkip ? Colors.white : NeumorphismTheme.textSecondary,
+                  color: canSkip ? Colors.white : NeumorphismTheme.textSecondary,
                 ),
               ),
             ],

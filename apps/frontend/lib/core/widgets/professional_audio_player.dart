@@ -384,10 +384,17 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FASE 5: Determinar si estamos reproduciendo un anuncio o una canción
-    final isPlayingAd = widget.ad != null;
-    final currentSong = widget.song;
+    // ✅ ANTI-FLICKER: Usar valores cacheados si los actuales son null
+    // Esto previene el parpadeo durante transiciones donde ambos son null momentáneamente
+    final currentSong = widget.song ?? _lastSongId;
     final currentAd = widget.ad;
+    
+    // Actualizar caché solo cuando hay valores válidos
+    if (widget.song != null) _lastSongId = widget.song;
+    if (widget.ad != null) _lastAdId = widget.ad!.id;
+    
+    // Determinar qué mostrar (prioridad a anuncios)
+    final isPlayingAd = widget.ad != null;
     
     // ✅ FIX CRÍTICO: Log removido del build - ya está en didUpdateWidget
     // El build se ejecuta muchas veces, solo loguear cuando realmente cambia el contenido
@@ -398,17 +405,21 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
       extendBodyBehindAppBar: true, // ✅ Extender detrás de la app bar
       body: Stack(
         children: [
-          // ✅ 1. Capa de carátulas persistentes (estilo Spotify)
-          // ✅ FASE 5: Mostrar carátula del anuncio o de la canción según corresponda
+          // ✅ 1. Fondo estático (NO cambia entre anuncio/canción - mismo color)
+          // ✅ ANTI-FLICKER: Fondo NUNCA parpadea porque es constante
           SizedBox.expand(
-            child: isPlayingAd && currentAd != null
-                ? _AdArtworkBackground(ad: currentAd)
-                : currentSong != null
-                    ? PersistentArtworkBackground(
-                        key: ValueKey('background_${currentSong.id}'),
-                        currentSong: currentSong,
-                      )
-                    : const SizedBox.shrink(),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    NeumorphismTheme.coffeeDark.withValues(alpha: 0.95),
+                    NeumorphismTheme.coffeeDark.withValues(alpha: 1.0),
+                  ],
+                ),
+              ),
+            ),
           ),
 
           // 2. Contenido seguro - OPTIMIZADO con CustomScrollView
@@ -1120,6 +1131,7 @@ class _AdArtworkBackground extends StatelessWidget {
   final AudioAd ad;
 
   const _AdArtworkBackground({
+    super.key, // ✅ ANTI-FLICKER: Key para AnimatedSwitcher
     required this.ad,
   });
 

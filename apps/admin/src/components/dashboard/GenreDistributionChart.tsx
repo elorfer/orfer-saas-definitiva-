@@ -83,8 +83,8 @@ export default function GenreDistributionChart() {
   const total = chartData.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <ResponsiveContainer width="100%" height={192}>
-      <PieChart>
+    <ResponsiveContainer width="100%" height={220}>
+      <PieChart margin={{ top: 20, right: 0, bottom: 0, left: 0 }}>
         <Pie
           data={chartData}
           cx="50%"
@@ -100,8 +100,8 @@ export default function GenreDistributionChart() {
             if (percentage < 2) return '';
             return `${formattedName}: ${percentage.toFixed(1)}%`;
           }}
-          outerRadius={70}
-          innerRadius={40}
+          outerRadius={65}
+          innerRadius={35}
           fill="#8884d8"
           dataKey="value"
         >

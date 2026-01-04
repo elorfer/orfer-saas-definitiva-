@@ -22,12 +22,12 @@ export class AnalyticsService {
     private readonly playHistoryRepository: Repository<PlayHistory>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async getGlobalStats(): Promise<any> {
     const totalSongs = await this.songRepository.count();
     const totalArtists = await this.artistRepository.count();
-    
+
     // Contar usuarios
     const totalUsers = await this.userRepository.count();
     const verifiedUsers = await this.userRepository.count({
@@ -36,7 +36,7 @@ export class AnalyticsService {
     const activeUsers = await this.userRepository.count({
       where: { isActive: true },
     });
-    
+
     // Contar artistas destacados (contar con cualquiera de los dos campos)
     const featuredArtistsWithIsFeatured = await this.artistRepository.count({
       where: { isFeatured: true },
@@ -46,12 +46,12 @@ export class AnalyticsService {
     });
     // Usar el mayor de los dos (por si hay inconsistencias)
     const featuredArtists = Math.max(featuredArtistsWithIsFeatured, featuredArtistsWithFeatured);
-    
+
     // Contar canciones publicadas
     const publishedSongs = await this.songRepository.count({
       where: { status: SongStatus.PUBLISHED },
     });
-    
+
     const totalStreams = await this.songRepository
       .createQueryBuilder('song')
       .select('SUM(song.totalStreams)', 'total')
@@ -163,21 +163,16 @@ export class AnalyticsService {
     const startDate = new Date(now);
     startDate.setDate(now.getDate() - (days - 1));
     startDate.setHours(0, 0, 0, 0);
-    
-    const endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
 
-    const playHistory = await this.playHistoryRepository
-      .createQueryBuilder('ph')
-      .select("DATE(ph.played_at)", 'date')
-      .addSelect('COUNT(*)', 'count')
-      .where('ph.played_at >= :startDate', { startDate })
-      .andWhere('ph.played_at <= :endDate', { endDate })
-      .groupBy("DATE(ph.played_at)")
-      .orderBy("DATE(ph.played_at)", 'ASC')
-      .getRawMany();
+    // 🎯 Consulta SQL con ajuste de zona horaria (UTC-5)
+    const playHistory = await this.playHistoryRepository.query(`
+      SELECT DATE(played_at - INTERVAL '5 hours') as date, COUNT(*) as count
+      FROM play_history 
+      GROUP BY DATE(played_at - INTERVAL '5 hours')
+      ORDER BY DATE(played_at - INTERVAL '5 hours') ASC
+    `);
 
-    // Función auxiliar para formatear fecha
+    // Función auxiliar para formatear fecha (YYYY-MM-DD)
     const formatDate = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -185,7 +180,7 @@ export class AnalyticsService {
       return `${year}-${month}-${day}`;
     };
 
-    // Crear un mapa para todas las fechas del período
+    // Crear mapa de fechas para los últimos N días
     const dateMap = new Map<string, number>();
     for (let i = 0; i < days; i++) {
       const date = new Date(startDate);
@@ -196,17 +191,20 @@ export class AnalyticsService {
 
     // Llenar con datos reales
     playHistory.forEach((item: any) => {
-      const date = new Date(item.date);
-      const dateStr = formatDate(date);
+      const dbDate = new Date(item.date);
+      const dateStr = formatDate(dbDate);
       if (dateMap.has(dateStr)) {
         dateMap.set(dateStr, parseInt(item.count) || 0);
       }
     });
 
-    return Array.from(dateMap.entries()).map(([date, count]) => ({
-      date,
-      count,
-    }));
+    // Ordenar por fecha
+    return Array.from(dateMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, count]) => ({
+        date,
+        count,
+      }));
   }
 
   /**
@@ -217,19 +215,14 @@ export class AnalyticsService {
     const startDate = new Date(now);
     startDate.setDate(now.getDate() - (days - 1));
     startDate.setHours(0, 0, 0, 0);
-    
-    const endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
 
-    const activeUsers = await this.playHistoryRepository
-      .createQueryBuilder('ph')
-      .select("DATE(ph.played_at)", 'date')
-      .addSelect('COUNT(DISTINCT ph.user_id)', 'count')
-      .where('ph.played_at >= :startDate', { startDate })
-      .andWhere('ph.played_at <= :endDate', { endDate })
-      .groupBy("DATE(ph.played_at)")
-      .orderBy("DATE(ph.played_at)", 'ASC')
-      .getRawMany();
+    // 🎯 Consulta SQL con ajuste de zona horaria (UTC-5)
+    const activeUsers = await this.playHistoryRepository.query(`
+      SELECT DATE(played_at - INTERVAL '5 hours') as date, COUNT(DISTINCT user_id) as count
+      FROM play_history 
+      GROUP BY DATE(played_at - INTERVAL '5 hours')
+      ORDER BY DATE(played_at - INTERVAL '5 hours') ASC
+    `);
 
     // Función auxiliar para formatear fecha
     const formatDate = (date: Date): string => {
@@ -257,10 +250,12 @@ export class AnalyticsService {
       }
     });
 
-    return Array.from(dateMap.entries()).map(([date, count]) => ({
-      date,
-      count,
-    }));
+    return Array.from(dateMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, count]) => ({
+        date,
+        count,
+      }));
   }
 
   /**
@@ -278,7 +273,7 @@ export class AnalyticsService {
     songs.forEach((song) => {
       const streams = song.totalStreams || 0;
       if (streams === 0) return; // Ignorar canciones sin reproducciones
-      
+
       // Priorizar géneros del array si existe y tiene valores
       if (song.genres && Array.isArray(song.genres) && song.genres.length > 0) {
         const validGenres = song.genres.filter(g => g && g.trim());
@@ -324,7 +319,7 @@ export class AnalyticsService {
 
     // Recalcular total después de filtrar
     const filteredTotal = distribution.reduce((sum, item) => sum + item.count, 0);
-    
+
     // Recalcular porcentajes basados en el total filtrado
     if (filteredTotal > 0) {
       distribution = distribution.map(item => ({
@@ -356,7 +351,7 @@ export class AnalyticsService {
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
     last30Days.setHours(0, 0, 0, 0);
-    
+
     const hourlyStats = await this.playHistoryRepository
       .createQueryBuilder('ph')
       .select('EXTRACT(HOUR FROM ph.played_at)', 'hour')

@@ -147,7 +147,7 @@ class _SongItemState extends ConsumerState<SongItem> {
                     const SizedBox(height: 4),
                     Text(
                       artistName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: NeumorphismTheme.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w400,

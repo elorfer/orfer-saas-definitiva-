@@ -34,16 +34,21 @@ class FinalMiniPlayer extends ConsumerWidget {
       unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
     );
     
-    // ✅ FIX: Si hay un anuncio reproduciéndose, no mostrar el mini reproductor de canción
+    // ✅ FIX DESYNC: Verificar también que currentAd existe
+    final hasActiveAd = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.currentAd != null),
+    );
+    
+    // ✅ FIX: Si hay un anuncio reproduciéndose Y tiene datos, no mostrar
     // El AdsMiniPlayer se mostrará en su lugar
     // DEBUG LOGS
-    if (currentSong == null || isPlayingAd) {
+    if (currentSong == null || (isPlayingAd && hasActiveAd)) {
       // print('[FinalMiniPlayer] Hidden because: Song=${currentSong?.title}, Ad=$isPlayingAd');
     }
     
-    // ✅ FIX: Si hay un anuncio reproduciéndose, no mostrar el mini reproductor de canción
+    // ✅ FIX: Si hay un anuncio reproduciéndose con datos, no mostrar
     // El AdsMiniPlayer se mostrará en su lugar
-    if (isPlayingAd) {
+    if (isPlayingAd && hasActiveAd) {
       return const SizedBox.shrink();
     }
     
@@ -52,13 +57,13 @@ class FinalMiniPlayer extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    // 🥷 NINJA MODE: Verificar visibilidad explícita
-    final isVisible = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.isMiniPlayerVisible),
+    // 🏆 SPOTIFY-LEVEL: Verificar si hay sesión de escucha activa
+    final isSessionActive = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isSessionActive),
     );
     
-    if (!isVisible) {
-      // print('[FinalMiniPlayer] Hidden because isVisible=false (Song: ${currentSong.title})');
+    if (!isSessionActive) {
+      // print('[FinalMiniPlayer] Hidden because isSessionActive=false (Song: ${currentSong.title})')
       return const SizedBox.shrink();
     }
 

@@ -28,7 +28,7 @@ class ImagePlaceholder extends StatelessWidget {
   });
 
   /// Placeholder para artistas (color sólido - GAMA BAJA)
-  const ImagePlaceholder.artist({
+  ImagePlaceholder.artist({
     super.key,
     this.width,
     this.height,
@@ -41,7 +41,7 @@ class ImagePlaceholder extends StatelessWidget {
         isCircular = false;
 
   /// Placeholder para artistas redondos (color sólido - GAMA BAJA)
-  const ImagePlaceholder.artistRound({
+  ImagePlaceholder.artistRound({
     super.key,
     this.width,
     this.height,
@@ -54,7 +54,7 @@ class ImagePlaceholder extends StatelessWidget {
         isCircular = true;
 
   /// Placeholder para canciones (color sólido - GAMA BAJA)
-  const ImagePlaceholder.song({
+  ImagePlaceholder.song({
     super.key,
     this.width,
     this.height,
@@ -67,7 +67,7 @@ class ImagePlaceholder extends StatelessWidget {
         isCircular = false;
 
   /// Placeholder con loading (color sólido - GAMA BAJA, sin shimmer)
-  const ImagePlaceholder.shimmer({
+  ImagePlaceholder.shimmer({
     super.key,
     this.width,
     this.height,
