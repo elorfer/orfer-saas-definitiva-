@@ -8,7 +8,20 @@ import { AppSetting, SettingKeys } from '../../common/entities/app-setting.entit
  * Si no existe en la BD, se retorna este valor.
  */
 const DEFAULT_VALUES: Record<string, number> = {
+  // 📢 ANUNCIOS
   [SettingKeys.AD_FREQUENCY]: 3, // 3 canciones entre cada anuncio
+
+  // 🎵 ALGORITMO DE RECOMENDACIONES
+  [SettingKeys.ALGORITHM_HISTORY_SIZE]: 100,       // Historial de exclusión
+  [SettingKeys.ALGORITHM_PHASE2_COUNT]: 6,         // Canciones que solicita FASE 2.0
+  [SettingKeys.ALGORITHM_PHASE31_COUNT]: 20,       // Canciones que solicita FASE 3.1
+  [SettingKeys.ALGORITHM_BUFFER_SIZE]: 5,          // Buffer inicial FASE 1
+  [SettingKeys.ALGORITHM_PRELOAD_THRESHOLD]: 3,    // Umbral para disparar precarga
+  [SettingKeys.ALGORITHM_CRITICAL_SONGS]: 5,       // Canciones críticas a agregar
+
+  // 📊 CATÁLOGO
+  [SettingKeys.CATALOG_SIZE]: 0,                   // Se auto-calcula
+  [SettingKeys.CATALOG_SMALL_THRESHOLD]: 150,      // Umbral para "catálogo pequeño"
 };
 
 @Injectable()
@@ -18,7 +31,7 @@ export class SettingsService {
   constructor(
     @InjectRepository(AppSetting)
     private readonly settingsRepository: Repository<AppSetting>,
-  ) {}
+  ) { }
 
   /**
    * Obtiene el valor de una configuración por su llave.

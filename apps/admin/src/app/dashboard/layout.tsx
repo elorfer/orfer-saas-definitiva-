@@ -74,6 +74,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Mensaje en Home', href: '/dashboard/home-message', icon: MegaphoneIcon },
     { name: 'Anuncios de Audio', href: '/dashboard/ads', icon: MegaphoneIcon },
     { name: 'Aprobar contenido', href: '/dashboard/approvals', icon: ShieldCheckIcon },
+    { name: 'Configuración', href: '/dashboard/settings', icon: Cog6ToothIcon },
   ];
 
   if (status === 'loading') {
@@ -95,9 +96,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-gray-100 flex">
       <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
         <div className="flex flex-col items-center xl:items-start px-4 mb-8">
-          <img 
-            src="/logo-icon.png" 
-            alt="Logo" 
+          <img
+            src="/logo-icon.png"
+            alt="Logo"
             className="h-20 w-20 object-contain"
             onError={(e) => {
               console.error('Error cargando logo-icon.png');
@@ -120,11 +121,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     router.push(item.href);
                   }
                 }}
-                className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                  isActive
+                className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive
                     ? 'bg-brown-100 text-brown-700'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <item.icon className="h-5 w-5" />
                 <span className="hidden xl:inline">{item.name}</span>

@@ -38,7 +38,20 @@ export class AppSetting {
  * Esto ayuda a evitar errores de tipeo y facilita el autocompletado.
  */
 export const SettingKeys = {
+  // 📢 ANUNCIOS
   AD_FREQUENCY: 'ad_frequency', // Número de canciones entre anuncios
+
+  // 🎵 ALGORITMO DE RECOMENDACIONES
+  ALGORITHM_HISTORY_SIZE: 'algorithm_history_size',         // Historial de exclusión (default: 100)
+  ALGORITHM_PHASE2_COUNT: 'algorithm_phase2_count',         // Canciones que solicita FASE 2.0 (default: 6)
+  ALGORITHM_PHASE31_COUNT: 'algorithm_phase31_count',       // Canciones que solicita FASE 3.1 (default: 20)
+  ALGORITHM_BUFFER_SIZE: 'algorithm_buffer_size',           // Buffer inicial FASE 1 (default: 5)
+  ALGORITHM_PRELOAD_THRESHOLD: 'algorithm_preload_threshold', // Umbral para disparar precarga (default: 3)
+  ALGORITHM_CRITICAL_SONGS: 'algorithm_critical_songs',     // Canciones críticas a agregar (default: 5)
+
+  // 📊 CATÁLOGO
+  CATALOG_SIZE: 'catalog_size',                             // Total de canciones en el catálogo (auto-calculado)
+  CATALOG_SMALL_THRESHOLD: 'catalog_small_threshold',       // Umbral para "catálogo pequeño" (default: 150)
 } as const;
 
 export type SettingKey = typeof SettingKeys[keyof typeof SettingKeys];
