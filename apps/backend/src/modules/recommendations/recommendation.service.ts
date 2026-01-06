@@ -8,6 +8,8 @@ import { SongStatus } from '../../common/entities/song.entity';
 import { SongLike } from '../../common/entities/song-like.entity';
 import { ArtistFollower } from '../../common/entities/artist-follower.entity';
 import { Not } from 'typeorm';
+import { SettingsService } from '../settings/settings.service';
+import { SettingKeys } from '../../common/entities/app-setting.entity';
 
 /**
  * 🎛️ RESULTADO DEL BATCH CON METADATA
@@ -57,6 +59,7 @@ export class RecommendationService {
     private readonly songLikeRepository: Repository<SongLike>,
     @InjectRepository(ArtistFollower)
     private readonly artistFollowerRepository: Repository<ArtistFollower>,
+    private readonly settingsService: SettingsService, // 🎛️ Admin settings
   ) {
     // Limpiar historial expirado cada 10 minutos
     setInterval(() => {
@@ -1313,16 +1316,40 @@ export class RecommendationService {
   ): Promise<ScoredSong[]> {
     const scoredSongs: ScoredSong[] = [];
 
+    // 🎛️ OBTENER PESOS DEL ADMIN (0-100) y convertir a decimales (0.0-1.0)
+    const [
+      adminGenreWeight,
+      adminPopularityWeight,
+      adminArtistWeight,
+      adminNoveltyWeight,
+      adminAffinityWeight
+    ] = await Promise.all([
+      this.settingsService.getValue(SettingKeys.WEIGHT_GENRE),
+      this.settingsService.getValue(SettingKeys.WEIGHT_POPULARITY),
+      this.settingsService.getValue(SettingKeys.WEIGHT_ARTIST),
+      this.settingsService.getValue(SettingKeys.WEIGHT_NOVELTY),
+      this.settingsService.getValue(SettingKeys.WEIGHT_AFFINITY),
+    ]);
+
+    // Normalizar a decimales (Admin usa 0-100, scoring usa 0.0-1.0)
+    const baseGenreWeight = adminGenreWeight / 100;
+    const basePopularityWeight = adminPopularityWeight / 100;
+    const baseArtistWeight = adminArtistWeight / 100;
+    const baseNoveltyWeight = adminNoveltyWeight / 100;
+    const baseAffinityWeight = adminAffinityWeight / 100;
+
     // 🚨 LOOP DETECTION: Ajustar pesos cuando detecta loops
-    // Reducir peso de semilla (género/artista) y aumentar peso de diversidad (novedad/diferentes géneros)
-    const genreWeight = loopDetected ? 0.15 : 0.30; // Reducir de 30% a 15%
-    const popularityWeight = loopDetected ? 0.10 : 0.20; // Reducir de 20% a 10%
-    const artistWeight = loopDetected ? 0.05 : 0.10; // Reducir de 10% a 5%
-    const noveltyWeight = loopDetected ? 0.40 : 0.20; // Aumentar de 20% a 40%
-    const diversityWeight = loopDetected ? 0.30 : 0.20; // Aumentar de 20% a 30% (afinidad + diversidad)
+    // Reducir pesos de semilla (género/artista) a la mitad y aumentar diversidad
+    const genreWeight = loopDetected ? baseGenreWeight * 0.5 : baseGenreWeight;
+    const popularityWeight = loopDetected ? basePopularityWeight * 0.5 : basePopularityWeight;
+    const artistWeight = loopDetected ? baseArtistWeight * 0.5 : baseArtistWeight;
+    const noveltyWeight = loopDetected ? baseNoveltyWeight * 2 : baseNoveltyWeight; // Duplicar novedad
+    const diversityWeight = loopDetected ? baseAffinityWeight * 1.5 : baseAffinityWeight; // +50% afinidad
 
     if (loopDetected) {
-      this.logger.warn(`🔄 [SCORING] Modo diversidad activado: Género=${genreWeight}, Popularidad=${popularityWeight}, Artista=${artistWeight}, Novedad=${noveltyWeight}, Diversidad=${diversityWeight}`);
+      this.logger.warn(`🔄 [SCORING] Modo diversidad activado: Género=${(genreWeight * 100).toFixed(0)}%, Popularidad=${(popularityWeight * 100).toFixed(0)}%, Artista=${(artistWeight * 100).toFixed(0)}%, Novedad=${(noveltyWeight * 100).toFixed(0)}%, Diversidad=${(diversityWeight * 100).toFixed(0)}%`);
+    } else {
+      this.logger.debug(`🎛️ [SCORING] Pesos Admin: Género=${adminGenreWeight}%, Popularidad=${adminPopularityWeight}%, Artista=${adminArtistWeight}%, Novedad=${adminNoveltyWeight}%, Afinidad=${adminAffinityWeight}%`);
     }
 
     for (const candidate of candidates) {
@@ -1811,7 +1838,7 @@ export class RecommendationService {
 
       // 🚨 CATÁLOGO PEQUEÑO: Si el catálogo es pequeño, reducir exclusiones agresivas
       // Estrategia adaptativa basada en el tamaño del catálogo
-      const adaptiveExcludeLimit = this.getAdaptiveExcludeLimit(totalSongs, excludeIds.length);
+      const adaptiveExcludeLimit = await this.getAdaptiveExcludeLimit(totalSongs, excludeIds.length);
 
       // Mantener solo los excludeIds más recientes (últimos N) para catálogos pequeños
       const effectiveExcludeIds = excludeIds.slice(-adaptiveExcludeLimit);
@@ -2094,18 +2121,32 @@ export class RecommendationService {
 
   /**
    * 🎯 CALCULAR LÍMITE ADAPTATIVO DE EXCLUSIONES
-   * Ajusta dinámicamente cuántos IDs excluir basándose en el tamaño del catálogo
+   * Ajusta dinámicamente cuántos IDs excluir basándose en:
+   * 1. El historySize configurado en el Admin
+   * 2. El tamaño del catálogo
+   * 3. Lo que el frontend solicitó
    */
-  private getAdaptiveExcludeLimit(totalSongs: number, requestedExcludes: number): number {
-    // Si hay muchas canciones, usar todas las exclusiones solicitadas
+  private async getAdaptiveExcludeLimit(totalSongs: number, requestedExcludes: number): Promise<number> {
+    // 🎛️ OBTENER HISTORYSIZE DEL ADMIN
+    const adminHistorySize = await this.settingsService.getValue(SettingKeys.ALGORITHM_HISTORY_SIZE);
+
+    // El límite máximo es lo que configuró el Admin
+    const maxAllowedByAdmin = Math.min(adminHistorySize, requestedExcludes);
+
+    // Si hay muchas canciones (>=50), usar el límite del Admin
     if (totalSongs >= 50) {
-      return requestedExcludes;
+      this.logger.log(`🎛️ [ADAPTIVE EXCLUDE] Catálogo grande (${totalSongs}): usando límite Admin=${adminHistorySize}, solicitado=${requestedExcludes}, final=${maxAllowedByAdmin}`);
+      return maxAllowedByAdmin;
     }
 
-    // 🚨 PLAN DE CHOQUE: Para catálogos < 50, ser MUY permisivo
-    // Excluir solo las últimas 3-5 canciones para permitir que el algoritmo "muerda"
-    // canciones anteriores rápidamente (re-comendación circular)
-    return Math.min(5, requestedExcludes);
+    // 🎯 CATÁLOGO PEQUEÑO: Aplicar proporción basada en el catálogo
+    // Permitir excluir hasta el 60% del catálogo, pero no más que el Admin permite
+    const proportionalLimit = Math.floor(totalSongs * 0.6);
+    const finalLimit = Math.min(proportionalLimit, maxAllowedByAdmin, requestedExcludes);
+
+    this.logger.log(`🎛️ [ADAPTIVE EXCLUDE] Catálogo pequeño (${totalSongs}): Admin=${adminHistorySize}, proporcional=${proportionalLimit}, final=${finalLimit}/${requestedExcludes}`);
+
+    return Math.max(5, finalLimit); // Mínimo 5 para evitar repeticiones inmediatas
   }
 
   /**

@@ -9,7 +9,8 @@ import {
     ChartBarIcon,
     ArrowPathIcon,
     CheckCircleIcon,
-    ExclamationCircleIcon
+    ExclamationCircleIcon,
+    AdjustmentsHorizontalIcon
 } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api';
 
@@ -30,6 +31,12 @@ interface AlgorithmSettings {
     catalog_size: number;
     catalog_small_threshold: number;
     ad_frequency: number;
+    // 🎯 Pesos del Scoring
+    weight_genre: number;
+    weight_popularity: number;
+    weight_artist: number;
+    weight_novelty: number;
+    weight_affinity: number;
 }
 
 const DEFAULT_SETTINGS: AlgorithmSettings = {
@@ -42,6 +49,12 @@ const DEFAULT_SETTINGS: AlgorithmSettings = {
     catalog_size: 0,
     catalog_small_threshold: 150,
     ad_frequency: 3,
+    // 🎯 Pesos del Scoring (suman 100)
+    weight_genre: 30,
+    weight_popularity: 20,
+    weight_artist: 10,
+    weight_novelty: 20,
+    weight_affinity: 20,
 };
 
 const SETTING_DESCRIPTIONS: Record<string, { label: string; description: string; min: number; max: number; color: string }> = {
@@ -100,6 +113,42 @@ const SETTING_DESCRIPTIONS: Record<string, { label: string; description: string;
         min: 1,
         max: 20,
         color: 'rose',
+    },
+    // 🎯 PESOS DEL SCORING
+    weight_genre: {
+        label: 'Peso: Género',
+        description: 'Importancia de la similitud de género en las recomendaciones.',
+        min: 0,
+        max: 100,
+        color: 'emerald',
+    },
+    weight_popularity: {
+        label: 'Peso: Popularidad',
+        description: 'Importancia de la popularidad relativa de las canciones.',
+        min: 0,
+        max: 100,
+        color: 'sky',
+    },
+    weight_artist: {
+        label: 'Peso: Artista',
+        description: 'Bonus para recomendar canciones del mismo artista.',
+        min: 0,
+        max: 100,
+        color: 'pink',
+    },
+    weight_novelty: {
+        label: 'Peso: Novedad',
+        description: 'Preferencia por canciones más recientes del catálogo.',
+        min: 0,
+        max: 100,
+        color: 'cyan',
+    },
+    weight_affinity: {
+        label: 'Peso: Afinidad',
+        description: 'Importancia de las preferencias del usuario (historial, likes).',
+        min: 0,
+        max: 100,
+        color: 'teal',
     },
 };
 
@@ -581,6 +630,130 @@ export default function SettingsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderSettingCard('ad_frequency')}
+                </div>
+            </div>
+
+            {/* Scoring Weights */}
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <AdjustmentsHorizontalIcon className="h-5 w-5 text-emerald-500" />
+                        Pesos del Scoring
+                    </h2>
+                    {/* Total indicator */}
+                    {(() => {
+                        const total = settings.weight_genre + settings.weight_popularity +
+                            settings.weight_artist + settings.weight_novelty + settings.weight_affinity;
+                        const isBalanced = total === 100;
+                        return (
+                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${isBalanced
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                                }`}>
+                                {isBalanced ? (
+                                    <CheckCircleIcon className="h-4 w-4" />
+                                ) : (
+                                    <ExclamationCircleIcon className="h-4 w-4" />
+                                )}
+                                Total: {total}% {isBalanced ? '✓' : `(debe ser 100%)`}
+                            </div>
+                        );
+                    })()}
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                    Ajusta cómo el algoritmo pondera cada factor al recomendar canciones. La suma debe ser 100%.
+                </p>
+
+                {/* 🎯 PRESETS DE SCORING */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl">
+                    <h3 className="text-sm font-semibold text-emerald-800 mb-3">🎯 Presets de Scoring Rápidos</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {/* Coherente */}
+                        <button
+                            onClick={async () => {
+                                const weights = { weight_genre: 40, weight_popularity: 20, weight_artist: 15, weight_novelty: 10, weight_affinity: 15 };
+                                for (const [key, value] of Object.entries(weights)) {
+                                    await updateSetting(key, value);
+                                }
+                            }}
+                            className={`p-3 rounded-lg border-2 text-center transition-all hover:scale-105 ${settings.weight_genre === 40 && settings.weight_novelty === 10
+                                ? 'border-emerald-500 bg-emerald-100'
+                                : 'border-emerald-200 bg-white hover:border-emerald-300'
+                                }`}
+                        >
+                            <div className="text-xl mb-1">🎵</div>
+                            <div className="text-xs font-semibold text-emerald-800">Coherente</div>
+                            <div className="text-[10px] text-emerald-600">Más género (40%)</div>
+                        </button>
+
+                        {/* Balanceado */}
+                        <button
+                            onClick={async () => {
+                                const weights = { weight_genre: 30, weight_popularity: 20, weight_artist: 10, weight_novelty: 20, weight_affinity: 20 };
+                                for (const [key, value] of Object.entries(weights)) {
+                                    await updateSetting(key, value);
+                                }
+                            }}
+                            className={`p-3 rounded-lg border-2 text-center transition-all hover:scale-105 ${settings.weight_genre === 30 && settings.weight_novelty === 20 && settings.weight_affinity === 20
+                                ? 'border-emerald-500 bg-emerald-100'
+                                : 'border-emerald-200 bg-white hover:border-emerald-300'
+                                }`}
+                        >
+                            <div className="text-xl mb-1">⚖️</div>
+                            <div className="text-xs font-semibold text-emerald-800">Balanceado</div>
+                            <div className="text-[10px] text-emerald-600">Estándar (30/20/10/20/20)</div>
+                        </button>
+
+                        {/* Variado */}
+                        <button
+                            onClick={async () => {
+                                const weights = { weight_genre: 20, weight_popularity: 15, weight_artist: 5, weight_novelty: 30, weight_affinity: 30 };
+                                for (const [key, value] of Object.entries(weights)) {
+                                    await updateSetting(key, value);
+                                }
+                            }}
+                            className={`p-3 rounded-lg border-2 text-center transition-all hover:scale-105 ${settings.weight_genre === 20 && settings.weight_novelty === 30
+                                ? 'border-emerald-500 bg-emerald-100'
+                                : 'border-emerald-200 bg-white hover:border-emerald-300'
+                                }`}
+                        >
+                            <div className="text-xl mb-1">🎲</div>
+                            <div className="text-xs font-semibold text-emerald-800">Variado</div>
+                            <div className="text-[10px] text-emerald-600">Más novedad (30%)</div>
+                        </button>
+
+                        {/* Personalizado */}
+                        <button
+                            onClick={async () => {
+                                const weights = { weight_genre: 25, weight_popularity: 15, weight_artist: 5, weight_novelty: 20, weight_affinity: 35 };
+                                for (const [key, value] of Object.entries(weights)) {
+                                    await updateSetting(key, value);
+                                }
+                            }}
+                            className={`p-3 rounded-lg border-2 text-center transition-all hover:scale-105 ${settings.weight_affinity === 35
+                                ? 'border-emerald-500 bg-emerald-100'
+                                : 'border-emerald-200 bg-white hover:border-emerald-300'
+                                }`}
+                        >
+                            <div className="text-xl mb-1">👤</div>
+                            <div className="text-xs font-semibold text-emerald-800">Personalizado</div>
+                            <div className="text-[10px] text-emerald-600">Más afinidad (35%)</div>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {renderSettingCard('weight_genre')}
+                    {renderSettingCard('weight_popularity')}
+                    {renderSettingCard('weight_artist')}
+                    {renderSettingCard('weight_novelty')}
+                    {renderSettingCard('weight_affinity')}
+                </div>
+                <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-sm text-emerald-700">
+                        <strong>💡 Ejemplo:</strong> Si quieres más canciones del mismo género, aumenta "Peso: Género".
+                        Si prefieres más variedad, reduce ese peso y aumenta "Peso: Novedad" o "Peso: Afinidad".
+                    </p>
                 </div>
             </div>
 

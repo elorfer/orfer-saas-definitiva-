@@ -19,6 +19,13 @@ const DEFAULT_VALUES: Record<string, number> = {
   [SettingKeys.ALGORITHM_PRELOAD_THRESHOLD]: 3,    // Umbral para disparar precarga
   [SettingKeys.ALGORITHM_CRITICAL_SONGS]: 5,       // Canciones críticas a agregar
 
+  // 🎯 PESOS DEL SCORING (valores 0-100, suman 100)
+  [SettingKeys.WEIGHT_GENRE]: 30,       // 30% - Similitud de género
+  [SettingKeys.WEIGHT_POPULARITY]: 20,  // 20% - Popularidad relativa
+  [SettingKeys.WEIGHT_ARTIST]: 10,      // 10% - Mismo artista
+  [SettingKeys.WEIGHT_NOVELTY]: 20,     // 20% - Novedad (canciones recientes)
+  [SettingKeys.WEIGHT_AFFINITY]: 20,    // 20% - Afinidad de usuario
+
   // 📊 CATÁLOGO
   [SettingKeys.CATALOG_SIZE]: 0,                   // Se auto-calcula
   [SettingKeys.CATALOG_SMALL_THRESHOLD]: 150,      // Umbral para "catálogo pequeño"

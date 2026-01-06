@@ -118,6 +118,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   // 🎯 Historial de exclusión (DINÁMICO) - Se ajusta según tamaño del catálogo
   int get historyExcludeLimit => _algorithmConfig.effectiveHistorySize;
   
+  // 🎯 Buffer inicial FASE 1 (DINÁMICO) - Canciones antes de reproducir
+  int get bufferSize => _algorithmConfig.bufferSize;
+  
   // 🚨 SINCRONIZACIÓN: Flag para prevenir actualizaciones concurrentes del estado
   bool _isUpdatingQueue = false;
   // Flag para evitar múltiples ejecuciones de playFromCard al mismo tiempo
@@ -209,6 +212,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       AppLogger.info('[PlaybackNotifier]    • Historial: ${config.historySize} (efectivo: ${config.effectiveHistorySize})');
       AppLogger.info('[PlaybackNotifier]    • FASE 2.0: ${config.phase2Count} canciones');
       AppLogger.info('[PlaybackNotifier]    • FASE 3.1: ${config.phase31Count} canciones');
+      AppLogger.info('[PlaybackNotifier]    • Buffer inicial: ${config.bufferSize} canciones');
       AppLogger.info('[PlaybackNotifier]    • Umbral precarga: ${config.preloadThreshold}');
       AppLogger.info('[PlaybackNotifier]    • Canciones críticas: ${config.criticalSongs}');
       if (config.isSmallCatalog) {
@@ -2349,15 +2353,25 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final playedIds = ref.read(playbackSessionProvider.notifier).getPlayedSongIds(limit: historyExcludeLimit);
       // Incluir canciones actuales en la cola (playlist) para evitar duplicados en la transición
       final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
-      final excludeIds = excludeSeedFromQueue 
-          ? {...playedIds, seedSong.id, ...currentQueueIds}
-          : {...playedIds, ...currentQueueIds};
+      
+      // 🚨 FIX: Limitar excludeIds al historyExcludeLimit del Admin
+      var combinedExcludeIds = excludeSeedFromQueue 
+          ? {...playedIds, seedSong.id, ...currentQueueIds}.toList()
+          : {...playedIds, ...currentQueueIds}.toList();
+      
+      // 🎯 LIMITAR al historyExcludeLimit del Admin
+      if (combinedExcludeIds.length > historyExcludeLimit) {
+        combinedExcludeIds = combinedExcludeIds.sublist(
+          combinedExcludeIds.length - historyExcludeLimit
+        );
+      }
+      final excludeIds = combinedExcludeIds.toSet();
       
       // ⚡ OBTENER BUFFER INICIAL: 4-5 canciones para transición más suave
       // Aumentado de 2 a 4-5 para que la transición entre Fase 1 y Fase 2 sea menos abrupta
       // Esto garantiza que haya suficientes canciones mientras la Fase 2 completa se ejecuta en background
       final quickRecommendations = await _intelligentService.getIntelligentFeaturedSongs(
-        limit: 5, // 🎯 5 canciones para buffer inicial más generoso (antes: 2)
+        limit: bufferSize, // 🎛️ DINÁMICO: Configurable desde Admin
         currentSongId: seedSong.id,
         forceRefresh: true,
         excludeIds: excludeIds,
@@ -2379,7 +2393,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             return isNew;
           })
           .where((s) => s.isValidForPlayback) // 🚨 CRÍTICO: Solo canciones válidas
-          .take(5) // Máximo 5 canciones para buffer inicial más generoso (antes: 2)
+          .take(bufferSize) // 🎛️ DINÁMICO: Configurable desde Admin
           .toList();
       
       if (validSongs.isEmpty) {
@@ -2440,9 +2454,19 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 🎛️ DINÁMICO: Usa historyExcludeLimit que se configura desde el Admin
       final playedIds = sessionNotifier.getPlayedSongIds(limit: historyExcludeLimit);
       final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
-      final excludeIds = excludeSeedFromQueue 
-          ? {...playedIds, seedSong.id, ...currentQueueIds}
-          : {...playedIds, ...currentQueueIds};
+      
+      // 🚨 FIX: Limitar excludeIds al historyExcludeLimit del Admin
+      var combinedExcludeIds = excludeSeedFromQueue 
+          ? {...playedIds, seedSong.id, ...currentQueueIds}.toList()
+          : {...playedIds, ...currentQueueIds}.toList();
+      
+      // 🎯 LIMITAR al historyExcludeLimit del Admin
+      if (combinedExcludeIds.length > historyExcludeLimit) {
+        combinedExcludeIds = combinedExcludeIds.sublist(
+          combinedExcludeIds.length - historyExcludeLimit
+        );
+      }
+      final excludeIds = combinedExcludeIds.toSet();
       
       // 🎯 Obtener canciones que ya están en la cola para usarlas como semillas
       // Esto incluye la semilla original + las canciones del buffer inicial
@@ -2634,12 +2658,23 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     try {
       // 🎯 FASE 1: Obtener excludeIds del servicio centralizado
       final sessionNotifier = ref.read(playbackSessionProvider.notifier);
-      final totalKnown = sessionNotifier.getPlayedSongIds().length + state.currentQueue.length;
-      final excludeLimit = totalKnown <= 12 ? 5 : (excludeSeedFromQueue ? 15 : 8);
-      final playedIds = sessionNotifier.getPlayedSongIds(limit: excludeLimit);
-      final excludeIds = excludeSeedFromQueue 
-          ? {...playedIds, seedSong.id}
-          : playedIds;
+      
+      // 🚨 FIX: Usar historyExcludeLimit del Admin en lugar de lógica ad-hoc
+      final playedIds = sessionNotifier.getPlayedSongIds(limit: historyExcludeLimit);
+      final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
+      
+      // Construir y limitar excludeIds
+      var combinedExcludeIds = excludeSeedFromQueue 
+          ? {...playedIds, seedSong.id, ...currentQueueIds}.toList()
+          : {...playedIds, ...currentQueueIds}.toList();
+      
+      // 🎯 LIMITAR al historyExcludeLimit del Admin
+      if (combinedExcludeIds.length > historyExcludeLimit) {
+        combinedExcludeIds = combinedExcludeIds.sublist(
+          combinedExcludeIds.length - historyExcludeLimit
+        );
+      }
+      final excludeIds = combinedExcludeIds.toSet();
       
       // Usar IntelligentFeaturedService para obtener recomendaciones
       // IMPORTANTE: Excluir la semilla y el historial reciente para evitar repetición
@@ -2720,33 +2755,35 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   /// Calcula cuántas canciones quedan por delante de la canción actual.
   /// Retorna -1 si no se puede determinar (cola vacía o índice inválido).
   /// 🎯 FASE 2: Función centralizada para obtener canciones restantes
-  /// Usa el índice real de audio cuando esté disponible para mayor precisión
+  /// 🚨 FIX CRÍTICO: Usa la cola REAL del reproductor (service.player.sequence)
+  /// para consistencia con AD GUARD y evitar desincronizaciones
   int _getRemainingQueueSize() {
-    if (state.currentQueue.isEmpty) return -1;
+    // 🚨 FUENTE DE VERDAD: Usar la cola REAL del reproductor, NO state.currentQueue
+    // Esto garantiza consistencia con AD GUARD que también usa service.player.sequence
+    final sequence = service.player.sequence;
+    if (sequence == null || sequence.isEmpty) return -1;
     
-    // 🚨 MEJORA: Intentar usar el índice real de audio primero (más preciso)
-    final sequenceState = service.player.sequenceState;
-    final audioCurrentIndex = sequenceState.currentIndex;
-    
-    int currentIndex;
-    if (audioCurrentIndex != null && audioCurrentIndex >= 0 && audioCurrentIndex < state.currentQueue.length) {
-      // Usar índice real de audio (más confiable)
-      currentIndex = audioCurrentIndex;
-    } else {
-      // Fallback: buscar canción actual en la cola
-      final currentSong = state.currentSong;
-      if (currentSong == null) return -1;
-      
-      currentIndex = state.currentQueue.indexWhere(
-        (s) => s.id == currentSong.id,
-      );
-      
-      if (currentIndex == -1) return -1;
+    // Contar solo canciones (excluir anuncios AudioAd)
+    int songCount = 0;
+    for (final source in sequence) {
+      if (source.tag is Song) {
+        songCount++;
+      }
     }
     
-    // Calcular canciones restantes: total - índice actual - 1 (porque el índice es 0-based)
-    final remainingSongs = state.currentQueue.length - currentIndex - 1;
-    return remainingSongs >= 0 ? remainingSongs : 0;
+    if (songCount == 0) return -1;
+    
+    final currentIndex = service.player.currentIndex ?? 0;
+    
+    // Contar canciones restantes DESPUÉS del índice actual (excluyendo anuncios)
+    int remainingSongs = 0;
+    for (int i = currentIndex + 1; i < sequence.length; i++) {
+      if (sequence[i].tag is Song) {
+        remainingSongs++;
+      }
+    }
+    
+    return remainingSongs;
   }
 
   /// 🚀 SPOTIFY-LEVEL: Agregar más canciones a la cola del algoritmo
@@ -2760,6 +2797,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   Future<void> _appendMoreAlgorithmSongs({bool forceIgnoreCooldown = false}) async {
     // 🚨 CONTROL DE CONCURRENCIA: Evitar múltiples llamadas simultáneas
     if (_isPreloading || state.currentQueue.isEmpty) {
+      if (_isPreloading) {
+        AppLogger.debug('[PlaybackNotifier] ⏳ FASE 3.1 BLOQUEADO: Ya hay precarga en curso');
+      }
+      if (state.currentQueue.isEmpty) {
+        AppLogger.warning('[PlaybackNotifier] ⚠️ FASE 3.1 BLOQUEADO: Cola vacía');
+      }
       // 🚨 CRÍTICO: Completar Completer si existe para evitar bloqueos
       if (_preloadCompleter != null && !_preloadCompleter!.isCompleted) {
         _preloadCompleter!.complete();
@@ -2804,6 +2847,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       
       final currentSong = state.currentSong ?? _lastConfirmedSong;
       if (currentSong == null) {
+        AppLogger.warning('[PlaybackNotifier] ⚠️ FASE 3.1 ABORT: currentSong es null');
         _isPreloading = false;
         return;
       }
@@ -2815,6 +2859,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 🎯 FASE 2: Usar función centralizada para obtener canciones restantes
       final remainingSongs = _getRemainingQueueSize();
       if (remainingSongs == -1) {
+        AppLogger.warning('[PlaybackNotifier] ⚠️ FASE 3.1 ABORT: No se pudo determinar tamaño de cola');
         _isPreloading = false;
         return; // No se puede determinar, salir silenciosamente
       }
@@ -2823,6 +2868,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final isUrgentPreload = remainingSongs <= 2;
       
       if (!isUrgentPreload && !shouldPreloadByTime) {
+        AppLogger.debug('[PlaybackNotifier] ⏳ FASE 3.1 SKIP: No es urgente ni por tiempo (remaining=$remainingSongs, isUrgent=$isUrgentPreload, byTime=$shouldPreloadByTime)');
         _isPreloading = false; // Liberar flag antes de retornar
         return; // Silencioso: condición no cumplida
       }
@@ -2831,6 +2877,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final shouldPreloadByCount = remainingSongs <= preloadThreshold;
       
       if (!isUrgentPreload && !shouldPreloadByCount) {
+        AppLogger.debug('[PlaybackNotifier] ⏳ FASE 3.1 SKIP: Hay suficientes canciones (remaining=$remainingSongs, threshold=$preloadThreshold, isUrgent=$isUrgentPreload)');
         _isPreloading = false; // Liberar flag antes de retornar
         // 🚨 CRÍTICO: Completar Completer si existe para evitar bloqueos
         if (_preloadCompleter != null && !_preloadCompleter!.isCompleted) {
@@ -2864,14 +2911,28 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // 3. Combinar ambas fuentes para máxima cobertura
       final allQueueIds = {...allAudioQueueIds, ...allStateQueueIds};
       
-      // 4. Obtener TODAS las canciones del historial reciente
+      // 4. Obtener las canciones del historial reciente
       // 🎛️ DINÁMICO: Usa historyExcludeLimit que se configura desde el Admin
       final allPlayedIds = sessionNotifier.getPlayedSongIds(limit: historyExcludeLimit);
       
-      // 5. Construir lista de exclusión completa
-      final excludeIds = {...allQueueIds, ...allPlayedIds};
+      // 5. Construir lista de exclusión LIMITADA por configuración del Admin
+      // 🚨 FIX: Antes enviábamos TODOS los IDs, ahora respetamos el límite del Admin
+      // Prioridad: Cola actual (más reciente) > Historial (más antiguo)
+      var combinedExcludeIds = {...allQueueIds, ...allPlayedIds}.toList();
       
-      AppLogger.info('[PlaybackNotifier] 🔍 Precarga: EXCLUSIÓN REFORZADA - Excluyendo ${excludeIds.length} IDs (${allQueueIds.length} en cola + ${allPlayedIds.length} reproducidas)');
+      // 🎯 LIMITAR al historyExcludeLimit del Admin
+      // Si el total excede el límite, recortar las canciones más antiguas
+      if (combinedExcludeIds.length > historyExcludeLimit) {
+        // Mantener las más recientes (las últimas en la lista)
+        combinedExcludeIds = combinedExcludeIds.sublist(
+          combinedExcludeIds.length - historyExcludeLimit
+        );
+        AppLogger.info('[PlaybackNotifier] 🎛️ LÍMITE ADMIN: Recortando a $historyExcludeLimit IDs (${allQueueIds.length} en cola + ${allPlayedIds.length} historial → limitado)');
+      }
+      
+      final excludeIds = combinedExcludeIds.toSet();
+      
+      AppLogger.info('[PlaybackNotifier] 🔍 Precarga: EXCLUSIÓN LIMITADA - Excluyendo ${excludeIds.length} IDs (límite Admin: $historyExcludeLimit)');
       
       // ⚡ TRANSICIÓN INSTANTÁNEA: Obtener más recomendaciones
       // 🎛️ DINÁMICO: Usa phase31Count que se configura desde el Admin
@@ -3036,6 +3097,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       if (_preloadCompleter != null && !_preloadCompleter!.isCompleted) {
         _preloadCompleter!.complete();
         _preloadCompleter = null;
+      }
+      
+      // 🚀 REINICIAR MONITOR: Si estamos en modo algoritmo y el monitor no está activo, reiniciarlo
+      // Esto asegura que FASE 2.0 siga funcionando después de precargas de emergencia
+      if (state.playbackMode == PlaybackMode.algorithm && _algorithmMonitorTimer == null) {
+        AppLogger.info('[PlaybackNotifier] 🔄 FASE 3.1: Reiniciando Monitor de FASE 2 después de precarga');
+        _startAlgorithmMonitor();
       }
     }
   }
@@ -4697,7 +4765,15 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   }
 
   /// Saltar anuncio actual (llamado desde UI)
+  /// ✅ OPTIMIZADO: Consolidación de estados y limpieza de flags
+  /// ✅ PROTECCIÓN: Evita doble click con flag _isCompletingAd
   Future<void> skipAd() async {
+    // 🛡️ PROTECCIÓN DOBLE CLICK: Si ya está procesando un skip, ignorar
+    if (_isCompletingAd) {
+      AppLogger.warning('[PlaybackNotifier] ⚠️ skipAd() ignorado: ya hay un skip en proceso');
+      return;
+    }
+    
     final currentAd = state.currentAd;
     if (currentAd == null || !state.isPlayingAd) {
       return;
@@ -4705,88 +4781,95 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     
     AppLogger.info('[PlaybackNotifier] 🛑 Saltando anuncio: ${currentAd.title}');
     
-    // 🛡️ ANTI-LOOP: Activar el escudo ANTES de cualquier cambio
+    // 🛡️ ANTI-LOOP: Activar escudos ANTES de cualquier cambio
     _isCompletingAd = true;
+    _isTransitioning = true;
     
-    // ✅ FIX CRÍTICO: Resetear estado INMEDIATAMENTE antes de cualquier otra operación
-    // Esto asegura que la UI reaccione inmediatamente
-    state = state.copyWith(
-      isPlayingAd: false,
-      clearCurrentAd: true, // ✅ FIX CRÍTICO: Forzar reset a null
-    );
-    AppLogger.info('[PlaybackNotifier] ✅ Estado después de skip: isPlayingAd=${state.isPlayingAd}, currentAd=${state.currentAd?.id ?? "null"}');
-    
-    // Registrar skip
-    await _handleAdCompletion(currentAd, true); // wasSkipped = true
-    
-    // ✅ FIX CRÍTICO: Avanzar a siguiente canción y sincronizar inmediatamente
-    // ✅ FIX CRÍTICO: Búsqueda robusta de la siguiente canción (Hard Skip)
-    // En lugar de confiar en next(), buscamos explícitamente el siguiente índice que sea Song
     try {
-      final sequence = _service!.player.sequenceState?.sequence;
-      final currentIdx = _service!.player.currentIndex;
+      // ✅ FIX CRÍTICO: Buscar siguiente canción PRIMERO (antes de cambiar estados)
+      final sequence = _service?.player.sequenceState?.sequence;
+      final currentIdx = _service?.player.currentIndex;
       
+      Song? targetSong;
       int? targetIndex;
+      
       if (sequence != null && currentIdx != null) {
-         // Buscar hacia adelante el primer item que NO sea anuncio
-         for (int i = currentIdx + 1; i < sequence.length; i++) {
-            if (sequence[i].tag is Song) {
-               targetIndex = i;
-               break;
-            }
-         }
+        // Buscar hacia adelante el primer item que NO sea anuncio
+        for (int i = currentIdx + 1; i < sequence.length; i++) {
+          if (sequence[i].tag is Song) {
+            targetIndex = i;
+            targetSong = sequence[i].tag as Song;
+            break;
+          }
+        }
       }
       
-      if (targetIndex != null) {
-         AppLogger.info('[PlaybackNotifier] ⏭️ HARD SKIP: Saltando anuncio -> Índice canción: $targetIndex');
-         
-         // 🛡️ PROTECCIÓN FLICKER: Bloquear actualizaciones del stream durante el skip
-         _isTransitioning = true;
-         
-         // ✅ FIX FLICKER: Actualizar estado optimísticamente ANTES del seek
-         // Esto evita que la UI parpadee con carátulas intermedias
-         final targetSong = sequence![targetIndex].tag as Song;
-         state = state.copyWith(
-           currentSong: targetSong,
-           lastConfirmedSong: targetSong,
-           currentPosition: Duration.zero,
-           totalDuration: targetSong.duration != null ? Duration(seconds: targetSong.duration!) : Duration.zero,
-           isPlayingAd: false,
-           clearCurrentAd: true,
-         );
-         AppLogger.info('[PlaybackNotifier] ✅ Estado optimista: ${targetSong.title}');
-         
-         // Seek explícito al inicio de la canción (UI ya está actualizada)
-         await _service!.player.seek(Duration.zero, index: targetIndex);
-         // Force Play
-         await _service!.player.play();
-         
-         // 🛡️ DESBLOQUEAR: Permitir actualizaciones del stream después de un breve delay
-         // para que el reproductor se estabilice
-         _lastAdCompletionTime = null;
-         Future.delayed(const Duration(milliseconds: 300), () {
-           _isTransitioning = false;
-           // Sincronizar después del delay (solo para consistencia, UI ya está correcta)
-           if (_service != null) {
-             _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
-           }
-         });
+      // ✅ CONSOLIDACIÓN: Una sola actualización de estado con TODA la información
+      if (targetSong != null) {
+        AppLogger.info('[PlaybackNotifier] ⏭️ HARD SKIP: Saltando anuncio -> Índice canción: $targetIndex (${targetSong.title})');
+        
+        state = state.copyWith(
+          isPlayingAd: false,
+          clearCurrentAd: true,
+          currentSong: targetSong,
+          lastConfirmedSong: targetSong,
+          currentPosition: Duration.zero,
+          totalDuration: targetSong.duration != null 
+              ? Duration(seconds: targetSong.duration!) 
+              : Duration.zero,
+        );
+        AppLogger.info('[PlaybackNotifier] ✅ Estado consolidado: ${targetSong.title}');
+        
+        // Seek explícito al inicio de la canción (UI ya está actualizada)
+        await _service!.player.seek(Duration.zero, index: targetIndex);
+        await _service!.player.play();
+        
       } else {
-         // Caso borde: No hay más canciones en la secuencia física
-         AppLogger.warning('[PlaybackNotifier] ⚠️ No se encontró siguiente canción en secuencia física. Intentando next() estándar...');
-         if (_service != null && _service!.player.hasNext) {
-            await _service!.next();
-            await _service!.player.play();
-         }
+        // Caso borde: No hay más canciones en la secuencia física
+        AppLogger.warning('[PlaybackNotifier] ⚠️ No se encontró siguiente canción, limpiando estado de anuncio...');
+        
+        // Solo limpiar el anuncio
+        state = state.copyWith(
+          isPlayingAd: false,
+          clearCurrentAd: true,
+        );
+        
+        if (_service != null && _service!.player.hasNext) {
+          await _service!.next();
+          await _service!.player.play();
+        }
       }
+      
+      // ✅ REGISTRAR SKIP: Después de la transición exitosa (no bloquea UI)
+      // Usar unawaited para no bloquear
+      _handleAdCompletion(currentAd, true).catchError((e) {
+        AppLogger.warning('[PlaybackNotifier] Error al registrar skip (no crítico): $e');
+      });
+      
     } catch (e) {
       AppLogger.error('[PlaybackNotifier] Error al avanzar después de skip: $e');
       
+      // Limpiar estado del anuncio de emergencia
+      state = state.copyWith(isPlayingAd: false, clearCurrentAd: true);
+      
       // FALLBACK DE EMERGENCIA: Si todo falla, recargar la canción actual lógica
       if (state.currentSong != null) {
-         AppLogger.error('[PlaybackNotifier] 🚨 EMERGENCIA: Recargando canción actual...');
-         playSpecificSong(state.currentSong!);
+        AppLogger.error('[PlaybackNotifier] 🚨 EMERGENCIA: Recargando canción actual...');
+        playSpecificSong(state.currentSong!);
       }
+    } finally {
+      // 🛡️ GARANTIZAR LIMPIEZA: Siempre resetear flags después de un delay
+      _lastAdCompletionTime = null;
+      
+      Future.delayed(const Duration(milliseconds: 300), () {
+        _isTransitioning = false;
+        _isCompletingAd = false; // ✅ FIX: Ahora se resetea correctamente
+        
+        // Sincronizar después del delay (solo para consistencia)
+        if (_service != null) {
+          _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
+        }
+      });
     }
   }
 

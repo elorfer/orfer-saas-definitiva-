@@ -106,6 +106,61 @@ export class PublicSettingsController {
       smallCatalogThreshold,
     };
   }
+
+  /**
+   * Endpoint público para obtener los pesos del scoring del algoritmo.
+   */
+  @Get('scoring-weights')
+  @ApiOperation({
+    summary: 'Obtener pesos del scoring',
+    description: 'Retorna los pesos configurados para el algoritmo de scoring de recomendaciones.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pesos del scoring obtenidos exitosamente',
+    schema: {
+      type: 'object',
+      properties: {
+        genreWeight: { type: 'number', example: 30, description: 'Peso de similitud de género (0-100)' },
+        popularityWeight: { type: 'number', example: 20, description: 'Peso de popularidad (0-100)' },
+        artistWeight: { type: 'number', example: 10, description: 'Peso de mismo artista (0-100)' },
+        noveltyWeight: { type: 'number', example: 20, description: 'Peso de novedad (0-100)' },
+        affinityWeight: { type: 'number', example: 20, description: 'Peso de afinidad de usuario (0-100)' },
+        total: { type: 'number', example: 100, description: 'Suma total de pesos (debe ser 100)' },
+      },
+    },
+  })
+  async getScoringWeights(): Promise<{
+    genreWeight: number;
+    popularityWeight: number;
+    artistWeight: number;
+    noveltyWeight: number;
+    affinityWeight: number;
+    total: number;
+  }> {
+    const [
+      genreWeight,
+      popularityWeight,
+      artistWeight,
+      noveltyWeight,
+      affinityWeight,
+    ] = await Promise.all([
+      this.settingsService.getValue('weight_genre'),
+      this.settingsService.getValue('weight_popularity'),
+      this.settingsService.getValue('weight_artist'),
+      this.settingsService.getValue('weight_novelty'),
+      this.settingsService.getValue('weight_affinity'),
+    ]);
+
+    return {
+      genreWeight,
+      popularityWeight,
+      artistWeight,
+      noveltyWeight,
+      affinityWeight,
+      total: genreWeight + popularityWeight + artistWeight + noveltyWeight + affinityWeight,
+    };
+  }
 }
 
 

@@ -49,6 +49,13 @@ export const SettingKeys = {
   ALGORITHM_PRELOAD_THRESHOLD: 'algorithm_preload_threshold', // Umbral para disparar precarga (default: 3)
   ALGORITHM_CRITICAL_SONGS: 'algorithm_critical_songs',     // Canciones críticas a agregar (default: 5)
 
+  // 🎯 PESOS DEL SCORING (0-100, se convierte a 0.0-1.0)
+  WEIGHT_GENRE: 'weight_genre',               // Peso de similitud de género (default: 30)
+  WEIGHT_POPULARITY: 'weight_popularity',     // Peso de popularidad (default: 20)
+  WEIGHT_ARTIST: 'weight_artist',             // Peso de mismo artista (default: 10)
+  WEIGHT_NOVELTY: 'weight_novelty',           // Peso de novedad (default: 20)
+  WEIGHT_AFFINITY: 'weight_affinity',         // Peso de afinidad de usuario (default: 20)
+
   // 📊 CATÁLOGO
   CATALOG_SIZE: 'catalog_size',                             // Total de canciones en el catálogo (auto-calculado)
   CATALOG_SMALL_THRESHOLD: 'catalog_small_threshold',       // Umbral para "catálogo pequeño" (default: 150)
