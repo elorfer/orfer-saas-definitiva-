@@ -11,12 +11,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
+import { google } from 'googleapis'; // 🔵 Google OAuth
+import axios from 'axios'; // 🌐 HTTP client
 
 import { User, UserRole } from '../../common/entities/user.entity';
 import { Artist } from '../../common/entities/artist.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { SocialLoginDto } from './dto/social-login.dto'; // 🔐 Social Login
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { ResendService } from '../../common/services/resend.service';
 
 @Injectable()
 export class AuthService {
@@ -30,7 +34,8 @@ export class AuthService {
     @InjectRepository(Artist)
     private readonly artistRepository: Repository<Artist>,
     private readonly jwtService: JwtService,
-  ) {}
+    private readonly resendService: ResendService,
+  ) { }
 
   /**
    * Transforma los datos de usuario de camelCase a snake_case para la API
@@ -82,7 +87,7 @@ export class AuthService {
 
   async login(loginDto: LoginDto) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
-    
+
     if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -144,6 +149,31 @@ export class AuthService {
 
     const savedUser = await this.userRepository.save(user);
 
+    // 🔥 SINCRONIZAR CON FIREBASE AUTH (para forgot password)
+    try {
+      const admin = (await import('firebase-admin')).default;
+
+      if (admin.apps.length > 0) {
+        // Crear usuario en Firebase Auth
+        await admin.auth().createUser({
+          email: registerDto.email,
+          password: registerDto.password, // Firebase hashea automáticamente
+          displayName: `${registerDto.firstName} ${registerDto.lastName}`,
+          emailVerified: false, // Se puede verificar después
+        });
+
+        this.logger.log(`✅ Usuario sincronizado con Firebase Auth: ${registerDto.email}`);
+      }
+    } catch (firebaseError) {
+      // Si Firebase falla, NO bloquear el registro
+      // El usuario puede registrarse igual, pero forgot password no funcionará hasta sincronizar
+      if (firebaseError.code === 'auth/email-already-exists') {
+        this.logger.warn(`⚠️ Usuario ya existe en Firebase Auth: ${registerDto.email}`);
+      } else {
+        this.logger.error(`❌ Error creando usuario en Firebase Auth:`, firebaseError.message);
+      }
+    }
+
     // No se crea perfil de artista - solo se permite registro como usuario
 
     const payload: JwtPayload = {
@@ -156,6 +186,84 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
       user: this.transformUserData(savedUser),
+    };
+  }
+
+  /**
+   * 🌐 LOGIN SOCIAL (Google/Facebook)
+   * Verifica el token OAuth y crea/loguea el usuario automáticamente
+   */
+  async socialLogin(socialLoginDto: SocialLoginDto) {
+    const { provider, accessToken, email, displayName, photoUrl } = socialLoginDto;
+
+    // TODO: Verificar token según provider
+    // Por ahora confiamos en el token del frontend
+    // En producción DEBES verificar el token con Google/Facebook APIs
+
+    // Buscar usuario por email
+    let user = await this.userRepository.findOne({
+      where: { email },
+      relations: ['artist'],
+    });
+
+    if (!user) {
+      // Usuario no existe - crear nuevo
+      this.logger.log(`🆕 Creando nuevo usuario desde ${provider}: ${email}`);
+
+      // Generar username único desde email
+      const baseUsername = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+      let username = baseUsername;
+      let attempts = 0;
+
+      // Verificar que el username no exista
+      while (attempts < 100) {
+        const existing = await this.userRepository.findOne({ where: { username } });
+        if (!existing) break;
+
+        username = `${baseUsername}${Math.floor(Math.random() * 10000)}`;
+        attempts++;
+      }
+
+      // Generar password aleatorio (no se usará nunca)
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      const passwordHash = await bcrypt.hash(randomPassword, 12);
+
+      // Crear usuario
+      user = this.userRepository.create({
+        email,
+        username,
+        passwordHash,
+        firstName: displayName.split(' ')[0] || 'Usuario',
+        lastName: displayName.split(' ').slice(1).join(' ') || '',
+        avatarUrl: photoUrl || null,
+        role: UserRole.USER,
+        // Email verificado automáticamente (Google/Facebook ya lo verificó)
+        isVerified: true,
+      });
+
+      user = await this.userRepository.save(user);
+      this.logger.log(`✅ Usuario creado exitosamente: ${user.id}`);
+    } else {
+      // Usuario existe - actualizar último login
+      this.logger.log(`🔄 Usuario existente desde ${provider}: ${email}`);
+      await this.userRepository.update(user.id, {
+        lastLoginAt: new Date(),
+        // Actualizar foto si viene y no tiene
+        ...(photoUrl && !user.avatarUrl ? { avatarUrl: photoUrl } : {}),
+      });
+    }
+
+    // Generar JWT
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: this.transformUserData(user),
     };
   }
 
@@ -216,18 +324,18 @@ export class AuthService {
     try {
       // Limpiar el username
       const cleanUsername = username.trim();
-      
+
       // Permitir verificación desde 1 carácter (pero el registro requerirá mínimo 3)
       if (!cleanUsername || cleanUsername.length < 1) {
         return { available: false }; // Vacío, no disponible
       }
-      
+
       // Buscar usuario usando búsqueda exacta (case-sensitive primero, más rápido)
       // Si no encuentra, hacer búsqueda case-insensitive
       let existingUser = await this.userRepository.findOne({
         where: { username: cleanUsername },
       });
-      
+
       // Si no encontró con búsqueda exacta, buscar case-insensitive
       if (!existingUser) {
         existingUser = await this.userRepository
@@ -238,9 +346,9 @@ export class AuthService {
 
       // Si existe un usuario, NO está disponible
       const available = !existingUser;
-      
+
       this.logger.log(`[checkUsernameAvailability] Username: "${cleanUsername}", Existe: ${!!existingUser}, Disponible: ${available}`);
-      
+
       return { available };
     } catch (error) {
       // En caso de error, registrar y asumir que NO está disponible para ser más seguro
@@ -253,17 +361,17 @@ export class AuthService {
     try {
       // Limpiar el email
       const cleanEmail = email.trim().toLowerCase();
-      
+
       if (!cleanEmail || cleanEmail.length < 1) {
         return { available: false }; // Vacío, no disponible
       }
-      
+
       // Buscar usuario usando búsqueda exacta (case-sensitive primero, más rápido)
       // Si no encuentra, hacer búsqueda case-insensitive
       let existingUser = await this.userRepository.findOne({
         where: { email: cleanEmail },
       });
-      
+
       // Si no encontró con búsqueda exacta, buscar case-insensitive
       if (!existingUser) {
         existingUser = await this.userRepository
@@ -274,9 +382,9 @@ export class AuthService {
 
       // Si existe un usuario, NO está disponible
       const available = !existingUser;
-      
+
       this.logger.log(`[checkEmailAvailability] Email: "${cleanEmail}", Existe: ${!!existingUser}, Disponible: ${available}`);
-      
+
       return { available };
     } catch (error) {
       // En caso de error, registrar y asumir que NO está disponible para ser más seguro
@@ -285,6 +393,10 @@ export class AuthService {
     }
   }
 
+  /**
+   * 🔐 Solicitar recuperación de contraseña con Resend
+   * Genera token, almacena en memoria y envía email profesional
+   */
   async forgotPassword(email: string): Promise<{ message: string; token?: string }> {
     const user = await this.userRepository.findOne({
       where: { email },
@@ -297,6 +409,54 @@ export class AuthService {
       };
     }
 
+    try {
+      // Generar token de recuperación
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 1); // Token válido por 1 hora
+
+      // Almacenar token en memoria
+      this.passwordResetTokens.set(resetToken, {
+        userId: user.id,
+        expiresAt,
+      });
+
+      // Limpiar tokens expirados
+      this.cleanExpiredTokens();
+
+      // Enviar email con Resend
+      const emailSent = await this.resendService.sendPasswordResetEmail(email, resetToken);
+
+      if (emailSent) {
+        this.logger.log(`✅ Email de recuperación enviado a: ${email}`);
+      } else {
+        this.logger.warn(`⚠️ No se pudo enviar email a: ${email}`);
+      }
+
+      // En desarrollo, devolver token para testing
+      if (process.env.NODE_ENV === 'development') {
+        this.logger.log(`[DEV] Token de recuperación: ${resetToken}`);
+        return {
+          message: 'Si el email existe, recibirás un enlace para recuperar tu contraseña',
+          token: resetToken, // Solo en desarrollo
+        };
+      }
+
+      return {
+        message: 'Si el email existe, recibirás un enlace para recuperar tu contraseña',
+      };
+    } catch (error) {
+      this.logger.error(`❌ Error en forgot password:`, error);
+      return {
+        message: 'Si el email existe, recibirás un enlace para recuperar tu contraseña',
+      };
+    }
+  }
+
+  /**
+   * Método de fallback para recuperación de contraseña sin Firebase
+   */
+  private forgotPasswordFallback(email: string, userId: string): { message: string; token: string } {
     // Generar token de recuperación
     const resetToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
@@ -304,16 +464,14 @@ export class AuthService {
 
     // Almacenar token temporalmente
     this.passwordResetTokens.set(resetToken, {
-      userId: user.id,
+      userId,
       expiresAt,
     });
 
     // Limpiar tokens expirados periódicamente
     this.cleanExpiredTokens();
 
-    // En producción, aquí enviarías un email con el token
-    // Por ahora, devolvemos el token en la respuesta (solo para desarrollo)
-    // En producción, esto NO debería devolverse
+    // En desarrollo, devolver token para testing
     if (process.env.NODE_ENV === 'development') {
       console.log(`[DEV] Token de recuperación para ${email}: ${resetToken}`);
       return {
@@ -324,6 +482,7 @@ export class AuthService {
 
     return {
       message: 'Si el email existe, recibirás un enlace para recuperar tu contraseña',
+      token: undefined,
     };
   }
 

@@ -35,7 +35,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   bool _isProcessingNext = false;
   bool _isProcessingPrevious = false;
   DateTime _lastControlTap = DateTime.fromMillisecondsSinceEpoch(0);
-  static const Duration _controlDebounce = Duration(milliseconds: 200);
+  // ⚡ ADMIN CONTROLADO: Debounce dinámico desde el Admin
+  Duration get _controlDebounce => AlgorithmConfigService.instance.currentConfig.controlDebounceDuration;
   
   // Servicios de recomendación
   late final IntelligentFeaturedService _intelligentService;
@@ -104,7 +105,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   // 🎯 FASE 2: Umbral de Recarga Proactivo (DINÁMICO)
   int get preloadThreshold => _algorithmConfig.preloadThreshold; // Pre-cargar cuando quedan ≤N canciones disponibles
   static const int _preloadTimeThreshold = 45; // ⚡ TRANSICIÓN INSTANTÁNEA: Pre-cargar cuando quedan 45 segundos (aumentado para más anticipación)
-  static const Duration _preloadCooldown = Duration(seconds: 3); // 🚨 COOLDOWN: Mínimo 3 segundos entre precargas
+  static const Duration _preloadCooldown = Duration(milliseconds: 500); // ⚡ OPTIMIZADO: 500ms cooldown para recargas rápidas
   
   // 🎯 FASE 3.1: Precarga Progresiva - Constantes de Control (DINÁMICO)
   int get criticalSongsCount => _algorithmConfig.criticalSongs; // Canciones críticas a agregar inmediatamente
@@ -143,7 +144,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   int? _lastPreparedSongIndex; // Trackear qué canción fue preparada
   
   // 🛡️ PREVENCIÓN DE COLA VACÍA: Sistema robusto de protección
-  static const int _minQueueSize = 5; // Tamaño mínimo garantizado de la cola
+  static const int _minQueueSize = 8; // ⚡ OPTIMIZADO: Buffer más grande para pasar rápido
   // 🎯 FASE 2: Usar preloadThreshold como umbral crítico (unificado)
   Timer? _queueProtectionTimer; // Timer para monitoreo constante de la cola
   int _consecutiveFailures = 0; // Contador de fallos consecutivos en precarga
@@ -449,6 +450,22 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             _startAlgorithmMonitor();
             _startQueueProtection();
             
+            // 🚀 PRO-ACTIVE BUFFER (SPOTIFY-LEVEL): Cargar recomendaciones INMEDIATAMENTE
+            // No esperar al Timer del monitor (5s) - el usuario podría querer saltar NOW
+            // Esto garantiza que quando el usuario presione "siguiente", ya haya canciones disponibles
+            final queueSize = state.currentQueue.length;
+            if (queueSize <= 2) {
+              AppLogger.info('[PlaybackNotifier] 🚀 PRO-ACTIVE BUFFER: Cola pequeña ($queueSize), cargando recomendaciones AHORA...');
+              // Usar unawaited para no bloquear la reproducción actual
+              // pero iniciar la carga inmediatamente
+              Future.microtask(() async {
+                if (!_isPreloading && state.playbackMode == PlaybackMode.algorithm) {
+                  await _forceImmediatePreload();
+                  AppLogger.info('[PlaybackNotifier] 🚀 PRO-ACTIVE BUFFER: Recomendaciones cargadas (${state.currentQueue.length} canciones en cola)');
+                }
+              });
+            }
+            
             AppLogger.info('[PlaybackNotifier] ✅ Cambio instantáneo completado');
             
             return;
@@ -521,13 +538,15 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   }
 
   /// Iniciar algoritmo con prioridad de latencia
-  /// 🏆 SPOTIFY-LEVEL: Precargar audio pero NO reproducir ni mostrar UI
+  /// 🏆 SPOTIFY-LEVEL: Precargar audio Y buffer inicial pero NO reproducir ni mostrar UI
   Future<void> _initAlgorithmWithLowLatency(User user) async {
-     // Implementación simplificada: Obtener canción y precargar en el motor de audio
+     // Implementación mejorada: Obtener buffer inicial de canciones y precargar
      // PERO sin reproducir ni mostrar el MiniPlayer
      try {
+       // 🚀 SPOTIFY-LEVEL: Precargar 8 canciones para buffer instantáneo
+       // Esto permite que el usuario pueda saltar inmediatamente después de tocar Play
        final featuredSongs = await _intelligentService.getIntelligentFeaturedSongs(
-         limit: 1, // Solo 1 para velocidad máxima
+         limit: 8, // Buffer inicial amplio para skip instantáneo
          user: user,
        );
        
@@ -547,19 +566,29 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
            // ❌ NO: currentSong, isMiniPlayerVisible, isSessionActive
          );
          
-         // 3. 🔥 PRECARGAR AUDIO: Crear la cola en el motor pero NO reproducir
+         // 3. 🔥 PRECARGAR AUDIO: Crear la cola en el motor con TODAS las canciones
          if (_service != null) {
-           final source = await _service!.createAudioSource(song);
-           if (source != null) {
+           // Precargar TODAS las canciones del buffer (no solo la primera)
+           final sources = await Future.wait(
+             recommendations.map((s) async {
+               final source = await _service!.createAudioSource(s);
+               return source;
+             }).toList(),
+           );
+           
+           // Filtrar nulls
+           final validSources = sources.whereType<AudioSource>().toList();
+           
+           if (validSources.isNotEmpty) {
              final playlist = ConcatenatingAudioSource(
                useLazyPreparation: true,
                shuffleOrder: DefaultShuffleOrder(),
-               children: [source],
+               children: validSources,
              );
              
              // Solo precargar, NO llamar play()
              await _service!.player.setAudioSource(playlist, preload: true);
-             AppLogger.success('[PlaybackNotifier] 💉 Inyección de Adrenalina completada. Audio precargado: ${song.title}');
+             AppLogger.success('[PlaybackNotifier] 💉 Inyección de Adrenalina completada. ${validSources.length} canciones precargadas (${song.title} + ${validSources.length - 1} más)');
            }
          }
        }
@@ -637,6 +666,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         // ✅ FIX: Los anuncios tienen prioridad sobre _isManualSkipping Y _isFreezingUI
         // Esto asegura que el AdsMiniPlayer aparezca cuando ocultas el reproductor extendido
         if ((_isManualSkipping && !isAdSource) || (_isFreezingUI && !isAdSource)) return;
+        
+        // 🛡️ PROTECCIÓN POST-INSERCIÓN: Ignorar eventos de sincronización inmediatamente después de insertar anuncio
+        // Esto evita que _syncQueue se ejecute cuando el anuncio se agrega a la cola, causando refrescos innecesarios
+        if (_isInsertingAd && !isAdSource) {
+          AppLogger.debug('[PlaybackNotifier] 🛡️ Ignorando evento de sequenceState: inserción de anuncio en progreso');
+          return;
+        }
 
         if (sequenceState == null) return;
         
@@ -2153,6 +2189,17 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
               isBuffering: true,
             );
           }
+          
+          // ⚡ REPRODUCCIÓN INSTANTÁNEA: Iniciar música ANTES de cargar recomendaciones
+          // Esto elimina el bloqueo de 3-8 segundos esperando el algoritmo
+          if (!usedInjectionForSeed) {
+            if (!service.player.playing) {
+              AppLogger.info('[PlaybackNotifier] ⚡ Iniciando reproducción INMEDIATA (antes de recomendaciones)');
+              service.play().catchError((e) {
+                AppLogger.warning('[PlaybackNotifier] ⚠️ Error en play inicial: $e');
+              });
+            }
+          }
         } finally {
           _isReplacingQueue = false;
           _isUpdatingQueue = false;
@@ -2173,140 +2220,78 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
         AppLogger.info('[PlaybackNotifier] ✅ Semilla cargada: ${seedSong.title}');
 
-        AppLogger.info('[PlaybackNotifier] ⚡ Obteniendo buffer inicial crítico (Fase 1 rápida)...');
-        initialSongs = await _generateInitialRecommendations(seedSong, excludeSeedFromQueue: false);
+        // ⚡ RECOMENDACIONES EN BACKGROUND: NO esperar, ejecutar en paralelo
+        AppLogger.info('[PlaybackNotifier] ⚡ Programando buffer inicial en BACKGROUND...');
+        Future.microtask(() async {
+          try {
+            var initialSongs = await _generateInitialRecommendations(seedSong, excludeSeedFromQueue: false);
 
-        // Filtrar canciones no reproducibles antes de agregarlas
-        initialSongs = _filterPlayableSongs(initialSongs);
+            // Filtrar canciones no reproducibles antes de agregarlas
+            initialSongs = _filterPlayableSongs(initialSongs);
 
-        if (initialSongs.isNotEmpty) {
-          final queueSizeBefore = state.currentQueue.length;
-          await _updateQueueAtomically(
-            newSongs: initialSongs,
-            audioOperation: (sources) => service.appendToQueue(sources),
-            replace: false,
-          );
-          final queueSizeAfter = state.currentQueue.length;
-          final actuallyAdded = queueSizeAfter - queueSizeBefore;
+            if (initialSongs.isNotEmpty) {
+              final queueSizeBefore = state.currentQueue.length;
+              await _updateQueueAtomically(
+                newSongs: initialSongs,
+                audioOperation: (sources) => service.appendToQueue(sources),
+                replace: false,
+              );
+              final queueSizeAfter = state.currentQueue.length;
+              final actuallyAdded = queueSizeAfter - queueSizeBefore;
 
-          if (actuallyAdded > 0) {
-            AppLogger.info('[PlaybackNotifier] ✅ Buffer inicial: $actuallyAdded canciones agregadas a la cola (${initialSongs.length} solicitadas, ${initialSongs.length - actuallyAdded} duplicadas filtradas)');
-          } else {
-            AppLogger.info('[PlaybackNotifier] ⚠️ Buffer inicial: Todas las canciones ya estaban en la cola (${initialSongs.length} solicitadas)');
+              if (actuallyAdded > 0) {
+                AppLogger.info('[PlaybackNotifier] ✅ Buffer inicial: $actuallyAdded canciones agregadas a la cola');
+              }
+            }
+          } catch (e) {
+            AppLogger.warning('[PlaybackNotifier] ⚠️ Error en buffer inicial (background): $e');
           }
-        } else {
-          AppLogger.warning('[PlaybackNotifier] ⚠️ Buffer inicial: La Fase 1 no devolvió canciones. Procediendo solo con la semilla.');
-        }
+        });
       }
 
       AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Después del bloque de buffer inicial, continuando con Fase 2...');
 
-      // 🎯 FASE 2: Iniciar reproducción SOLAMENTE DESPUÉS de cargar la semilla y el buffer inicial
-      // Esto elimina el riesgo de stalling (cola vacía cuando termina la primera canción)
+      // ⚡ OPTIMIZACIÓN: La reproducción ya se inició arriba, solo actualizar estado
       state = state.copyWith(isLoading: false);
-      AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Estado isLoading actualizado a false');
-      AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Línea inmediatamente después de isLoading = false');
 
       // Sincronizar de inmediato para que currentSong no quede nulo
-      AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Antes de primera sincronización');
       _syncQueueWithAudioService(service.player.sequenceState);
-      AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Después de primera sincronización');
       if (state.currentSong == null && _lastConfirmedSong != null) {
         state = state.copyWith(currentSong: _lastConfirmedSong);
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] currentSong actualizado desde _lastConfirmedSong');
       }
 
-      // Activar bloqueo crítico durante el arranque del modo algoritmo
-      // Asegurar que las suscripciones estén pausadas para evitar actualizaciones intermedias
-      _pauseSubscriptions();
-      AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Suscripciones pausadas para arranque de algoritmo');
+      // ⚡ VERIFICACIÓN RÁPIDA: Solo verificar que esté reproduciendo, sin bloquear
+      if (!service.player.playing) {
+        // Fire and forget - iniciar reproducción sin esperar
+        service.play().catchError((e) {
+          AppLogger.warning('[PlaybackNotifier] ⚠️ Error en play: $e');
+        });
+      }
 
       try {
-        // 🔄 CRÍTICO: Solo llamar a play() si NO se usó inyección instantánea
-        // Si se usó inyección, ya se llamó a play() inmediatamente después de insertar
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Verificando usedInjectionForSeed: $usedInjectionForSeed');
-        if (!usedInjectionForSeed) {
-          // ✅ OPTIMIZACIÓN: Verificar si ya está reproduciendo antes de llamar a play()
-          if (service.player.playing) {
-            AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Reproductor ya está reproduciendo, saltando service.play()');
-          } else {
-            AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Llamando a service.play() (sin inyección)');
-            try {
-              await service.play().timeout(
-                const Duration(seconds: 5),
-                onTimeout: () {
-                  AppLogger.warning('[PlaybackNotifier] ⚠️ service.play() timeout después de 5 segundos');
-                },
-              );
-              AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] service.play() completado');
-            } catch (e) {
-              AppLogger.error('[PlaybackNotifier] ❌ Error en service.play(): $e');
-              // Continuar de todos modos si el reproductor ya está reproduciendo
-              if (service.player.playing) {
-                AppLogger.info('[PlaybackNotifier] ✅ Reproductor está reproduciendo a pesar del error, continuando...');
-              } else {
-                rethrow;
-              }
-            }
-          }
-        } else {
-          // Si se usó inyección, verificar que el reproductor esté reproduciendo
-          // Si no está reproduciendo, iniciar reproducción
-          AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Verificando si reproductor está reproduciendo: ${service.player.playing}');
-          if (!service.player.playing) {
-            AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Llamando a service.play() (con inyección pero no reproduciendo)');
-            // 🔥 FIX CRÍTICO: NO await - el player ya está reproduciendo audio pero just_audio
-            // puede quedar "colgado" en el await. Usamos fire-and-forget con timeout.
-            service.play().timeout(
-              const Duration(seconds: 2),
-              onTimeout: () {
-                AppLogger.warning('[PlaybackNotifier] ⚠️ service.play() timeout en modo inyección - continuando de todos modos');
-              },
-            ).catchError((e) {
-              AppLogger.warning('[PlaybackNotifier] ⚠️ Error en service.play() con inyección: $e');
-            });
-            // Dar un pequeño delay para que el reproductor arranque
-            await Future.delayed(const Duration(milliseconds: 100));
-            AppLogger.info('[PlaybackNotifier] ▶️ Reproducción fire-and-forget iniciada');
-          } else {
-            AppLogger.info('[PlaybackNotifier] ✅ Reproductor ya está reproduciendo después de inyección');
-          }
-        }
-
         // 🛡️ FUENTE ÚNICA DE VERDAD: El stream actualizará isPlaying automáticamente
-        // Solo actualizar isBuffering si es necesario para otros widgets
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Obteniendo estado del reproductor');
         final actualPlayerState = service.player.playerState;
         final actualIsBuffering = actualPlayerState.processingState == ProcessingState.buffering ||
                                  actualPlayerState.processingState == ProcessingState.loading;
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] actualIsBuffering: $actualIsBuffering');
         
         state = state.copyWith(
           isBuffering: actualIsBuffering,
           lastConfirmedSong: state.currentSong ?? state.lastConfirmedSong,
         );
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Estado actualizado con isBuffering');
 
         // Sincronizar y asegurar currentSong/posición tras play
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Antes de segunda sincronización');
         _syncQueueWithAudioService(service.player.sequenceState);
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Después de segunda sincronización');
         if (state.currentSong == null && _lastConfirmedSong != null) {
           state = state.copyWith(currentSong: _lastConfirmedSong);
-          AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] currentSong actualizado desde _lastConfirmedSong (segunda vez)');
         }
         state = state.copyWith(currentPosition: Duration.zero);
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] currentPosition reseteado a zero');
         
-        // Sincronizar cola después de un breve delay
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Programando sincronización diferida');
+        // Sincronizar cola después de un breve delay (en background)
         Future.delayed(const Duration(milliseconds: 200), () {
           _syncQueueWithAudioService(service.player.sequenceState);
         });
 
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Llegando a línea antes de log de reproducción iniciada');
         AppLogger.info('[PlaybackNotifier] ✅ Reproducción iniciada con buffer garantizado: ${state.currentQueue.length} canciones en cola');
-        AppLogger.info('[PlaybackNotifier] 🔍 [DEBUG] Después de log de reproducción iniciada');
 
         // 🎯 FASE 3 (BACKGROUND): Ejecutar Fase 2 completa en background (sin await)
         // ⚡ OPTIMIZACIÓN: Iniciar inmediatamente sin esperar, ejecutando en paralelo con la reproducción
@@ -2843,7 +2828,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       _isPreloading = true;
       _lastPreloadTime = DateTime.now(); // 🚨 COOLDOWN: Registrar timestamp
       
-      AppLogger.info('[PlaybackNotifier] 🎯 FASE 3.1 STARTING: Iniciando precarga proactiva de canciones...');
+      // 🔇 LOG movido hacia abajo - Solo se muestra cuando realmente va a precargar
       
       final currentSong = state.currentSong ?? _lastConfirmedSong;
       if (currentSong == null) {
@@ -2868,7 +2853,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final isUrgentPreload = remainingSongs <= 2;
       
       if (!isUrgentPreload && !shouldPreloadByTime) {
-        AppLogger.debug('[PlaybackNotifier] ⏳ FASE 3.1 SKIP: No es urgente ni por tiempo (remaining=$remainingSongs, isUrgent=$isUrgentPreload, byTime=$shouldPreloadByTime)');
+        // 🔇 SILENCIOSO: No mostrar log para evitar spam - hay suficientes canciones
         _isPreloading = false; // Liberar flag antes de retornar
         return; // Silencioso: condición no cumplida
       }
@@ -2877,7 +2862,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final shouldPreloadByCount = remainingSongs <= preloadThreshold;
       
       if (!isUrgentPreload && !shouldPreloadByCount) {
-        AppLogger.debug('[PlaybackNotifier] ⏳ FASE 3.1 SKIP: Hay suficientes canciones (remaining=$remainingSongs, threshold=$preloadThreshold, isUrgent=$isUrgentPreload)');
+        // 🔇 SILENCIOSO: No mostrar log para evitar spam - hay suficientes canciones
         _isPreloading = false; // Liberar flag antes de retornar
         // 🚨 CRÍTICO: Completar Completer si existe para evitar bloqueos
         if (_preloadCompleter != null && !_preloadCompleter!.isCompleted) {
@@ -2887,7 +2872,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         return; // Silencioso: hay suficientes canciones
       }
       
-      // 🚨 LOG REDUCIDO: Solo cuando realmente inicia la precarga
+      // ✅ AHORA SÍ: Realmente va a precargar - mostrar log
+      AppLogger.info('[PlaybackNotifier] 🎯 FASE 3.1: Iniciando precarga (restantes: $remainingSongs, urgente: $isUrgentPreload)');
       
       // 🎯 FASE 1: EXCLUSIÓN REFORZADA - Obtener TODAS las canciones de la cola y historial
       // 🚀 MEJORA: Incluir TODAS las canciones activas para forzar diversidad en el backend
@@ -3413,22 +3399,24 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         return;
       }
 
-      // 🛡️ PREVENTIVO: Si quedan menos de 5 canciones, precargar proactivamente
+      // 🛡️ PREVENTIVO: Si quedan pocas canciones Y está cerca del final, precargar
       // 🚨 PROTECCIÓN: NO activar si se están generando recomendaciones iniciales
       // 🛡️ FIX: NO activar durante reproducción de anuncios (las canciones ya están en la cola)
-      if (effectiveRemainingSongs < _minQueueSize && effectiveRemainingSongs > 0 && !_isPreloading && !_isGeneratingRecommendations && !state.isPlayingAd) {
+      // 🔇 OPTIMIZADO: Usar preloadThreshold para evitar llamadas que terminarán en SKIP
+      if (effectiveRemainingSongs <= preloadThreshold && effectiveRemainingSongs > 0 && !_isPreloading && !_isGeneratingRecommendations && !state.isPlayingAd) {
         final remainingTime = state.totalDuration - state.currentPosition;
         // Precargar si quedan menos de 60 segundos (más anticipación)
         if (remainingTime.inSeconds <= 60 && remainingTime.inSeconds > 0) {
-          AppLogger.info('[PlaybackNotifier] 🛡️ Precarga preventiva: $effectiveRemainingSongs canciones restantes (objetivo: $_minQueueSize)');
+          // 🔇 No mostrar log aquí - _appendMoreAlgorithmSongs mostrará su propio log si realmente precarga
           _appendMoreAlgorithmSongs();
         }
       }
 
       // 🛡️ VALIDACIÓN: Verificar que la cola tenga tamaño mínimo
       // 🚨 PROTECCIÓN: NO activar si se están generando recomendaciones iniciales o reproduciendo anuncios
-      if (queueSize < _minQueueSize && !_isPreloading && !_isGeneratingRecommendations && queueSize > 0 && !state.isPlayingAd) {
-        AppLogger.warning('[PlaybackNotifier] 🛡️ Cola pequeña detectada: $queueSize canciones (mínimo: $_minQueueSize). Precargando...');
+      // 🔇 OPTIMIZADO: Solo activar si realmente necesita precarga (usar preloadThreshold)
+      if (queueSize <= preloadThreshold && !_isPreloading && !_isGeneratingRecommendations && queueSize > 0 && !state.isPlayingAd) {
+        // 🔇 No mostrar log aquí - _appendMoreAlgorithmSongs mostrará su propio log si realmente precarga
         _appendMoreAlgorithmSongs();
       }
     });
@@ -4616,11 +4604,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         _isInsertingAd = false;
         state = state.copyWith(isInsertingAd: false);
         
+        // ✅ FIX: NO sincronizar manualmente - el stream listener lo hará automáticamente
         // Solo sincronizar si NO estamos reproduciendo un anuncio ya
         // (el stream listener debería haber detectado el anuncio para este momento)
-        if (!state.isPlayingAd && _service != null) {
-          _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
-        }
+        // COMENTADO: Causaba refrescos innecesarios después de insertar anuncio
+        // if (!state.isPlayingAd && _service != null) {
+        //   _syncQueueWithAudioService(_service!.player.sequenceState, forceSync: true);
+        // }
         AppLogger.info('[PlaybackNotifier] ✅ Flag _isInsertingAd liberado (delayed)');
       });
       
@@ -5121,14 +5111,14 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
 
     // 🧹 LIMPIEZA CONDICIONAL (Política Estricta):
-    // Si la canción ya pasó el 5% (Debug Threshold), NO limpiar anuncios (el usuario debe verlos/saltarlos).
-    // Si es antes del 5%, limpiar anuncios huérfanos.
+    // ⚡ OPTIMIZACIÓN: La limpieza ahora se hace en background DESPUÉS del skip para no bloquear
     final currentPos = _service?.player.position ?? Duration.zero;
     final totalDur = _service?.player.duration ?? state.totalDuration;
+    final shouldCleanupAds = totalDur.inSeconds > 0 && currentPos.inSeconds < totalDur.inSeconds * 0.05;
     
-    if (totalDur.inSeconds > 0 && currentPos.inSeconds < totalDur.inSeconds * 0.05) {
-       AppLogger.info('[PlaybackNotifier] ⏭️ Salto antes del 5% (${currentPos.inSeconds}/${totalDur.inSeconds}s). Limpiando anuncios...');
-       await _cleanupOrphanedAds();
+    if (shouldCleanupAds) {
+       AppLogger.info('[PlaybackNotifier] ⏭️ Salto antes del 5% (${currentPos.inSeconds}/${totalDur.inSeconds}s). Limpieza programada post-skip...');
+       // ⚡ NO ESPERAR - la limpieza se hará después del skip
     } else {
        AppLogger.info('[PlaybackNotifier] ⏭️ Salto después del 5% (${currentPos.inSeconds}/${totalDur.inSeconds}s). Manteniendo anuncios (Política Estricta).');
        
@@ -5174,9 +5164,16 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
          state = state.copyWith(isInsertingAd: true);
        }
        
-       // 🛑 ATOMIC SYNC: Esperar a que el frame se pinte antes de tocar el audio
-       // Esto garantiza que el usuario VEA la carátula del anuncio antes de ESCUCHAR el cambio
-       await WidgetsBinding.instance.endOfFrame;
+       // ⚡ OPTIMIZACIÓN: Eliminado await WidgetsBinding.instance.endOfFrame
+       // Causa pausa innecesaria al pasar rápido
+    }
+    
+    // ⚡ LIMPIEZA EN BACKGROUND: Ejecutar después del skip para no bloquear
+    if (shouldCleanupAds) {
+      // Usar unawaited para no bloquear el flujo principal
+      Future.microtask(() async {
+        await _cleanupOrphanedAds();
+      });
     }
 
     if (state.playbackMode == PlaybackMode.fixedQueue && state.shouldStartAlgorithmAfterQueue) {
@@ -5229,97 +5226,120 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       if (currentIndex != -1) {
         final remainingSongs = state.currentQueue.length - currentIndex - 1;
         
-        // Si quedan ≤3 canciones, forzar recarga inmediata ANTES del salto
-        // 🚨 PROTECCIÓN: Solo llamar si no hay precarga en curso
-        if (remainingSongs <= preloadThreshold && !_isPreloading) {
-          // 🎯 CASO CRÍTICO: Si quedan 0 canciones, esperar a que se complete la recarga
-          if (remainingSongs == 0) {
-            AppLogger.info('[PlaybackNotifier] ⏭️ Salto manual detectado con 0 canciones. Recargando primero...');
-            
-            // 🎯 MÉTODO PROFESIONAL: Esperar directamente a que termine la precarga
-            // Ya no necesitamos Completer porque _forceImmediatePreload() ahora es async
-            try {
-              await _forceImmediatePreload().timeout(
-                const Duration(seconds: 5),
-                onTimeout: () {
-                  AppLogger.warning('[PlaybackNotifier] ⚠️ Timeout esperando precarga (5s). Continuando...');
-                },
-              );
-              
-              // 🚨 MEJORA: Sincronizar cola con reproductor después de agregar canciones
-              _syncQueueWithAudioService(service.player.sequenceState);
-              
-              // 🚨 MEJORA: Verificar tanto hasNext como el tamaño de la cola en el estado
-              final queueSizeAfterPreload = state.currentQueue.length;
-              final currentIndexAfterPreload = state.currentQueue.indexWhere(
-                (s) => s.id == state.currentSong?.id,
-              );
-              final remainingAfterPreload = currentIndexAfterPreload != -1 
-                  ? queueSizeAfterPreload - currentIndexAfterPreload - 1 
-                  : 0;
-              
-              // Verificar si ahora hay siguiente canción (tanto en el reproductor como en el estado)
-              if (service.player.hasNext || remainingAfterPreload > 0) {
-                AppLogger.info('[PlaybackNotifier] ✅ Canciones agregadas (cola: $queueSizeAfterPreload, restantes: $remainingAfterPreload), avanzando...');
-                
-                // Si el reproductor aún no tiene siguiente, forzar sincronización y reintentar
-                if (!service.player.hasNext && remainingAfterPreload > 0) {
-                  AppLogger.info('[PlaybackNotifier] 🔄 Reproductor no sincronizado, forzando sincronización...');
-                  // Esperar un poco más para que el reproductor se sincronice
-                  await Future.delayed(const Duration(milliseconds: 200));
-                  _syncQueueWithAudioService(service.player.sequenceState);
-                }
-                
-                // Intentar avanzar
-                if (service.player.hasNext) {
-                  await service.next();
-                } else if (remainingAfterPreload > 0) {
-                  // Si aún no hay siguiente en el reproductor pero hay en el estado, usar seekToNext forzado
-                  AppLogger.info('[PlaybackNotifier] 🔄 Forzando avance manual usando índice...');
-                  final nextIndex = currentIndexAfterPreload + 1;
-                  if (nextIndex < queueSizeAfterPreload) {
-                    // Cargar la siguiente canción manualmente
-                    await service.loadNewQueue(
-                      state.currentQueue.map((s) => s.toAudioSource()).toList(),
-                      nextIndex,
-                    );
-                    await service.play();
-                    
-                    // 🔄 SINCRONIZACIÓN FORZADA: Asegurar coherencia después de loadNewQueue
-                    Future.delayed(const Duration(milliseconds: 200), () {
-                      _syncQueueWithAudioService(service.player.sequenceState, forceSync: true);
-                    });
-                    
-                    AppLogger.info('[PlaybackNotifier] ✅ Avance manual completado a índice $nextIndex');
-                  }
-                }
-                
-                _isProcessingNext = false;
-                state = state.copyWith(isProcessingNext: false);
-                return; // Salir aquí, ya avanzamos
-              } else {
-                AppLogger.warning('[PlaybackNotifier] ⚠️ Aún no hay siguiente canción después de recarga (cola: $queueSizeAfterPreload, restantes: $remainingAfterPreload)');
-                _isProcessingNext = false;
-                state = state.copyWith(isProcessingNext: false);
-                return; // No avanzar si no hay siguiente
-              }
-            } catch (e) {
-              AppLogger.error('[PlaybackNotifier] Error en precarga crítica: $e');
-              // 🚨 CRÍTICO: Siempre limpiar el flag, incluso si hay errores
-              _isProcessingNext = false;
-              state = state.copyWith(isProcessingNext: false);
-              return; // Salir si hay error
-            }
-          } else {
-            // Caso no crítico: programar recarga en background (no esperar)
-            AppLogger.info('[PlaybackNotifier] ⏭️ Salto manual detectado (botón siguiente) con $remainingSongs canciones restantes. Programando recarga...');
-            // Usar Future.delayed para evitar bloqueos (no esperar)
-            Future.delayed(const Duration(milliseconds: 50), () {
+        // ⚡ VERIFICACIÓN RÁPIDA: Si el reproductor ya tiene siguiente, no bloquear
+        // El reproductor puede tener canciones que el estado aún no detectó
+        if (service.player.hasNext) {
+          // Programar precarga en background si quedan pocas canciones
+          if (remainingSongs <= preloadThreshold && !_isPreloading) {
+            Future.microtask(() {
               if (!_isPreloading && state.playbackMode == PlaybackMode.algorithm) {
-                _forceImmediatePreload(); // No esperar, ejecutar en background
+                _forceImmediatePreload();
               }
             });
           }
+          // No bloquear, continuar al código de avance normal abajo
+        } else if (remainingSongs == 0) {
+          // 🎯 CASO CRÍTICO (ADRENALINA FIX): No hay siguiente en reproductor NI en estado
+          // Estrategia SPOTIFY-LEVEL: Esperar a que termine la carga que ya está en curso
+          AppLogger.info('[PlaybackNotifier] ⏭️ ADRENALINA CASE: Cola vacía. Esperando carga en progreso...');
+          
+          // ⏳ UI: Mostrar estado de carga
+          state = state.copyWith(isWaitingForMoreSongs: true, isBuffering: true);
+          
+          bool loadedSuccessfully = false;
+          final stopwatch = Stopwatch()..start();
+          const maxWaitMs = 3000; // 3 segundos máximo (suficiente para requests de red)
+          
+          try {
+            // 🚀 PASO 1: Esperar a que terminen las cargas en progreso
+            // IMPORTANTE: Esperar AMBOS flags (_isPreloading Y _isGeneratingRecommendations)
+            while (stopwatch.elapsedMilliseconds < maxWaitMs) {
+              // Check inmediato: ¿Ya hay canciones?
+              if (service.player.hasNext) {
+                loadedSuccessfully = true;
+                AppLogger.info('[PlaybackNotifier] ✅ FAST PATH: Canción disponible (${stopwatch.elapsedMilliseconds}ms)');
+                break;
+              }
+              
+              // ¿Hay alguna carga en progreso?
+              final isLoadingInProgress = _isPreloading || _isGeneratingRecommendations;
+              
+              if (!isLoadingInProgress) {
+                // No hay carga en progreso, intentar forzar una
+                AppLogger.info('[PlaybackNotifier] 🚀 ADRENALINA: No hay carga en progreso, forzando precarga...');
+                
+                // Forzar precarga
+                await _forceImmediatePreload();
+                
+                // Pequeño delay para sync
+                await Future.delayed(const Duration(milliseconds: 100));
+                
+                if (service.player.hasNext) {
+                  loadedSuccessfully = true;
+                  AppLogger.info('[PlaybackNotifier] ✅ Canciones cargadas post-precarga forzada (${stopwatch.elapsedMilliseconds}ms)');
+                }
+                break; // Salir del while después de intentar forzar
+              }
+              
+              // Hay carga en progreso, seguir esperando con polling rápido
+              await Future.delayed(const Duration(milliseconds: 100));
+              
+              // Log cada 500ms para debug
+              if (stopwatch.elapsedMilliseconds % 500 < 100) {
+                AppLogger.debug('[PlaybackNotifier] ⏳ ADRENALINA: Esperando... (${stopwatch.elapsedMilliseconds}ms) [preloading=$_isPreloading, generating=$_isGeneratingRecommendations]');
+              }
+            }
+            
+            // Timeout: verificar una última vez
+            if (!loadedSuccessfully && service.player.hasNext) {
+              loadedSuccessfully = true;
+              AppLogger.info('[PlaybackNotifier] ✅ Canciones disponibles post-timeout (${stopwatch.elapsedMilliseconds}ms)');
+            }
+            
+          } catch (e) {
+            AppLogger.error('[PlaybackNotifier] ❌ Error en espera Adrenalina: $e');
+          }
+          
+          stopwatch.stop();
+          
+          // ⏳ Desactivar UI de espera
+          state = state.copyWith(isWaitingForMoreSongs: false, isBuffering: false);
+          
+          if (loadedSuccessfully && service.player.hasNext) {
+            // ✅ AVANCE EXITOSO
+            AppLogger.info('[PlaybackNotifier] ⏭️ ADRENALINA SUCCESS: Avanzando a siguiente canción (${stopwatch.elapsedMilliseconds}ms total)');
+            
+            try {
+              // UI Optimista
+              final newCurrentIndex = state.currentIndex;
+              if (newCurrentIndex < state.currentQueue.length - 1) {
+                state = state.copyWith(
+                  currentSong: state.currentQueue[newCurrentIndex + 1],
+                  lastConfirmedSong: state.currentQueue[newCurrentIndex + 1],
+                  currentPosition: Duration.zero,
+                );
+              }
+              
+              await service.next();
+              Future.microtask(() => _syncQueueWithAudioService(service.player.sequenceState, forceSync: false));
+            } catch (e) {
+              AppLogger.error('[PlaybackNotifier] ❌ Error en avance: $e');
+            }
+          } else {
+            AppLogger.warning('[PlaybackNotifier] ⚠️ Timeout (${stopwatch.elapsedMilliseconds}ms): No hay siguiente canción. La app está cargando recomendaciones, intente de nuevo en un momento.');
+          }
+          
+          _isProcessingNext = false;
+          state = state.copyWith(isProcessingNext: false);
+          return;
+        } else if (remainingSongs <= preloadThreshold && !_isPreloading) {
+          // Caso no crítico: hay algunas canciones pero necesitamos precargar más
+          // Programar recarga en background (no esperar)
+          Future.microtask(() {
+            if (!_isPreloading && state.playbackMode == PlaybackMode.algorithm) {
+              _forceImmediatePreload();
+            }
+          });
         }
       }
     }
@@ -5787,26 +5807,42 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
     // 4. INICIAR INSERCIÓN
     AppLogger.info('[PlaybackNotifier] 🚀 Lanzando _checkAndInsertAd...');
+    
+    // ❄️ FREEZE TEMPRANO: Congelar UI ANTES de cualquier cambio de estado
+    // Esto previene parpadeo de carátula durante la inserción
+    _isFreezingUI = true;
+    _service?.setFreezeMode(true);
+    
     _isInsertingAd = true;
     _isAdRequestInFlight = true; // 🔒 LOCK
-    state = state.copyWith(isInsertingAd: true);
+    state = state.copyWith(isInsertingAd: true);  // Ahora es safe porque UI está frozen
 
     _checkAndInsertAd(triggerSongId: songId).then((_) {
        AppLogger.info('[PlaybackNotifier] ✅ Anuncio insertado correctamente en la cola');
        _isAdRequestInFlight = false; // 🔓 UNLOCK
        
        // ✅ FIX: Resetear el flag de inserción una vez completada la tarea
-       // Esto evita que actualizaciones futuras del stream sean ignoradas erróneamente
-       // si el listener no detecta el cambio de inmediato.
-       // El estado 'isPlayingAd' se activará cuando el stream detecte el tag AudioAd.
        _isInsertingAd = false;
        state = state.copyWith(isInsertingAd: false);
+       
+       // 🌡️ UNFREEZE: Descongelar UI después de completar
+       // (puede que ya esté descongelado por _insertAdInQueue, pero es safe)
+       Future.delayed(const Duration(milliseconds: 100), () {
+         if (_isFreezingUI) {
+           _isFreezingUI = false;
+           _service?.setFreezeMode(false);
+         }
+       });
        
     }).catchError((e) {
        AppLogger.error('[PlaybackNotifier] ❌ Error crítico al insertar anuncio: $e');
        _isInsertingAd = false;
        _isAdRequestInFlight = false; // 🔓 UNLOCK
        state = state.copyWith(isInsertingAd: false);
+       
+       // 🌡️ UNFREEZE EMERGENCIA: Asegurar descongelar en caso de error
+       _isFreezingUI = false;
+       _service?.setFreezeMode(false);
     });
   }
 

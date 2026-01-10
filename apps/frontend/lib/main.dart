@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
+import 'package:sentry_flutter/sentry_flutter.dart'; // 🛡️ SENTRY
 import 'core/navigation/app_router.dart';
 import 'core/theme/neumorphism_theme.dart';
 import 'core/utils/logger.dart';
@@ -26,17 +27,34 @@ Widget _errorWidgetBuilder(FlutterErrorDetails details) {
   }
   
   AppLogger.error('[ErrorHandler] Error detectado', details.exception, details.stack);
+  
+  // 🛡️ SENTRY: Enviar error a Sentry en producción
+  if (kReleaseMode) {
+    Sentry.captureException(details.exception, stackTrace: details.stack);
+  }
+  
   return const SizedBox.shrink();
 }
 
 void _setupErrorHandlers() {
   FlutterError.onError = (FlutterErrorDetails details) {
     _errorWidgetBuilder(details);
-    if (kDebugMode) FlutterError.presentError(details);
+    if (kDebugMode) {
+      FlutterError.presentError(details);
+    } else {
+      // 🛡️ SENTRY: Capturar errores de Flutter en producción
+      Sentry.captureException(details.exception, stackTrace: details.stack);
+    }
   };
   
   PlatformDispatcher.instance.onError = (error, stack) {
     AppLogger.error('[ErrorHandler] Error de zona', error, stack);
+    
+    // 🛡️ SENTRY: Capturar errores async en producción
+    if (kReleaseMode) {
+      Sentry.captureException(error, stackTrace: stack);
+    }
+    
     return true;
   };
 }
@@ -45,7 +63,41 @@ void _setupErrorHandlers() {
 
 // #endregion
 
+/// 🛡️ SENTRY: Wrapper principal con captura de errores
 Future<void> main() async {
+  // Inicializar Sentry SOLO en producción
+  if (kReleaseMode) {
+    await SentryFlutter.init(
+      (options) {
+        // 🔑 TODO: Reemplaza con tu DSN de Sentry.io
+        options.dsn = 'https://YOUR_DSN_HERE@sentry.io/YOUR_PROJECT_ID';
+        
+        // Configuración
+        options.tracesSampleRate = 0.2; // 20% de trazas (performance)
+        options.environment = 'production';
+        options.release = 'struky@1.0.0'; // Versión de la app
+        
+        // Filtrar errores de red conocidos
+        options.beforeSend = (event, hint) {
+          final errorStr = event.throwable.toString().toLowerCase();
+          if (errorStr.contains('socketexception') || 
+              errorStr.contains('clientexception') ||
+              errorStr.contains('google_fonts')) {
+            return null; // No enviar a Sentry
+          }
+          return event;
+        };
+      },
+      appRunner: () => _mainApp(),
+    );
+  } else {
+    // En desarrollo, ejecutar sin Sentry
+    await _mainApp();
+  }
+}
+
+/// Función principal separada para reutilización
+Future<void> _mainApp() async {
   // ⚡ SUPER ROBUSTO: Mínimo trabajo antes de runApp
   WidgetsFlutterBinding.ensureInitialized();
   

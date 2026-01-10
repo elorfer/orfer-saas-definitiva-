@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+    --color-neon-purple: #a855f7;
+    --color-neon-blue: #3b82f6;
+    --color-dark-bg: #0a0a0f;
+    --color-dark-card: #16161f;
+
+    --font-family-display: 'Montserrat', sans-serif;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-dark-bg);
+        color: white;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+@layer components {
+    .btn-primary {
+        @apply bg-gradient-to-r from-[#a855f7] to-[#3b82f6] text-white font-bold py-4 px-8 rounded-full transition-all duration-300 hover:scale-105 active:scale-95;
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 0 30px rgba(168, 85, 247, 0.7);
+    }
+
+    .btn-secondary {
+        @apply bg-transparent border-2 text-white font-bold py-3 px-6 rounded-full transition-all duration-300;
+        border-color: var(--color-neon-purple);
+    }
+
+    .btn-secondary:hover {
+        background-color: var(--color-neon-purple);
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .card-dark {
+        background-color: var(--color-dark-card);
+        @apply rounded-2xl p-6 border border-gray-800 transition-all duration-300;
+    }
+
+    .card-dark:hover {
+        border-color: rgba(168, 85, 247, 0.5);
+    }
+
+    .text-gradient {
+        background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .section-padding {
+        @apply py-20 px-6 md:px-12 lg:px-24;
+    }
+}
+
+@layer utilities {
+    .glow-text {
+        text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .neon-border {
+        border: 2px solid;
+        border-image: linear-gradient(135deg, #a855f7, #3b82f6) 1;
+    }
+
+    /* Custom Audio Player Styles */
+    .audio-player {
+        height: 40px;
+        border-radius: 20px;
+        background: rgba(168, 85, 247, 0.1);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .audio-player::-webkit-media-controls-panel {
+        background: linear-gradient(to right, rgba(168, 85, 247, 0.2), rgba(59, 130, 246, 0.2));
+        border-radius: 20px;
+    }
+
+    .audio-player::-webkit-media-controls-play-button,
+    .audio-player::-webkit-media-controls-pause-button {
+        background-color: #a855f7;
+        border-radius: 50%;
+    }
+
+    .audio-player::-webkit-media-controls-current-time-display,
+    .audio-player::-webkit-media-controls-time-remaining-display {
+        color: #fff;
+    }
+
+    .audio-player::-webkit-media-controls-timeline {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 25px;
+        margin: 0 10px;
+    }
+
+    .bg-neon-glow {
+        background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+    }
+
+    .shadow-neon-purple {
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+    }
+
+    .shadow-neon-blue {
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+
+    .animate-pulse-slow {
+        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .animate-float {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0px);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+}

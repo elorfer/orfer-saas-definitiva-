@@ -20,6 +20,7 @@ import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SocialLoginDto } from './dto/social-login.dto'; // 🔐 Social Login
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('auth')
@@ -27,7 +28,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('register')
   @ApiOperation({ summary: 'Registrar nuevo usuario' })
@@ -44,6 +45,15 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Credenciales inválidas' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Post('social/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '🔐 Login con Google/Facebook OAuth' })
+  @ApiResponse({ status: 200, description: 'Login social exitoso' })
+  @ApiResponse({ status: 401, description: 'Token OAuth inválido' })
+  async socialLogin(@Body() socialLoginDto: SocialLoginDto) {
+    return this.authService.socialLogin(socialLoginDto);
   }
 
   @Post('refresh')

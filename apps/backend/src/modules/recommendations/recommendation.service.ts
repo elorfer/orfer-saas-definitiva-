@@ -43,6 +43,19 @@ export class RecommendationService {
   private readonly recommendationCache = new Map<string, CachedRecommendation>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutos (optimizado para reducir costos AWS)
 
+  // 🚀 SPOTIFY-LEVEL: Caché LRU para canciones (evita queries repetidas)
+  private readonly songCache = new Map<string, { song: Song; timestamp: number }>();
+  private readonly SONG_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+  private readonly SONG_CACHE_MAX_SIZE = 500; // Máximo 500 canciones en caché
+
+  // 🚀 SPOTIFY-LEVEL: Caché para tamaño del catálogo (evita COUNT pesado)
+  private catalogSizeCache: { count: number; timestamp: number } | null = null;
+  private readonly CATALOG_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+  // 🚀 SPOTIFY-LEVEL: Caché para resolución de géneros por ID
+  private readonly genreCache = new Map<string, { genre: Genre; timestamp: number }>();
+  private readonly GENRE_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+
   // Historial de canciones recientes por usuario para evitar repeticiones
   private readonly recentSongsHistory = new Map<string, RecentSongsHistory>();
   private readonly HISTORY_SIZE = 10; // Recordar últimas 10 canciones (aumentado para reducir repetitividad)
@@ -274,9 +287,18 @@ export class RecommendationService {
 
   /**
    * 🔍 OBTENER CANCIÓN ACTUAL CON TODA LA INFORMACIÓN
+   * 🚀 SPOTIFY-LEVEL: Con caché LRU para evitar queries repetidas
    */
   private async getCurrentSong(songId: string): Promise<Song | null> {
     try {
+      // 🚀 SPOTIFY-LEVEL: Verificar caché primero
+      const cached = this.songCache.get(songId);
+      if (cached && (Date.now() - cached.timestamp < this.SONG_CACHE_TTL)) {
+        this.logger.debug(`⚡ [SONG CACHE HIT] ${songId.substring(0, 8)}`);
+        return cached.song;
+      }
+
+      // Query a DB si no está en caché
       const song = await this.songRepository.findOne({
         where: { id: songId },
         relations: ['artist', 'album', 'genre'],
@@ -284,6 +306,16 @@ export class RecommendationService {
 
       if (song) {
         this.logger.log(`🎵 Canción actual encontrada: ${song.title} (géneros: ${song.genres?.join(', ') || 'ninguno'})`);
+
+        // 🚀 SPOTIFY-LEVEL: Guardar en caché
+        this.songCache.set(songId, { song, timestamp: Date.now() });
+
+        // Limpiar caché si excede el tamaño máximo (LRU simple)
+        if (this.songCache.size > this.SONG_CACHE_MAX_SIZE) {
+          const firstKey = this.songCache.keys().next().value;
+          this.songCache.delete(firstKey);
+          this.logger.debug(`🧹 [SONG CACHE] Limpiando: ${this.songCache.size}/${this.SONG_CACHE_MAX_SIZE}`);
+        }
       } else {
         this.logger.warn(`❌ Canción no encontrada: ${songId}`);
       }

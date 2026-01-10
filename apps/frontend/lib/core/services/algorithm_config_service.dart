@@ -99,7 +99,25 @@ class AlgorithmConfig {
     required this.criticalSongs,
     required this.catalogSize,
     required this.smallCatalogThreshold,
+    // ⚡ RENDIMIENTO Y UX
+    required this.controlDebounceMs,
+    required this.preloadCooldownMs,
+    required this.minQueueSize,
+    required this.cyclicBufferThreshold,
   });
+  
+  // ⚡ RENDIMIENTO Y UX
+  /// Debounce del botón siguiente (ms)
+  final int controlDebounceMs;
+  
+  /// Cooldown entre precargas (ms)
+  final int preloadCooldownMs;
+  
+  /// Objetivo de canciones en cola
+  final int minQueueSize;
+  
+  /// Canciones mínimas antes de permitir repeticiones (Cyclic Buffer)
+  final int cyclicBufferThreshold;
   
   /// Valores por defecto (fallback)
   factory AlgorithmConfig.defaults() => const AlgorithmConfig(
@@ -111,6 +129,11 @@ class AlgorithmConfig {
     criticalSongs: 5,
     catalogSize: 0,
     smallCatalogThreshold: 150,
+    // ⚡ RENDIMIENTO Y UX
+    controlDebounceMs: 100,
+    preloadCooldownMs: 500,
+    minQueueSize: 8,
+    cyclicBufferThreshold: 5,
   );
   
   /// Crear desde JSON del backend
@@ -124,26 +147,33 @@ class AlgorithmConfig {
       criticalSongs: json['criticalSongs'] as int? ?? 5,
       catalogSize: json['catalogSize'] as int? ?? 0,
       smallCatalogThreshold: json['smallCatalogThreshold'] as int? ?? 150,
+      // ⚡ RENDIMIENTO Y UX
+      controlDebounceMs: json['controlDebounceMs'] as int? ?? 100,
+      preloadCooldownMs: json['preloadCooldownMs'] as int? ?? 500,
+      minQueueSize: json['minQueueSize'] as int? ?? 8,
+      cyclicBufferThreshold: json['cyclicBufferThreshold'] as int? ?? 5,
     );
   }
   
   /// Verificar si el catálogo es pequeño
   bool get isSmallCatalog => catalogSize > 0 && catalogSize < smallCatalogThreshold;
   
-  /// Obtener historial de exclusión ajustado según tamaño del catálogo
+  /// Obtener historial de exclusión - DIRECTO DEL ADMIN
+  /// El valor del Admin se respeta tal cual, sin reducción automática
   int get effectiveHistorySize {
-    if (isSmallCatalog) {
-      // Para catálogos pequeños, reducir historial proporcionalmente
-      // Mínimo: 30% del catálogo o 10 canciones
-      final reduced = (catalogSize * 0.3).round().clamp(10, historySize);
-      debugPrint('[AlgorithmConfig] 📦 Catálogo pequeño ($catalogSize): historial reducido a $reduced');
-      return reduced;
-    }
+    // ⚡ CONTROL TOTAL: Usar directamente el valor del Admin
+    debugPrint('[AlgorithmConfig] 📊 Usando historySize del Admin: $historySize (catálogo: $catalogSize canciones)');
     return historySize;
   }
+  
+  /// ⚡ Getters de rendimiento como Duration para facilitar uso
+  Duration get controlDebounceDuration => Duration(milliseconds: controlDebounceMs);
+  Duration get preloadCooldownDuration => Duration(milliseconds: preloadCooldownMs);
   
   @override
   String toString() => 'AlgorithmConfig(historySize: $historySize, phase2Count: $phase2Count, '
       'phase31Count: $phase31Count, bufferSize: $bufferSize, preloadThreshold: $preloadThreshold, '
-      'criticalSongs: $criticalSongs, catalogSize: $catalogSize, smallCatalogThreshold: $smallCatalogThreshold)';
+      'criticalSongs: $criticalSongs, catalogSize: $catalogSize, smallCatalogThreshold: $smallCatalogThreshold, '
+      'controlDebounceMs: $controlDebounceMs, preloadCooldownMs: $preloadCooldownMs, '
+      'minQueueSize: $minQueueSize, cyclicBufferThreshold: $cyclicBufferThreshold)';
 }

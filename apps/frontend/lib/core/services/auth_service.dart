@@ -13,6 +13,7 @@ import '../utils/error_handler.dart';
 import '../utils/data_normalizer.dart';
 import '../exceptions/auth_exception.dart';
 import 'http_client_service.dart';
+import 'revenuecat_service.dart'; // 🎯 RevenueCat integration
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -337,6 +338,69 @@ class AuthService {
     }
   }
 
+  /// 🌐 LOGIN SOCIAL (Google/Facebook)
+  Future<AuthResponse> socialLogin({
+    required String provider,
+    required String accessToken,
+    required String email,
+    required String displayName,
+    String? photoUrl,
+  }) async {
+    // Verificar conectividad pero no bloquear si falla
+    final hasConnectivity = await _checkConnectivity();
+    if (!hasConnectivity) {
+      AppLogger.warning('Verificación de conectividad falló, pero intentando de todas formas...');
+    }
+
+    try {
+      final url = _buildUrl('auth/social/login');
+      
+      final response = await RetryHandler.retryCritical(
+        shouldRetry: RetryHandler.isDioErrorRetryable,
+        operation: () => _dio.post(
+          url,
+          data: {
+            'provider': provider,
+            'accessToken': accessToken,
+            'email': email,
+            'displayName': displayName,
+            'photoUrl': photoUrl,
+          },
+          options: Options(
+            headers: ApiConfig.defaultHeaders,
+          ),
+        ),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        try {
+          // Normalizar datos del usuario antes de parsear
+          final data = response.data as Map<String, dynamic>;
+          
+          if (data['user'] != null) {
+            final userData = data['user'] as Map<String, dynamic>;
+            data['user'] = DataNormalizer.normalizeUser(userData);
+          }
+          
+          final authResponse = AuthResponse.fromJson(data);
+          await _saveAuthData(authResponse);
+          return authResponse;
+        } catch (parseError, stackTrace) {
+          AppLogger.error('Error parseando respuesta de social login', parseError, stackTrace);
+          throw AuthException('Error parseando respuesta del servidor: $parseError');
+        }
+      } else {
+        throw AuthException('Error en el servidor: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'AuthService.socialLogin');
+      throw AuthException.fromDioError(e, context: 'AuthService.socialLogin');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'AuthService.socialLogin');
+      throw AuthException.fromGenericError(e, context: 'AuthService.socialLogin');
+    }
+  }
+
   /// Cambiar contraseña
   Future<void> changePassword({
     required String oldPassword,
@@ -525,6 +589,19 @@ class AuthService {
       
       // Actualizar token en HttpClientService para que se use en futuras peticiones
       await _httpClient.updateAuthToken(_accessToken);
+
+      // 🎯 INICIALIZAR REVENUECAT después de login exitoso
+      try {
+        final revenueCat = RevenueCatService();
+        await revenueCat.initialize(
+          userId: _currentUser!.id,
+          email: _currentUser!.email,
+        );
+        AppLogger.debug('[AuthService] 🎉 RevenueCat inicializado correctamente');
+      } catch (e, stackTrace) {
+        // No fallar el login si RevenueCat falla
+        AppLogger.error('[AuthService] ⚠️ Error inicializando RevenueCat', e, stackTrace);
+      }
     } catch (e, stackTrace) {
       AppLogger.error('[AuthService] ❌ Error guardando datos de autenticación', e, stackTrace);
       rethrow;
@@ -681,8 +758,15 @@ class AuthService {
         ),
       );
 
-      if (response.statusCode == 200) {
-        return response.data as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Manejar respuesta como Map o convertir si es necesario
+        if (response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        } else if (response.data is String) {
+          return {'message': response.data};
+        } else {
+          return {'message': 'Solicitud procesada exitosamente'};
+        }
       } else {
         throw AuthException('Error al solicitar recuperación de contraseña');
       }

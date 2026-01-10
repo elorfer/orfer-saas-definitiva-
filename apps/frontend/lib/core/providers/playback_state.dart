@@ -53,6 +53,9 @@ class PlaybackState {
   
   // 🛡️ ANTI-FLICKER: Cache de última carátula válida para evitar parpadeos durante transiciones
   final String? lastKnownCoverUrl;
+  
+  // ⏳ WAITING: Indica que el usuario debe esperar porque no hay más canciones
+  final bool isWaitingForMoreSongs;
 
   const PlaybackState({
     this.playbackMode = PlaybackMode.none,
@@ -80,6 +83,7 @@ class PlaybackState {
     this.isPlayingAd = false,
     this.isInsertingAd = false,
     this.lastKnownCoverUrl,
+    this.isWaitingForMoreSongs = false, // ⏳ WAITING: Default false
   });
 
   /// Calcular progreso de 0.0 a 1.0
@@ -172,6 +176,7 @@ class PlaybackState {
     bool? isPlayingAd,
     bool? isInsertingAd,
     String? lastKnownCoverUrl,
+    bool? isWaitingForMoreSongs, // ⏳ WAITING: Espera de canciones
     // ✅ FIX CRÍTICO: Flags para permitir establecer null explícitamente
     bool clearCurrentAd = false,
     bool clearCurrentSong = false,
@@ -221,6 +226,7 @@ class PlaybackState {
       isPlayingAd: isPlayingAd ?? this.isPlayingAd,
       isInsertingAd: isInsertingAd ?? this.isInsertingAd,
       lastKnownCoverUrl: newCoverUrl, // 🛡️ ANTI-FLICKER: Siempre mantener un caché válido
+      isWaitingForMoreSongs: isWaitingForMoreSongs ?? this.isWaitingForMoreSongs, // ⏳ WAITING
     );
   }
 

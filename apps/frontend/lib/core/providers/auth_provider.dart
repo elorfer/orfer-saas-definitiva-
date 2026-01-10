@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/social_auth_service.dart'; // 🔐 Social Auth
 import '../exceptions/auth_exception.dart';
 import 'onboarding_provider.dart';
 
@@ -174,6 +175,104 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(
         isLoading: false,
         error: e is AuthException ? e.message : 'Error inesperado: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// 🔵 LOGIN CON GOOGLE
+  Future<void> signInWithGoogle() async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+      
+      // Obtener servicio social auth
+      final socialAuth = ref.read(socialAuthServiceProvider);
+      final authData = await socialAuth.signInWithGoogle();
+      
+      if (authData == null) {
+        // Usuario canceló
+        state = state.copyWith(isLoading: false);
+        return;
+      }
+
+      // Enviar al backend
+      final authResponse = await _authService.socialLogin(
+        provider: authData['provider']!,
+        accessToken: authData['accessToken']!,
+        email: authData['email']!,
+        displayName: authData['displayName']!,
+        photoUrl: authData['photoUrl'],
+      );
+
+      state = state.copyWith(
+        user: authResponse.user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      );
+      
+      // Reset onboarding si es nuevo usuario
+      if (authResponse.user.id.isNotEmpty) {
+        try {
+          final onboardingNotifier = ref.read(onboardingProvider.notifier);
+          await onboardingNotifier.resetForNewUser(authResponse.user.id);
+        } catch (e) {
+          debugPrint('⚠️ Error reseteando onboarding: $e');
+        }
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e is AuthException ? e.message : 'Error al iniciar sesión con Google: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// 🔴 LOGIN CON FACEBOOK
+  Future<void> signInWithFacebook() async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+      
+      // Obtener servicio social auth
+      final socialAuth = ref.read(socialAuthServiceProvider);
+      final authData = await socialAuth.signInWithFacebook();
+      
+      if (authData == null) {
+        // Usuario canceló
+        state = state.copyWith(isLoading: false);
+        return;
+      }
+
+      // Enviar al backend
+      final authResponse = await _authService.socialLogin(
+        provider: authData['provider']!,
+        accessToken: authData['accessToken']!,
+        email: authData['email']!,
+        displayName: authData['displayName']!,
+        photoUrl: authData['photoUrl'],
+      );
+
+      state = state.copyWith(
+        user: authResponse.user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      );
+      
+      // Reset onboarding si es nuevo usuario
+      if (authResponse.user.id.isNotEmpty) {
+        try {
+          final onboardingNotifier = ref.read(onboardingProvider.notifier);
+          await onboardingNotifier.resetForNewUser(authResponse.user.id);
+        } catch (e) {
+          debugPrint('⚠️ Error reseteando onboarding: $e');
+        }
+      }
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e is AuthException ? e.message : 'Error al iniciar sesión con Facebook: $e',
       );
       rethrow;
     }

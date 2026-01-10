@@ -50,10 +50,10 @@ import { dataSourceOptions } from './database/data-source';
         const sslEnv = configService.get<string>('DB_SSL');
         const sslRejectEnv = configService.get<string>('DB_SSL_REJECT_UNAUTHORIZED');
         const databaseUrl = configService.get<string>('DATABASE_URL');
-        
+
         // Detectar si DATABASE_URL contiene parámetros SSL
         const urlHasSsl = databaseUrl?.includes('sslmode=') || databaseUrl?.includes('ssl=');
-        
+
         // Determinar si SSL debe estar habilitado
         let sslEnabled = false;
         if (typeof sslEnv === 'string') {
@@ -64,7 +64,7 @@ import { dataSourceOptions } from './database/data-source';
         } else {
           sslEnabled = isProduction;
         }
-        
+
         // Determinar si se debe rechazar certificados no autorizados
         // Por defecto, si DB_SSL_REJECT_UNAUTHORIZED no está definido, usar false (aceptar certificados autofirmados)
         let rejectUnauthorized = false;
@@ -72,14 +72,14 @@ import { dataSourceOptions } from './database/data-source';
           const sslRejectLower = sslRejectEnv.toLowerCase();
           rejectUnauthorized = ['1', 'true', 'yes', 'on'].includes(sslRejectLower);
         }
-        
+
         const sslOptions = sslEnabled ? { rejectUnauthorized } : false;
 
         // Configurar logging de TypeORM de forma más selectiva
         // Solo mostrar errores y warnings en desarrollo, no todas las queries
         const dbLoggingEnv = configService.get<string>('DB_LOGGING');
         let dbLogging: boolean | ('query' | 'error' | 'schema' | 'warn' | 'info' | 'log' | 'migration')[] = false;
-        
+
         if (dbLoggingEnv === 'true' || dbLoggingEnv === '1') {
           // Si se especifica explícitamente, habilitar logging completo
           dbLogging = true;
@@ -109,7 +109,7 @@ import { dataSourceOptions } from './database/data-source';
             // Si quedó un ? al final sin parámetros, removerlo
             cleanUrl = cleanUrl.replace(/\?$/, '');
           }
-          
+
           return {
             ...baseOptions,
             url: cleanUrl,
@@ -139,11 +139,23 @@ import { dataSourceOptions } from './database/data-source';
     //   inject: [ConfigService],
     // }),
 
-    // Rate limiting
+    // 🚦 RATE LIMITING PROFESIONAL (Multi-nivel)
+    // Protección contra ataques DDoS, bugs de loops infinitos, y abuso de APIs
     ThrottlerModule.forRoot([
       {
-        ttl: 60000, // 1 minuto
-        limit: 100, // 100 requests por minuto
+        name: 'default',      // Límite general para toda la app
+        ttl: 60000,           // 60 segundos (1 minuto)
+        limit: 100,           // Máximo 100 requests por minuto
+      },
+      {
+        name: 'strict',       // Límite estricto para endpoints públicos
+        ttl: 60000,           // 60 segundos
+        limit: 60,            // Máximo 60 requests por minuto
+      },
+      {
+        name: 'auth',         // Límite MUY estricto para autenticación
+        ttl: 60000,           // 60 segundos
+        limit: 10,            // Máximo 10 intentos de login por minuto (anti brute-force)
       },
     ]),
 
@@ -157,7 +169,7 @@ import { dataSourceOptions } from './database/data-source';
       useFactory: async (configService: ConfigService) => {
         // Priorizar REDIS_URL si está disponible (para Docker)
         const redisUrl = configService.get<string>('REDIS_URL');
-        
+
         let redisConfig: any = {
           maxRetriesPerRequest: null,
           enableReadyCheck: false,
@@ -173,7 +185,7 @@ import { dataSourceOptions } from './database/data-source';
           connectTimeout: 5000, // 5 segundos máximo para conectar
           lazyConnect: true, // Conectar bajo demanda, no al inicializar
         };
-        
+
         if (redisUrl) {
           // Parsear REDIS_URL (formato: redis://[password@]host:port)
           const url = new URL(redisUrl);
@@ -186,13 +198,13 @@ import { dataSourceOptions } from './database/data-source';
           // Fallback a REDIS_HOST y REDIS_PORT
           redisConfig.host = configService.get<string>('REDIS_HOST') || 'localhost';
           redisConfig.port = configService.get<number>('REDIS_PORT') || 6379;
-          
+
           const password = configService.get<string>('REDIS_PASSWORD');
           if (password) {
             redisConfig.password = password;
           }
         }
-        
+
         return {
           redis: redisConfig,
         };
@@ -225,4 +237,4 @@ import { dataSourceOptions } from './database/data-source';
     DiscoveryModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

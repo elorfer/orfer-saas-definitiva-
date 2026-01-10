@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     
     <application
-        android:label="vintage_music_app"
+        android:label="Struky"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
@@ -40,6 +40,20 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            
+            <!-- 🔗 DEEP LINK para reset password -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+                <!-- URL personalizada: struky://reset-password/token -->
+                <data android:scheme="struky" android:host="reset-password" />
+                
+                <!-- HTTPS (para producción): https://struky.com/reset-password/token -->
+                <data android:scheme="https" android:host="struky.com" android:pathPrefix="/reset-password" />
+                <data android:scheme="http" android:host="localhost" android:port="3000" android:pathPrefix="/reset-password" />
+            </intent-filter>
         </activity>
         
         <!-- Servicio de audio para background playback -->
@@ -57,6 +71,33 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        
+        <!-- 🔴 CONFIGURACIÓN DE FACEBOOK LOGIN -->
+        <meta-data 
+            android:name="com.facebook.sdk.ApplicationId" 
+            android:value="@string/facebook_app_id"/>
+        
+        <meta-data 
+            android:name="com.facebook.sdk.ClientToken" 
+            android:value="@string/facebook_client_token"/>
+        
+        <!-- Activity de Facebook para el callback del login -->
+        <activity 
+            android:name="com.facebook.FacebookActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:label="@string/app_name" 
+            android:exported="false"/>
+        
+        <activity
+            android:name="com.facebook.CustomTabActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/fb_login_protocol_scheme" />
+            </intent-filter>
+        </activity>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
@@ -68,5 +109,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        
+        <!-- 🔴 Query para permitir que la app abra Facebook -->
+        <package android:name="com.facebook.katana" />
     </queries>
 </manifest>

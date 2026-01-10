@@ -12,16 +12,40 @@ export class S3Service {
   private readonly region: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.region = this.configService.get<string>('AWS_REGION');
-    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET');
+    // Soporte para Cloudflare R2 o AWS S3
+    const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
 
-    this.s3Client = new S3Client({
-      region: this.region,
-      credentials: {
-        accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
-        secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY'),
-      },
-    });
+    if (useR2) {
+      // Configuración para Cloudflare R2
+      const accountId = this.configService.get<string>('R2_ACCOUNT_ID');
+      this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'struky-audio';
+      this.region = 'auto'; // R2 usa 'auto'
+
+      this.s3Client = new S3Client({
+        region: this.region,
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId: this.configService.get<string>('R2_ACCESS_KEY_ID'),
+          secretAccessKey: this.configService.get<string>('R2_SECRET_ACCESS_KEY'),
+        },
+      });
+
+      console.log('✅ Storage: Usando Cloudflare R2');
+    } else {
+      // Configuración para AWS S3 (fallback)
+      this.region = this.configService.get<string>('AWS_REGION') || 'us-east-1';
+      this.bucketName = this.configService.get<string>('AWS_S3_BUCKET');
+
+      this.s3Client = new S3Client({
+        region: this.region,
+        credentials: {
+          accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID'),
+          secretAccessKey: this.configService.get<string>('AWS_SECRET_ACCESS_KEY'),
+        },
+      });
+
+      console.log('✅ Storage: Usando AWS S3');
+    }
   }
 
   async uploadFile(
@@ -49,7 +73,24 @@ export class S3Service {
 
       await this.s3Client.send(command);
 
-      const url = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+      // Generar URL pública según el provider
+      const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
+      let url: string;
+
+      if (useR2) {
+        // URL pública de Cloudflare R2
+        const r2PublicDomain = this.configService.get<string>('R2_PUBLIC_DOMAIN');
+        if (r2PublicDomain) {
+          url = `https://${r2PublicDomain}/${key}`;
+        } else {
+          // Usar dominio público por defecto (necesitas configurar en Cloudflare)
+          const accountId = this.configService.get<string>('R2_ACCOUNT_ID');
+          url = `https://pub-${accountId}.r2.dev/${key}`;
+        }
+      } else {
+        // URL de S3
+        url = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+      }
 
       return { url, key };
     } catch (error) {
@@ -118,7 +159,7 @@ export class S3Service {
   extractKeyFromUrl(url: string): string {
     const urlParts = url.split('/');
     const bucketIndex = urlParts.findIndex(part => part.includes(this.bucketName));
-    
+
     if (bucketIndex === -1 || bucketIndex === urlParts.length - 1) {
       throw new BadRequestException('URL de S3 inválida');
     }
@@ -131,7 +172,7 @@ export class S3Service {
     if (cloudFrontDomain) {
       return `https://${cloudFrontDomain}/${key}`;
     }
-    
+
     // Fallback a S3 directo
     return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
   }

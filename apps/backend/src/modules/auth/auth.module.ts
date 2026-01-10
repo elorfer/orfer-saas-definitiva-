@@ -10,6 +10,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { User } from '../../common/entities/user.entity';
 import { Artist } from '../../common/entities/artist.entity';
+import { FirebaseService } from '../../common/services/firebase.service';
+import { ResendService } from '../../common/services/resend.service';
 
 @Module({
   imports: [
@@ -27,7 +29,7 @@ import { Artist } from '../../common/entities/artist.entity';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, LocalStrategy],
+  providers: [AuthService, JwtStrategy, LocalStrategy, FirebaseService, ResendService],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

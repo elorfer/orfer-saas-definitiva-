@@ -100,9 +100,10 @@ class _SmoothSeekbarState extends ConsumerState<SmoothSeekbar>
   bool _isDragging = false;
   double _dragProgress = 0.0;
   
-  //  FIX PARPADEO: Detectar saltos grandes (cambio de canción)
+  // ✅ FIX PARPADEO: Anti-retroceso profesional
   double _lastProgress = 0.0;
-  String? _lastSongId; // 🛠️ FIX: Tracking de song ID para detectar cambios
+  double _maxProgress = 0.0; // ✅ NUEVO: Progreso máximo alcanzado
+  String? _lastSongId;
   
   // Animación del thumb
   late AnimationController _thumbController;
@@ -152,27 +153,51 @@ class _SmoothSeekbarState extends ConsumerState<SmoothSeekbar>
     Duration position,
     Duration duration,
   ) {
-    // Calcular progreso
-    double progress = 0.0;
+    // Calcular progreso actual
+    double currentProgress = 0.0;
     
     if (duration.inMilliseconds > 0) {
-      progress = _isDragging
+      currentProgress = _isDragging
           ? _dragProgress
           : (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
     }
 
-    // 🆕 FIX PARPADEO: Detectar cambio de canción o salto grande
-    // 🛠️ FIX CRÍTICO: Usar ref.watch para detectar cambios reactivamente
+    // ✅ FIX PARPADEO PROFESIONAL: Detectar cambio de canción
     final currentSongId = ref.watch(unifiedAudioProviderFixed.select((state) => state.currentSong?.id));
     final songChanged = currentSongId != _lastSongId && _lastSongId != null;
     
-    // 🛠️ FIX CRÍTICO: Resetear _lastProgress cuando cambia la canción
-    // Esto fuerza que la barra empiece desde 0% en la nueva canción
+    // ✅ RESET COMPLETO cuando cambia la canción
     if (songChanged) {
       _lastProgress = 0.0;
+      _maxProgress = 0.0; // ✅ Reset del máximo
     }
     
-    // Si hay un salto > 30% hacia atrás hacia el inicio, NO animar
+    // ✅ ANTI-RETROCESO PROFESIONAL: Solo permitir avance (tolerancia 2%)
+    double progress;
+    if (_isDragging) {
+      // Durante drag, usar progreso del usuario
+      progress = _dragProgress;
+      _maxProgress = _dragProgress; // Actualizar máximo
+    } else if (currentProgress > _maxProgress) {
+      // Avance normal: actualizar máximo y usar
+      _maxProgress = currentProgress;
+      progress = currentProgress;
+    } else if (currentProgress < _maxProgress - 0.02) {
+      // Retroceso significativo (>2%): verificar si es cambio de canción
+      if (_maxProgress - currentProgress > 0.5 || currentProgress < 0.05) {
+        // Retroceso muy grande (>50%) o cerca del inicio: probablemente nueva canción
+        _maxProgress = currentProgress;
+        progress = currentProgress;
+      } else {
+        // Retroceso menor: mantener el máximo (anti-flicker)
+        progress = _maxProgress;
+      }
+    } else {
+      // Micro-variación (<2%): usar máximo actual
+      progress = _maxProgress;
+    }
+    
+    // Detectar si debemos saltar animación
     final bigJump = (_lastProgress - progress).abs() > 0.3 && progress < 0.1;
     final skipAnimation = (songChanged || bigJump) && !_isDragging;
     

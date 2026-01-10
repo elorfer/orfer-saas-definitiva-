@@ -58,6 +58,19 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
     final stateAsync = ref.watch(audioEngineStateProvider);
     final palette = ref.watch(dynamicPaletteProvider);
 
+    // 🛡️ PROTECCIÓN CRÍTICA: Cerrar reproductor si hay un anuncio
+    // El AdsMiniPlayer tomará el control de la UI durante los anuncios
+    if (stateAsync.hasValue && stateAsync.value!.isPlayingAd) {
+      // Cerrar el reproductor profesional para mostrar el AdsMiniPlayer
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          PlayerNavigationService.closeFullPlayer(context: context, ref: ref);
+        }
+      });
+      // Mientras se cierra, mostrar el estado actual sin parpadeos
+      return _buildPlayer(context, stateAsync.value!, palette);
+    }
+
     // ⚡ FIX: Evitar flash negro usando datos previos si existen (skipLoadingOnReload implícito)
     if (stateAsync.hasValue) {
       return _buildPlayer(context, stateAsync.value!, palette);
@@ -615,6 +628,9 @@ class ProfessionalMiniPlayer extends ConsumerWidget {
 
     return stateAsync.when(
       data: (state) {
+        // 🛡️ PROTECCIÓN: Ocultar si hay anuncio (el AdsMiniPlayer tomará el control)
+        if (state.isPlayingAd) return const SizedBox.shrink();
+        
         if (state.currentSong == null) return const SizedBox.shrink();
         return _buildMiniPlayer(context, ref, state, palette);
       },

@@ -572,28 +572,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 child: SocialAuthButton(
                                   icon: Icons.g_mobiledata,
                                   text: 'Google',
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Registro con Google próximamente'),
-                                      ),
-                                    );
-                                  },
+                                  onPressed: isLoading
+                                      ? null
+                                      : () async {
+                                          try {
+                                            await authNotifier.signInWithGoogle();
+                                          } catch (e) {
+                                            // El error ya se maneja en el provider
+                                          }
+                                        },
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Flexible(
                                 flex: 1,
                                 child: SocialAuthButton(
-                                  icon: Icons.apple,
-                                  text: 'Apple',
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Registro con Apple próximamente'),
-                                      ),
-                                    );
-                                  },
+                                  icon: Icons.facebook,
+                                  text: 'Facebook',
+                                  onPressed: isLoading
+                                      ? null
+                                      : () async {
+                                          try {
+                                            await authNotifier.signInWithFacebook();
+                                          } catch (e) {
+                                            // El error ya se maneja en el provider
+                                          }
+                                        },
+                                  backgroundColor: const Color(0xFF1877F2), // Azul de Facebook
+                                  textColor: Colors.white,
+                                  iconColor: Colors.white,
                                 ),
                               ),
                             ],

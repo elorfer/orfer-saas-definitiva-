@@ -338,24 +338,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   SocialAuthButton(
                     icon: Icons.g_mobiledata,
                     text: 'Google',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Login con Google próximamente'),
-                        ),
-                      );
+                    onPressed: isLoading ? null : () async {
+                      await authNotifier.signInWithGoogle();
                     },
                   ),
                   const SizedBox(height: 12),
                   SocialAuthButton(
-                    icon: Icons.apple,
-                    text: 'Apple',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Login con Apple próximamente'),
-                        ),
-                      );
+                    icon: Icons.facebook,
+                    text: 'Facebook',
+                    onPressed: isLoading ? null : () async {
+                      await authNotifier.signInWithFacebook();
                     },
                   ),
                 ],
@@ -367,12 +359,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: SocialAuthButton(
                       icon: Icons.g_mobiledata,
                       text: 'Google',
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Login con Google próximamente'),
-                          ),
-                        );
+                      onPressed: isLoading ? null : () async {
+                        await authNotifier.signInWithGoogle();
                       },
                     ),
                   ),
@@ -380,14 +368,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Flexible(
                     flex: 1,
                     child: SocialAuthButton(
-                      icon: Icons.apple,
-                      text: 'Apple',
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Login con Apple próximamente'),
-                          ),
-                        );
+                      icon: Icons.facebook,
+                      text: 'Facebook',
+                      onPressed: isLoading ? null : () async {
+                        await authNotifier.signInWithFacebook();
                       },
                     ),
                   ),

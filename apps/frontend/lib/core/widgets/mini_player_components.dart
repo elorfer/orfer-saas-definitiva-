@@ -15,7 +15,6 @@ import 'package:marquee/marquee.dart'; // ⚡ PREMIUM: Efecto de desplazamiento
 
 /// ⚡ OPTIMIZACIÓN: Widget separado para la imagen del álbum
 /// Solo se reconstruye si cambia la URL de la imagen
-/// ✅ FIX PARPADEO: Key única basada en songId para evitar parpadeos durante inserción de anuncios
 class _MiniPlayerAlbumImage extends ConsumerWidget {
   final String? coverArtUrl;
   final String? songId; 
@@ -27,12 +26,6 @@ class _MiniPlayerAlbumImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ MIRROR PATTERN: Escuchar directamente al stream de secuencia para la carátula
-    // Esto garantiza que el cambio automático se detecte incluso si Riverpod tiene retraso
-    // ✅ MIRROR PATTERN: Usar DIRECTAMENTE la data que viene del padre (props)
-    // El padre (FinalMiniPlayer) ya obtiene la "verdad" desde realCurrentSongProvider.
-    // No volver a escuchar el stream aquí porque reintroduce el bug del "zombie tag" (dato viejo).
-    
     return RepaintBoundary(
       child: Container(
         width: 40,
@@ -44,8 +37,7 @@ class _MiniPlayerAlbumImage extends ConsumerWidget {
         child: ClipOval(
           child: coverArtUrl != null && coverArtUrl!.isNotEmpty
               ? StableImageWidget(
-                  // ⚡ VALUEKEY: Obligar reconstrucción inmediata si cambia la URL
-                  key: ValueKey(coverArtUrl), 
+                  key: ValueKey('mini_${songId ?? 'unknown'}'),
                   imageUrl: coverArtUrl!,
                   width: 40,
                   height: 40,
@@ -217,14 +209,34 @@ class _MiniPlayerPlayButton extends ConsumerWidget {
   }
 }
 
-/// ⚡ BARRA DE PROGRESO OPTIMIZADA
-/// ✅ Usa el progreso del provider unificado (siempre sincronizado)
-/// ✅ RepaintBoundary para optimización de renderizado
-class _MiniPlayerProgressBar extends ConsumerWidget {
+/// ⚡ BARRA DE PROGRESO PROFESIONAL
+/// ✅ SOLUCIÓN PROFESIONAL: TweenAnimationBuilder para interpolación suave
+/// ✅ Anti-retroceso: Solo permite avance, nunca retroceso
+/// ✅ Detecta cambio de canción para resetear correctamente
+class _MiniPlayerProgressBar extends ConsumerStatefulWidget {
   const _MiniPlayerProgressBar();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MiniPlayerProgressBar> createState() => _MiniPlayerProgressBarState();
+}
+
+class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> {
+  // ✅ ANTI-RETROCESO: Guardar el progreso máximo y el ID de canción actual
+  double _maxProgress = 0.0;
+  String? _currentSongId;
+  
+  @override
+  Widget build(BuildContext context) {
+    // Obtener ID de canción actual para detectar cambios
+    final currentSong = ref.watch(realCurrentSongProvider);
+    final currentSongId = currentSong?.id;
+    
+    // ✅ DETECTAR CAMBIO DE CANCIÓN: Resetear progreso máximo
+    if (currentSongId != _currentSongId) {
+      _currentSongId = currentSongId;
+      _maxProgress = 0.0; // Nueva canción = nuevo progreso
+    }
+    
     // ✅ MIRROR PATTERN: Sincronización directa con streams del motor de audio
     final audioService = ref.watch(audioServiceProvider);
 
@@ -240,20 +252,47 @@ class _MiniPlayerProgressBar extends ConsumerWidget {
           builder: (context, positionSnapshot) {
             final position = positionSnapshot.data ?? Duration.zero;
             
-            double value = 0.0;
+            double currentProgress = 0.0;
             if (totalDuration.inMilliseconds > 0) {
-              value = (position.inMilliseconds / totalDuration.inMilliseconds).clamp(0.0, 1.0);
+              currentProgress = (position.inMilliseconds / totalDuration.inMilliseconds).clamp(0.0, 1.0);
             }
-
-            // 🎨 RENDERIZADO: Siempre visible
+            
+            // ✅ FIX CRÍTICO: Detectar cambio de canción por posición
+            // Si la posición está cerca del inicio (<5%) pero el maxProgress era alto (>20%),
+            // es muy probable que sea una nueva canción
+            final likelyNewSong = currentProgress < 0.05 && _maxProgress > 0.2;
+            if (likelyNewSong) {
+              _maxProgress = currentProgress;
+            }
+            
+            // ✅ ANTI-RETROCESO: Solo permitir avance (tolerancia de 2% para evitar micro-saltos)
+            if (currentProgress > _maxProgress) {
+              _maxProgress = currentProgress;
+            } else if (currentProgress < _maxProgress - 0.02) {
+              // Retroceso significativo detectado (>2%)
+              // Forzar reset si el retroceso es muy grande (>50%) o cerca del inicio
+              if (_maxProgress - currentProgress > 0.5 || currentProgress < 0.05) {
+                _maxProgress = currentProgress;
+              }
+              // Ignorar retrocesos menores (anti-flicker)
+            }
+            
+            // ✅ PROFESIONAL: TweenAnimationBuilder para transiciones suaves
             return SizedBox(
               height: 2,
               child: RepaintBoundary(
-                child: LinearProgressIndicator(
-                  value: value,
-                  backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
-                  borderRadius: const BorderRadius.all(Radius.circular(1.0)),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: _maxProgress, end: _maxProgress),
+                  duration: const Duration(milliseconds: 150),
+                  curve: Curves.easeOut,
+                  builder: (context, value, child) {
+                    return LinearProgressIndicator(
+                      value: value,
+                      backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
+                      valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+                      borderRadius: const BorderRadius.all(Radius.circular(1.0)),
+                    );
+                  },
                 ),
               ),
             );

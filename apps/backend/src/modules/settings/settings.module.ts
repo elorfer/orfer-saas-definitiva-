@@ -1,18 +1,19 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppSetting } from '../../common/entities/app-setting.entity';
+import { Song } from '../../common/entities/song.entity';
 import { SettingsService } from './settings.service';
 import { SettingsController } from './settings.controller';
 import { PublicSettingsController } from './public-settings.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AppSetting])],
+  imports: [TypeOrmModule.forFeature([AppSetting, Song])],
   controllers: [SettingsController, PublicSettingsController],
   providers: [SettingsService],
   exports: [SettingsService],
 })
 export class SettingsModule implements OnModuleInit {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(private readonly settingsService: SettingsService) { }
 
   /**
    * Al iniciar el módulo, inicializa las configuraciones por defecto

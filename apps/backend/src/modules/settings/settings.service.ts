@@ -29,6 +29,12 @@ const DEFAULT_VALUES: Record<string, number> = {
   // 📊 CATÁLOGO
   [SettingKeys.CATALOG_SIZE]: 0,                   // Se auto-calcula
   [SettingKeys.CATALOG_SMALL_THRESHOLD]: 150,      // Umbral para "catálogo pequeño"
+
+  // ⚡ RENDIMIENTO Y UX
+  'control_debounce_ms': 100,          // Debounce del botón siguiente (ms)
+  'preload_cooldown_ms': 500,          // Cooldown entre precargas (ms)
+  'min_queue_size': 8,                 // Objetivo de canciones en cola
+  'cyclic_buffer_threshold': 5,        // Canciones mínimas antes de permitir repeticiones
 };
 
 @Injectable()

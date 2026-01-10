@@ -90,6 +90,48 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
         }
     });
     
+    // ⏳ LISTENER DE ESPERA DE CANCIONES: Mostrar SnackBar cuando no hay canciones disponibles
+    ref.listen(
+      unifiedAudioProviderFixed.select((state) => state.isWaitingForMoreSongs),
+      (previous, current) {
+        if (current == true && previous != true) {
+          // Mostrar SnackBar de espera
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Cargando más canciones...'),
+                ],
+              ),
+              backgroundColor: NeumorphismTheme.coffeeMedium,
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom: 160, // Arriba del mini player
+                left: 16,
+                right: 16,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        } else if (current == false && previous == true) {
+          // Ocultar SnackBar cuando ya hay canciones
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        }
+      },
+    );
+    
     final navBarHeight = _cachedNavBarHeight ?? 80.0;
 
     return Scaffold(
@@ -144,10 +186,20 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
                     ? CrossFadeState.showFirst 
                     : CrossFadeState.showSecond,
                 firstChild: AdsMiniPlayer(
-                  onTap: () => PlayerNavigationService.openFullPlayer(
-                    context: context,
-                    ref: ref,
-                  ),
+                  onTap: () {
+                    try {
+                      final audioState = ref.read(unifiedAudioProviderFixed);
+                      // ✅ FIX: Verificar que el reproductor no esté ya expandido
+                      if (!audioState.isPlayerExpanded) {
+                        PlayerNavigationService.openFullPlayer(
+                          context: context,
+                          ref: ref,
+                        );
+                      }
+                    } catch (e) {
+                      AppLogger.error('[PersistentNavigation] Error abriendo player desde ad: $e');
+                    }
+                  },
                 ),
                 secondChild: FinalMiniPlayer(
                   onTap: () {

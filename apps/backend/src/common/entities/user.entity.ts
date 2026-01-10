@@ -78,6 +78,22 @@ export class User {
   @Column({ name: 'last_login_at', nullable: true })
   lastLoginAt?: Date;
 
+  // Campos de RevenueCat
+  @Column({ name: 'revenuecat_user_id', nullable: true })
+  revenuecatUserId?: string;
+
+  @Column({ name: 'revenuecat_customer_id', unique: true, nullable: true })
+  revenuecatCustomerId?: string;
+
+  @Column({ name: 'is_premium', default: false })
+  isPremium: boolean;
+
+  @Column({ name: 'premium_expires_at', nullable: true })
+  premiumExpiresAt?: Date;
+
+  @Column({ name: 'last_revenuecat_sync', nullable: true })
+  lastRevenuecatSync?: Date;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
@@ -123,6 +139,20 @@ export class User {
       this.subscriptionExpiresAt &&
       this.subscriptionExpiresAt > new Date()
     );
+  }
+
+  /**
+   * Verifica si el usuario tiene acceso premium ACTIVO
+   * Valida tanto el flag isPremium como la fecha de expiración
+   */
+  hasPremiumAccess(): boolean {
+    if (!this.isPremium) return false;
+
+    // Si no hay fecha de expiración, asumir que es premium lifetime
+    if (!this.premiumExpiresAt) return true;
+
+    // Verificar que no haya expirado
+    return this.premiumExpiresAt > new Date();
   }
 }
 

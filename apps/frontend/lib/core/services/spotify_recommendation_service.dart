@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import 'http_client_service.dart';
 import 'retry_service.dart';
 import 'http_request_pool.dart';
+import 'algorithm_config_service.dart';
 import '../utils/data_normalizer.dart';
 import '../utils/url_normalizer.dart';
 import '../utils/genre_normalizer.dart';
@@ -320,8 +321,18 @@ class SpotifyRecommendationService {
         queryParams['userId'] = user.id;
       }
       
-      if (excludeIds.isNotEmpty) {
-        queryParams['excludeIds'] = excludeIds.join(',');
+      // ⚡ ADMIN CONTROLADO: Usar effectiveHistorySize del Admin para limitar excludeIds
+      // Esto permite controlar desde el Admin cuántas canciones excluir
+      final maxExcludeIds = AlgorithmConfigService.instance.currentConfig.effectiveHistorySize;
+      var effectiveExcludeIds = excludeIds;
+      if (excludeIds.length > maxExcludeIds) {
+        debugPrint('⚠️ [SpotifyRec Batch] Demasiados excludeIds (${excludeIds.length}). Limitando a últimos $maxExcludeIds (Admin config).');
+        // Tomar solo los últimos N (los más recientes)
+        effectiveExcludeIds = excludeIds.skip(excludeIds.length - maxExcludeIds).toList();
+      }
+      
+      if (effectiveExcludeIds.isNotEmpty) {
+        queryParams['excludeIds'] = effectiveExcludeIds.join(',');
       }
 
       // 🚀 NUEVO ENDPOINT: /public/songs/playlist/generate
@@ -348,8 +359,8 @@ class SpotifyRecommendationService {
             '/public/songs/playlist/generate',
             queryParameters: queryParams,
             options: Options(
-              receiveTimeout: const Duration(seconds: 10), // Más tiempo para batch
-              sendTimeout: const Duration(seconds: 10),
+              receiveTimeout: const Duration(seconds: 30), // ⚡ Aumentado temporalmente por lentitud del backend
+              sendTimeout: const Duration(seconds: 30),
             ),
           ),
         ),

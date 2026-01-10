@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Struky</string>
+    
+    <!-- ✅ Facebook Login Configuration - App Consumidor -->
+    <!-- App ID obtenido desde Facebook Developers -->
+    <string name="facebook_app_id">1209364637258569</string>
+    <string name="fb_login_protocol_scheme">fb1209364637258569</string>
+    <string name="facebook_client_token">0d12329f758e9956f31d93bdd5d96587</string>
+</resources>

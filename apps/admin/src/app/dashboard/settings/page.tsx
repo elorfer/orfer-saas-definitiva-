@@ -37,6 +37,11 @@ interface AlgorithmSettings {
     weight_artist: number;
     weight_novelty: number;
     weight_affinity: number;
+    // ⚡ RENDIMIENTO Y UX
+    control_debounce_ms: number;
+    preload_cooldown_ms: number;
+    min_queue_size: number;
+    cyclic_buffer_threshold: number;
 }
 
 const DEFAULT_SETTINGS: AlgorithmSettings = {
@@ -55,6 +60,11 @@ const DEFAULT_SETTINGS: AlgorithmSettings = {
     weight_artist: 10,
     weight_novelty: 20,
     weight_affinity: 20,
+    // ⚡ RENDIMIENTO Y UX
+    control_debounce_ms: 100,
+    preload_cooldown_ms: 500,
+    min_queue_size: 8,
+    cyclic_buffer_threshold: 5,
 };
 
 const SETTING_DESCRIPTIONS: Record<string, { label: string; description: string; min: number; max: number; color: string }> = {
@@ -149,6 +159,35 @@ const SETTING_DESCRIPTIONS: Record<string, { label: string; description: string;
         min: 0,
         max: 100,
         color: 'teal',
+    },
+    // ⚡ RENDIMIENTO Y UX
+    control_debounce_ms: {
+        label: 'Debounce Controles',
+        description: 'Tiempo mínimo entre clicks en botón siguiente (ms). Reduce para respuesta más rápida.',
+        min: 50,
+        max: 500,
+        color: 'red',
+    },
+    preload_cooldown_ms: {
+        label: 'Cooldown Precarga',
+        description: 'Tiempo mínimo entre precargas de canciones (ms). Reduce para más agresividad.',
+        min: 100,
+        max: 5000,
+        color: 'amber',
+    },
+    min_queue_size: {
+        label: 'Canciones en Cola',
+        description: 'Objetivo de canciones listas para reproducir. Aumenta para menos interrupciones.',
+        min: 3,
+        max: 20,
+        color: 'lime',
+    },
+    cyclic_buffer_threshold: {
+        label: 'Umbral Cyclic Buffer',
+        description: 'Si quedan menos canciones, permite repeticiones para evitar interrupciones.',
+        min: 2,
+        max: 20,
+        color: 'gray',
     },
 };
 
@@ -630,6 +669,29 @@ export default function SettingsPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {renderSettingCard('ad_frequency')}
+                </div>
+            </div>
+
+            {/* ⚡ RENDIMIENTO Y UX */}
+            <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Cog6ToothIcon className="h-5 w-5 text-red-500" />
+                    Rendimiento y UX
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                    Ajusta la velocidad de respuesta y la agresividad de la precarga de canciones.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderSettingCard('control_debounce_ms')}
+                    {renderSettingCard('preload_cooldown_ms')}
+                    {renderSettingCard('min_queue_size')}
+                    {renderSettingCard('cyclic_buffer_threshold')}
+                </div>
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-700">
+                        <strong>⚡ Tip:</strong> Para saltar canciones más rápido, reduce "Debounce Controles" (50-100ms).
+                        Para evitar interrupciones, aumenta "Canciones en Cola" (8-15).
+                    </p>
                 </div>
             </div>
 

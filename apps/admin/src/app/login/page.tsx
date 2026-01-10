@@ -99,9 +99,9 @@ function LoginContent() {
         <div className='rounded-3xl border border-white/20 bg-white/90 px-8 py-10 shadow-2xl backdrop-blur-xl sm:px-12 sm:py-12'>
           <div className='mb-10 text-center'>
             <div className='mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-brown-700 to-brown-800 shadow-lg shadow-brown-700/40'>
-              <img 
-                src="/logo-icon.png" 
-                alt="Logo" 
+              <img
+                src="/logo-icon.png"
+                alt="Logo"
                 className="h-24 w-24 object-contain"
                 onError={(e) => {
                   console.error('Error cargando logo-icon.png');
@@ -155,6 +155,16 @@ function LoginContent() {
                   {showPassword ? <EyeSlashIcon className='h-5 w-5' /> : <EyeIcon className='h-5 w-5' />}
                 </button>
               </div>
+            </div>
+
+            <div className='text-right'>
+              <button
+                type='button'
+                onClick={() => router.push('/forgot-password')}
+                className='text-sm font-medium text-brown-700 hover:text-brown-800 transition'
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
             </div>
 
             <button

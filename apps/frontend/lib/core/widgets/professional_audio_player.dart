@@ -10,6 +10,7 @@ import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
 import '../utils/url_normalizer.dart';
 import '../services/audio_service.dart';
+import '../services/algorithm_config_service.dart'; // ⚡ ADMIN CONTROLADO
 import 'package:cached_network_image/cached_network_image.dart';
 import 'favorite_button.dart';
 import 'album_swiper.dart';
@@ -227,6 +228,12 @@ class _ProfessionalAudioPlayerState
     // Esto garantiza actualizaciones instantáneas en auto-advance
     final audioService = ref.watch(audioServiceProvider);
     
+    // ✅ FIX PARPADEO: Obtener isInsertingAd FUERA del StreamBuilder
+    // Durante inserción, ignoramos el stream y usamos el estado del provider
+    final isInserting = ref.watch(
+      unifiedAudioProviderFixed.select((s) => s.isInsertingAd),
+    );
+    
     return StreamBuilder<SequenceState?>(
       stream: audioService.player.sequenceStateStream,
       builder: (context, snapshot) {
@@ -236,7 +243,8 @@ class _ProfessionalAudioPlayerState
         Song? streamSong;
         AudioAd? streamAd;
         
-        if (currentSource != null) {
+        // ✅ FIX PARPADEO: Durante inserción, NO leer del stream (puede tener datos transitorios)
+        if (!isInserting && currentSource != null) {
           if (currentSource.tag is Song) {
             streamSong = currentSource.tag as Song;
           } else if (currentSource.tag is AudioAd) {
@@ -250,10 +258,14 @@ class _ProfessionalAudioPlayerState
           final isPlaying = playbackState.isPlaying;
           
           // 3. Fusión de Inteligencia:
-          // Priorizar el Stream para el contenido (qué se muestra)
-          // Usar Riverpod para el estado de control (play/pause, shuffle, etc)
-          final finalSong = streamSong ?? playbackState.currentSong;
-          final finalAd = streamAd ?? playbackState.currentAd;
+          // ✅ FIX PARPADEO: Durante inserción, SOLO usar datos del provider (estables)
+          // Fuera de inserción: Priorizar stream para contenido inmediato
+          final finalSong = isInserting 
+              ? playbackState.currentSong 
+              : (streamSong ?? playbackState.currentSong);
+          final finalAd = isInserting 
+              ? playbackState.currentAd 
+              : (streamAd ?? playbackState.currentAd);
           
           // Lógica de visualización (prioridad a anuncios)
           final showAd = finalAd != null; // Si el stream dice ad, es ad.
@@ -827,19 +839,14 @@ class _AsyncIconButton extends StatefulWidget {
 
 class _AsyncIconButtonState extends State<_AsyncIconButton> {
   bool _pending = false;
-  DateTime _unlockAt = DateTime.fromMillisecondsSinceEpoch(0);
   
-  // 🛡️ Timeout de seguridad para evitar bloqueo permanente
-  static const Duration _maxPendingDuration = Duration(seconds: 2);
+  // ⚡ ADMIN CONTROLADO: Timeout dinámico desde el Admin
+  // Solo bloqueamos brevemente para evitar doble-tap, no esperamos la operación completa
+  Duration get _maxPendingDuration => AlgorithmConfigService.instance.currentConfig.controlDebounceDuration;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final isUnlocked = now.isAfter(_unlockAt);
-    
-    // 🛡️ Auto-desbloqueo si _pending lleva demasiado tiempo
-    // Esto evita que el botón se quede bloqueado permanentemente
-    final isDisabled = widget.isLocked || (_pending && isUnlocked == false);
+    final isDisabled = widget.isLocked || _pending;
 
     return RepaintBoundary(
       child: Stack(
@@ -855,25 +862,20 @@ class _AsyncIconButtonState extends State<_AsyncIconButton> {
             ),
             onPressed: isDisabled
                 ? null
-                : () async {
-                    setState(() {
-                      _pending = true;
-                      // 🛡️ Desbloqueo automático después de timeout de seguridad
-                      _unlockAt = DateTime.now().add(_maxPendingDuration);
-                    });
-                    try {
-                      // 🛡️ Timeout en la operación para evitar bloqueo infinito
-                      await widget.onTap().timeout(
-                        _maxPendingDuration,
-                        onTimeout: () {
-                          AppLogger.warning('[AsyncIconButton] Timeout en operación, desbloqueando');
-                        },
-                      );
-                    } catch (e) {
+                : () {
+                    setState(() => _pending = true);
+                    
+                    // ⚡ FIRE AND FORGET: Ejecutar operación sin esperar
+                    // Esto permite que el botón se desbloquee rápidamente
+                    widget.onTap().catchError((e) {
                       AppLogger.error('[AsyncIconButton] Error: $e');
-                    } finally {
+                    });
+                    
+                    // ⚡ DESBLOQUEO RÁPIDO: Desbloquear después de 300ms
+                    // Suficiente para evitar doble-tap accidental, pero no bloquea la UI
+                    Future.delayed(_maxPendingDuration, () {
                       if (mounted) setState(() => _pending = false);
-                    }
+                    });
                   },
           ),
         ],

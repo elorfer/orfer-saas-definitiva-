@@ -1,4 +1,4 @@
-package com.vintagemusic.app.vintage_music_app
+package com.struky.app
 
 import io.flutter.embedding.android.FlutterActivity
 

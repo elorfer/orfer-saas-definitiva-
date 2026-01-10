@@ -1,11 +1,18 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { SettingsService } from './settings.service';
+import { Song, SongStatus } from '../../common/entities/song.entity';
 
 @ApiTags('public-settings')
 @Controller('public/ads')
 export class PublicSettingsController {
-  constructor(private readonly settingsService: SettingsService) { }
+  constructor(
+    private readonly settingsService: SettingsService,
+    @InjectRepository(Song)
+    private readonly songRepository: Repository<Song>,
+  ) { }
 
   /**
    * Endpoint público para obtener la frecuencia de anuncios.
@@ -74,7 +81,13 @@ export class PublicSettingsController {
     criticalSongs: number;
     catalogSize: number;
     smallCatalogThreshold: number;
+    // ⚡ RENDIMIENTO Y UX
+    controlDebounceMs: number;
+    preloadCooldownMs: number;
+    minQueueSize: number;
+    cyclicBufferThreshold: number;
   }> {
+    // 🎯 CONTEO DINÁMICO: Contar canciones publicadas en paralelo con otras configs
     const [
       historySize,
       phase2Count,
@@ -82,8 +95,14 @@ export class PublicSettingsController {
       bufferSize,
       preloadThreshold,
       criticalSongs,
-      catalogSize,
+      catalogSizeFromSettings,
       smallCatalogThreshold,
+      publishedSongsCount,
+      // ⚡ RENDIMIENTO Y UX
+      controlDebounceMs,
+      preloadCooldownMs,
+      minQueueSize,
+      cyclicBufferThreshold,
     ] = await Promise.all([
       this.settingsService.getValue('algorithm_history_size'),
       this.settingsService.getValue('algorithm_phase2_count'),
@@ -93,7 +112,17 @@ export class PublicSettingsController {
       this.settingsService.getValue('algorithm_critical_songs'),
       this.settingsService.getValue('catalog_size'),
       this.settingsService.getValue('catalog_small_threshold'),
+      // ⚡ CONTEO REAL: Contar solo canciones publicadas (válidas para reproducción)
+      this.songRepository.count({ where: { status: SongStatus.PUBLISHED } }),
+      // ⚡ RENDIMIENTO Y UX
+      this.settingsService.getValue('control_debounce_ms'),
+      this.settingsService.getValue('preload_cooldown_ms'),
+      this.settingsService.getValue('min_queue_size'),
+      this.settingsService.getValue('cyclic_buffer_threshold'),
     ]);
+
+    // Usar el conteo real si catalog_size no está configurado manualmente (es 0)
+    const catalogSize = catalogSizeFromSettings > 0 ? catalogSizeFromSettings : publishedSongsCount;
 
     return {
       historySize,
@@ -104,6 +133,11 @@ export class PublicSettingsController {
       criticalSongs,
       catalogSize,
       smallCatalogThreshold,
+      // ⚡ RENDIMIENTO Y UX
+      controlDebounceMs,
+      preloadCooldownMs,
+      minQueueSize,
+      cyclicBufferThreshold,
     };
   }
 

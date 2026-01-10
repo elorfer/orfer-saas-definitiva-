@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/theme_provider.dart';
+import '../../../core/services/revenuecat_service.dart';
 
 /// Pantalla de suscripción Premium que presenta los beneficios
 /// y motiva al usuario a convertirse en premium.
@@ -458,8 +460,241 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
     );
   }
 
-  void _handleSubscribeTap() {
-    // TODO: Implementar funcionalidad de suscripción premium
+  Future<void> _handleSubscribeTap() async {
+    // Verificar que RevenueCat esté inicializado
+    final revenueCat = RevenueCatService();
+    if (!revenueCat.isInitialized) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, inicia sesión primero'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Obtener paquetes disponibles directamente (sin loading dialog)
+      final packages = await revenueCat.getAvailablePackages();
+
+      if (!mounted) return;
+
+      if (packages.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No hay planes disponibles en este momento'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Mostrar bottom sheet con los paquetes
+      final selectedPackage = await showModalBottomSheet<Package>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _buildPackageSelector(packages),
+      );
+
+      if (selectedPackage == null || !mounted) return;
+
+      // Realizar compra directamente (sin loading dialog)
+      final success = await revenueCat.purchasePackage(selectedPackage);
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('🎉 ¡Bienvenido a Premium!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo completar la compra'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      String errorMessage = 'Error al procesar la compra';
+      if (e.toString().contains('cancelled') || e.toString().contains('cancelada')) {
+        return; // No mostrar error si el usuario canceló
+      } else if (e.toString().contains('already purchased')) {
+        errorMessage = 'Ya tienes una suscripción activa';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  Widget _buildPackageSelector(List<Package> packages) {
+    return Container(
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.isDark 
+            ? NeumorphismTheme.background 
+            : Colors.white,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Título
+          Text(
+            'Elige tu plan',
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: NeumorphismTheme.isDark 
+                  ? Colors.white 
+                  : NeumorphismTheme.coffeeDark,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Lista de paquetes
+          ...packages.map((package) => _buildPackageCard(package)),
+          
+          const SizedBox(height: 16),
+          
+          // Botón cancelar
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancelar',
+              style: GoogleFonts.inter(
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          
+          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPackageCard(Package package) {
+    final product = package.storeProduct;
+    
+    return GestureDetector(
+      onTap: () => Navigator.pop(context, package),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.isDark 
+              ? NeumorphismTheme.surface 
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: NeumorphismTheme.accent.withValues(alpha: 0.3),
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Icono
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    NeumorphismTheme.coffeeMedium,
+                    NeumorphismTheme.coffeeDark,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.diamond_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: NeumorphismTheme.isDark 
+                          ? Colors.white 
+                          : NeumorphismTheme.coffeeDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    product.description,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            
+            // Precio
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  product.priceString,
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: NeumorphismTheme.accent,
+                  ),
+                ),
+                if (product.subscriptionPeriod != null)
+                  Text(
+                    '/${product.subscriptionPeriod}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildMessageSection({

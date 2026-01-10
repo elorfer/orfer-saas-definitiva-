@@ -39,20 +39,24 @@ class FinalMiniPlayer extends ConsumerWidget {
       unifiedAudioProviderFixed.select((state) => state.currentAd != null),
     );
     
+    // ✅ FIX PARPADEO: No ocultar durante inserción de anuncios (estado transitorio)
+    final isInsertingAd = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isInsertingAd),
+    );
+    
     // ✅ FIX: Si hay un anuncio reproduciéndose Y tiene datos, no mostrar
     // El AdsMiniPlayer se mostrará en su lugar
-    // DEBUG LOGS
-    if (currentSong == null || (isPlayingAd && hasActiveAd)) {
-      // print('[FinalMiniPlayer] Hidden because: Song=${currentSong?.title}, Ad=$isPlayingAd');
-    }
-    
-    // ✅ FIX: Si hay un anuncio reproduciéndose con datos, no mostrar
-    // El AdsMiniPlayer se mostrará en su lugar
-    if (isPlayingAd && hasActiveAd) {
+    // PERO: Durante inserción, mantener el MiniPlayer visible para evitar parpadeo
+    if (isPlayingAd && hasActiveAd && !isInsertingAd) {
       return const SizedBox.shrink();
     }
     
-    // Si no hay canción, no mostrar nada
+    // Si no hay canción, no mostrar nada (pero mantener durante inserción si hay lastKnown)
+    if (currentSong == null && !isInsertingAd) {
+      return const SizedBox.shrink();
+    }
+    
+    // Durante inserción sin canción, usar placeholder invisible
     if (currentSong == null) {
       return const SizedBox.shrink();
     }
