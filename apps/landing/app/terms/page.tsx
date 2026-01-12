@@ -16,7 +16,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">1. Aceptación de los Términos</h2>
                         <p>
-                            Al acceder y utilizar los servicios de Struky Music AI, aceptas estar sujeto a estos Términos de Servicio.
+                            Al acceder y utilizar los servicios de Struky, aceptas estar sujeto a estos Términos de Servicio.
                             Si no estás de acuerdo con alguna parte de estos términos, no debes utilizar nuestros servicios.
                         </p>
                     </section>
@@ -24,9 +24,9 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">2. Descripción del Servicio</h2>
                         <p>
-                            Struky Music AI ofrece servicios de producción musical asistida por inteligencia artificial,
-                            supervisada por profesionales humanos. Convertimos letras de canciones proporcionadas por el cliente
-                            en producciones musicales profesionales.
+                            Struky ofrece servicios de producción musical asistida por inteligencia artificial avanzada,
+                            supervisada y refinada por productores musicales profesionales humanos. Convertimos letras de canciones proporcionadas por el cliente
+                            en producciones musicales de calidad profesional.
                         </p>
                     </section>
 
@@ -51,7 +51,7 @@ export default function TermsPage() {
                             los derechos de la producción musical final para uso personal o comercial.
                         </p>
                         <p>
-                            <strong>4.3 Portafolio:</strong> Struky Music AI se reserva el derecho de utilizar fragmentos
+                            <strong>4.3 Portafolio:</strong> Struky se reserva el derecho de utilizar fragmentos
                             de las producciones como ejemplos de portafolio, salvo que el cliente solicite lo contrario.
                         </p>
                     </section>
@@ -95,7 +95,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">8. Limitación de Responsabilidad</h2>
                         <p>
-                            Struky Music AI no será responsable por daños indirectos, incidentales, especiales o consecuentes
+                            Struky no será responsable por daños indirectos, incidentales, especiales o consecuentes
                             que resulten del uso o la imposibilidad de usar nuestros servicios, incluso si hemos sido advertidos
                             de la posibilidad de dichos daños.
                         </p>
@@ -112,7 +112,7 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">10. Ley Aplicable</h2>
                         <p>
-                            Estos términos se rigen por las leyes aplicables en la jurisdicción donde opera Struky Music AI.
+                            Estos términos se rigen por las leyes aplicables en la jurisdicción donde opera Struky.
                             Cualquier disputa será resuelta en los tribunales competentes de dicha jurisdicción.
                         </p>
                     </section>
@@ -121,8 +121,8 @@ export default function TermsPage() {
                         <h2 className="text-2xl font-bold text-white mb-4">11. Contacto</h2>
                         <p>
                             Para preguntas sobre estos términos, contáctanos en:{' '}
-                            <a href="mailto:legal@strukymusicai.com" className="text-neon-purple hover:text-neon-blue underline">
-                                legal@strukymusicai.com
+                            <a href="mailto:strukyapp@gmail.com" className="text-neon-purple hover:text-neon-blue underline">
+                                strukyapp@gmail.com
                             </a>
                         </p>
                     </section>

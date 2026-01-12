@@ -14,103 +14,110 @@ export default function RefundPage() {
 
                 <div className="card-dark space-y-6 text-gray-300">
                     <section className="bg-neon-purple/10 border border-neon-purple/30 rounded-lg p-6">
-                        <h2 className="text-2xl font-bold text-white mb-4">⚠️ Política de No Reembolso</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">✅ Política de Reembolso de 14 Días</h2>
                         <p className="text-lg">
-                            <strong>Importante:</strong> Debido a la naturaleza digital y personalizada de nuestros productos,
-                            <span className="text-neon-purple font-bold"> NO OFRECEMOS REEMBOLSOS</span> una vez que el trabajo
-                            ha sido iniciado.
+                            En Struky, ofrecemos un período de reembolso de <strong className="text-neon-purple">14 días naturales</strong> desde la fecha de compra.
+                            Tu satisfacción es nuestra prioridad.
                         </p>
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">1. ¿Por qué no hay reembolsos?</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">1. ¿Cuándo puedo solicitar un reembolso?</h2>
                         <p className="mb-3">
-                            Nuestro servicio implica la creación de productos digitales personalizados que se producen
-                            específicamente para cada cliente. Una vez que comenzamos a trabajar en tu canción:
+                            Puedes solicitar un reembolso completo dentro de los <strong>14 días naturales</strong> posteriores a tu compra si:
                         </p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li>Invertimos tiempo y recursos de IA en la producción</li>
-                            <li>Un profesional humano supervisa y refina el trabajo</li>
-                            <li>El producto final es único y personalizado para ti</li>
-                            <li>No podemos revender o reutilizar el trabajo realizado</li>
+                            <li>No estás satisfecho con la calidad de la producción musical entregada</li>
+                            <li>La canción no cumple con las especificaciones que acordamos</li>
+                            <li>Experimentamos retrasos significativos en la entrega (más de 72 horas del plazo acordado)</li>
+                            <li>Cancelas tu pedido antes de que comencemos la producción</li>
+                            <li>Cualquier otra razón dentro del período de 14 días</li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">2. Proceso de Revisión</h2>
+                        <h2 className="text-2xl font-bold text-white mb-4">2. ¿Cómo solicito un reembolso?</h2>
+                        <p className="mb-3">El proceso es simple y rápido:</p>
+                        <div className="bg-dark-bg rounded-lg p-6 space-y-3">
+                            <div className="flex items-start gap-4">
+                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">1</div>
+                                <div>
+                                    <strong className="text-white">Envía un correo electrónico</strong>
+                                    <p className="text-sm mt-1">Escribe a: <a href="mailto:strukyapp@gmail.com" className="text-neon-purple hover:text-neon-blue underline">strukyapp@gmail.com</a></p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">2</div>
+                                <div>
+                                    <strong className="text-white">Incluye la información necesaria</strong>
+                                    <p className="text-sm mt-1">Tu nombre, número de pedido (si lo tienes) y el motivo del reembolso</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">3</div>
+                                <div>
+                                    <strong className="text-white">Procesamos tu solicitud</strong>
+                                    <p className="text-sm mt-1">Revisaremos y responderemos en un plazo de 3-5 días hábiles</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">4</div>
+                                <div>
+                                    <strong className="text-white">Recibes tu reembolso</strong>
+                                    <p className="text-sm mt-1">El reembolso se realizará al método de pago original utilizado en la compra</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 className="text-2xl font-bold text-white mb-4">3. Excepciones al período de reembolso</h2>
                         <p className="mb-3">
-                            Aunque no ofrecemos reembolsos, nos comprometemos a tu satisfacción:
+                            No podremos procesar reembolsos en los siguientes casos:
                         </p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
                             <li>
-                                <strong>Revisión incluida:</strong> Ofrecemos una (1) revisión menor por pedido para
-                                ajustes razonables como cambios de tempo, mezcla o arreglos menores.
+                                <strong>Después de 14 días:</strong> Solicitudes recibidas después de transcurridos los 14 días naturales desde la fecha de compra
                             </li>
                             <li>
-                                <strong>Comunicación clara:</strong> Trabajaremos contigo para asegurar que el resultado
-                                final se acerque lo máximo posible a tus expectativas.
+                                <strong>Distribución comercial:</strong> Si ya has distribuido comercialmente la canción en plataformas de streaming (Spotify, Apple Music, etc.)
                             </li>
                             <li>
-                                <strong>Garantía de calidad:</strong> Garantizamos que la producción será de calidad profesional.
+                                <strong>Uso público:</strong> Si has publicado o usado públicamente la canción en redes sociales, YouTube u otras plataformas
                             </li>
                         </ul>
                     </section>
 
                     <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">3. Excepciones Limitadas</h2>
-                        <p className="mb-3">
-                            Solo consideraremos reembolsos en casos excepcionales:
-                        </p>
-                        <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li>
-                                <strong>Error técnico:</strong> Si experimentamos un error técnico que nos impida
-                                completar tu pedido.
-                            </li>
-                            <li>
-                                <strong>Cancelación antes del inicio:</strong> Si cancelas tu pedido ANTES de que
-                                comencemos la producción, podrás recibir un reembolso completo.
-                            </li>
-                            <li>
-                                <strong>Problemas de pago duplicado:</strong> Si se procesó un pago duplicado por error.
-                            </li>
-                        </ul>
-                        <p className="mt-4">
-                            Para solicitar una revisión de tu caso, contáctanos en:{' '}
-                            <a href="mailto:refunds@strukymusicai.com" className="text-neon-purple hover:text-neon-blue underline">
-                                refunds@strukymusicai.com
-                            </a>
-                        </p>
-                    </section>
-
-                    <section>
-                        <h2 className="text-2xl font-bold text-white mb-4">4. Lo que SÍ Garantizamos</h2>
-                        <div className="grid md:grid-cols-2 gap-4 mt-4">
+                        <h2 className="text-2xl font-bold text-white mb-4">4. Garantía de Satisfacción</h2>
+                        <p className="mb-4">Además de nuestra política de reembolso, te garantizamos:</p>
+                        <div className="grid md:grid-cols-2 gap-4">
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
                                 <div className="text-neon-purple text-2xl mb-2">✓</div>
                                 <h3 className="font-bold text-white mb-2">Calidad Profesional</h3>
                                 <p className="text-sm">
-                                    Producción de nivel profesional supervisada por expertos humanos.
+                                    Producción con IA avanzada supervisada por productores musicales profesionales
                                 </p>
                             </div>
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
                                 <div className="text-neon-purple text-2xl mb-2">✓</div>
-                                <h3 className="font-bold text-white mb-2">Entrega a Tiempo</h3>
+                                <h3 className="font-bold text-white mb-2">Entrega Rápida</h3>
                                 <p className="text-sm">
-                                    Tu canción en 24-48 horas o te notificaremos de cualquier retraso.
+                                    Tu canción lista en 24-48 horas o te notificamos de cualquier retraso
                                 </p>
                             </div>
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
                                 <div className="text-neon-purple text-2xl mb-2">✓</div>
-                                <h3 className="font-bold text-white mb-2">Una Revisión Incluida</h3>
+                                <h3 className="font-bold text-white mb-2">Revisión Incluida</h3>
                                 <p className="text-sm">
-                                    Ajustes razonables para asegurar tu satisfacción.
+                                    Una (1) revisión incluida para ajustes razonables de mezcla, tempo o arreglos
                                 </p>
                             </div>
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
                                 <div className="text-neon-purple text-2xl mb-2">✓</div>
-                                <h3 className="font-bold text-white mb-2">Soporte Dedicado</h3>
+                                <h3 className="font-bold text-white mb-2">Soporte Directo</h3>
                                 <p className="text-sm">
-                                    Comunicación directa vía email o WhatsApp.
+                                    Comunicación directa y personalizada vía email o WhatsApp
                                 </p>
                             </div>
                         </div>
@@ -119,54 +126,76 @@ export default function RefundPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">5. Antes de Realizar tu Pedido</h2>
                         <p className="mb-3">
-                            Para evitar decepciones, te recomendamos:
+                            Para asegurar tu satisfacción, te recomendamos:
                         </p>
                         <ul className="list-disc list-inside space-y-2 ml-4">
-                            <li>Revisar nuestros ejemplos de trabajo en el portafolio</li>
-                            <li>Asegurarte de que tu letra esté completa y sea de tu autoría</li>
-                            <li>Elegir el género musical que mejor se adapte a tu letra</li>
-                            <li>Contactarnos si tienes preguntas antes de pagar</li>
+                            <li>Escuchar nuestros ejemplos de trabajo para conocer el estilo de producción</li>
+                            <li>Asegurarte de que tu letra esté completa y pulida</li>
+                            <li>Verificar que tienes los derechos de la letra que estás enviando</li>
+                            <li>Elegir el género musical que mejor se adapte a tu canción</li>
+                            <li>Contactarnos si tienes preguntas antes de realizar el pago</li>
                         </ul>
                     </section>
 
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">6. Disputas de Pago</h2>
-                        <p>
-                            Si inicias una disputa o contracargo (chargeback) con tu banco o procesador de pagos sin
-                            contactarnos primero, nos reservamos el derecho de suspender futuros servicios.
-                            Te pedimos que nos contactes directamente para resolver cualquier problema.
+                        <p className="mb-3">
+                            Nos comprometemos a resolver cualquier problema de manera directa y justa. Si tienes algún inconveniente:
                         </p>
+                        <ul className="list-disc list-inside space-y-2 ml-4">
+                            <li>
+                                <strong>Contáctanos primero:</strong> Por favor, comunícate con nosotros antes de iniciar una disputa de pago con tu banco
+                            </li>
+                            <li>
+                                <strong>Resolución directa:</strong> En la mayoría de casos, podemos resolver el problema de manera rápida y satisfactoria
+                            </li>
+                            <li>
+                                <strong>Disputas bancarias:</strong> Si inicias un contracargo sin contactarnos primero, nos reservamos el derecho de suspender servicios futuros
+                            </li>
+                        </ul>
                     </section>
 
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">7. Contacto</h2>
-                        <p>
-                            ¿Tienes preguntas sobre nuestra política de reembolso? Contáctanos:
+                        <p className="mb-4">
+                            ¿Tienes preguntas sobre nuestra política de reembolso o necesitas solicitar uno?
                         </p>
-                        <div className="mt-4 space-y-2">
-                            <p>
-                                📧 Email:{' '}
-                                <a href="mailto:refunds@strukymusicai.com" className="text-neon-purple hover:text-neon-blue underline">
-                                    refunds@strukymusicai.com
-                                </a>
-                            </p>
-                            <p>
-                                💬 WhatsApp:{' '}
-                                <a
-                                    href="https://wa.me/1234567890"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-neon-purple hover:text-neon-blue underline"
-                                >
-                                    +1 (234) 567-890
-                                </a>
-                            </p>
+                        <div className="bg-dark-bg rounded-lg p-6 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">📧</span>
+                                <div>
+                                    <div className="text-sm text-gray-400">Email</div>
+                                    <a href="mailto:strukyapp@gmail.com" className="text-neon-purple hover:text-neon-blue underline font-semibold">
+                                        strukyapp@gmail.com
+                                    </a>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">💬</span>
+                                <div>
+                                    <div className="text-sm text-gray-400">WhatsApp</div>
+                                    <a
+                                        href="https://wa.me/573009012217"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-neon-purple hover:text-neon-blue underline font-semibold"
+                                    >
+                                        +57 300 901 2217
+                                    </a>
+                                </div>
+                            </div>
                         </div>
+                        <p className="text-sm text-gray-400 mt-4">
+                            Horario de atención: Lunes a Viernes, 9:00 AM - 6:00 PM (hora de Colombia)
+                        </p>
                     </section>
 
                     <section className="pt-4 border-t border-gray-700">
                         <p className="text-sm text-gray-400">
                             Última actualización: {new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                            Esta política cumple con los estándares internacionales de comercio electrónico y protección al consumidor.
                         </p>
                     </section>
                 </div>

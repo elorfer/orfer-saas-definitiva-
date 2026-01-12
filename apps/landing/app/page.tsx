@@ -96,7 +96,7 @@ export default function HomePage() {
 
                     {/* Subtitle */}
                     <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-                        <strong className="text-white">Tecnología de inteligencia artificial de última generación</strong> supervisada por productores musicales expertos.
+                        <strong className="text-white">Inteligencia artificial de última generación</strong> supervisada y refinada por <strong className="text-neon-purple">productores musicales profesionales humanos</strong>.
                     </p>
                     <p className="text-lg md:text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
                         Tú pones la letra, nosotros entregamos la canción lista para sonar en plataformas digitales.
@@ -127,7 +127,7 @@ export default function HomePage() {
                         Escucha <span className="text-gradient">nuestros ejemplos</span>
                     </h2>
                     <p className="text-center text-gray-400 mb-16 max-w-2xl mx-auto">
-                        Canciones reales creadas con nuestra tecnología de IA avanzada. Cada una supervisada por productores profesionales.
+                        Canciones reales creadas con nuestra tecnología de IA avanzada. Cada una <strong className="text-white">supervisada y refinada por productores musicales profesionales</strong>.
                     </p>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -247,9 +247,9 @@ export default function HomePage() {
                             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-neon-purple">
                                 3
                             </div>
-                            <h3 className="text-xl font-bold mb-4">IA Avanzada</h3>
+                            <h3 className="text-xl font-bold mb-4">IA + Humanos</h3>
                             <p className="text-gray-400">
-                                Tecnología de inteligencia artificial de última generación + criterio artístico profesional
+                                IA avanzada genera la base, productores musicales <strong className="text-white">humanos profesionales</strong> supervisan y refinan cada detalle
                             </p>
                         </div>
 
@@ -364,7 +364,7 @@ export default function HomePage() {
                                 </div>
                                 <p className="text-sm text-gray-400">
                                     ✓ IA musical de última generación<br />
-                                    ✓ Supervisión de productores expertos<br />
+                                    ✓ <strong>Supervisión de productores musicales profesionales humanos</strong><br />
                                     ✓ Entrega express en 24-48 horas<br />
                                     ✓ Archivo profesional WAV/MP3 de alta calidad<br />
                                     ✓ Listo para Spotify, Apple Music, YouTube
@@ -397,7 +397,7 @@ export default function HomePage() {
                                 Struky Music AI
                             </h3>
                             <p className="text-gray-400 mb-4">
-                                Producción musical profesional con <strong className="text-white">tecnología de inteligencia artificial avanzada</strong>. Transformamos tus letras en canciones de calidad profesional listas para distribuir en plataformas digitales.
+                                Producción musical con <strong className="text-white">IA avanzada supervisada por productores profesionales humanos</strong>. Transformamos tus letras en canciones de calidad profesional listas para distribuir en plataformas digitales.
                             </p>
                         </div>
 
@@ -453,7 +453,7 @@ export default function HomePage() {
                     <div className="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
                         <p>© {new Date().getFullYear()} Struky Music AI. Todos los derechos reservados.</p>
                         <p className="mt-2">
-                            Tecnología de IA musical de última generación supervisada por productores profesionales.
+                            Inteligencia artificial de última generación supervisada y refinada por productores musicales profesionales humanos.
                         </p>
                     </div>
                 </div>
