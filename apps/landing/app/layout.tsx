@@ -17,11 +17,11 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-    title: "Struky Music AI | Producción Musical Profesional con IA",
+    title: "Struky | Producción Musical Profesional con IA",
     description: "Tus letras, convertidas en música profesional con IA. Producción musical experta supervisada por humanos.",
     keywords: "producción musical, IA, inteligencia artificial, música, letras, canciones, reggaetón, trap, pop",
     openGraph: {
-        title: "Struky Music AI | Producción Musical Profesional con IA",
+        title: "Struky | Producción Musical Profesional con IA",
         description: "Tus letras, convertidas en música profesional con IA",
         type: "website",
     },
