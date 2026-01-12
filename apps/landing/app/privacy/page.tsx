@@ -16,7 +16,7 @@ export default function PrivacyPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">1. Información que Recopilamos</h2>
                         <p>
-                            En Struky Music AI, recopilamos la siguiente información cuando utilizas nuestros servicios:
+                            En Struky, recopilamos la siguiente información cuando utilizas nuestros servicios:
                         </p>
                         <ul className="list-disc list-inside mt-2 space-y-2 ml-4">
                             <li>Nombre completo</li>
@@ -82,8 +82,8 @@ export default function PrivacyPage() {
                         <h2 className="text-2xl font-bold text-white mb-4">7. Contacto</h2>
                         <p>
                             Para cualquier pregunta sobre esta política de privacidad, contáctanos en:{' '}
-                            <a href="mailto:privacy@strukymusicai.com" className="text-neon-purple hover:text-neon-blue underline">
-                                privacy@strukymusicai.com
+                            <a href="mailto:strukyapp@gmail.com" className="text-neon-purple hover:text-neon-blue underline">
+                                strukyapp@gmail.com
                             </a>
                         </p>
                     </section>
