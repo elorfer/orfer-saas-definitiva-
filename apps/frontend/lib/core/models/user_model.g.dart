@@ -16,6 +16,10 @@ User _$UserFromJson(Map<String, dynamic> json) => User(
       role: $enumDecode(_$UserRoleEnumMap, json['role']),
       subscriptionStatus:
           $enumDecode(_$SubscriptionStatusEnumMap, json['subscription_status']),
+      isPremiumField: json['is_premium_field'] as bool?,
+      premiumExpiresAt: json['premium_expires_at'] == null
+          ? null
+          : DateTime.parse(json['premium_expires_at'] as String),
       isVerified: json['is_verified'] as bool?,
       isActive: json['is_active'] as bool?,
       lastLoginAt: json['last_login_at'] == null
@@ -51,6 +55,9 @@ Map<String, dynamic> _$UserToJson(User instance) {
   val['role'] = _$UserRoleEnumMap[instance.role]!;
   val['subscription_status'] =
       _$SubscriptionStatusEnumMap[instance.subscriptionStatus]!;
+  writeNotNull('is_premium_field', instance.isPremiumField);
+  writeNotNull(
+      'premium_expires_at', instance.premiumExpiresAt?.toIso8601String());
   writeNotNull('is_verified', instance.isVerified);
   writeNotNull('is_active', instance.isActive);
   writeNotNull('last_login_at', instance.lastLoginAt?.toIso8601String());

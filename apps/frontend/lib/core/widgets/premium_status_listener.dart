@@ -55,7 +55,8 @@ class _PremiumStatusListenerState extends ConsumerState<PremiumStatusListener>
       if (authState.isAuthenticated && authState.user != null &&
           (authState.user!.subscriptionStatus == SubscriptionStatus.premium ||
            authState.user!.subscriptionStatus == SubscriptionStatus.vip ||
-           authState.user!.subscriptionStatus == SubscriptionStatus.free)) {
+           authState.user!.subscriptionStatus == SubscriptionStatus.free ||
+           authState.user!.subscriptionStatus == SubscriptionStatus.inactive)) {
         _connectWebSocket();
       }
     });
@@ -75,40 +76,21 @@ class _PremiumStatusListenerState extends ConsumerState<PremiumStatusListener>
           debugPrint('🔍 PremiumStatusListener - Estado inicial: $_previousSubscriptionStatus');
         }
         
-        // Si el usuario ya es premium al inicializar, verificar si ya vio la pantalla
+        // Si el usuario ya es premium al inicializar, ASUMIMOS que ya vio la pantalla.
+        // La pantalla de "Gracias" solo debe salir transicionalmente (cuando ocurre la compra).
+        // Si entra a la app ya siendo premium, no debemos interrumpirlo.
         if (isPremium) {
-          // Verificar si ya se mostró la pantalla usando el provider persistente
+          _hasShownActivationScreen = true;
+          _isPremiumStable = true;
+          
+          if (kDebugMode) {
+            debugPrint('ℹ️ Usuario ya es premium al inicio - Omitiendo pantalla de agradecimiento');
+          }
+          
+          // Asegurar que esté marcado en persistencia para consistencia
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             if (!_isDisposed && mounted) {
-              try {
-                final activationProvider = ref.read(premiumActivationShownProvider.notifier);
-                final hasShown = await activationProvider.hasShownForUser(user.id);
-                
-                if (!hasShown) {
-                  // Usuario es premium pero no ha visto la pantalla (activado desde admin)
-                  if (kDebugMode) {
-                    debugPrint('🎉 Usuario premium sin ver pantalla - Mostrando ahora');
-                  }
-                  _hasShownActivationScreen = false;
-                  _isPremiumStable = false;
-                  // Mostrar la pantalla de activación
-                  await _checkAndShowActivationScreen(user);
-                } else {
-                  // Ya vio la pantalla, mantener estado estable
-                  _hasShownActivationScreen = true;
-                  _isPremiumStable = true;
-                  if (kDebugMode) {
-                    debugPrint('ℹ️ Usuario premium estable, ya vio pantalla de activación');
-                  }
-                }
-              } catch (e) {
-                if (kDebugMode) {
-                  debugPrint('❌ Error al verificar estado de activación en init: $e');
-                }
-                // En caso de error, asumir que ya se mostró para evitar mostrar múltiples veces
-                _hasShownActivationScreen = true;
-                _isPremiumStable = true;
-              }
+              await ref.read(premiumActivationShownProvider.notifier).markAsShown(user.id);
             }
           });
         } else {
@@ -138,7 +120,8 @@ class _PremiumStatusListenerState extends ConsumerState<PremiumStatusListener>
       final status = authState.user!.subscriptionStatus;
       if (status != SubscriptionStatus.premium &&
           status != SubscriptionStatus.vip &&
-          status != SubscriptionStatus.free) {
+          status != SubscriptionStatus.free &&
+          status != SubscriptionStatus.inactive) {
         if (kDebugMode) {
           debugPrint('⚠️ Perfil sin subscriptionStatus válido, no conectando WebSocket');
         }

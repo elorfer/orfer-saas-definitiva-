@@ -25,12 +25,12 @@ class HttpRequestPool {
     if (_pendingRequests.containsKey(key)) {
       AppLogger.debug('[HttpRequestPool] ⏳ Reutilizando request pendiente: $key');
       try {
-        final result = await _pendingRequests[key] as Future<T>;
-        return result;
+        final result = await _pendingRequests[key];
+        return result as T;
       } catch (e) {
         // Si el request pendiente falló, continuar con uno nuevo
         _pendingRequests.remove(key);
-        AppLogger.debug('[HttpRequestPool] ⚠️ Request pendiente falló, creando nuevo: $key');
+        AppLogger.debug('[HttpRequestPool] ! Request pendiente falló, creando nuevo: $key');
       }
     }
 

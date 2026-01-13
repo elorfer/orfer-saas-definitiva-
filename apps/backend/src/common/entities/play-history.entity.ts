@@ -5,11 +5,16 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Song } from './song.entity';
 
+// 🚀 PERFORMANCE: Índices compuestos para optimizar queries de recomendaciones
 @Entity('play_history')
+@Index('idx_user_played_at', ['userId', 'playedAt']) // ⚡ Para historial ordenado por fecha
+@Index('idx_song_played_at', ['songId', 'playedAt']) // ⚡ Para estadísticas de canciones
+@Index('idx_user_completed', ['userId', 'completed']) // ⚡ Para filtrar por completitud
 export class PlayHistory {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -84,54 +84,58 @@ export const apiClient = {
   // Auth
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
-  
+
   logout: () => api.post('/auth/logout'),
-  
+
   getProfile: () => api.get('/auth/profile'),
 
   // Users
-  getUsers: (page = 1, limit = 10) =>
-    api.get(`/users?page=${page}&limit=${limit}`),
-  
+  getUsers: (page = 1, limit = 10, search?: string) =>
+    api.get(`/users?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}`),
+
   getUser: (id: string) => api.get(`/users/${id}`),
-  
+
   createUser: (data: any) => api.post('/auth/register', data),
-  
+
   updateUser: (id: string, data: any) => api.patch(`/users/${id}`, data),
-  
+
   deleteUser: (id: string) => api.delete(`/users/${id}`),
-  
+
   activateUser: (id: string) => api.post(`/users/${id}/activate`),
-  
+
   deactivateUser: (id: string) => api.post(`/users/${id}/deactivate`),
-  
+
   verifyUser: (id: string) => api.post(`/users/${id}/verify`),
 
   // Premium users
-  markAsPremium: (id: string, expiresAt?: string) => 
-    api.post(`/users/${id}/premium`, expiresAt ? { expiresAt } : {}),
-  
+  markAsPremium: (id: string, data?: { expiresAt?: string; plan?: 'quincenal' | 'mensual' | 'anual'; amount?: number }) =>
+    api.post(`/users/${id}/premium`, data || {}),
+
   removePremium: (id: string) => api.post(`/users/${id}/remove-premium`),
-  
+
   getPremiumUsersCount: () => api.get('/users/premium/count'),
-  
+
   getPremiumUsers: (page = 1, limit = 10) =>
     api.get(`/users/premium/list?page=${page}&limit=${limit}`),
-  
+
   getPremiumUsersExpiringSoon: (days = 30) =>
     api.get(`/users/premium/expiring-soon?days=${days}`),
-  
+
   getPremiumStats: () => api.get('/users/premium/stats'),
+
+  getManualRevenueStats: () => api.get('/users/admin/revenue-stats'),
+  getMonthlyRevenueStats: () => api.get('/users/admin/revenue-stats/monthly'),
+  downloadRevenueReport: () => api.get('/users/admin/revenue-report/download', { responseType: 'blob' }),
 
   // Artists
   getArtists: (page = 1, limit = 100) =>
     api.get(`/artists?page=${page}&limit=${limit}`),
-  
+
   getArtist: (id: string) => api.get(`/artists/${id}`),
 
   // Verificar/desverificar artista
   verifyArtist: (id: string) => api.patch(`/artists/${id}/verify`),
-  
+
   unverifyArtist: (id: string) => api.patch(`/artists/${id}/unverify`),
 
   // Crear artista (multipart/form-data)
@@ -198,25 +202,25 @@ export const apiClient = {
   // Toggle destacado
   toggleArtistFeatured: (id: string, featured: boolean) =>
     api.put(`/artists/${id}/feature`, { featured }),
-  
+
   deleteArtist: (id: string) => api.delete(`/artists/${id}`),
-  
+
   getArtistStats: (id: string) => api.get(`/artists/${id}/stats`),
 
   // Songs
   getSongs: (page = 1, limit = 10, all = true) =>
     api.get(`/songs?page=${page}&limit=${limit}&all=${all}`),
-  
+
   getSong: (id: string) => api.get(`/songs/${id}`),
-  
+
   getSongsByGenre: (genreId: string, page = 1, limit = 50) =>
     api.get(`/songs/genre/${genreId}?page=${page}&limit=${limit}`),
-  
+
   getTopSongsByPlays: (limit = 10) => api.get(`/songs/top?limit=${limit}`),
-  
+
   uploadSong: (
-    audioFile: File, 
-    coverFile: File | undefined, 
+    audioFile: File,
+    coverFile: File | undefined,
     songData: {
       title: string;
       artistId: string;
@@ -264,36 +268,36 @@ export const apiClient = {
       },
     });
   },
-  
+
   createSong: (data: any) => api.post('/songs', data),
-  
+
   updateSong: (id: string, data: any) => api.patch(`/songs/${id}`, data),
-  
+
   deleteSong: (id: string) => api.delete(`/songs/${id}`),
-  
+
   // Genres
   getGenres: (page = 1, limit = 50, all = false) =>
     api.get(`/genres?page=${page}&limit=${limit}&all=${all ? 'true' : 'false'}`),
-  
+
   getGenre: (id: string) => api.get(`/genres/${id}`),
-  
+
   searchGenres: (query: string, limit = 20) =>
     api.get(`/genres/search?q=${encodeURIComponent(query)}&limit=${limit}`),
-  
+
   createGenre: (data: {
     name: string;
     description?: string;
     colorHex?: string;
     imageUrl?: string;
   }) => api.post('/genres', data),
-  
+
   updateGenre: (id: string, data: {
     name?: string;
     description?: string;
     colorHex?: string;
     imageUrl?: string;
   }) => api.patch(`/genres/${id}`, data),
-  
+
   uploadGenreImage: (id: string, imageFile: File) => {
     const formData = new FormData();
     formData.append('image', imageFile);
@@ -303,25 +307,25 @@ export const apiClient = {
       },
     });
   },
-  
+
   deleteGenre: (id: string) => api.delete(`/genres/${id}`),
-  
+
   // Playlists
   getPlaylists: (page = 1, limit = 10) =>
     api.get(`/playlists?page=${page}&limit=${limit}`),
-  
+
   getPlaylist: (id: string) => api.get(`/playlists/${id}`),
-  
+
   getFeaturedPlaylists: (limit = 10) => api.get(`/playlists/featured?limit=${limit}`),
-  
+
   createPlaylist: (data: any) => api.post('/playlists', data),
-  
+
   updatePlaylist: (id: string, data: any) => api.put(`/playlists/${id}`, data),
-  
+
   deletePlaylist: (id: string) => api.delete(`/playlists/${id}`),
-  
+
   toggleFeaturedPlaylist: (id: string) => api.patch(`/playlists/${id}/feature`),
-  
+
   uploadPlaylistCover: (id: string, coverFile: File) => {
     const formData = new FormData();
     formData.append('cover', coverFile);
@@ -331,35 +335,35 @@ export const apiClient = {
       },
     });
   },
-  
+
   addSongToPlaylist: (playlistId: string, songId: string) =>
     api.post(`/playlists/${playlistId}/songs/${songId}`),
-  
+
   removeSongFromPlaylist: (playlistId: string, songId: string) =>
     api.delete(`/playlists/${playlistId}/songs/${songId}`),
 
   // Analytics
   getGlobalStats: () => api.get('/analytics/global'),
-  
+
   getTopArtists: (limit = 10) => api.get(`/analytics/top-artists?limit=${limit}`),
-  
+
   getTopSongs: (limit = 10) => api.get(`/analytics/top-songs?limit=${limit}`),
 
   // Analytics - Datos históricos
   getDailyStreams: (days = 7) => api.get(`/analytics/daily-streams?days=${days}`),
-  
+
   getDailyActiveUsers: (days = 7) => api.get(`/analytics/daily-active-users?days=${days}`),
-  
+
   getGenreDistribution: (limit = 5) => api.get(`/analytics/genre-distribution?limit=${limit}`),
-  
+
   getPeakHours: () => api.get('/analytics/peak-hours'),
 
   // Payments
   getPayments: (page = 1, limit = 10) =>
     api.get(`/payments?page=${page}&limit=${limit}`),
-  
+
   getPayment: (id: string) => api.get(`/payments/${id}`),
-  
+
   refundPayment: (id: string) => api.post(`/payments/${id}/refund`),
 
   // Featured Content
@@ -384,45 +388,45 @@ export const apiClient = {
     if (status) params.append('status', status);
     return api.get(`/ads?${params.toString()}`);
   },
-  
+
   getAd: (id: string) => api.get(`/ads/${id}`),
-  
+
   createAd: (data: any) => api.post('/ads', data),
-  
+
   updateAd: (id: string, data: any) => api.patch(`/ads/${id}`, data),
-  
+
   deleteAd: (id: string) => api.delete(`/ads/${id}`),
-  
+
   activateAd: (id: string) => api.post(`/ads/${id}/activate`),
-  
+
   pauseAd: (id: string) => api.post(`/ads/${id}/pause`),
-  
+
   uploadAdAudio: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
     // No establecer Content-Type explícitamente - el interceptor lo maneja automáticamente
     return api.post(`/ads/${id}/upload-audio`, formData);
   },
-  
+
   uploadAdCover: (id: string, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
     // No establecer Content-Type explícitamente - el interceptor lo maneja automáticamente
     return api.post(`/ads/${id}/upload-cover`, formData);
   },
-  
+
   getAdStats: (id: string) => api.get(`/ads/${id}/stats`),
 
   // Settings (Configuraciones)
   getSettings: () => api.get('/settings'),
-  
+
   getAdFrequency: () => api.get('/settings/ad-frequency'),
-  
+
   updateAdFrequency: (value: number) => api.put('/settings/ad-frequency', { value }),
-  
+
   getSetting: (key: string) => api.get(`/settings/${key}`),
-  
-  updateSetting: (key: string, value: number, description?: string) => 
+
+  updateSetting: (key: string, value: number, description?: string) =>
     api.put(`/settings/${key}`, { value, description }),
 };
 

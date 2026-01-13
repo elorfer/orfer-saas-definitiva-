@@ -1,0 +1,162 @@
+﻿Analyzing frontend...                                           
+
+   info - The file name 'EJEMPLOS_USO_REVENUECAT.dart' isn't a lower_case_with_underscores identifier - EJEMPLOS_USO_REVENUECAT.dart:1:1 - file_names
+  error - Undefined name 'httpClient' - EJEMPLOS_USO_REVENUECAT.dart:20:30 - undefined_identifier
+   info - Don't invoke 'print' in production code - EJEMPLOS_USO_REVENUECAT.dart:36:9 - avoid_print
+   info - Don't invoke 'print' in production code - EJEMPLOS_USO_REVENUECAT.dart:38:9 - avoid_print
+   info - Don't invoke 'print' in production code - EJEMPLOS_USO_REVENUECAT.dart:42:7 - avoid_print
+  error - The method 'signInWithGoogle' isn't defined for the type 'AuthService' - EJEMPLOS_USO_REVENUECAT.dart:49:30 - undefined_method
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:70:1 - directive_after_declaration
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:71:1 - directive_after_declaration
+   info - Parameter 'key' could be a super parameter - EJEMPLOS_USO_REVENUECAT.dart:74:9 - use_super_parameters
+   info - Don't use 'BuildContext's across async gaps - EJEMPLOS_USO_REVENUECAT.dart:170:19 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - EJEMPLOS_USO_REVENUECAT.dart:172:26 - use_build_context_synchronously
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:193:1 - directive_after_declaration
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:194:1 - directive_after_declaration
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:195:1 - directive_after_declaration
+   info - Parameter 'key' could be a super parameter - EJEMPLOS_USO_REVENUECAT.dart:198:9 - use_super_parameters
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - EJEMPLOS_USO_REVENUECAT.dart:403:17 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - EJEMPLOS_USO_REVENUECAT.dart:404:17 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - EJEMPLOS_USO_REVENUECAT.dart:488:26 - use_build_context_synchronously
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:511:1 - directive_after_declaration
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:512:1 - directive_after_declaration
+   info - Constructors for public widgets should have a named 'key' parameter - EJEMPLOS_USO_REVENUECAT.dart:514:7 - use_key_in_widget_constructors
+   info - Don't invoke 'print' in production code - EJEMPLOS_USO_REVENUECAT.dart:556:5 - avoid_print
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:571:1 - directive_after_declaration
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:572:1 - directive_after_declaration
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:606:1 - directive_after_declaration
+  error - Directives must appear before any declarations - EJEMPLOS_USO_REVENUECAT.dart:607:1 - directive_after_declaration
+   info - Constructors for public widgets should have a named 'key' parameter - EJEMPLOS_USO_REVENUECAT.dart:609:7 - use_key_in_widget_constructors
+   info - Constructors for public widgets should have a named 'key' parameter - EJEMPLOS_USO_REVENUECAT.dart:653:7 - use_key_in_widget_constructors
+   info - Don't use 'BuildContext's across async gaps - EJEMPLOS_USO_REVENUECAT.dart:668:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - EJEMPLOS_USO_REVENUECAT.dart:679:28 - use_build_context_synchronously
+warning - The annotation 'JsonKey.new' can only be used on fields or getters - lib\core\models\user_model.dart:57:6 - invalid_annotation_target
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\ad_insertion_manager.dart:41:29 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\ad_insertion_manager.dart:114:29 - deprecated_member_use
+warning - The value of the local variable 'homeMessage' isn't used - lib\core\providers\home_provider.dart:234:20 - unused_local_variable
+warning - The value of the local variable 'localRecents' isn't used - lib\core\providers\library_coordinator.dart:302:13 - unused_local_variable
+warning - The declaration '_saveRecentlyPlayedToLocal' isn't referenced - lib\core\providers\library_coordinator.dart:444:16 - unused_element
+warning - The value of the field '_secureStorage' isn't used - lib\core\providers\offline_manager_provider.dart:56:9 - unused_field
+warning - The value of the local variable 'debugStr' isn't used - lib\core\providers\offline_manager_provider.dart:139:23 - unused_local_variable
+   info - Use interpolation to compose strings and values - lib\core\providers\offline_manager_provider.dart:139:57 - prefer_interpolation_to_compose_strings
+warning - Unused import: 'package:flutter/widgets.dart' - lib\core\providers\playback_notifier.dart:4:8 - unused_import
+warning - The value of the field '_isProcessingPlayFromCard' isn't used - lib\core\providers\playback_notifier.dart:140:8 - unused_field
+warning - The value of the field '_lastSeekTime' isn't used - lib\core\providers\playback_notifier.dart:144:13 - unused_field
+warning - The value of the field '_minQueueSize' isn't used - lib\core\providers\playback_notifier.dart:159:20 - unused_field
+warning - The value of the field '_isAdRequestInFlight' isn't used - lib\core\providers\playback_notifier.dart:180:8 - unused_field
+warning - The value of the local variable 'offlineManager' isn't used - lib\core\providers\playback_notifier.dart:321:11 - unused_local_variable
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\playback_notifier.dart:369:26 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\playback_notifier.dart:595:31 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:788:27 - unnecessary_null_comparison
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:853:44 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:854:32 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:862:105 - invalid_null_aware_operator
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:867:27 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:923:48 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:969:27 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:1013:34 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:1039:43 - unnecessary_null_comparison
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:1233:26 - invalid_null_aware_operator
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:1266:44 - unnecessary_null_comparison
+warning - The value of the local variable 'seqCurrentSongId' isn't used - lib\core\providers\playback_notifier.dart:1446:17 - unused_local_variable
+warning - The declaration '_prefetchInitialAlgorithmBuffer' isn't referenced - lib\core\providers\playback_notifier.dart:2403:16 - unused_element
+warning - The operand can't be 'null', so the condition is always 'false' - lib\core\providers\playback_notifier.dart:2754:18 - unnecessary_null_comparison
+warning - The declaration '_handlePreventiveAdInsertion' isn't referenced - lib\core\providers\playback_notifier.dart:3738:16 - unused_element
+warning - The value of the local variable 'freshSequenceState' isn't used - lib\core\providers\playback_notifier.dart:4078:17 - unused_local_variable
+warning - The value of the local variable 'freshCurrentIndex' isn't used - lib\core\providers\playback_notifier.dart:4079:17 - unused_local_variable
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:4216:37 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:4428:57 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:4492:54 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5334:55 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5416:54 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5417:50 - invalid_null_aware_operator
+warning - Dead code - lib\core\providers\playback_notifier.dart:5457:20 - dead_code
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5462:51 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5483:55 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5521:54 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5522:50 - invalid_null_aware_operator
+warning - The declaration '_logAdDiagnostics' isn't referenced - lib\core\providers\playback_notifier.dart:5573:8 - unused_element
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5992:67 - invalid_null_aware_operator
+warning - Unused import: 'package:shared_preferences/shared_preferences.dart' - lib\core\providers\saved_playlists_provider.dart:5:8 - unused_import
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\unified_audio_provider_fixed.dart:63:21 - unnecessary_null_comparison
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\advanced_audio_engine.dart:410:3 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\advanced_audio_engine.dart:653:30 - deprecated_member_use
+warning - Unused import: 'package:flutter/foundation.dart' - lib\core\services\app_initializer.dart:2:8 - unused_import
+warning - Unused import: 'package:shared_preferences/shared_preferences.dart' - lib\core\services\app_initializer.dart:5:8 - unused_import
+   info - Use 'rethrow' to rethrow a caught exception - lib\core\services\app_initializer.dart:52:7 - use_rethrow_when_possible
+warning - The value of the field '_seekingGuardDuration' isn't used - lib\core\services\audio_service.dart:79:16 - unused_field
+warning - The value of the field '_persistenceDelayAfterSeek' isn't used - lib\core\services\audio_service.dart:101:16 - unused_field
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:803:9 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:842:13 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:869:13 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1103:28 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1124:28 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1165:29 - deprecated_member_use
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\services\audio_service.dart:1175:49 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\services\audio_service.dart:1183:36 - invalid_null_aware_operator
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1244:29 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1312:29 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1404:36 - deprecated_member_use
+warning - The stack trace variable 'stackTrace' isn't used and can be removed - lib\core\services\intelligent_featured_service.dart:395:23 - unused_catch_stack
+warning - Unused import: 'package:dio/dio.dart' - lib\core\services\playback_reporter_service.dart:7:8 - unused_import
+warning - The value of the field '_lastReportTime' isn't used - lib\core\services\playback_reporter_service.dart:26:13 - unused_field
+warning - Unused import: 'dart:convert' - lib\core\services\revenuecat_service.dart:5:8 - unused_import
+warning - The value of the field '_premiumOfferingId' isn't used - lib\core\services\revenuecat_service.dart:68:23 - unused_field
+   info - Don't invoke 'print' in production code - lib\core\services\social_auth_service.dart:42:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\services\social_auth_service.dart:77:7 - avoid_print
+   info - Use interpolation to compose strings and values - lib\core\services\spotify_recommendation_service.dart:120:105 - prefer_interpolation_to_compose_strings
+   info - Use interpolation to compose strings and values - lib\core\services\spotify_recommendation_service.dart:373:100 - prefer_interpolation_to_compose_strings
+warning - Unused import: '../models/song_model.dart' - lib\core\widgets\final_mini_player.dart:4:8 - unused_import
+warning - Unused import: '../services/audio_service.dart' - lib\core\widgets\final_mini_player.dart:6:8 - unused_import
+warning - Unused import: '../services/advanced_audio_engine.dart' - lib\core\widgets\final_mini_player.dart:7:8 - unused_import
+warning - Duplicate import - lib\core\widgets\mini_player_components.dart:8:8 - duplicate_import
+warning - Duplicate import - lib\core\widgets\mini_player_components.dart:9:8 - duplicate_import
+warning - Unused import: '../models/song_model.dart' - lib\core\widgets\mini_player_components.dart:13:8 - unused_import
+   info - Parameter 'key' could be a super parameter - lib\core\widgets\optimized_cached_image.dart:16:9 - use_super_parameters
+warning - Unused import: 'persistent_artwork_background.dart' - lib\core\widgets\professional_audio_player.dart:17:8 - unused_import
+warning - The value of the local variable 'isPlayingAd' isn't used - lib\core\widgets\professional_audio_player.dart:984:11 - unused_local_variable
+warning - The declaration '_AdArtworkBackground' isn't referenced - lib\core\widgets\professional_audio_player.dart:1132:7 - unused_element
+warning - A value for optional parameter 'key' isn't ever given - lib\core\widgets\professional_audio_player.dart:1136:11 - unused_element_parameter
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:31:60 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:32:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:33:51 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\core\widgets\struky_drawer_menu.dart:177:23 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:348:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:381:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_zoom_drawer.dart:110:44 - deprecated_member_use
+   info - Statements in an if should be enclosed in a block - lib\core\widgets\struky_zoom_drawer.dart:212:51 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\core\widgets\struky_zoom_drawer.dart:213:38 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\core\widgets\struky_zoom_drawer.dart:215:67 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block - lib\core\widgets\struky_zoom_drawer.dart:216:38 - curly_braces_in_flow_control_structures
+warning - Unused import: 'package:go_router/go_router.dart' - lib\features\ads\screens\ad_stats_screen.dart:4:8 - unused_import
+warning - Unused import: '../services/ads_service.dart' - lib\features\ads\screens\ad_stats_screen.dart:5:8 - unused_import
+warning - Unused import: '../../../core/utils/logger.dart' - lib\features\ads\screens\ad_stats_screen.dart:7:8 - unused_import
+   info - The local variable '_forceDebugAd' starts with an underscore - lib\features\ads\services\ads_service.dart:32:16 - no_leading_underscores_for_local_identifiers
+warning - Dead code - lib\features\ads\services\ads_service.dart:41:24 - dead_code
+warning - The stack trace variable 'stackTrace' isn't used and can be removed - lib\features\ads\services\ads_service.dart:168:17 - unused_catch_stack
+warning - Dead code - lib\features\ads\services\ads_service.dart:259:7 - dead_code
+   info - Unnecessary use of string interpolation - lib\features\ads\services\ads_service.dart:270:39 - unnecessary_string_interpolations
+warning - Unused import: 'package:shimmer/shimmer.dart' - lib\features\artists\pages\artist_page.dart:6:8 - unused_import
+warning - Unused import: '../../../core/theme/neumorphism_theme.dart' - lib\features\auth\screens\login_screen.dart:4:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:420:47 - deprecated_member_use
+warning - Unused import: '../../../core/theme/text_styles.dart' - lib\features\home\screens\home_screen.dart:14:8 - unused_import
+warning - The value of the local variable 'statusBarHeight' isn't used - lib\features\home\screens\home_screen.dart:112:11 - unused_local_variable
+warning - Unused import: 'package:cached_network_image/cached_network_image.dart' - lib\features\home\widgets\featured_artist_card.dart:2:8 - unused_import
+warning - Unused import: '../../../core/models/artist_model.dart' - lib\features\home\widgets\featured_artists_section.dart:8:8 - unused_import
+warning - Unused import: '../../../core/widgets/optimized_image.dart' - lib\features\home\widgets\featured_artists_section.dart:9:8 - unused_import
+warning - Unused import: '../../../core/widgets/verified_badge.dart' - lib\features\home\widgets\featured_artists_section.dart:12:8 - unused_import
+warning - Unused import: 'package:animate_do/animate_do.dart' - lib\features\home\widgets\featured_artists_section.dart:15:8 - unused_import
+warning - Unused import: 'package:animate_do/animate_do.dart' - lib\features\home\widgets\featured_playlists_section.dart:11:8 - unused_import
+warning - Unused import: 'package:animate_do/animate_do.dart' - lib\features\home\widgets\featured_songs_section.dart:11:8 - unused_import
+warning - The left operand can't be null, so the right operand is never executed - lib\features\home\widgets\home_header.dart:77:44 - dead_null_aware_expression
+   info - Unnecessary 'const' keyword - lib\features\home\widgets\intelligent_featured_songs_section.dart:128:27 - unnecessary_const
+   info - Unnecessary 'const' keyword - lib\features\home\widgets\intelligent_featured_songs_section.dart:136:27 - unnecessary_const
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\library\screens\recently_played_screen.dart:285:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\library\screens\recently_played_screen.dart:288:28 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\features\library\screens\recently_played_screen.dart:288:62 - deprecated_member_use
+   info - 'opacity' is deprecated and shouldn't be used. Use .a - lib\features\library\screens\recently_played_screen.dart:288:80 - deprecated_member_use
+warning - Unused import: 'package:shimmer/shimmer.dart' - lib\features\playlists\screens\playlists_screen.dart:6:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\premium\widgets\premium_upsell_dialog.dart:28:48 - deprecated_member_use
+warning - The declaration '_MenuButton' isn't referenced - lib\features\song_detail\screens\song_detail_screen.dart:1755:7 - unused_element
+warning - Unused import: 'package:flutter/foundation.dart' - lib\features\song_detail\services\song_detail_service.dart:2:8 - unused_import
+

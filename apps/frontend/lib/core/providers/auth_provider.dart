@@ -5,6 +5,12 @@ import '../services/auth_service.dart';
 import '../services/social_auth_service.dart'; // 🔐 Social Auth
 import '../exceptions/auth_exception.dart';
 import 'onboarding_provider.dart';
+import '../services/revenuecat_service.dart';
+import 'offline_manager_provider.dart'; // 🔒 Offline Manager
+import 'play_history_provider.dart'; // PlayHistory
+import 'playback_notifier.dart'; // 🎵 Playback
+import '../services/audio_service.dart'; // 🔊 Audio Service
+import '../utils/logger.dart'; // 📝 Logger
 
 /// Provider para el servicio de autenticación
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -53,10 +59,28 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthService _authService;
 
+
+
   @override
   AuthState build() {
     _authService = ref.read(authServiceProvider);
-    // Inicializar de forma asíncrona sin bloquear
+    
+    // Escuchar cambios de RevenueCat para actualización optimista instantánea
+    // Esto elimina el delay entre la compra y la actualización de la UI
+    RevenueCatService().premiumStatusStream.listen((isPremium) {
+      if (state.user != null) {
+        debugPrint('⚡ AuthNotifier: Recibido evento de RevenueCat. isPremium: $isPremium');
+        
+        final updatedUser = state.user!.copyWith(
+          isPremiumField: isPremium,
+          subscriptionStatus: isPremium ? SubscriptionStatus.premium : SubscriptionStatus.free, // Fallback a free si false
+        );
+        
+        // Optimistic Update: Actualizamos el estado local inmediatamente
+        state = state.copyWith(user: updatedUser);
+      }
+    });
+
     Future.microtask(() => _initialize());
     return const AuthState(isLoading: true);
   }
@@ -82,6 +106,26 @@ class AuthNotifier extends Notifier<AuthState> {
           isInitialized: true,
         );
         
+        
+        // CRITICO: Inicializar OfflineManager para el usuario restaurado
+        if (_authService.currentUser != null) {
+          try {
+            final offlineManager = ref.read(offlineManagerProvider.notifier);
+            await offlineManager.initializeForUser(_authService.currentUser!.id);
+            AppLogger.info('[AuthProvider] OfflineManager inicializado para usuario restaurado');
+          } catch (e) {
+            AppLogger.error('[AuthProvider] Error inicializando OfflineManager al restaurar sesion: $e');
+          }
+          
+          // CRITICO: Inicializar PlayHistory para el usuario restaurado
+          try {
+            final playHistory = ref.read(playHistoryProvider.notifier);
+            await playHistory.initializeForUser(_authService.currentUser!.id);
+            AppLogger.info('[AuthProvider] PlayHistory inicializado para usuario restaurado');
+          } catch (e) {
+            AppLogger.error('[AuthProvider] Error inicializando PlayHistory al restaurar sesion: $e');
+          }
+        }
         // Luego refrescar el perfil en segundo plano (sin bloquear)
         refreshProfile().catchError((e) {
           // Silenciar errores de refresh, el usuario ya está cargado
@@ -121,6 +165,18 @@ class AuthNotifier extends Notifier<AuthState> {
         isLoading: false,
         error: null,
       );
+      
+      // 🔒 Inicializar OfflineManager para este usuario
+      try {
+        final offlineManager = ref.read(offlineManagerProvider.notifier);
+        await offlineManager.initializeForUser(authResponse.user.id);
+        AppLogger.info('[AuthProvider] ✅ OfflineManager inicializado para usuario: ${authResponse.user.id}');
+        final playHistory = ref.read(playHistoryProvider.notifier);
+        await playHistory.initializeForUser(authResponse.user.id);
+        AppLogger.info('[AuthProvider] PlayHistory inicializado para usuario: ${authResponse.user.id}');
+      } catch (e) {
+        AppLogger.error('[AuthProvider] ⚠️ Error inicializando OfflineManager: $e');
+      }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -159,6 +215,18 @@ class AuthNotifier extends Notifier<AuthState> {
         isLoading: false,
         error: null,
       );
+      
+      // 🔒 Inicializar OfflineManager para este usuario
+      try {
+        final offlineManager = ref.read(offlineManagerProvider.notifier);
+        await offlineManager.initializeForUser(authResponse.user.id);
+        AppLogger.info('[AuthProvider] ✅ OfflineManager inicializado para usuario: ${authResponse.user.id}');
+        final playHistory = ref.read(playHistoryProvider.notifier);
+        await playHistory.initializeForUser(authResponse.user.id);
+        AppLogger.info('[AuthProvider] PlayHistory inicializado para usuario: ${authResponse.user.id}');
+      } catch (e) {
+        AppLogger.error('[AuthProvider] ⚠️ Error inicializando OfflineManager: $e');
+      }
       
       // ✅ FIX: Resetear onboarding para el nuevo usuario registrado
       // Esto asegura que el onboarding aparezca solo para usuarios nuevos
@@ -210,6 +278,18 @@ class AuthNotifier extends Notifier<AuthState> {
         isLoading: false,
         error: null,
       );
+      
+      // 🔒 Inicializar OfflineManager para este usuario
+      try {
+        final offlineManager = ref.read(offlineManagerProvider.notifier);
+        await offlineManager.initializeForUser(authResponse.user.id);
+        AppLogger.info('[AuthProvider] ✅ OfflineManager inicializado para usuario: ${authResponse.user.id}');
+        final playHistory = ref.read(playHistoryProvider.notifier);
+        await playHistory.initializeForUser(authResponse.user.id);
+        AppLogger.info('[AuthProvider] PlayHistory inicializado para usuario: ${authResponse.user.id}');
+      } catch (e) {
+        AppLogger.error('[AuthProvider] ⚠️ Error inicializando OfflineManager: $e');
+      }
       
       // Reset onboarding si es nuevo usuario
       if (authResponse.user.id.isNotEmpty) {
@@ -341,6 +421,47 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> logout() async {
     try {
       state = state.copyWith(isLoading: true, error: null);
+      
+      // 🎵 CRÍTICO: Detener música y ocultar reproductor antes de cerrar sesión
+      try {
+        AppLogger.info('[AuthProvider] 🎵 Deteniendo música...');
+        
+        // Detener el audio directamente
+        try {
+          final audioService = ref.read(audioServiceProvider);
+          await audioService.player.pause();
+          AppLogger.info('[AuthProvider] ⏸️ Audio pausado');
+        } catch (e) {
+          AppLogger.warning('[AuthProvider] Error pausando audio: $e');
+        }
+        
+        // Ocultar reproductor
+        final playbackNotifier = ref.read(playbackNotifierProvider.notifier);
+        playbackNotifier.state = playbackNotifier.state.copyWith(
+          isMiniPlayerVisible: false,
+          isSessionActive: false,
+          isPlaying: false,
+        );
+        
+        AppLogger.info('[AuthProvider] ✅ Música detenida y reproductor oculto');
+      } catch (e) {
+        AppLogger.error('[AuthProvider] ⚠️ Error deteniendo música: $e');
+        // No bloquear el logout si falla
+      }
+      
+      // 🔒 Cerrar sesión de OfflineManager (SIN eliminar datos)
+      // Los datos del usuario se mantienen para cuando vuelva a iniciar sesión
+      try {
+        AppLogger.info('[AuthProvider] 🔄 Cerrando sesión de OfflineManager...');
+        final offlineManager = ref.read(offlineManagerProvider.notifier);
+        await offlineManager.closeCurrentUserSession();
+        final playHistory = ref.read(playHistoryProvider.notifier);
+        await playHistory.closeCurrentUserSession();
+        AppLogger.info('[AuthProvider] ✅ OfflineManager cerrado correctamente');
+      } catch (e) {
+        AppLogger.error('[AuthProvider] ⚠️ Error cerrando OfflineManager (continuando con logout): $e');
+        // No bloquear el logout si falla
+      }
       
       await _authService.logout();
       

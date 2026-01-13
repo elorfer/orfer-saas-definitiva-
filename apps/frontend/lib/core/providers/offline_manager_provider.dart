@@ -40,8 +40,9 @@ class OfflineState {
 }
 
 /// Provider para el gestor de descargas y modo offline
+/// 🔒 PROFESIONAL: Soporta separación de datos por usuario
 class OfflineManagerNotifier extends Notifier<OfflineState> {
-  static const String _boxName = 'offline_songs_v1';
+  static const String _boxNamePrefix = 'offline_songs_v2'; // v2 para nueva estructura
   static const String _downloadDirName = 'offline_music';
   
   static const String _keyStorageKey = 'offline_mode_encryption_key_v1';
@@ -50,21 +51,120 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
   // (En producción ideal: guardar IV junto al archivo, pero para MVP usamos uno fijo de 16 bytes)
   static final _iv = encrypt.IV.fromUtf8('VintageMusicApp1'); // Exactly 16 chars = 16 bytes
 
+  // 🔒 ID del usuario actual - CRÍTICO para separación de datos
+  String? _currentUserId;
 
   Box<String>? _box;
   Directory? _baseDir;
   final _secureStorage = const FlutterSecureStorage();
+  bool _isInitialized = false;
 
   @override
   OfflineState build() {
-    _init();
+    // NO inicializar automáticamente - esperar a que se establezca el userId
     return const OfflineState();
   }
 
-  Future<void> _init() async {
+  /// 🔒 Inicializar para un usuario específico
+  /// DEBE ser llamado cuando un usuario inicia sesión
+  Future<void> initializeForUser(String userId) async {
+    if (_currentUserId == userId && _isInitialized) {
+      AppLogger.debug('[OfflineManager] Ya inicializado para usuario: $userId');
+      return;
+    }
+
+    AppLogger.info('[OfflineManager] 🔑 Inicializando para usuario: $userId');
+    
+    // Si había un usuario anterior, cerrar su sesión primero
+    if (_currentUserId != null && _currentUserId != userId) {
+      await closeCurrentUserSession();
+    }
+
+    _currentUserId = userId;
+    await _init();
+  }
+
+  /// Cerrar sesión del usuario actual (sin eliminar sus datos)
+  Future<void> closeCurrentUserSession() async {
     try {
+      AppLogger.info('[OfflineManager] 🔄 Cerrando sesión de usuario: $_currentUserId');
+      
+      // Cerrar Hive box si está abierto
+      if (_box != null && _box!.isOpen) {
+        await _box!.close();
+        _box = null;
+      }
+      
+      // Limpiar estado
+      state = const OfflineState();
+      _baseDir = null;
+      _isInitialized = false;
+      
+      AppLogger.debug('[OfflineManager] ✅ Sesión cerrada correctamente');
+    } catch (e) {
+      AppLogger.error('[OfflineManager] Error cerrando sesión: $e');
+    }
+  }
+
+  /// 🗑️ Eliminar TODOS los datos del usuario actual
+  /// Solo usar al cerrar sesión si quieres borrar las descargas
+  Future<void> clearCurrentUserData() async {
+    if (_currentUserId == null) {
+      AppLogger.warning('[OfflineManager] No hay usuario activo para limpiar');
+      return;
+    }
+
+    try {
+      AppLogger.info('[OfflineManager] 🧹 Eliminando datos de usuario: $_currentUserId');
+      
+      // Eliminar directorio del usuario
+      if (_baseDir != null && await _baseDir!.exists()) {
+        await _baseDir!.delete(recursive: true);
+      }
+      
+      // Eliminar y cerrar Hive box del usuario
+      if (_box != null) {
+        final boxName = _getUserBoxName(_currentUserId!);
+        await _box!.clear();
+        await _box!.close();
+        await Hive.deleteBoxFromDisk(boxName);
+        _box = null;
+      }
+      
+      // Limpiar estado
+      state = const OfflineState();
+      _isInitialized = false;
+      
+      AppLogger.info('[OfflineManager] ✅ Datos eliminados correctamente');
+    } catch (e) {
+      AppLogger.error('[OfflineManager] Error eliminando datos: $e');
+    }
+  }
+
+  /// Obtener nombre del Hive Box para un usuario específico
+  String _getUserBoxName(String userId) {
+    // Sanitizar userId para nombre de archivo seguro
+    final safeUserId = userId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    return '${_boxNamePrefix}_$safeUserId';
+  }
+
+  /// Obtener directorio de descargas para un usuario específico
+  String _getUserDownloadDir(Directory appDir, String userId) {
+    // Sanitizar userId para nombre de directorio seguro
+    final safeUserId = userId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    return path.join(appDir.path, _downloadDirName, safeUserId);
+  }
+
+  Future<void> _init() async {
+    if (_currentUserId == null) {
+      AppLogger.warning('[OfflineManager] ⚠️ No se puede inicializar sin userId');
+      return;
+    }
+
+    try {
+      AppLogger.info('[OfflineManager] 🚀 Inicializando para usuario: $_currentUserId');
+
       // 1. Inicializar Secure Storage y Clave (Configuración Robusta)
-      // Usamos la misma configuración que en AuthService para evitar conflictos
       const secureStorage = FlutterSecureStorage(
         aOptions: AndroidOptions(
           encryptedSharedPreferences: false,
@@ -103,23 +203,43 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
         
         AppLogger.warning('[OfflineManager] ⚠️ Key not found. Generated NEW encryption key. (Old downloads will be unreadable)');
       } else {
-        AppLogger.info('[OfflineManager] 🔐 Decryption key loaded successfully.');
-        key = encrypt.Key.fromBase64(keyBase64);
+        try {
+          key = encrypt.Key.fromBase64(keyBase64);
+          AppLogger.info('[OfflineManager] 🔐 Decryption key loaded successfully.');
+        } catch (e) {
+          AppLogger.error('[OfflineManager] ❌ Corrupted key found. Regenerating...');
+          key = encrypt.Key.fromSecureRandom(32);
+          final newKeyBase64 = key.base64;
+          await secureStorage.write(key: _keyStorageKey, value: newKeyBase64);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_keyStorageKey, newKeyBase64);
+          AppLogger.warning('[OfflineManager] ⚠️ Generated NEW encryption key after corruption.');
+        }
       }
       _encrypter = encrypt.Encrypter(encrypt.AES(key));
 
-      // 2. Inicializar Hive y Directorios
-      _box = await Hive.openBox<String>(_boxName);
+      // 2. Inicializar Hive Box específico del usuario
+      final boxName = _getUserBoxName(_currentUserId!);
+      _box = await Hive.openBox<String>(boxName);
+      AppLogger.info('[OfflineManager] 📦 Hive box abierto: $boxName');
+
+      // 3. Inicializar directorio específico del usuario
       final appDir = await getApplicationDocumentsDirectory();
-      _baseDir = Directory(path.join(appDir.path, _downloadDirName));
+      final userDirPath = _getUserDownloadDir(appDir, _currentUserId!);
+      _baseDir = Directory(userDirPath);
       
       if (!await _baseDir!.exists()) {
         await _baseDir!.create(recursive: true);
+        AppLogger.info('[OfflineManager] 📁 Directorio creado: $userDirPath');
       }
 
       _loadDownloadedSongs();
-    } catch (e) {
-      AppLogger.error('[OfflineManager] Init failed: $e');
+      _isInitialized = true;
+      
+      AppLogger.info('[OfflineManager] ✅ Inicialización completada para usuario: $_currentUserId');
+    } catch (e, stackTrace) {
+      AppLogger.error('[OfflineManager] ❌ Init failed: $e', e, stackTrace);
+      _isInitialized = false;
     }
   }
 
@@ -135,10 +255,6 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
         final jsonStr = _box!.getAt(i);
         if (jsonStr != null) {
             try {
-                // Loguear los primeros 100 caracteres para debug
-                final debugStr = jsonStr.length > 100 ? jsonStr.substring(0, 100) + '...' : jsonStr;
-                // AppLogger.debug('[OfflineManager] Parsing: $debugStr');
-                
                 final song = Song.fromJson(jsonDecode(jsonStr));
                 songs[song.id] = song;
             } catch (e, stack) {
@@ -146,12 +262,17 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
             }
         }
     }
-    AppLogger.info('[OfflineManager] ✅ Loaded ${songs.length} songs from disk.');
+    AppLogger.info('[OfflineManager] ✅ Loaded ${songs.length} songs from disk for user: $_currentUserId');
     state = state.copyWith(downloadedSongs: songs);
   }
 
   /// Descargar una canción
   Future<void> downloadSong(Song song) async {
+    if (_currentUserId == null || !_isInitialized) {
+      AppLogger.error('[OfflineManager] ❌ No se puede descargar sin usuario inicializado');
+      return;
+    }
+
     if (_box == null || _baseDir == null) await _init();
     if (state.downloadingIds.contains(song.id)) return; // Ya descargando
     if (state.downloadedSongs.containsKey(song.id)) return; // Ya descargada
@@ -166,8 +287,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
       
       if (url == null || url.isEmpty) throw Exception('URL inválida');
 
-      // 1. Descargar bytes en memoria (buffer)
-      // Nota: Para archivos muy grandes, sería mejor stream, pero canciones MP3 < 10MB ok en memoria.
+      // 1. Descargar bytes en memoria
       final response = await dio.get<List<int>>(
         url,
         options: Options(responseType: ResponseType.bytes),
@@ -191,11 +311,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
       final file = File(filePath);
       await file.writeAsBytes(encrypted.bytes);
 
-      // 4. Guardar metadatos en Hive (Referencia al path local)
-      // IMPORTANTE: Guardamos el path local en una propiedad 'localPath' o 'fileUrl' modificada?
-      // Para evitar conflictos con el modelo Song inmutable, guardamos el original en Hive,
-      // pero al servirlo inyectaremos el path.
-      
+      // 4. Guardar metadatos en Hive
       await _box!.put(song.id, jsonEncode(song.toJson()));
 
       // 5. Actualizar estado
@@ -211,7 +327,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
         downloadProgress: newProgressEnd,
       );
       
-      AppLogger.info('[OfflineManager] Downloaded & Encrypted: ${song.title}');
+      AppLogger.info('[OfflineManager] ✅ Downloaded & Encrypted: ${song.title} (User: $_currentUserId)');
 
     } catch (e) {
       AppLogger.error('[OfflineManager] Download failed for ${song.title}: $e');
@@ -247,31 +363,13 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
     }
   }
 
-  /// Eliminar TODAS las descargas
+  /// Eliminar TODAS las descargas del usuario actual
+  @Deprecated('Use clearCurrentUserData() para eliminar datos al cerrar sesión')
   Future<void> removeAllDownloads() async {
-    try {
-      if (_baseDir != null && await _baseDir!.exists()) {
-        await _baseDir!.delete(recursive: true);
-        await _baseDir!.create(); // Recrear directorio vacío
-      }
-      
-      await _box?.clear();
-      
-      state = state.copyWith(
-        downloadedSongs: {},
-        downloadingIds: {},
-        downloadProgress: {},
-      );
-      
-      AppLogger.info('[OfflineManager] 🧹 All downloads removed');
-    } catch (e) {
-      AppLogger.error('[OfflineManager] Remove all failed: $e');
-    }
+    await clearCurrentUserData();
   }
 
   /// Obtener archivo desencriptado (TEMPORAL) para reproducción
-  /// Devuelve la ruta a un archivo temporal desencriptado.
-  /// NOTA: Idealmente, el player leería stream desencriptado, pero just_audio requiere archivo o URL.
   Future<String?> getDecryptedFilePath(String songId) async {
       try {
           if (_baseDir == null) await _init();
@@ -290,8 +388,6 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
                final encryptedBytes = await encryptedFile.readAsBytes();
                final decryptedBytes = _encrypter.decryptBytes(encrypt.Encrypted(encryptedBytes), iv: _iv);
                await tempFile.writeAsBytes(decryptedBytes);
-          } else {
-             // AppLogger.debug('[OfflineManager] Using cached decrypted file: $tempPath');
           }
           
           return tempPath;

@@ -379,6 +379,24 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   Future<void> playSpecificSong(Song song, {String? contextId}) async {
     AppLogger.info('[PlaybackNotifier] 🎵 playSpecificSong: ${song.title} (Context: $contextId)');
     
+    // 🎯 CRÍTICO: Guardar en historial INMEDIATAMENTE cuando usuario selecciona la canción
+    // Esto asegura que aparezca en "Recientemente Reproducidas" desde el primer momento
+    try {
+      AppLogger.info('[PlaybackNotifier] 💾 GUARDANDO EN HISTORIAL AL INICIO: ${song.title}');
+      ref.read(playHistoryProvider.notifier).addToHistory(song);
+      
+      // Verificar que se guardó
+      final historyAfter = ref.read(playHistoryProvider);
+      if (historyAfter.isNotEmpty && historyAfter.last.id == song.id) {
+        AppLogger.success('[PlaybackNotifier] ✅ Canción guardada en historial exitosamente: ${song.title}');
+      } else {
+        AppLogger.warning('[PlaybackNotifier] ⚠️ La canción NO se guardó en historial - ejecutando diagnóstico...');
+        ref.read(playHistoryProvider.notifier).debugHistoryStatus();
+      }
+    } catch (e) {
+      AppLogger.error('[PlaybackNotifier] ❌ Error guardando en historial: $e');
+    }
+    
     // 🔓 NUCLEAR RESET: Limpiar TODOS los flags que podrían bloquear actualizaciones de posición
     // Este reset es esencial para que el contador funcione desde el primer segundo
     _isInsertingAd = false;
@@ -527,11 +545,15 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
      // PERO sin reproducir ni mostrar el MiniPlayer
      try {
        final featuredSongs = await _intelligentService.getIntelligentFeaturedSongs(
-         limit: 1, // Solo 1 para velocidad máxima
+         limit: bufferSize, // 🔥 Usando configuración del admin (Buffer Inicial)
          user: user,
        );
        
-       final recommendations = featuredSongs.map((f) => f.song).toList();
+       // ✅ LIMITAR al bufferSize configurado (evitar precargar más de lo necesario)
+       final recommendations = featuredSongs
+           .map((f) => f.song)
+           .take(bufferSize)
+           .toList();
        
        if (recommendations.isNotEmpty) {
          final song = recommendations.first;
@@ -547,19 +569,46 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
            // ❌ NO: currentSong, isMiniPlayerVisible, isSessionActive
          );
          
-         // 3. 🔥 PRECARGAR AUDIO: Crear la cola en el motor pero NO reproducir
+         // 3. 🔥 PRECARGAR AUDIO: Crear la cola en el motor con TODAS las canciones
          if (_service != null) {
-           final source = await _service!.createAudioSource(song);
-           if (source != null) {
-             final playlist = ConcatenatingAudioSource(
-               useLazyPreparation: true,
-               shuffleOrder: DefaultShuffleOrder(),
-               children: [source],
-             );
+           try {
+             // Crear sources para todas las canciones
+             final sources = <AudioSource>[];
+             for (final rec in recommendations) {
+               final source = await _service!.createAudioSource(rec);
+               if (source != null) {
+                 sources.add(source);
+               }
+             }
              
-             // Solo precargar, NO llamar play()
-             await _service!.player.setAudioSource(playlist, preload: true);
-             AppLogger.success('[PlaybackNotifier] 💉 Inyección de Adrenalina completada. Audio precargado: ${song.title}');
+             if (sources.isNotEmpty) {
+               final playlist = ConcatenatingAudioSource(
+                 useLazyPreparation: true,
+                 shuffleOrder: DefaultShuffleOrder(),
+                 children: sources,
+               );
+               
+               // Solo precargar, NO llamar play()
+               await _service!.player.setAudioSource(playlist, preload: true);
+               AppLogger.success('[PlaybackNotifier] 💉 Inyección de Adrenalina completada. ${sources.length} canciones precargadas (Inicial: ${song.title})');
+             }
+           } catch (e) {
+             AppLogger.error('[PlaybackNotifier] Error precargando cola completa: $e');
+             // Fallback: al menos cargar la primera
+             try {
+               final source = await _service!.createAudioSource(song);
+               if (source != null) {
+                 final playlist = ConcatenatingAudioSource(
+                   useLazyPreparation: true,
+                   shuffleOrder: DefaultShuffleOrder(),
+                   children: [source],
+                 );
+                 await _service!.player.setAudioSource(playlist, preload: true);
+                 AppLogger.warning('[PlaybackNotifier] ⚠️ Fallback: Solo 1 canción precargada: ${song.title}');
+               }
+             } catch (fallbackError) {
+               AppLogger.error('[PlaybackNotifier] Error en fallback: $fallbackError');
+             }
            }
          }
        }
@@ -1234,6 +1283,26 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
              AppLogger.info('[PlaybackNotifier] 🚀 Actualizando estado para canción: ${currentSong.title} (ID: ${currentSong.id})');
         }
 
+        // 🎯 CRÍTICO: Guardar en historial SIEMPRE que cambie la canción (manual o automática)
+        // Hacer esto ANTES del if(shouldUpdate) para capturar todas las transiciones
+        if (!isSameSong && currentSong.id.isNotEmpty) {
+          try {
+            AppLogger.info('[PlaybackNotifier] 💾 AUTO-GUARDANDO en historial (transición automática): ${currentSong.title}');
+            ref.read(playHistoryProvider.notifier).addToHistory(currentSong);
+            
+            // Verificar que se guardó
+            final historyAfter = ref.read(playHistoryProvider);
+            if (historyAfter.isNotEmpty && historyAfter.last.id == currentSong.id) {
+              AppLogger.success('[PlaybackNotifier] ✅ Canción AUTO-guardada exitosamente: ${currentSong.title} (Total: ${historyAfter.length})');
+            } else {
+              AppLogger.warning('[PlaybackNotifier] ⚠️ AUTO-guardado falló - diagnóstico...');
+              ref.read(playHistoryProvider.notifier).debugHistoryStatus();
+            }
+          } catch (e) {
+            AppLogger.error('[PlaybackNotifier] ❌ Error AUTO-guardando: $e');
+          }
+        }
+
         if (shouldUpdate) {
           // ✅ FIX CRÍTICO: SIEMPRE actualizar currentSong y lastConfirmedSong cuando cambia
           // 🔥 FIX: Resetear currentPosition a Duration.zero al cambiar de canción
@@ -1275,20 +1344,8 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         // Solo si la canción es válida y hubo actualización real
         if (shouldUpdate) {
            ref.read(playbackSessionProvider.notifier).registerPlayedSong(currentSong.id);
-          // Sincronizar también con el historial persistente local
-          try {
-            AppLogger.debug('[PlaybackNotifier] 🔍 Intentando añadir al historial persistente: ${currentSong.id} - ${currentSong.title}');
-            final currentHistory = ref.read(playHistoryProvider);
-            final lastId = currentHistory.isNotEmpty ? currentHistory.last.id : 'none';
-            AppLogger.debug('[PlaybackNotifier] 🔍 Historial local antes: ${currentHistory.length} items; last=$lastId');
-
-            ref.read(playHistoryProvider.notifier).addToHistory(currentSong);
-
-            // Log optimista: addToHistory es síncrono y programará el guardado debounced
-            AppLogger.info('[PlaybackNotifier] ✅ Añadido (optimista) al historial persistente: ${currentSong.id}');
-          } catch (e) {
-            AppLogger.error('[PlaybackNotifier] ❌ Error al añadir al historial persistente: $e');
-          }
+           // Nota: El historial ya se guardó arriba (antes del if shouldUpdate) 
+           // para capturar tanto cambios manuales como automáticos
            if (state.currentSong?.id != currentSong.id) {
              AppLogger.info('[PlaybackNotifier] Canción actual: ${currentSong.title}');
            }
@@ -1635,6 +1692,14 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         throw Exception('La canción inicial no está en la playlist');
       }
 
+      // 🎯 CRÍTICO: Guardar canción inicial en historial INMEDIATAMENTE
+      try {
+        AppLogger.info('[PlaybackNotifier] 💾 GUARDANDO canción inicial en historial: ${startSong.title}');
+        ref.read(playHistoryProvider.notifier).addToHistory(startSong);
+      } catch (e) {
+        AppLogger.error('[PlaybackNotifier] ❌ Error guardando en historial: $e');
+      }
+
       // 🚨 CRÍTICO: Verificar si hay transiciones a algoritmo en curso ANTES de limpiar
       // Esto previene conflictos cuando se toca una canción de playlist mientras
       // el algoritmo está iniciándose (por ejemplo, después de tocar la última canción)
@@ -1878,6 +1943,16 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   Future<void> playAlgorithmStart(Song seedSong, {bool excludeSeedFromQueue = false}) async {
     try {
       AppLogger.info('[PlaybackNotifier] 🚀 Iniciando Radio Infinita con semilla: ${seedSong.title} (ID: ${seedSong.id})${excludeSeedFromQueue ? ' (semilla excluida de cola)' : ''}');
+      
+      // 🎯 CRÍTICO: Guardar semilla en historial INMEDIATAMENTE
+      if (!excludeSeedFromQueue) {
+        try {
+          AppLogger.info('[PlaybackNotifier] 💾 GUARDANDO semilla en historial: ${seedSong.title}');
+          ref.read(playHistoryProvider.notifier).addToHistory(seedSong);
+        } catch (e) {
+          AppLogger.error('[PlaybackNotifier] ❌ Error guardando en historial: $e');
+        }
+      }
       
       // LOG VISUAL PARA TRANQUILIDAD DE FASE 2
       AppLogger.info('[PlaybackNotifier] 🎯 FASE 2 MONITOR: 🟢 ACTIVANDO MOTOR DE RECOMENDACIONES...');
@@ -2455,18 +2530,38 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final playedIds = sessionNotifier.getPlayedSongIds(limit: historyExcludeLimit);
       final currentQueueIds = state.currentQueue.map((s) => s.id).toSet();
       
-      // 🚨 FIX: Limitar excludeIds al historyExcludeLimit del Admin
-      var combinedExcludeIds = excludeSeedFromQueue 
-          ? {...playedIds, seedSong.id, ...currentQueueIds}.toList()
-          : {...playedIds, ...currentQueueIds}.toList();
-      
-      // 🎯 LIMITAR al historyExcludeLimit del Admin
-      if (combinedExcludeIds.length > historyExcludeLimit) {
-        combinedExcludeIds = combinedExcludeIds.sublist(
-          combinedExcludeIds.length - historyExcludeLimit
-        );
+      // 🚨 FIX: Prioridad absoluta a la cola actual para evitar repeticiones inmediatas
+      // 🚨 FIX: Usar la cola real del Player + State para máxima seguridad
+      final sequenceState = service.player.sequenceState;
+      final audioQueueIds = <String>{};
+      if (sequenceState.sequence.isNotEmpty) {
+        for (final source in sequenceState.sequence) {
+          if (source.tag is Song) {
+            audioQueueIds.add((source.tag as Song).id);
+          }
+        }
       }
-      final excludeIds = combinedExcludeIds.toSet();
+      
+      final queueIdsList = excludeSeedFromQueue 
+          ? {...audioQueueIds, ...currentQueueIds, seedSong.id}.toList()
+          : {...audioQueueIds, ...currentQueueIds}.toList();
+          
+      var finalExcludeList = <String>[...queueIdsList];
+
+      final remainingSlots = historyExcludeLimit - finalExcludeList.length;
+      
+      if (remainingSlots > 0 && playedIds.isNotEmpty) {
+        final historyList = playedIds.toList();
+        if (historyList.length > remainingSlots) {
+           final historySubset = historyList.sublist(historyList.length - remainingSlots);
+           finalExcludeList.addAll(historySubset);
+        } else {
+           finalExcludeList.addAll(historyList);
+        }
+      }
+      
+      final excludeIds = finalExcludeList.toSet();
+      AppLogger.info('[PlaybackNotifier] 🛡️ _generateAndAppendRecommendations: Excluyendo ${excludeIds.length} IDs (Cola: ${queueIdsList.length}, Historial: ${excludeIds.length - queueIdsList.length})');
       
       // 🎯 Obtener canciones que ya están en la cola para usarlas como semillas
       // Esto incluye la semilla original + las canciones del buffer inicial
@@ -2865,7 +2960,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
       
       // 🚨 CRÍTICO: Si es precarga urgente (remainingSongs <= 2), saltar validación de tiempo
-      final isUrgentPreload = remainingSongs <= 2;
+      final isUrgentPreload = remainingSongs <= preloadThreshold; // 🎛️ DINÁMICO: Usar umbral del admin
       
       if (!isUrgentPreload && !shouldPreloadByTime) {
         AppLogger.debug('[PlaybackNotifier] ⏳ FASE 3.1 SKIP: No es urgente ni por tiempo (remaining=$remainingSongs, isUrgent=$isUrgentPreload, byTime=$shouldPreloadByTime)');
@@ -3000,15 +3095,13 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       // Las canciones ya vienen ordenadas por score del backend (mejor primero)
       // La primera canción es la mejor recomendación y será la siguiente canción
       
-      // 🎯 FASE 3.1: Precarga Progresiva - Agregar solo canciones críticas inmediatamente
-      // Separar canciones críticas (primeras 5) del resto
+      // 🎯 FASE 3.1: Agregar TODAS las canciones solicitadas según configuración del admin
       // ✅ IMPORTANTE: Las primeras canciones son las mejores recomendaciones del algoritmo
-      final criticalSongs = validNewSongs.take(criticalSongsCount).toList();
-      final additionalSongs = validNewSongs.skip(criticalSongsCount).toList();
+      final songsToAdd = validNewSongs; // Agregar TODAS, no solo las críticas
       
-      // ✅ VALIDACIÓN FINAL: Verificar que la primera canción crítica es la mejor recomendación
-      if (criticalSongs.isNotEmpty) {
-        AppLogger.info('[PlaybackNotifier] ✅ SIGUIENTE CANCIÓN CONFIRMADA (mejor recomendación): ${criticalSongs.first.title}');
+      // ✅ VALIDACIÓN FINAL: Verificar que la primera canción es la mejor recomendación
+      if (songsToAdd.isNotEmpty) {
+        AppLogger.info('[PlaybackNotifier] ✅ SIGUIENTE CANCIÓN CONFIRMADA (mejor recomendación): ${songsToAdd.first.title}');
         AppLogger.info('[PlaybackNotifier] ✅ Esta será la siguiente canción que se reproducirá después de la actual');
       }
       
@@ -3017,10 +3110,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       final remainingSongsBeforeAdd = _getRemainingQueueSize();
       final isCriticalPreload = remainingSongsBeforeAdd != -1 && remainingSongsBeforeAdd <= 1;
       
-      // 🎯 FASE 3.1: Agregar solo canciones críticas inmediatamente
-      // El resto se agregará cuando el Monitor de Fase 2 detecte que la cola baja nuevamente
+      // 🎯 FASE 3.1: Agregar TODAS las canciones obtenidas
       await _updateQueueAtomically(
-        newSongs: criticalSongs,
+        newSongs: songsToAdd,
         audioOperation: (sources) => service.appendToQueue(sources),
         replace: false,
         waitForPrevious: isCriticalPreload, // Esperar si es precarga crítica
@@ -3032,33 +3124,26 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         _preloadCompleter = null;
       }
       
-      // 🎯 FASE 3.1: Log de canciones críticas agregadas
+      // 🎯 FASE 3.1: Log de canciones agregadas
       final remainingSongsAfterAdd = _getRemainingQueueSize();
       AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1: PRECARGA COMPLETADA');
       AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:    📊 Estado:');
       AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       • Antes: ${remainingSongsBeforeAdd >= 0 ? remainingSongsBeforeAdd : "N/A"} canciones restantes');
-      AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       • Agregadas: ${criticalSongs.length} canciones críticas');
+      AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       • Agregadas: ${songsToAdd.length} canciones');
       AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       • Después: ${remainingSongsAfterAdd >= 0 ? remainingSongsAfterAdd : "N/A"} canciones restantes');
       AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:    🎵 Canciones agregadas:');
-      for (int i = 0; i < criticalSongs.length && i < 3; i++) {
-        AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       ${i + 1}. ${criticalSongs[i].title}');
+      for (int i = 0; i < songsToAdd.length && i < 5; i++) {
+        AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       ${i + 1}. ${songsToAdd[i].title}');
       }
-      if (criticalSongs.length > 3) {
-        AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       ... y ${criticalSongs.length - 3} más');
-      }
-      
-      // 🎯 FASE 3.1: Si hay más canciones, informar (pero no agregarlas ahora)
-      // Por ahora, dejamos que el Monitor de Fase 2 se encargue de obtener más cuando sea necesario
-      // Esto evita conflictos con el conteo de canciones del Monitor
-      if (additionalSongs.isNotEmpty) {
-        AppLogger.debug('[PlaybackNotifier] 📋 FASE 3.1:    💾 ${additionalSongs.length} canciones adicionales disponibles (el Monitor de Fase 2 las agregará cuando sea necesario)');
+      if (songsToAdd.length > 5) {
+        AppLogger.info('[PlaybackNotifier] ✅ FASE 3.1:       ... y ${songsToAdd.length - 5} más');
       }
       
       // 🎯 DETECCIÓN MANUAL: Si estaba en modo crítico (0 canciones), avanzar automáticamente
       // Solo si realmente estábamos sin siguiente canción y el reproductor estaba detenido/completado.
       final shouldAutoAdvance = isCriticalPreload &&
           remainingSongsBeforeAdd == 0 && // realmente sin siguiente
-          criticalSongs.isNotEmpty &&
+          songsToAdd.isNotEmpty &&
           (service.player.processingState == ProcessingState.completed ||
               !service.player.hasNext ||
               !service.player.playing);
@@ -5548,7 +5633,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         return;
     }
 
-    // ⚛️ ATOMIC STATE: Detectar cambio de canción
+    //⚛️ ATOMIC STATE: Detectar cambio de canción
     final currentSong = state.currentSong;
     if (currentSong != null && currentSong.id != _currentSongId) {
        // Si cambiamos de canción, reseteamos flags críticos
@@ -5556,6 +5641,23 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
        if (!state.isPlayingAd) {
           AppLogger.debug('[PlaybackNotifier] ⚛️ Cambio de canción detectado: ${_currentSongId ?? "Inicio"} -> ${currentSong.id}');
           _currentSongId = currentSong.id;
+          
+          // 🎯 CRÍTICO: Guardar en historial INMEDIATAMENTE cuando detectamos cambio automático
+          try {
+            AppLogger.info('[PlaybackNotifier] 💾 AUTO-GUARDANDO (cambio detectado): ${currentSong.title}');
+            ref.read(playHistoryProvider.notifier).addToHistory(currentSong);
+            
+            // Verificar que se guardó
+            final historyAfter = ref.read(playHistoryProvider);
+            if (historyAfter.isNotEmpty && historyAfter.last.id == currentSong.id) {
+              AppLogger.success('[PlaybackNotifier] ✅ AUTO-guardado exitoso: ${currentSong.title} (Total: ${historyAfter.length})');
+            } else {
+              AppLogger.warning('[PlaybackNotifier] ⚠️ AUTO-guardado falló');
+              ref.read(playHistoryProvider.notifier).debugHistoryStatus();
+            }
+          } catch (e) {
+            AppLogger.error('[PlaybackNotifier] ❌ Error AUTO-guardando: $e');
+          }
           
           // Limpieza atómica
           // No limpiamos _adTriggeredSongs completo para evitar re-disparos inmediatos si el usuario vuelve atrás,

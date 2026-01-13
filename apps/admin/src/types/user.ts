@@ -27,6 +27,8 @@ export interface UserModel {
   role: UserRole;
   subscriptionStatus: SubscriptionStatus;
   subscriptionExpiresAt?: string | null;
+  revenuecatCustomerId?: string | null;
+  subscriptionSource?: 'revenuecat' | 'manual';
   isVerified: boolean;
   isActive: boolean;
   lastLoginAt?: string | null;
@@ -54,6 +56,7 @@ export interface UseUsersParams {
   page?: number;
   limit?: number;
   enabled?: boolean;
+  search?: string;
 }
 
 export interface UpdateUserInput {

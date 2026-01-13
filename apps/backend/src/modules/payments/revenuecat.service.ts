@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../common/entities/user.entity';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 
 /**
  * 🎯 RevenueCat Service - Gestión de Suscripciones Premium
@@ -34,6 +35,8 @@ export class RevenueCatService {
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
+        @Inject(forwardRef(() => RealtimeGateway))
+        private readonly realtimeGateway: RealtimeGateway,
     ) { }
 
     /**
@@ -133,14 +136,24 @@ export class RevenueCatService {
             ? new Date(parseInt(eventData.expiration_at_ms))
             : null;
 
-        // Actualizar campos de RevenueCat
+        // Actualizar campos de RevenueCat y subscription status
         user.isPremium = true;
         user.premiumExpiresAt = expiresAt;
+        user.subscriptionStatus = 'active' as any; // Activar suscripción
+        user.subscriptionExpiresAt = expiresAt; // Sincronizar fecha de expiración
+        user.subscriptionSource = 'revenuecat'; // ✅ Marcar como RevenueCat
         user.revenuecatUserId = eventData.app_user_id;
         user.revenuecatCustomerId = eventData.subscriber_attributes?.$revenueCatId || null;
         user.lastRevenuecatSync = new Date();
 
         await this.userRepository.save(user);
+
+        // Notificar cambio de estado premium vía WebSocket
+        try {
+            this.realtimeGateway.notifyPremiumStatusChange(user.id, 'active');
+        } catch (error) {
+            this.logger.error('Error enviando notificación WebSocket (activación):', error);
+        }
 
         this.logger.log(
             `✅ Premium activado para ${user.email} - Expira: ${expiresAt || 'Lifetime'}`
@@ -166,6 +179,7 @@ export class RevenueCatService {
         // Si la fecha de expiración ya pasó, desactivar
         if (expiresAt && expiresAt <= new Date()) {
             user.isPremium = false;
+            user.subscriptionStatus = 'inactive' as any;
             this.logger.log(`❌ Premium desactivado inmediatamente (fecha expirada)`);
         } else {
             this.logger.log(
@@ -174,6 +188,15 @@ export class RevenueCatService {
         }
 
         await this.userRepository.save(user);
+
+        // Notificar cambio de estado premium vía WebSocket (si se desactivó inmediatamente)
+        if (expiresAt && expiresAt <= new Date()) {
+            try {
+                this.realtimeGateway.notifyPremiumStatusChange(user.id, 'inactive');
+            } catch (error) {
+                this.logger.error('Error enviando notificación WebSocket (cancelación):', error);
+            }
+        }
     }
 
     /**
@@ -183,9 +206,17 @@ export class RevenueCatService {
         this.logger.log(`❌ Desactivando premium para usuario: ${user.id}`);
 
         user.isPremium = false;
+        user.subscriptionStatus = 'inactive' as any; // Desactivar suscripción
         user.lastRevenuecatSync = new Date();
 
         await this.userRepository.save(user);
+
+        // Notificar cambio de estado premium vía WebSocket
+        try {
+            this.realtimeGateway.notifyPremiumStatusChange(user.id, 'inactive');
+        } catch (error) {
+            this.logger.error('Error enviando notificación WebSocket (desactivación):', error);
+        }
 
         this.logger.log(`❌ Premium desactivado para ${user.email}`);
     }

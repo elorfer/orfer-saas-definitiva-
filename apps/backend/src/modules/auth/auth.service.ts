@@ -50,6 +50,9 @@ export class AuthService {
       avatar_url: user.avatarUrl,
       role: user.role,
       subscription_status: user.subscriptionStatus,
+      subscription_source: user.subscriptionSource, // ✅ Incluir fuente
+      is_premium: user.isPremium,
+      premium_expires_at: user.premiumExpiresAt,
       is_verified: user.isVerified,
       is_active: user.isActive,
       last_login_at: user.lastLoginAt,

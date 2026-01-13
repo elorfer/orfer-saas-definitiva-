@@ -91,6 +91,9 @@ export class User {
   @Column({ name: 'premium_expires_at', nullable: true })
   premiumExpiresAt?: Date;
 
+  @Column({ name: 'subscription_source', length: 20, default: 'manual' })
+  subscriptionSource: 'revenuecat' | 'manual';
+
   @Column({ name: 'last_revenuecat_sync', nullable: true })
   lastRevenuecatSync?: Date;
 

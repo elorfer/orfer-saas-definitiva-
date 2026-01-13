@@ -191,7 +191,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${stats.totalRecentlyPlayed} escuchadas · ${stats.totalFavorites} favoritas · ${stats.totalFollowedArtists} artistas',
+                          '${stats.totalRecentlyPlayed} recientes · ${stats.totalFavorites} favoritas · ${stats.totalSavedPlaylists} playlists',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -321,7 +321,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       _CategoryData(
         icon: Icons.playlist_play_rounded,
         label: 'Mis Playlists',
-        value: '0', // Placeholder por ahora
+        value: '${stats.totalSavedPlaylists}', // ✅ AHORA REAL
         route: '/playlists',
       ),
       _CategoryData(

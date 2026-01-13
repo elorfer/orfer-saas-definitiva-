@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/theme_provider.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/revenuecat_service.dart';
+import '../../../core/utils/logger.dart';
 
 /// Pantalla de suscripción Premium que presenta los beneficios
 /// y motiva al usuario a convertirse en premium.
@@ -506,11 +508,22 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
       if (!mounted) return;
 
       if (success) {
+        // 🔄 Sincronizar estado premium inmediatamente
+        try {
+          await revenueCat.syncPremiumStatus();
+          // Refrescar el usuario en el AuthProvider
+          await ref.read(authStateProvider.notifier).refreshProfile();
+        } catch (e) {
+          AppLogger.error('[PremiumScreen] Error sincronizando estado premium', e);
+        }
+        
+        if (!mounted) return;
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('🎉 ¡Bienvenido a Premium!'),
+          const SnackBar(
+            content: Text('🎉 ¡Bienvenido a Premium!'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
+            duration: Duration(seconds: 3),
           ),
         );
       } else {

@@ -88,7 +88,26 @@ class PlayButtonCard extends ConsumerWidget {
           if (currentAudioState.currentSong?.id == song.id) {
             await notifier.togglePlayPause();
           } else {
-            await notifier.playFromCard(song, useAlgorithm: true);
+            // 🎯 LÓGICA INTELIGENTE: Solo usar algoritmo si NO hay sesión activa
+            // Si ya hay música reproduciéndose, solo cambiar la canción sin regenerar toda la cola
+            final hasActiveSession = currentAudioState.isSessionActive && 
+                                     currentAudioState.currentQueue.isNotEmpty;
+            
+            debugPrint('🔍 [PlayButtonCard] Decisión de algoritmo:');
+            debugPrint('   - isSessionActive: ${currentAudioState.isSessionActive}');
+            debugPrint('   - currentQueue.length: ${currentAudioState.currentQueue.length}');
+            debugPrint('   - hasActiveSession: $hasActiveSession');
+            debugPrint('   - useAlgorithm: ${!hasActiveSession}');
+            
+            if (hasActiveSession) {
+              // Ya hay música: solo cambiar de canción (inyección rápida)
+              debugPrint('✅ [PlayButtonCard] Sesión activa detectada - Solo cambiando canción (NO algoritmo)');
+              await notifier.playFromCard(song, useAlgorithm: false);
+            } else {
+              // Primera canción o sesión terminada: iniciar con algoritmo
+              debugPrint('🆕 [PlayButtonCard] NO hay sesión activa - Iniciando con algoritmo');
+              await notifier.playFromCard(song, useAlgorithm: true);
+            }
           }
         } catch (e, stackTrace) {
           debugPrint('❌ [PlayButtonCard] Error al reproducir canción: $e');

@@ -2,11 +2,14 @@
 // Gestiona suscripciones premium de Struky con RevenueCat
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:dio/dio.dart';
+import 'http_client_service.dart';
 
 /// Servicio centralizado para gestionar suscripciones premium con RevenueCat
 /// 
@@ -65,7 +68,7 @@ class RevenueCatService {
   static const String _premiumOfferingId = 'premium_monthly';
   
   /// Identificador del entitlement (permiso) de premium
-  static const String _premiumEntitlementId = 'premium';
+  static const String _premiumEntitlementId = 'Struky Premium';
   
   // ========================================================================
   // ESTADO
@@ -443,6 +446,85 @@ class RevenueCatService {
   void _notifyPremiumStatus() {
     if (_premiumStatusController.isClosed) return;
     _premiumStatusController.add(isPremium);
+    
+    // 🔄 SINCRONIZAR CON EL BACKEND
+    // Como el webhook no funciona en localhost, sincronizamos manualmente
+    _syncPremiumStatusToBackend();
+  }
+  
+  /// Sincroniza el estado premium con el backend
+  /// (Alternativa al webhook que no funciona en localhost)
+  Future<void> _syncPremiumStatusToBackend() async {
+    try {
+      if (!isPremium || _currentUserId == null) return;
+      
+      _logger.i('🔄 Sincronizando estado premium con el backend...');
+      
+      // Usar el HttpClientService que ya está disponible globalmente
+      // Importar: import 'package:get/get.dart';
+      // import '../services/http_client_service.dart';
+      
+      try {
+        // ✅ CAMBIO: Usar endpoint específico de RevenueCat que marca subscription_source='revenuecat'
+        final response = await _makeHttpRequest(
+          'POST',
+          '/users/$_currentUserId/sync-revenuecat',
+          body: {
+            'expiresAt': premiumExpirationDate?.toIso8601String(),
+          },
+        );
+        
+        if (response != null) {
+          _logger.i('✅ Estado premium sincronizado con backend (RevenueCat)');
+        }
+      } catch (e) {
+        _logger.w('⚠️ Error en sincronización HTTP (no crítico)', error: e);
+      }
+      
+    } catch (e) {
+      _logger.w('⚠️ Error sincronizando con backend (no crítico)', error: e);
+    }
+  }
+  
+  /// Helper para hacer requests HTTP al backend usando el cliente global
+  Future<Map<String, dynamic>?> _makeHttpRequest(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    try {
+      final httpClient = HttpClientService();
+      Response response;
+      
+      if (method == 'POST') {
+        response = await httpClient.post(
+          path,
+          data: body,
+        );
+      } else if (method == 'GET') {
+        response = await httpClient.get(
+          path,
+        );
+      } else {
+        throw UnsupportedError('Método HTTP no soportado: $method');
+      }
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data is Map<String, dynamic> 
+            ? response.data as Map<String, dynamic>
+            : {'data': response.data};
+      }
+      
+      return null;
+      
+    } catch (e) {
+      if (e is DioException) {
+        _logger.w('⚠️ Error HTTP en sincronización: ${e.message} (${e.response?.statusCode})');
+      } else {
+        _logger.w('⚠️ Error inesperado en sincronización HTTP: $e');
+      }
+      return null;
+    }
   }
   
   /// Log detallado del estado premium (solo en modo debug)

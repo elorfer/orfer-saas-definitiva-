@@ -123,6 +123,22 @@ class AuthService {
           
           _currentUser = User.fromJson(normalizedData);
           AppLogger.info('[AuthService] ✅ Sesión restaurada exitosamente para: ${_currentUser?.email}');
+          
+          // 🎯 INICIALIZAR REVENUECAT después de restaurar sesión
+          try {
+            final revenueCat = RevenueCatService();
+            if (!revenueCat.isInitialized && _currentUser != null) {
+              await revenueCat.initialize(
+                userId: _currentUser!.id,
+                email: _currentUser!.email,
+              );
+              AppLogger.info('[AuthService] 🎉 RevenueCat inicializado después de restaurar sesión');
+            }
+          } catch (e, stackTrace) {
+            // No fallar la carga de sesión si RevenueCat falla
+            AppLogger.error('[AuthService] ⚠️ Error inicializando RevenueCat al restaurar sesión', e, stackTrace);
+          }
+          
         } catch (parseError, stackTrace) {
           AppLogger.error('[AuthService] ❌ Error parseando datos de usuario guardados', parseError, stackTrace);
           rethrow; // Relanzar para limpiar datos corruptos
@@ -633,6 +649,37 @@ class AuthService {
     
     // Limpiar token en HttpClientService
     await _httpClient.clearAuthToken();
+    
+    // 🎯 Limpiar RevenueCat
+    try {
+      final revenueCat = RevenueCatService();
+      // Solo hacer logout si RevenueCat fue inicializado
+      if (revenueCat.isInitialized) {
+        await revenueCat.logout();
+        AppLogger.debug('[AuthService] ✅ RevenueCat cerrado correctamente');
+      } else {
+        AppLogger.debug('[AuthService] ℹ️ RevenueCat no estaba inicializado, skip logout');
+      }
+    } catch (e) {
+      AppLogger.warning('[AuthService] ⚠️ Error cerrando RevenueCat (ignorable): $e');
+    }
+  }
+
+  /// 🔒 Limpiar datos offline del usuario actual
+  /// CRÍTICO: Debe ser llamado cuando el usuario cierra sesión para evitar que
+  /// las descargas de un usuario sean visibles para otros usuarios
+  Future<void> clearOfflineData() async {
+    try {
+      AppLogger.info('[AuthService] 🧹 Limpiando datos offline (descargas)...');
+      
+      // Nota: No podemos usar ref.read aquí porque AuthService no tiene acceso a WidgetRef.
+      // En su lugar, vamos a limpiar directamente usando la lógica de OfflineManager
+      // Esta limpieza se debe hacer desde el AuthProvider donde sí tenemos acceso a ref.
+      
+      AppLogger.debug('[AuthService] ℹ️ La limpieza de descargas debe hacerse desde AuthProvider');
+    } catch (e) {
+      AppLogger.warning('[AuthService] ⚠️ Error preparando limpieza offline: $e');
+    }
   }
 
   /// Verificar disponibilidad de nombre de usuario

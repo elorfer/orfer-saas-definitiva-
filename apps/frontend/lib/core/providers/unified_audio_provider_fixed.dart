@@ -70,6 +70,16 @@ final realCurrentSongProvider = Provider<Song?>((ref) {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // 5. LÓGICA DE RECONCILIACIÓN 🎯
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  // 🎯 PRIORIDAD 1: Si el estado tiene una canción nueva (diferente a _lastConfirmedSong),
+  // actualizar INMEDIATAMENTE sin esperar confirmación del stream
+  // Esto asegura que el mini reproductor se actualice cuando se toca una canción nueva
+  if (stateSong != null && (_lastConfirmedSong == null || stateSong.id != _lastConfirmedSong?.id)) {
+    // Nueva canción detectada en el estado - actualizar inmediato (UI optimista)
+    _lastConfirmedSong = stateSong;
+    return stateSong;
+  }
+  
   // Si ambas fuentes coinciden (mismo ID), usar esa canción
   if (streamSong != null && stateSong != null && streamSong.id == stateSong.id) {
     // ✅ MATCH: Estado y stream coinciden - canción confirmada

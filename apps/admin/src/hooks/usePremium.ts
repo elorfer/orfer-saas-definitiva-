@@ -29,6 +29,7 @@ const mapUser = (user: any): UserModel => ({
   avatarUrl: user?.avatarUrl ?? user?.avatar_url ?? null,
   role: user?.role ?? 'user',
   subscriptionStatus: user?.subscriptionStatus ?? user?.subscription_status ?? 'inactive',
+  subscriptionSource: user?.subscriptionSource ?? user?.subscription_source ?? 'manual',
   subscriptionExpiresAt: user?.subscriptionExpiresAt ?? user?.subscription_expires_at ?? null,
   isVerified: user?.isVerified ?? user?.is_verified ?? false,
   isActive: user?.isActive ?? user?.is_active ?? false,
@@ -97,6 +98,40 @@ export const usePremiumStats = (enabled: boolean = true) => {
     [PREMIUM_QUERY_KEY, 'stats'],
     async () => {
       const response = await apiClient.getPremiumStats();
+      return response.data;
+    },
+    {
+      enabled,
+      refetchOnWindowFocus: true,
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+
+export const useManualRevenueStats = (enabled: boolean = true) => {
+  return useQuery<{ totalManualRevenue: number }, Error>(
+    [PREMIUM_QUERY_KEY, 'revenue-stats'],
+    async () => {
+      const response = await apiClient.getManualRevenueStats();
+      return response.data;
+    },
+    {
+      enabled,
+      refetchOnWindowFocus: true,
+      onError: (error) => {
+        toast.error(extractErrorMessage(error));
+      },
+    }
+  );
+};
+
+export const useMonthlyRevenueStats = (enabled: boolean = true) => {
+  return useQuery<{ month: string; total: number; count: number }[], Error>(
+    [PREMIUM_QUERY_KEY, 'monthly-revenue'],
+    async () => {
+      const response = await apiClient.getMonthlyRevenueStats();
       return response.data;
     },
     {

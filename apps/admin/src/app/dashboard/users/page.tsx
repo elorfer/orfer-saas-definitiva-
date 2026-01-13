@@ -9,13 +9,11 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
-import { 
-  useCreateUser, 
-  useDeactivateUser, 
-  useActivateUser, 
+import {
+  useCreateUser,
+  useDeactivateUser,
+  useActivateUser,
   useUsers,
-  useMarkAsPremium,
-  useRemovePremium,
   usePremiumUsersCount,
 } from '@/hooks/useUsers';
 import type { UserModel } from '@/types/user';
@@ -47,8 +45,6 @@ export default function UsersPage() {
   const { mutateAsync: createUser, isLoading: isCreating } = useCreateUser();
   const { mutateAsync: deactivateUser } = useDeactivateUser();
   const { mutateAsync: activateUser } = useActivateUser();
-  const { mutateAsync: markAsPremium } = useMarkAsPremium();
-  const { mutateAsync: removePremium } = useRemovePremium();
   const { data: premiumCount } = usePremiumUsersCount();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -105,39 +101,7 @@ export default function UsersPage() {
     }
   };
 
-  const handleMarkAsPremium = async (user: UserModel) => {
-    if (user.subscriptionStatus === 'active') {
-      window.alert('El usuario ya tiene premium activo.');
-      return;
-    }
 
-    const confirmed = window.confirm(`¿Seguro que deseas marcar a ${user.email} como premium?`);
-    if (!confirmed) return;
-
-    try {
-      setUpdatingId(user.id);
-      await markAsPremium({ id: user.id });
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleRemovePremium = async (user: UserModel) => {
-    if (user.subscriptionStatus !== 'active') {
-      window.alert('El usuario no tiene premium activo.');
-      return;
-    }
-
-    const confirmed = window.confirm(`¿Seguro que deseas remover el premium de ${user.email}?`);
-    if (!confirmed) return;
-
-    try {
-      setUpdatingId(user.id);
-      await removePremium(user.id);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
 
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return users;
@@ -200,182 +164,177 @@ export default function UsersPage() {
             </button>
           </div>
         </div>
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative w-full sm:w-72">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar por nombre, correo o usuario..."
-                  className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
-                />
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              </div>
-              <p className="text-sm text-gray-500">{total.toLocaleString('es-ES')} usuarios en total</p>
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por nombre, correo o usuario..."
+                className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
+              />
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
+            <p className="text-sm text-gray-500">{total.toLocaleString('es-ES')} usuarios en total</p>
+          </div>
 
-            <div className="mt-6 overflow-hidden rounded-xl border border-gray-200">
-              <table className="min-w-full divide-y divide-gray-200 bg-white">
-                <thead className="bg-gray-50">
+          <div className="mt-6 overflow-hidden rounded-xl border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 bg-white">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Usuario
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Rol
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Estado
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Suscripción
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Último acceso
+                  </th>
+                  <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {isLoading ? (
                   <tr>
-                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Usuario
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Rol
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Estado
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Suscripción
-                    </th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Último acceso
-                    </th>
-                    <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Acciones
-                    </th>
+                    <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
+                      Cargando usuarios...
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
-                        Cargando usuarios...
-                      </td>
-                    </tr>
-                  ) : filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
-                        No se encontraron usuarios.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map((user: UserModel) => {
-                      const roleInfo = roleLabels[user.role] ?? roleLabels.user;
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
+                      No se encontraron usuarios.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user: UserModel) => {
+                    const roleInfo = roleLabels[user.role] ?? roleLabels.user;
 
-                      return (
-                        <tr key={user.id} className="hover:bg-gray-50 transition">
-                          <td className="py-4 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brown-700 to-brown-700 text-white flex items-center justify-center text-sm font-semibold">
-                                {user.firstName?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {`${user.firstName} ${user.lastName}`.trim() || user.username}
-                                </p>
-                                <p className="text-xs text-gray-500">{user.email}</p>
-                                <p className="text-xs text-gray-400">@{user.username}</p>
-                              </div>
+                    return (
+                      <tr key={user.id} className="hover:bg-gray-50 transition">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brown-700 to-brown-700 text-white flex items-center justify-center text-sm font-semibold">
+                              {user.firstName?.charAt(0)?.toUpperCase() || user.email.charAt(0).toUpperCase()}
                             </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span
-                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${roleInfo.badge}`}
-                            >
-                              {roleInfo.text}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span
-                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                                user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {`${user.firstName} ${user.lastName}`.trim() || user.username}
+                              </p>
+                              <p className="text-xs text-gray-500">{user.email}</p>
+                              <p className="text-xs text-gray-400">@{user.username}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${roleInfo.badge}`}
+                          >
+                            {roleInfo.text}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${user.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
                               }`}
-                            >
-                              {user.isActive ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4">
+                          >
+                            {user.isActive ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col gap-1">
                             {user.subscriptionStatus === 'active' ? (
-                              <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800">
-                                Premium
-                              </span>
+                              <>
+                                <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800">
+                                  ✨ Premium
+                                </span>
+
+                                {user.subscriptionSource === 'revenuecat' ? (
+                                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700">
+                                    📱 RevenueCat
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700">
+                                    👤 Manual
+                                  </span>
+                                )}
+                              </>
                             ) : (
                               <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-gray-100 text-gray-600">
                                 Sin premium
                               </span>
                             )}
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-500">
-                            {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('es-ES') : 'Nunca'}
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {user.subscriptionStatus === 'active' ? (
-                                <button
-                                  onClick={() => handleRemovePremium(user)}
-                                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                                  disabled={updatingId === user.id}
-                                  title="Remover premium"
-                                >
-                                  <span className="ml-1">Quitar Premium</span>
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleMarkAsPremium(user)}
-                                  className="inline-flex items-center rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-1.5 text-xs font-semibold text-yellow-700 transition hover:border-yellow-400 hover:bg-yellow-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                  disabled={updatingId === user.id}
-                                  title="Marcar como premium"
-                                >
-                                  <span className="ml-1">Marcar Premium</span>
-                                </button>
-                              )}
-                              {user.isActive ? (
-                                <button
-                                  onClick={() => handleDeactivateUser(user)}
-                                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-yellow-300 hover:text-yellow-600 disabled:cursor-not-allowed disabled:opacity-60"
-                                  disabled={updatingId === user.id}
-                                >
-                                  <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
-                                  <span className="ml-1">Desactivar</span>
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleActivateUser(user)}
-                                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-green-300 hover:text-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                                  disabled={updatingId === user.id}
-                                >
-                                  <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
-                                  <span className="ml-1">Activar</span>
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-sm text-gray-500">
+                          {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('es-ES') : 'Nunca'}
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
 
-            <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
-              <p className="text-sm text-gray-500">
-                Página {page} de {totalPages}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrev}
-                  disabled={page === 1}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={page === totalPages}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Siguiente
-                </button>
-              </div>
+                            {user.isActive ? (
+                              <button
+                                onClick={() => handleDeactivateUser(user)}
+                                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-yellow-300 hover:text-yellow-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={updatingId === user.id}
+                              >
+                                <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
+                                <span className="ml-1">Desactivar</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleActivateUser(user)}
+                                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-green-300 hover:text-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                disabled={updatingId === user.id}
+                              >
+                                <ShieldCheckIcon className={`h-4 w-4 ${updatingId === user.id ? 'animate-spin' : ''}`} />
+                                <span className="ml-1">Activar</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <p className="text-sm text-gray-500">
+              Página {page} de {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrev}
+                disabled={page === 1}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={page === totalPages}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
             </div>
           </div>
+        </div>
       </div>
-    {showCreateModal && (
+      {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
@@ -531,6 +490,8 @@ export default function UsersPage() {
           </div>
         </div>
       )}
+
+
     </>
   );
 }

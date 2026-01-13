@@ -36,6 +36,8 @@ class User {
   final String? avatarUrl;
   final UserRole role;
   final SubscriptionStatus subscriptionStatus;
+  final bool? isPremiumField; // Campo del backend
+  final DateTime? premiumExpiresAt; // Fecha de expiración from backend
   final bool? isVerified;
   final bool? isActive;
   final DateTime? lastLoginAt;
@@ -52,6 +54,8 @@ class User {
     this.avatarUrl,
     required this.role,
     required this.subscriptionStatus,
+    @JsonKey(name: 'is_premium') this.isPremiumField,
+    this.premiumExpiresAt,
     this.isVerified,
     this.isActive,
     this.lastLoginAt,
@@ -72,6 +76,8 @@ class User {
     String? avatarUrl,
     UserRole? role,
     SubscriptionStatus? subscriptionStatus,
+    bool? isPremiumField,
+    DateTime? premiumExpiresAt,
     bool? isVerified,
     bool? isActive,
     DateTime? lastLoginAt,
@@ -88,6 +94,8 @@ class User {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       role: role ?? this.role,
       subscriptionStatus: subscriptionStatus ?? this.subscriptionStatus,
+      isPremiumField: isPremiumField ?? this.isPremiumField,
+      premiumExpiresAt: premiumExpiresAt ?? this.premiumExpiresAt,
       isVerified: isVerified ?? this.isVerified,
       isActive: isActive ?? this.isActive,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
@@ -101,10 +109,25 @@ class User {
   String get displayName => username;
   bool get isArtist => role == UserRole.artist;
   bool get isAdmin => role == UserRole.admin;
-  // ✅ FIX: isPremium solo debe ser true para premium o vip, NO para inactive
-  // Los usuarios inactive deben ver anuncios
-  bool get isPremium => subscriptionStatus == SubscriptionStatus.premium || 
-                        subscriptionStatus == SubscriptionStatus.vip;
+  
+  /// ✅ Getter isPremium que prioriza el valor del backend
+  /// Si el backend envía is_premium, lo usamos directamente
+  /// Si no, fallback a verificar subscriptionStatus (para backwards compatibility)
+  bool get isPremium {
+    // 1. Prioridad: usar el campo del backend si está disponible
+    if (isPremiumField != null) {
+      // Verificar también que no haya expirado
+      if (premiumExpiresAt != null) {
+        return isPremiumField! && premiumExpiresAt!.isAfter(DateTime.now());
+      }
+      return isPremiumField!;
+    }
+    
+    // 2. Fallback: verificar subscription status (legacy)
+    return subscriptionStatus == SubscriptionStatus.premium || 
+           subscriptionStatus == SubscriptionStatus.vip;
+  }
+  
   bool get isUserActive => isActive ?? true; // Por defecto activo si no se especifica
   bool get isUserVerified => isVerified ?? false; // Por defecto no verificado si no se especifica
 }

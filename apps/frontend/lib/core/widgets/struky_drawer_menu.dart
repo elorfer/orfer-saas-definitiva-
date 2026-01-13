@@ -6,6 +6,7 @@ import '../../core/providers/theme_provider.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:go_router/go_router.dart';
 import '../../features/premium/widgets/premium_upsell_dialog.dart';
+import '../../core/providers/offline_manager_provider.dart';
 import 'optimized_image.dart';
 
 class StrukyDrawerMenu extends ConsumerWidget {
@@ -21,6 +22,9 @@ class StrukyDrawerMenu extends ConsumerWidget {
     final isPremium = user != null &&
         (user.subscriptionStatus == SubscriptionStatus.premium ||
             user.subscriptionStatus == SubscriptionStatus.vip);
+
+    // Permitir acceso a descargas si hay canciones descargadas, incluso si offline/free
+    final hasDownloads = ref.watch(offlineManagerProvider.select((s) => s.downloadedSongs.isNotEmpty));
 
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
@@ -198,7 +202,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     icon: Icons.download_outlined,
                     label: 'Descargas',
                     onTap: () {
-                      if (isPremium) {
+                      if (isPremium || hasDownloads) {
                         context.push('/downloads');
                       } else {
                         showGeneralDialog(

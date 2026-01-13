@@ -8,6 +8,8 @@ import '../../features/artists/models/artist.dart';
 import 'favorites_provider.dart';
 import 'follow_provider.dart';
 import 'play_history_provider.dart';
+import 'saved_playlists_provider.dart';
+import '../models/playlist_model.dart';
 
 /// ═══════════════════════════════════════════════════════════════════════════
 /// 🎯 LIBRARY COORDINATOR - ARQUITECTURA EVENT-DRIVEN
@@ -25,10 +27,12 @@ class LibraryState {
   final List<Song> recentlyPlayed;
   final List<Song> favorites;
   final List<ArtistLite> followedArtists;
+  final List<Playlist> savedPlaylists; // ✅ NUEVO
   final Set<String> favoriteIds;
   final Set<String> followedArtistIds;
+  final Set<String> savedPlaylistIds; // ✅ NUEVO
   final bool isLoading;
-  final bool isSyncing; // Sincronización silenciosa en background
+  final bool isSyncing;
   final String? error;
   final DateTime? lastSyncTime;
   final LibrarySyncStatus syncStatus;
@@ -37,8 +41,10 @@ class LibraryState {
     this.recentlyPlayed = const [],
     this.favorites = const [],
     this.followedArtists = const [],
+    this.savedPlaylists = const [], // ✅ NUEVO
     this.favoriteIds = const {},
     this.followedArtistIds = const {},
+    this.savedPlaylistIds = const {}, // ✅ NUEVO
     this.isLoading = false,
     this.isSyncing = false,
     this.error,
@@ -50,8 +56,10 @@ class LibraryState {
     List<Song>? recentlyPlayed,
     List<Song>? favorites,
     List<ArtistLite>? followedArtists,
+    List<Playlist>? savedPlaylists, // ✅ NUEVO
     Set<String>? favoriteIds,
     Set<String>? followedArtistIds,
+    Set<String>? savedPlaylistIds, // ✅ NUEVO
     bool? isLoading,
     bool? isSyncing,
     String? error,
@@ -63,8 +71,10 @@ class LibraryState {
       recentlyPlayed: recentlyPlayed ?? this.recentlyPlayed,
       favorites: favorites ?? this.favorites,
       followedArtists: followedArtists ?? this.followedArtists,
+      savedPlaylists: savedPlaylists ?? this.savedPlaylists, // ✅ NUEVO
       favoriteIds: favoriteIds ?? this.favoriteIds,
       followedArtistIds: followedArtistIds ?? this.followedArtistIds,
+      savedPlaylistIds: savedPlaylistIds ?? this.savedPlaylistIds, // ✅ NUEVO
       isLoading: isLoading ?? this.isLoading,
       isSyncing: isSyncing ?? this.isSyncing,
       error: clearError ? null : (error ?? this.error),
@@ -84,6 +94,7 @@ class LibraryState {
     totalFavorites: favorites.length,
     totalFollowedArtists: followedArtists.length,
     totalRecentlyPlayed: recentlyPlayed.length,
+    totalSavedPlaylists: savedPlaylists.length, // ✅ NUEVO
   );
 }
 
@@ -100,11 +111,13 @@ class LibraryStats {
   final int totalFavorites;
   final int totalFollowedArtists;
   final int totalRecentlyPlayed;
+  final int totalSavedPlaylists; // ✅ NUEVO
 
   const LibraryStats({
     required this.totalFavorites,
     required this.totalFollowedArtists,
     required this.totalRecentlyPlayed,
+    required this.totalSavedPlaylists, // ✅ NUEVO
   });
 }
 
@@ -207,19 +220,21 @@ class LibraryCoordinator extends Notifier<LibraryState> {
     ref.listen<List<Song>>(playHistoryProvider, (previous, next) {
       _onHistoryChanged(previous, next);
     });
+
+    // 🎯 Escuchar cambios en Saved Playlists (Likes)
+    ref.listen<SavedPlaylistsState>(savedPlaylistsProvider, (previous, next) {
+      _onSavedPlaylistsChanged(previous, next);
+    });
   }
 
   /// Handler: Cambios en Favorites
   void _onFavoritesChanged(FavoritesState? previous, FavoritesState next) {
-    if (previous == null) return;
-    
-    // Solo actualizar si hubo cambios reales
-    if (previous.favorites.length != next.favorites.length ||
-        !_setsEqual(previous.favoriteIds, next.favoriteIds)) {
+    // Solo actualizar si hay cambios reales respecto al estado actual del coordinador
+    if (!_setsEqual(state.favoriteIds, next.favoriteIds) || 
+        state.favorites.length != next.favorites.length) {
       
-      AppLogger.info('[LibraryCoordinator] 🔄 Favorites changed: ${next.favorites.length} items');
+      AppLogger.info('[LibraryCoordinator] 🔄 Syncing favorites: ${next.favorites.length} items');
       
-      // Actualizar estado local inmediatamente (sin llamar al backend)
       state = state.copyWith(
         favorites: next.favorites,
         favoriteIds: next.favoriteIds,
@@ -232,15 +247,12 @@ class LibraryCoordinator extends Notifier<LibraryState> {
 
   /// Handler: Cambios en Follow
   void _onFollowChanged(FollowState? previous, FollowState next) {
-    if (previous == null) return;
-    
-    // Solo actualizar si hubo cambios reales
-    if (previous.followedArtists.length != next.followedArtists.length ||
-        !_setsEqual(previous.followedArtistIds, next.followedArtistIds)) {
+    // Solo actualizar si hay cambios reales respecto al estado actual
+    if (!_setsEqual(state.followedArtistIds, next.followedArtistIds) ||
+        state.followedArtists.length != next.followedArtists.length) {
       
-      AppLogger.info('[LibraryCoordinator] 🔄 Followed artists changed: ${next.followedArtists.length} items');
+      AppLogger.info('[LibraryCoordinator] 🔄 Syncing followed artists: ${next.followedArtists.length} items');
       
-      // Actualizar estado local inmediatamente
       state = state.copyWith(
         followedArtists: next.followedArtists,
         followedArtistIds: next.followedArtistIds,
@@ -253,22 +265,29 @@ class LibraryCoordinator extends Notifier<LibraryState> {
 
   /// Handler: Cambios en History
   void _onHistoryChanged(List<Song>? previous, List<Song> next) {
-    if (previous == null) return;
+    AppLogger.info('[LibraryCoordinator] 📥 UPDATE: Recibidas ${next.length} canciones de PlayHistoryProvider');
     
-    // Solo actualizar si hubo cambios reales
-    if (previous.length != next.length || 
-        (previous.isNotEmpty && next.isNotEmpty && previous.last.id != next.last.id)) {
+    // 🎯 ESCUCHA SIEMPRE: PlayHistoryProvider es la fuente única de verdad
+    final recentlyPlayed = next.reversed.take(_maxRecentlyPlayed).toList();
+    
+    AppLogger.info('[LibraryCoordinator] 🔄 Sincronizando historial (${recentlyPlayed.length} items)');
+    
+    // Actualizar estado local
+    state = state.copyWith(recentlyPlayed: recentlyPlayed);
+  }
+
+  /// Handler: Cambios en Saved Playlists
+  void _onSavedPlaylistsChanged(SavedPlaylistsState? previous, SavedPlaylistsState next) {
+    // Solo actualizar si hay cambios reales respecto al estado actual
+    if (!_setsEqual(state.savedPlaylistIds, next.savedIds) ||
+        state.savedPlaylists.length != next.playlists.length) {
       
-      // Obtener los últimos N items (más recientes primero)
-      final recentlyPlayed = next.reversed.take(_maxRecentlyPlayed).toList();
+      AppLogger.info('[LibraryCoordinator] 🔄 Syncing saved playlists: ${next.playlists.length} items');
       
-      AppLogger.info('[LibraryCoordinator] 🔄 History changed: ${recentlyPlayed.length} items');
-      
-      // Actualizar estado local
-      state = state.copyWith(recentlyPlayed: recentlyPlayed);
-      
-      // Persistir en Hive
-      _saveRecentlyPlayedToLocal(recentlyPlayed);
+      state = state.copyWith(
+        savedPlaylists: next.playlists,
+        savedPlaylistIds: next.savedIds,
+      );
     }
   }
 
@@ -276,19 +295,43 @@ class LibraryCoordinator extends Notifier<LibraryState> {
   /// 💾 ESTRATEGIA OFFLINE-FIRST (Hive)
   /// ═══════════════════════════════════════════════════════════════════════
   
-  /// Cargar datos locales desde Hive
+  /// Cargar datos locales desde Hive y sincronizar con providers actuales
   Future<void> _loadLocalData() async {
     try {
-      final recentlyPlayed = await _loadRecentlyPlayedFromLocal();
-      final favorites = await _loadFavoritesFromLocal();
-      final followedArtists = await _loadFollowedArtistsFromLocal();
+      // 1. Cargar desde Hive (Cache persistente del coordinador)
+      final localRecents = await _loadRecentlyPlayedFromLocal();
+      final localFavorites = await _loadFavoritesFromLocal();
+      final localFollowed = await _loadFollowedArtistsFromLocal();
+      
+      // 2. Obtener estado actual de los providers (Fuente de Verdad)
+      final favoritesState = ref.read(favoritesProvider);
+      final followState = ref.read(followProvider);
+      final historyList = ref.read(playHistoryProvider);
+      final savedPlaylistsState = ref.read(savedPlaylistsProvider);
+
+      // 3. Fusionar: Priorizar providers si tienen datos, si no usar Hive
+      final favorites = favoritesState.favorites.isNotEmpty 
+          ? favoritesState.favorites 
+          : localFavorites;
+          
+      final followedArtists = followState.followedArtists.isNotEmpty 
+          ? followState.followedArtists 
+          : localFollowed;
+          
+      final recentlyPlayed = historyList.reversed.take(_maxRecentlyPlayed).toList();
 
       state = state.copyWith(
         recentlyPlayed: recentlyPlayed,
         favorites: favorites,
-        favoriteIds: favorites.map((s) => s.id).toSet(),
+        favoriteIds: favorites.isEmpty && favoritesState.favoriteIds.isNotEmpty 
+            ? favoritesState.favoriteIds 
+            : favorites.map((s) => s.id).toSet(),
         followedArtists: followedArtists,
-        followedArtistIds: followedArtists.map((a) => a.id).toSet(),
+        followedArtistIds: followedArtists.isEmpty && followState.followedArtistIds.isNotEmpty 
+            ? followState.followedArtistIds 
+            : followedArtists.map((a) => a.id).toSet(),
+        savedPlaylists: savedPlaylistsState.playlists,
+        savedPlaylistIds: savedPlaylistsState.savedIds,
         isLoading: false,
       );
 

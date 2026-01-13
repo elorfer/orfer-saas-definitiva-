@@ -128,7 +128,7 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
     // Observar cambios en el historial para mantener cache/precarga
-    final history = ref.read(playHistoryProvider);
+    final history = ref.watch(playHistoryProvider);
     final recentSongs = List<Song>.from(history.reversed).take(50).toList();
 
     // Escuchar cambios en el historial aquí (permitido en build) y mantener cache/precarga

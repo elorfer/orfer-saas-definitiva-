@@ -7,9 +7,13 @@ import { RevenueCatService } from './revenuecat.service';
 import { RevenueCatWebhookController } from './revenuecat-webhook.controller';
 import { Payment } from '../../common/entities/payment.entity';
 import { User } from '../../common/entities/user.entity';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, User])],
+  imports: [
+    TypeOrmModule.forFeature([Payment, User]),
+    RealtimeModule,
+  ],
   controllers: [
     PaymentsController,
     RevenueCatWebhookController, // Webhook de RevenueCat

@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import { apiClient } from '@/lib/api';
 import {
   ArrowPathIcon,
   MagnifyingGlassIcon,
@@ -12,20 +14,26 @@ import {
   ChartBarIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
+  BanknotesIcon,
+  UserPlusIcon,
 } from '@heroicons/react/24/outline';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-import { 
+import {
   usePremiumUsers,
   usePremiumUsersExpiringSoon,
   usePremiumStats,
+  useManualRevenueStats,
+  useMonthlyRevenueStats,
 } from '@/hooks/usePremium';
 import {
   useMarkAsPremium,
   useRemovePremium,
   usePremiumUsersCount,
+  useUsers,
 } from '@/hooks/useUsers';
+import { PremiumPlans } from '@/components/PremiumPlans';
 import type { UserModel } from '@/types/user';
 
 const PAGE_SIZE = 10;
@@ -37,16 +45,34 @@ export default function PremiumPage() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'expiring'>('all');
 
+  // Estado para renovación
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [selectedUserForPremium, setSelectedUserForPremium] = useState<UserModel | null>(null);
+
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = usePremiumStats(status === 'authenticated');
-  const { data: premiumData, isLoading: premiumLoading, isFetching: premiumFetching, refetch: refetchPremium } = usePremiumUsers({ 
-    page, 
-    limit: PAGE_SIZE, 
-    enabled: status === 'authenticated' && activeTab === 'all' 
+  const { data: revenueData, isLoading: revenueLoading, refetch: refetchRevenue } = useManualRevenueStats(status === 'authenticated');
+  const { data: monthlyRevenue, refetch: refetchMonthly } = useMonthlyRevenueStats(status === 'authenticated');
+  const { data: premiumData, isLoading: premiumLoading, isFetching: premiumFetching, refetch: refetchPremium } = usePremiumUsers({
+    page,
+    limit: PAGE_SIZE,
+    enabled: status === 'authenticated' && activeTab === 'all'
   });
   const { data: expiringData, isLoading: expiringLoading, refetch: refetchExpiring } = usePremiumUsersExpiringSoon(
     30,
     status === 'authenticated' && activeTab === 'expiring'
   );
+
+  // Estado para buscador de candidatos
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [candidateSearch, setCandidateSearch] = useState('');
+  const { data: searchResults, isFetching: isSearchingCandidates } = useUsers({
+    page: 1,
+    limit: 5,
+    search: candidateSearch, // El hook useUsers ya maneja el filtro por búsqueda
+    enabled: showAddModal && candidateSearch.length > 1
+  });
+
+
   const { mutateAsync: markAsPremium } = useMarkAsPremium();
   const { mutateAsync: removePremium } = useRemovePremium();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -67,22 +93,27 @@ export default function PremiumPage() {
     return null;
   }
 
-  const handleMarkAsPremium = async (user: UserModel) => {
-    if (user.subscriptionStatus === 'active') {
-      window.alert('El usuario ya tiene premium activo.');
-      return;
-    }
+  const handleOpenRenewModal = (user: UserModel) => {
+    setSelectedUserForPremium(user);
+    setShowPremiumModal(true);
+  };
 
-    const confirmed = window.confirm(`¿Seguro que deseas marcar a ${user.email} como premium?`);
-    if (!confirmed) return;
-
+  const handleDownloadReport = async () => {
     try {
-      setUpdatingId(user.id);
-      await markAsPremium({ id: user.id });
-      refetchPremium();
-      refetchStats();
-    } finally {
-      setUpdatingId(null);
+      const response = await apiClient.downloadRevenueReport();
+      // Crear Blob y descargar
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `ingresos_manuales_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Reporte descargado correctamente');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al descargar el reporte');
     }
   };
 
@@ -142,11 +173,11 @@ export default function PremiumPage() {
     const expDate = new Date(date);
     const now = new Date();
     const daysLeft = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysLeft < 0) return 'Expirado';
     if (daysLeft === 0) return 'Expira hoy';
     if (daysLeft <= 7) return `Expira en ${daysLeft} día${daysLeft > 1 ? 's' : ''}`;
-    
+
     return formatDistanceToNow(expDate, { addSuffix: true, locale: es });
   };
 
@@ -155,7 +186,7 @@ export default function PremiumPage() {
     const expDate = new Date(date);
     const now = new Date();
     const daysLeft = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysLeft < 0) return 'text-red-600';
     if (daysLeft <= 7) return 'text-orange-600';
     if (daysLeft <= 30) return 'text-yellow-600';
@@ -180,6 +211,8 @@ export default function PremiumPage() {
             refetchPremium();
             refetchExpiring();
             refetchStats();
+            refetchRevenue();
+            refetchMonthly();
           }}
           className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-brown-600 hover:text-brown-700"
         >
@@ -248,22 +281,76 @@ export default function PremiumPage() {
             </div>
           </div>
         </div>
+
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Ingresos Manuales</p>
+              <p className="mt-2 text-3xl font-bold text-emerald-600">
+                {revenueLoading ? '...' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(revenueData?.totalManualRevenue || 0)}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">Acumulado Total</p>
+            </div>
+            <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+              <BanknotesIcon className="h-6 w-6 text-emerald-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla de reporte mensual */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 mt-6 mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Historial de Ingresos Mensuales</h3>
+          <button
+            onClick={handleDownloadReport}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition"
+          >
+            <BanknotesIcon className="h-4 w-4" />
+            Descargar CSV
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 text-gray-500 font-medium">
+              <tr>
+                <th className="px-4 py-3 rounded-l-lg">Mes</th>
+                <th className="px-4 py-3">Transacciones</th>
+                <th className="px-4 py-3 text-right rounded-r-lg">Total Recaudado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {monthlyRevenue?.map((item) => (
+                <tr key={item.month} className="hover:bg-gray-50 transition">
+                  <td className="px-4 py-3 font-medium text-gray-800">{item.month}</td>
+                  <td className="px-4 py-3 text-gray-600">{item.count}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-emerald-600">
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.total)}
+                  </td>
+                </tr>
+              ))}
+              {!monthlyRevenue?.length && (
+                <tr><td colSpan={3} className="px-4 py-6 text-center text-gray-500">No hay registros aún</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between pr-4 gap-4 sm:gap-0">
           <nav className="flex -mb-px" aria-label="Tabs">
             <button
               onClick={() => {
                 setActiveTab('all');
                 setPage(1);
               }}
-              className={`${
-                activeTab === 'all'
-                  ? 'border-brown-600 text-brown-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition`}
+              className={`${activeTab === 'all'
+                ? 'border-brown-600 text-brown-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition`}
             >
               Todos los Premium ({premiumData?.total ?? 0})
             </button>
@@ -272,16 +359,26 @@ export default function PremiumPage() {
                 setActiveTab('expiring');
                 setPage(1);
               }}
-              className={`${
-                activeTab === 'expiring'
-                  ? 'border-orange-600 text-orange-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition flex items-center gap-2`}
+              className={`${activeTab === 'expiring'
+                ? 'border-orange-600 text-orange-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition flex items-center gap-2`}
             >
               <ExclamationTriangleIcon className="h-4 w-4" />
               Próximos a expirar ({expiringData?.total ?? 0})
             </button>
           </nav>
+
+          <button
+            onClick={() => {
+              setCandidateSearch('');
+              setShowAddModal(true);
+            }}
+            className="flex items-center gap-2 rounded-lg bg-brown-600 px-4 py-2 text-sm font-medium text-white hover:bg-brown-700 transition shadow-sm mb-2 sm:mb-0 ml-4 sm:ml-0"
+          >
+            <UserPlusIcon className="h-4 w-4" />
+            Agregar Premium
+          </button>
         </div>
 
         {/* Search and Filters */}
@@ -315,7 +412,10 @@ export default function PremiumPage() {
                   Estado Premium
                 </th>
                 <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                  Expiración
+                  Origen de Suscripción
+                </th>
+                <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Expiración y Días Restantes
                 </th>
                 <th className="py-3 px-6 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Último acceso
@@ -335,17 +435,17 @@ export default function PremiumPage() {
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-sm text-gray-500">
-                    {activeTab === 'expiring' 
-                      ? 'No hay usuarios próximos a expirar.' 
+                    {activeTab === 'expiring'
+                      ? 'No hay usuarios próximos a expirar.'
                       : 'No se encontraron usuarios premium.'}
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user: UserModel) => {
-                  const expirationDate = user.subscriptionExpiresAt 
-                    ? new Date(user.subscriptionExpiresAt).toISOString() 
+                  const expirationDate = user.subscriptionExpiresAt
+                    ? new Date(user.subscriptionExpiresAt).toISOString()
                     : null;
-                  
+
                   return (
                     <tr key={user.id} className="hover:bg-gray-50 transition">
                       <td className="py-4 px-6">
@@ -369,6 +469,17 @@ export default function PremiumPage() {
                         </span>
                       </td>
                       <td className="py-4 px-6">
+                        {user.subscriptionSource === 'revenuecat' ? (
+                          <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-800">
+                            🛒 RevenueCat
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold bg-purple-100 text-purple-800">
+                            👤 Manual
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6">
                         <div className="flex flex-col">
                           <span className={`text-sm font-medium ${getExpirationColor(expirationDate)}`}>
                             {formatExpirationDate(expirationDate)}
@@ -385,23 +496,43 @@ export default function PremiumPage() {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-500">
-                        {user.lastLoginAt 
+                        {user.lastLoginAt
                           ? formatDistanceToNow(new Date(user.lastLoginAt), { addSuffix: true, locale: es })
                           : 'Nunca'}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={() => handleRemovePremium(user)}
-                          className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          disabled={updatingId === user.id}
-                          title="Remover premium"
-                        >
-                          {updatingId === user.id ? (
-                            <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                          ) : (
-                            'Quitar Premium'
-                          )}
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenRenewModal(user)}
+                            className="inline-flex items-center rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 transition hover:border-green-300 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200"
+                            disabled={user.subscriptionSource === 'revenuecat'}
+                            title={
+                              user.subscriptionSource === 'revenuecat'
+                                ? 'Gestionado automáticamente por RevenueCat'
+                                : 'Extender suscripción'
+                            }
+                          >
+                            <ClockIcon className="h-3 w-3 mr-1" />
+                            Renovar
+                          </button>
+
+                          <button
+                            onClick={() => handleRemovePremium(user)}
+                            className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                            disabled={updatingId === user.id || user.subscriptionSource === 'revenuecat'}
+                            title={
+                              user.subscriptionSource === 'revenuecat'
+                                ? 'No se puede quitar: Suscripción de RevenueCat (Google Play/App Store)'
+                                : 'Remover premium'
+                            }
+                          >
+                            {updatingId === user.id ? (
+                              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                            ) : (
+                              'Quitar'
+                            )}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -436,7 +567,106 @@ export default function PremiumPage() {
           </div>
         )}
       </div>
+
+
+
+      {/* MODAL DE RENOVACIÓN DE PLANES */}
+      {showPremiumModal && selectedUserForPremium && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Renovar Suscripción</h2>
+                <p className="text-sm text-gray-500">
+                  Extender plan para <b>{selectedUserForPremium.firstName || selectedUserForPremium.username}</b>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPremiumModal(false)}
+                className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-6">
+              <PremiumPlans
+                userId={selectedUserForPremium.id}
+                onSuccess={() => {
+                  setShowPremiumModal(false);
+                  refetchPremium();
+                  refetchExpiring();
+                  refetchStats();
+                }}
+              />
+              <p className="text-xs text-gray-400 mt-4 text-center">
+                Al seleccionar un plan, la nueva fecha de expiración se calculará a partir de hoy (reinicia la vigencia).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Buscar y Agregar Premium */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">Otorgar Premium Manual</h2>
+              <button onClick={() => setShowAddModal(false)} className="rounded-full p-1 text-gray-400 hover:bg-gray-100">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="relative mb-4">
+                <input
+                  type="text"
+                  value={candidateSearch}
+                  onChange={(e) => setCandidateSearch(e.target.value)}
+                  placeholder="Buscar usuario por email o nombre..."
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 pl-10 focus:border-brown-500 focus:ring-brown-500"
+                  autoFocus
+                />
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
+              </div>
+
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {isSearchingCandidates && <p className="text-sm text-gray-500 text-center py-2">Buscando...</p>}
+
+                {!isSearchingCandidates && candidateSearch.length > 1 && searchResults?.users.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-2">No se encontraron usuarios.</p>
+                )}
+
+                {searchResults?.users.map(user => (
+                  <div key={user.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-gray-900">{user.email}</span>
+                      <span className="text-xs text-gray-500">{user.firstName} {user.lastName}</span>
+                      {user.subscriptionStatus === 'active' && <span className="text-xs text-yellow-600 font-semibold">Ya es Premium</span>}
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (user.subscriptionStatus === 'active') {
+                          toast.error('Este usuario ya es Premium');
+                          return;
+                        }
+                        setSelectedUserForPremium(user);
+                        setShowAddModal(false);
+                        setShowPremiumModal(true);
+                      }}
+                      disabled={user.subscriptionStatus === 'active'}
+                      className="text-sm bg-brown-600 text-white px-3 py-1.5 rounded-md hover:bg-brown-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Seleccionar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

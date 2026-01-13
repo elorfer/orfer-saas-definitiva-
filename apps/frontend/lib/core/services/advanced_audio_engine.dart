@@ -719,9 +719,21 @@ class AdvancedAudioEngine {
     }
   }
 
+  // Protección contra doble toque (Debounce)
+  DateTime? _lastSkipTime;
+  static const _skipDebounce = Duration(milliseconds: 500);
+
   /// Siguiente canción
   Future<void> next() async {
     if (!_state.hasNext) return;
+
+    // 🛡️ PROTECCIÓN CONTRA DOBLE TOQUE
+    final now = DateTime.now();
+    if (_lastSkipTime != null && now.difference(_lastSkipTime!) < _skipDebounce) {
+      AppLogger.info('[AdvancedAudioEngine] 🛡️ Ignorando skip rápido (doble toque protegido)');
+      return;
+    }
+    _lastSkipTime = now;
 
     try {
       await _player.seekToNext();
@@ -732,6 +744,14 @@ class AdvancedAudioEngine {
 
   /// Canción anterior
   Future<void> previous() async {
+    // 🛡️ PROTECCIÓN CONTRA DOBLE TOQUE
+    final now = DateTime.now();
+    if (_lastSkipTime != null && now.difference(_lastSkipTime!) < _skipDebounce) {
+       // Permitir volver al inicio si está avanzado, pero no cambiar canción si es spam
+       if (_state.position.inSeconds <= 3) return;
+    }
+    _lastSkipTime = now;
+
     // Si llevamos más de 3 segundos, volver al inicio de la canción
     if (_state.position.inSeconds > 3) {
       await seek(Duration.zero);
@@ -1130,6 +1150,7 @@ class AdvancedAudioEngine {
         
         _updateState(_state.copyWith(
           currentSong: song,
+          lastConfirmedSong: song, // ✅ FIX MINI PLAYER: También actualizar lastConfirmedSong
           currentIndex: currentIndex,
           position: Duration.zero,
           clearCurrentAd: true,

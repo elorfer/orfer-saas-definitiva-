@@ -1,0 +1,43 @@
+﻿Analyzing playback_notifier.dart...                             
+
+warning - Unused import: 'package:flutter/widgets.dart' - lib\core\providers\playback_notifier.dart:4:8 - unused_import
+warning - The value of the field '_isProcessingPlayFromCard' isn't used - lib\core\providers\playback_notifier.dart:140:8 - unused_field
+warning - The value of the field '_lastSeekTime' isn't used - lib\core\providers\playback_notifier.dart:144:13 - unused_field
+warning - The value of the field '_minQueueSize' isn't used - lib\core\providers\playback_notifier.dart:159:20 - unused_field
+warning - The value of the field '_isAdRequestInFlight' isn't used - lib\core\providers\playback_notifier.dart:180:8 - unused_field
+warning - The value of the local variable 'offlineManager' isn't used - lib\core\providers\playback_notifier.dart:321:11 - unused_local_variable
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\playback_notifier.dart:369:26 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\playback_notifier.dart:595:31 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:788:27 - unnecessary_null_comparison
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:853:44 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:854:32 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:862:105 - invalid_null_aware_operator
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:867:27 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:923:48 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:969:27 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:1013:34 - unnecessary_null_comparison
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:1039:43 - unnecessary_null_comparison
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:1233:26 - invalid_null_aware_operator
+warning - The operand can't be 'null', so the condition is always 'true' - lib\core\providers\playback_notifier.dart:1266:44 - unnecessary_null_comparison
+warning - The value of the local variable 'seqCurrentSongId' isn't used - lib\core\providers\playback_notifier.dart:1446:17 - unused_local_variable
+  error - The method '_handleSongCompletion' isn't defined for the type 'PlaybackNotifier' - lib\core\providers\playback_notifier.dart:1536:11 - undefined_method
+  error - A try block must be followed by an 'on', 'catch', or 'finally' clause - lib\core\providers\playback_notifier.dart:2276:7 - missing_catch_or_finally
+warning - The declaration '_prefetchInitialAlgorithmBuffer' isn't referenced - lib\core\providers\playback_notifier.dart:2403:16 - unused_element
+warning - The operand can't be 'null', so the condition is always 'false' - lib\core\providers\playback_notifier.dart:2754:18 - unnecessary_null_comparison
+warning - The declaration '_handlePreventiveAdInsertion' isn't referenced - lib\core\providers\playback_notifier.dart:3738:16 - unused_element
+warning - The value of the local variable 'freshSequenceState' isn't used - lib\core\providers\playback_notifier.dart:4078:17 - unused_local_variable
+warning - The value of the local variable 'freshCurrentIndex' isn't used - lib\core\providers\playback_notifier.dart:4079:17 - unused_local_variable
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:4216:37 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:4418:57 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:4482:54 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5324:55 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5406:54 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5407:50 - invalid_null_aware_operator
+warning - Dead code - lib\core\providers\playback_notifier.dart:5447:20 - dead_code
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5452:51 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5473:55 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5511:54 - invalid_null_aware_operator
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5512:50 - invalid_null_aware_operator
+warning - The declaration '_logAdDiagnostics' isn't referenced - lib\core\providers\playback_notifier.dart:5563:8 - unused_element
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\providers\playback_notifier.dart:5982:67 - invalid_null_aware_operator
+

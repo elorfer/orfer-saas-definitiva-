@@ -5,12 +5,13 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { User } from '../../common/entities/user.entity';
 import { Artist } from '../../common/entities/artist.entity';
+import { Payment } from '../../common/entities/payment.entity';
 import { ArtistsModule } from '../artists/artists.module';
 import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Artist]),
+    TypeOrmModule.forFeature([User, Artist, Payment]),
     ArtistsModule, // Importar para usar ArtistsService
     forwardRef(() => RealtimeModule), // Importar para notificaciones WebSocket
   ],
@@ -18,7 +19,7 @@ import { RealtimeModule } from '../realtime/realtime.module';
   providers: [UsersService],
   exports: [UsersService],
 })
-export class UsersModule {}
+export class UsersModule { }
 
 
 

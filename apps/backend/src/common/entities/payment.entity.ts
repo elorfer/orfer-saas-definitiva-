@@ -19,6 +19,7 @@ export enum PaymentStatus {
 export enum PaymentMethod {
   STRIPE = 'stripe',
   PAYPAL = 'paypal',
+  MANUAL = 'manual',
 }
 
 @Entity('payments')

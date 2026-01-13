@@ -15,7 +15,7 @@ import { GenresModule } from './modules/genres/genres.module';
 import { PlaylistsModule } from './modules/playlists/playlists.module';
 import { StreamingModule } from './modules/streaming/streaming.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
-// import { PaymentsModule } from './modules/payments/payments.module';  // Deshabilitado - Pagos no implementados aún
+import { PaymentsModule } from './modules/payments/payments.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { CoversModule } from './modules/covers/covers.module';
 import { HealthModule } from './modules/health/health.module';
@@ -222,7 +222,7 @@ import { dataSourceOptions } from './database/data-source';
     PlaylistsModule,
     StreamingModule,
     AnalyticsModule,
-    // PaymentsModule,  // Deshabilitado - Pagos no implementados aún
+    PaymentsModule,
     UploadModule,
     CoversModule,
     PublicModule,

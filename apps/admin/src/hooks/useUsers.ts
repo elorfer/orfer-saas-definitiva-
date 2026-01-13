@@ -38,6 +38,7 @@ const mapUser = (user: any): UserModel => ({
   avatarUrl: user?.avatarUrl ?? user?.avatar_url ?? null,
   role: user?.role ?? 'user',
   subscriptionStatus: user?.subscriptionStatus ?? user?.subscription_status ?? 'inactive',
+  subscriptionSource: user?.subscriptionSource ?? user?.subscription_source ?? 'manual',
   subscriptionExpiresAt: user?.subscriptionExpiresAt ?? user?.subscription_expires_at ?? null,
   isVerified: user?.isVerified ?? user?.is_verified ?? false,
   isActive: user?.isActive ?? user?.is_active ?? false,
@@ -65,11 +66,11 @@ const extractErrorMessage = (error: unknown): string => {
   return 'Ocurrió un error inesperado';
 };
 
-export const useUsers = ({ page = 1, limit = 10, enabled = true }: UseUsersParams = {}) => {
+export const useUsers = ({ page = 1, limit = 10, enabled = true, search }: UseUsersParams = {}) => {
   return useQuery<UsersResponse, Error>(
-    [USERS_QUERY_KEY, page, limit],
+    [USERS_QUERY_KEY, page, limit, search],
     async () => {
-      const response = await apiClient.getUsers(page, limit);
+      const response = await apiClient.getUsers(page, limit, search);
       return mapUsersResponse(response.data);
     },
     {
@@ -206,8 +207,14 @@ export const useMarkAsPremium = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    async ({ id, expiresAt }: { id: string; expiresAt?: string }) => {
-      const response = await apiClient.markAsPremium(id, expiresAt);
+    async ({ id, expiresAt, plan, amount }: { id: string; expiresAt?: string; plan?: 'quincenal' | 'mensual' | 'anual'; amount?: number }) => {
+      // Construir objeto solo con propiedades definidas
+      const data: { expiresAt?: string; plan?: 'quincenal' | 'mensual' | 'anual'; amount?: number } = {};
+      if (expiresAt) data.expiresAt = expiresAt;
+      if (plan) data.plan = plan;
+      if (amount !== undefined) data.amount = amount;
+
+      const response = await apiClient.markAsPremium(id, data);
       return mapUser(response.data);
     },
     {

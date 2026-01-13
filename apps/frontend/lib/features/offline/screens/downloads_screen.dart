@@ -7,11 +7,19 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/logger.dart'; // ✅ Importar AppLogger
 
-class DownloadsScreen extends ConsumerWidget {
+class DownloadsScreen extends ConsumerStatefulWidget {
   const DownloadsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DownloadsScreen> createState() => _DownloadsScreenState();
+}
+
+class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
+  // 🔒 Lock de navegación para prevenir doble-taps y crashes por navegación duplicada
+  bool _isNavigating = false;
+
+  @override
+  Widget build(BuildContext context) {
     final offlineState = ref.watch(offlineManagerProvider);
     final songs = offlineState.downloadedSongs.values.toList();
 
@@ -31,9 +39,11 @@ class DownloadsScreen extends ConsumerWidget {
         actions: [
           if (songs.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.delete_sweep_rounded, color: Colors.red),
+              icon: Icon(Icons.delete_sweep_rounded, color: _isNavigating ? Colors.grey : Colors.red),
               tooltip: 'Eliminar todo',
-              onPressed: () async {
+              onPressed: _isNavigating 
+                ? null 
+                : () async {
                  final confirm = await showDialog<bool>(
                    context: context,
                    builder: (context) => AlertDialog(
@@ -72,7 +82,7 @@ class DownloadsScreen extends ConsumerWidget {
                 ],
               ),
             )
-            : ListView.builder(
+          : ListView.builder(
               padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100), // ✅ Padding bottom para MiniPlayer
               itemCount: songs.length,
               itemBuilder: (context, index) {
@@ -110,52 +120,76 @@ class DownloadsScreen extends ConsumerWidget {
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // ▶️ Botón Play Directo (Junto al item)
-                                IconButton(
-                                  icon: Icon(Icons.play_circle_fill, color: NeumorphismTheme.accent, size: 32),
-                                  tooltip: 'Reproducir ahora',
-                                  onPressed: () async {
-                                    try {
-                                      await ref.read(playbackNotifierProvider.notifier).playOfflineQueue(
-                                        songs,
-                                        initialIndex: index,
-                                        autoPlay: true, // ✅ Reproducir inmediatamente
-                                      );
-                                      if (context.mounted) {
-                                        context.push('/downloads/song/${song.id}', extra: song);
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                  // ▶️ Botón Play/Pause (Dinámico)
+                                  IconButton(
+                                    // Feedback visual: Si es la canción actual y está sonando, mostrar Pausa
+                                    icon: Icon(
+                                      (ref.watch(playbackNotifierProvider).isPlaying && ref.watch(playbackNotifierProvider).currentSong?.id == song.id)
+                                          ? Icons.pause_circle_filled
+                                          : Icons.play_circle_fill,
+                                      color: NeumorphismTheme.accent,
+                                      size: 32,
+                                    ),
+                                    tooltip: (ref.watch(playbackNotifierProvider).isPlaying && ref.watch(playbackNotifierProvider).currentSong?.id == song.id)
+                                        ? 'Pausar'
+                                        : 'Reproducir ahora',
+                                    // 🛡️ Prevenir doble tap
+                                    onPressed: () async {
+                                      if (_isNavigating) return;
+                                      
+                                      final notifier = ref.read(playbackNotifierProvider.notifier);
+                                      final isPlayingCurrent = ref.read(playbackNotifierProvider).isPlaying && 
+                                                              ref.read(playbackNotifierProvider).currentSong?.id == song.id;
+
+                                      if (isPlayingCurrent) {
+                                        notifier.play();
+                                      } else {
+                                        await notifier.playOfflineQueue(
+                                          songs,
+                                          initialIndex: index,
+                                          autoPlay: true, 
                                         );
                                       }
-                                    }
-                                  },
-                                ),
+                                    },
+                                  ),
                                 // 🗑️ Botón Eliminar
                                 IconButton(
                                     icon: const Icon(Icons.delete_outline, color: Colors.grey),
                                     tooltip: 'Eliminar descarga',
                                     onPressed: () {
-                                    ref.read(offlineManagerProvider.notifier).removeDownload(song.id);
-                                },
+                                      if (_isNavigating) return;
+                                      ref.read(offlineManagerProvider.notifier).removeDownload(song.id);
+                                    },
                                 ),
                               ],
                             ),
                             onTap: () async {
+                              if (_isNavigating) return;
                               // Tocar el item abre la info (Preview) sin reproducir automáticamente
+                              setState(() => _isNavigating = true);
                               try {
                                 await ref.read(playbackNotifierProvider.notifier).playOfflineQueue(
                                   songs,
                                   initialIndex: index,
                                   autoPlay: false, // ✅ NO reproducir automáticamente (Preview Mode)
                                 );
-                                if (context.mounted) {
+                                if (mounted) {
+                                  // 🚀 Navegar SIN esperar
                                   context.push('/downloads/song/${song.id}', extra: song);
                                 }
                               } catch (e) {
                                 AppLogger.error('Error opening song detail: $e');
+                                if (mounted) {
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                   );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  // 🔓 Liberar lock INMEDIATAMENTE para permitir interacción rápida
+                                  // Ya no esperamos a que termine la animación de navegación
+                                  setState(() => _isNavigating = false);
+                                }
                               }
                             },
                         ),

@@ -260,9 +260,10 @@ class _ProfessionalAudioPlayerState
           // 3. Fusión de Inteligencia:
           // ✅ FIX PARPADEO: Durante inserción, SOLO usar datos del provider (estables)
           // Fuera de inserción: Priorizar stream para contenido inmediato
+          // ✅ FIX MINI PLAYER: Usar lastConfirmedSong como fallback para garantizar consistencia
           final finalSong = isInserting 
-              ? playbackState.currentSong 
-              : (streamSong ?? playbackState.currentSong);
+              ? (playbackState.lastConfirmedSong ?? playbackState.currentSong)
+              : (streamSong ?? playbackState.lastConfirmedSong ?? playbackState.currentSong);
           final finalAd = isInserting 
               ? playbackState.currentAd 
               : (streamAd ?? playbackState.currentAd);
