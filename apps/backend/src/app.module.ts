@@ -92,10 +92,11 @@ import { dataSourceOptions } from './database/data-source';
           type: 'postgres',
           entities,
           autoLoadEntities: true,
-          // Permitir sync forzado con TYPEORM_SYNC=true (útil para primer deploy)
-          synchronize: configService.get<string>('TYPEORM_SYNC') === 'true' ? true : !isProduction,
-          logging: dbLogging,
-          connectTimeoutMS: 30000, // 30 segundos de timeout
+          // 🔥 TEMPORAL: Forzar sync para crear tablas en Railway
+          // TODO: REVERTIR A: synchronize: !isProduction después del primer deploy
+          synchronize: true,
+          logging: true, // Ver todas las queries
+          connectTimeoutMS: 30000,
           extra: {
             connectionTimeoutMillis: 30000,
           },
