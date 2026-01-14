@@ -31,14 +31,11 @@ RUN if [ -f package-lock.json ]; then \
 # Copiar código fuente
 COPY . .
 
-# Añadir script de espera
-RUN mkdir -p /app/scripts && chmod +x /app/scripts/wait-for.sh
-
 # Compilar la aplicación
 RUN npm run build
 
-# Exponer puerto correcto usado por la app (3001)
+# Exponer puerto (Railway usa PORT env var, pero defaulteamos a 3001)
 EXPOSE 3001
 
-# Esperar por Postgres y Redis antes de arrancar la app
-CMD ["sh", "-c", "./scripts/wait-for.sh postgres 5432 && ./scripts/wait-for.sh redis 6379 && npm run start:prod"]
+# Comando de inicio - Railway maneja las dependencias automáticamente
+CMD ["npm", "run", "start:prod"]
