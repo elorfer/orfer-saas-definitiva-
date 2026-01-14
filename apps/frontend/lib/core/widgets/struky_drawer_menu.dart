@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/models/user_model.dart';
 import '../../core/providers/theme_provider.dart';
@@ -272,7 +274,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                    _MenuOption(
                     icon: Icons.help_outline_rounded,
                     label: 'Ayuda y Soporte',
-                    onTap: () {},
+                    onTap: () => _showSupportOptions(context),
                     textColor: textColorPrimary,
                     iconColor: iconColor,
                   ),
@@ -330,9 +332,29 @@ class StrukyDrawerMenu extends ConsumerWidget {
                 style: TextStyle(color: Colors.red), // Destructive action
               ),
               onPressed: () async {
-                Navigator.of(context).pop(); // Cerrar diálogo
-                await ref.read(authStateProvider.notifier).logout();
+                Navigator.of(context).pop(); // Cerrar diálogo de confirmación
+
+                // Mostrar Loader de espera
                 if (context.mounted) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false, // No permitir cerrar tocando afuera
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                      ),
+                    ),
+                  );
+                }
+
+                // Ejecutar logout (mínimo 1 segundo para que se vea el loader)
+                await Future.wait([
+                  ref.read(authStateProvider.notifier).logout(),
+                  Future.delayed(const Duration(seconds: 1)),
+                ]);
+
+                if (context.mounted) {
+                   Navigator.of(context).pop(); // Cerrar Loader
                    GoRouter.of(context).go('/login');
                 }
               },
@@ -430,6 +452,130 @@ class StrukyDrawerMenu extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  void _showSupportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        final theme = Theme.of(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea( // Padding seguro para iOS
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 24),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                
+                // Title
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Icon(Icons.support_agent_rounded, size: 28, color: theme.colorScheme.primary),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Ayuda y Soporte',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // WhatsApp Option
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF25D366).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(MdiIcons.whatsapp, color: const Color(0xFF25D366)),
+                  ),
+                  title: const Text('Contactar por WhatsApp'),
+                  subtitle: const Text('Respuesta rápida (+57 300 901 2217)'),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _launchWhatsApp();
+                  },
+                ),
+                
+                // Email Option
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.email_outlined, color: Colors.blueAccent),
+                  ),
+                  title: const Text('Sugerencias y Problemas'),
+                  subtitle: const Text('Escríbenos a strukyapp@gmail.com'),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _launchEmail();
+                  },
+                ),
+                
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _launchWhatsApp() async {
+    const phone = '573009012217';
+    // const message = 'Hola, equipo de soporte. Tengo una consulta sobre la app.';
+    final url = Uri.parse('https://wa.me/$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      // Fallback si no tiene WhatsApp instalado (intentar SMS o error silencioso)
+      debugPrint('No se pudo abrir WhatsApp');
+    }
+  }
+
+  Future<void> _launchEmail() async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'strukyapp@gmail.com',
+      queryParameters: {
+        'subject': 'Soporte Struky App',
+      },
+    );
+
+    if (await canLaunchUrl(emailLaunchUri)) {
+      await launchUrl(emailLaunchUri);
+    } else {
+      debugPrint('No se pudo abrir la app de correo');
+    }
   }
 }
 
