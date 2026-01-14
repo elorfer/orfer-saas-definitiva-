@@ -1,6 +1,7 @@
 # ===================================
 # DOCKERFILE OPTIMIZADO PARA RAILWAY
-# Actualizado: 2026-01-14
+# Actualizado: 2026-01-14 16:54 UTC
+# Forzar rebuild - instala TODAS las deps
 # ===================================
 
 FROM node:20-bullseye-slim
