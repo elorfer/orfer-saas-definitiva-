@@ -258,6 +258,16 @@ class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> 
       if (_maxProgress > 0.05 && !isPlayingAd) {
         AppLogger.info('[MiniProgressBar] 🔄 Cambio abrupto: CONGELANDO por 1s');
         _isFrozen = true;
+        
+        // ✅ FIX CRÍTICO: Programar descongelamiento (faltaba esto)
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (mounted) {
+            setState(() {
+              _isFrozen = false;
+              AppLogger.debug('[MiniProgressBar] 🔓 Descongelado (Cambio Canción)');
+            });
+          }
+        });
       }
       _currentSongId = currentSongId;
       _maxProgress = 0.0;
@@ -309,14 +319,21 @@ class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> 
               }
             }
             
-            // ✅ BARRA DIRECTA SIN ANIMACIONES INTERMEDIAS
+            // ✅ ANIMACIÓN SUAVE: Usar TweenAnimationBuilder para interpolar el progreso
             return SizedBox(
               height: 2,
-              child: LinearProgressIndicator(
-                value: _maxProgress,
-                backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
-                borderRadius: const BorderRadius.all(Radius.circular(1.0)),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: _maxProgress, end: _maxProgress),
+                duration: const Duration(milliseconds: 250), // Animación fluida de 250ms
+                curve: Curves.linear, // Movimiento lineal constante para audio
+                builder: (context, value, child) {
+                  return LinearProgressIndicator(
+                    value: value,
+                    backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
+                    valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+                    borderRadius: const BorderRadius.all(Radius.circular(1.0)),
+                  );
+                },
               ),
             );
           },
