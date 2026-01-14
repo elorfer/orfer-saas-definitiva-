@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     bash \
     netcat \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Asegurar node-gyp disponible globalmente para compilaciones nativas (sharp)
 RUN npm install -g node-gyp
@@ -21,12 +21,8 @@ RUN npm install -g node-gyp
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias reproduciblemente si existe package-lock, si no usar npm install
-RUN if [ -f package-lock.json ]; then \
-            echo "package-lock.json found, running npm ci" && npm ci --unsafe-perm; \
-        else \
-            echo "No package-lock.json, running npm install" && npm install --unsafe-perm; \
-        fi
+# Instalar dependencias - usar npm install para Railway (sincroniza automáticamente)
+RUN npm install --only=production --unsafe-perm
 
 # Copiar código fuente
 COPY . .
