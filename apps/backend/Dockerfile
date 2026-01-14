@@ -1,8 +1,16 @@
+# ===================================
+# DOCKERFILE OPTIMIZADO PARA RAILWAY
+# Actualizado: 2026-01-14
+# ===================================
+
 FROM node:20-bullseye-slim
+
+# Variables de entorno
+ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias para compilar módulos nativos
+# Instalar dependencias del sistema para módulos nativos
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     build-essential \
@@ -12,17 +20,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvips-dev \
     curl \
     bash \
-    netcat \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Asegurar node-gyp disponible globalmente para compilaciones nativas (sharp)
-RUN npm install -g node-gyp
+# Instalar node-gyp globalmente para compilaciones nativas
+RUN npm install -g node-gyp npm@latest
 
-# Copiar archivos de dependencias
+# Copiar package files
 COPY package*.json ./
 
-# Instalar dependencias - usar npm install para Railway (sincroniza automáticamente)
-RUN npm install --only=production --unsafe-perm
+# Instalar TODAS las dependencias primero (prod + dev para build)
+RUN npm install --unsafe-perm
 
 # Copiar código fuente
 COPY . .
@@ -30,8 +38,18 @@ COPY . .
 # Compilar la aplicación
 RUN npm run build
 
-# Exponer puerto (Railway usa PORT env var, pero defaulteamos a 3001)
+# Limpiar devDependencies después del build
+RUN npm prune --production
+
+# Crear directorio para uploads
+RUN mkdir -p uploads/covers uploads/songs uploads/ads/audio uploads/ads/covers
+
+# Exponer puerto (Railway usa PORT env var)
 EXPOSE 3001
 
-# Comando de inicio - Railway maneja las dependencias automáticamente
-CMD ["npm", "run", "start:prod"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
+    CMD curl -f http://localhost:${PORT:-3001}/api/v1/health || exit 1
+
+# Comando de inicio
+CMD ["node", "dist/main.js"]
