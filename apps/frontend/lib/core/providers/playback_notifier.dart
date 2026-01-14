@@ -4963,10 +4963,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         
         // 🔓 Descongelar después de un pequeño delay para que el stream se asiente
         Future.delayed(const Duration(milliseconds: 400), () {
-          // ✅ RESETEAR POSICIÓN: Ahora que el seek se completó, sincronizar la posición
-          state = state.copyWith(
-            currentPosition: Duration.zero,
-          );
+          // ✅ FIX: Forzar reset del stream suavizado a 0 antes de descongelar
+          // Esto corrige el bug donde la barra "sigue avanzando" con el valor de la canción anterior
+          // debido a que AudioService ignoró el cambio de track durante el freeze.
+          _service?.forceSmoothPositionUpdate(Duration.zero);
           
           _isFreezingUI = false;
           _service?.setFreezeMode(false);

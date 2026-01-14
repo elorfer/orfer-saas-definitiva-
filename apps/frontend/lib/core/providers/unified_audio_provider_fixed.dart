@@ -48,8 +48,9 @@ final realCurrentSongProvider = Provider<Song?>((ref) {
   // 3. PROTECCIÓN DURANTE ANUNCIO: Mantener última canción (no es transitoria)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   if (isPlayingAd || currentAd != null) {
-    // Durante anuncio, el MiniPlayer se oculta de todos modos
-    // Pero retornamos la última canción confirmada para cuando el anuncio termine
+    // Durante anuncio, el MiniPlayer se oculta de todos modos (en teoría).
+    // PERO si por alguna razón se renderiza, DEBE mostrar la última canción confirmada.
+    // NUNCA debe intentar leer del stream durante un anuncio porque los índices están desfasados.
     return _lastConfirmedSong ?? stateSong;
   }
   
@@ -62,6 +63,8 @@ final realCurrentSongProvider = Provider<Song?>((ref) {
   Song? streamSong;
   if (sequenceState != null && sequenceState.currentSource != null) {
     final tag = sequenceState.currentSource!.tag;
+    // 🛡️ PROTECCIÓN ADICIONAL: Si el tag es un anuncio, IGNORARLO.
+    // Esto previene que un anuncio "disfrazado" o mal etiquetado se cuele aquí.
     if (tag is Song) {
       streamSong = tag;
     }
@@ -89,14 +92,13 @@ final realCurrentSongProvider = Provider<Song?>((ref) {
   
   // Si solo el stream tiene canción (estado aún no actualizado)
   if (streamSong != null && (stateSong == null || streamSong.id != stateSong.id)) {
-    // Stream adelantado: usar stream pero verificar si es transición válida
-    // (no queremos mostrar canciones random del stream)
+    // 🛡️ STREAM GUARD: Si estamos en una transición de anuncio (aunque flags sean falsos),
+    // el stream puede adelantarse. Si tenemos una última canción confirmada,
+    // es más seguro mostrar esa visualmente hasta que el ESTADO oficial alcance al stream.
     if (_lastConfirmedSong != null) {
-      // Verificar si es la canción "siguiente" lógica o si es aleatorio
-      // Por seguridad, mantener la última confirmada hasta que el estado se actualice
-      return _lastConfirmedSong;
+      return _lastConfirmedSong; 
     }
-    // Si no hay cache, usar el stream
+    // Solo si no hay nada más, confiamos ciegamente en el stream.
     return streamSong;
   }
   

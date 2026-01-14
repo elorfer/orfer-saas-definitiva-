@@ -1,0 +1,25 @@
+// INSTRUCCIONES PARA ACTUALIZAR api.ts
+// =====================================
+//
+// Busca esta línea (aprox línea 111):
+//   markAsPremium: (id: string, expiresAt?: string) => 
+//     api.post(`/users/${id}/premium`, expiresAt ? { expiresAt } : {}),
+//
+// Y REEMPLÁZALA por:
+//   markAsPremium: (id: string, data?: { expiresAt?: string; plan?: 'quincenal' | 'mensual' | 'anual' }) => 
+//     api.post(`/users/${id}/premium`, data || {}),
+//
+// =====================================
+//
+// Luego actualiza el hook useUsers.ts (aprox línea 210):
+//
+// BUSCA:
+//   const response = await apiClient.markAsPremium(id, expiresAt);
+//
+// REEMPLAZA por:
+//   const response = await apiClient.markAsPremium(id, expiresAt ? { expiresAt } : data);
+//
+// Y actualiza la firma:
+//   async ({ id, expiresAt, plan }: { id: string; expiresAt?: string; plan?: 'quincenal' | 'mensual' | 'anual' }) => {
+//
+// =====================================

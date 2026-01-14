@@ -220,33 +220,71 @@ class _MiniPlayerProgressBar extends ConsumerStatefulWidget {
   ConsumerState<_MiniPlayerProgressBar> createState() => _MiniPlayerProgressBarState();
 }
 
+/// ✅ SOLUCIÓN PROFESIONAL: Control manual del stream con pausa/reanudación
 class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> {
-  // ✅ ANTI-RETROCESO: Guardar el progreso máximo y el ID de canción actual
   double _maxProgress = 0.0;
   String? _currentSongId;
+  bool? _wasPlayingAd;
+  bool _isFrozen = false; // ✅ Flag de freeze simple y directo
   
   @override
   Widget build(BuildContext context) {
-    // Obtener ID de canción actual para detectar cambios
     final currentSong = ref.watch(realCurrentSongProvider);
     final currentSongId = currentSong?.id;
+    final isPlayingAd = ref.watch(
+      unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
+    );
     
-    // ✅ DETECTAR CAMBIO DE CANCIÓN: Resetear progreso máximo
-    if (currentSongId != _currentSongId) {
+    // ✅ DETECCIÓN PROFESIONAL: Transición Ad→Song
+    if (_wasPlayingAd == true && isPlayingAd == false) {
+      AppLogger.info('[MiniProgressBar] 🔄 Ad→Song: CONGELANDO por 1s');
+      _isFrozen = true;
+      _maxProgress = 0.0;
       _currentSongId = currentSongId;
-      _maxProgress = 0.0; // Nueva canción = nuevo progreso
+      
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) {
+          setState(() {
+            _isFrozen = false;
+            AppLogger.debug('[MiniProgressBar] 🔓 Descongelado');
+          });
+        }
+      });
+    }
+    _wasPlayingAd = isPlayingAd;
+    
+    // ✅ DETECCIÓN PROFESIONAL: Cambio abrupto de canción
+    if (currentSongId != _currentSongId) {
+      if (_maxProgress > 0.05 && !isPlayingAd) {
+        AppLogger.info('[MiniProgressBar] 🔄 Cambio abrupto: CONGELANDO por 1s');
+        _isFrozen = true;
+      }
+      _currentSongId = currentSongId;
+      _maxProgress = 0.0;
     }
     
-    // ✅ MIRROR PATTERN: Sincronización directa con streams del motor de audio
+    // ✅ SOLUCIÓN PROFESIONAL: Barra simple sin StreamBuilder
     final audioService = ref.watch(audioServiceProvider);
-
-    // Stream de duración (Outer Stream)
+    
+    // Si está congelado, retornar LinearProgressIndicator directo en 0
+    if (_isFrozen) {
+      return SizedBox(
+        height: 2,
+        child: LinearProgressIndicator(
+          value: 0.0,
+          backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
+          valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+          borderRadius: const BorderRadius.all(Radius.circular(1.0)),
+        ),
+      );
+    }
+    
+    // ✅ MODO NORMAL: StreamBuilder simple SIN TweenAnimationBuilder
     return StreamBuilder<Duration?>(
       stream: audioService.durationStream,
       builder: (context, durationSnapshot) {
         final totalDuration = durationSnapshot.data ?? Duration.zero;
-
-        // Stream de posición suavizada (Inner Stream) - 60fps fluidos
+        
         return StreamBuilder<Duration>(
           stream: audioService.smoothPositionStream,
           builder: (context, positionSnapshot) {
@@ -257,43 +295,28 @@ class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> 
               currentProgress = (position.inMilliseconds / totalDuration.inMilliseconds).clamp(0.0, 1.0);
             }
             
-            // ✅ FIX CRÍTICO: Detectar cambio de canción por posición
-            // Si la posición está cerca del inicio (<5%) pero el maxProgress era alto (>20%),
-            // es muy probable que sea una nueva canción
+            // Anti-retroceso simple
             final likelyNewSong = currentProgress < 0.05 && _maxProgress > 0.2;
             if (likelyNewSong) {
               _maxProgress = currentProgress;
             }
             
-            // ✅ ANTI-RETROCESO: Solo permitir avance (tolerancia de 2% para evitar micro-saltos)
             if (currentProgress > _maxProgress) {
               _maxProgress = currentProgress;
             } else if (currentProgress < _maxProgress - 0.02) {
-              // Retroceso significativo detectado (>2%)
-              // Forzar reset si el retroceso es muy grande (>50%) o cerca del inicio
               if (_maxProgress - currentProgress > 0.5 || currentProgress < 0.05) {
                 _maxProgress = currentProgress;
               }
-              // Ignorar retrocesos menores (anti-flicker)
             }
             
-            // ✅ PROFESIONAL: TweenAnimationBuilder para transiciones suaves
+            // ✅ BARRA DIRECTA SIN ANIMACIONES INTERMEDIAS
             return SizedBox(
               height: 2,
-              child: RepaintBoundary(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: _maxProgress, end: _maxProgress),
-                  duration: const Duration(milliseconds: 150),
-                  curve: Curves.easeOut,
-                  builder: (context, value, child) {
-                    return LinearProgressIndicator(
-                      value: value,
-                      backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
-                      borderRadius: const BorderRadius.all(Radius.circular(1.0)),
-                    );
-                  },
-                ),
+              child: LinearProgressIndicator(
+                value: _maxProgress,
+                backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+                borderRadius: const BorderRadius.all(Radius.circular(1.0)),
               ),
             );
           },
