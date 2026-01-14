@@ -92,7 +92,8 @@ import { dataSourceOptions } from './database/data-source';
           type: 'postgres',
           entities,
           autoLoadEntities: true,
-          synchronize: !isProduction,
+          // Permitir sync forzado con TYPEORM_SYNC=true (útil para primer deploy)
+          synchronize: configService.get<string>('TYPEORM_SYNC') === 'true' ? true : !isProduction,
           logging: dbLogging,
           connectTimeoutMS: 30000, // 30 segundos de timeout
           extra: {
