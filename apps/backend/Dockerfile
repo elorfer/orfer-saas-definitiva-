@@ -6,9 +6,6 @@
 
 FROM node:20-bullseye-slim
 
-# Variables de entorno
-ENV NODE_ENV=production
-
 WORKDIR /app
 
 # Instalar dependencias del sistema para módulos nativos
@@ -30,16 +27,17 @@ RUN npm install -g node-gyp npm@latest
 # Copiar package files
 COPY package*.json ./
 
-# Instalar TODAS las dependencias primero (prod + dev para build)
+# Instalar TODAS las dependencias (prod + dev) - NO establecer NODE_ENV aún
 RUN npm install --unsafe-perm
 
 # Copiar código fuente
 COPY . .
 
-# Compilar la aplicación
+# Compilar la aplicación (necesita @nestjs/cli de devDependencies)
 RUN npm run build
 
-# Limpiar devDependencies después del build
+# AHORA SÍ establecer NODE_ENV y limpiar devDependencies
+ENV NODE_ENV=production
 RUN npm prune --production
 
 # Crear directorio para uploads
