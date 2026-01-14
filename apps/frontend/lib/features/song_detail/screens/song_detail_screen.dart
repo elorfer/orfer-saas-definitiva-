@@ -1518,59 +1518,21 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                                  user.subscriptionStatus == SubscriptionStatus.vip);
 
                                             if (!isPremium) {
-                                              // OPTIMIZACIÓN: Animación fluida igual que en Drawer
-                                              showGeneralDialog(
-                                                context: context,
-                                                barrierDismissible: true,
-                                                barrierLabel: 'Cerrar',
-                                                barrierColor: Colors.black54,
-                                                pageBuilder: (context, animation, secondaryAnimation) => const PremiumUpsellDialog(),
-                                                transitionBuilder: (context, animation, secondaryAnimation, child) {
-                                                  // ⚡ OPTIMIZATION LOW-END: 
-                                                  // Removed ScaleTransition (Expensive).
-                                                  // Used SlideTransition (Cheap).
-                                                  final curvedAnimation = CurvedAnimation(
-                                                    parent: animation,
-                                                    curve: Curves.easeOut,
-                                                  );
-                                                  
-                                                  return SlideTransition(
-                                                    position: Tween<Offset>(
-                                                      begin: const Offset(0, 0.1), 
-                                                      end: Offset.zero,
-                                                    ).animate(curvedAnimation),
-                                                    child: FadeTransition(
-                                                      opacity: curvedAnimation,
-                                                      child: child,
-                                                    ),
-                                                  );
-                                                },
-                                                transitionDuration: const Duration(milliseconds: 150), // Ultra Fast
-                                              );
+                                              // ⚡ OPTIMIZACIÓN: Navegación DIRECTA y fluida en lugar de diálogo pesado
+                                              context.push('/premium');
                                               return;
                                             }
 
+                                            // Lógica de descarga
+                                            final offlineNotifier = ref.read(offlineManagerProvider.notifier);
                                             if (isDownloaded) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: const Text('Canción disponible offline'),
-                                                  duration: const Duration(milliseconds: 1500),
-                                                  behavior: SnackBarBehavior.floating,
-                                                  backgroundColor: NeumorphismTheme.accent,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                ),
-                                              );
+                                              offlineNotifier.removeDownload(song.id);
                                             } else {
-                                              ref.read(offlineManagerProvider.notifier).downloadSong(song);
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: const Text('Iniciando descarga...'),
-                                                  duration: const Duration(milliseconds: 1500),
-                                                  behavior: SnackBarBehavior.floating,
-                                                  backgroundColor: NeumorphismTheme.textPrimary,
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                                ),
+                                              // Asegurar coverUrl válido
+                                              final songToDownload = song.copyWith(
+                                                coverArtUrl: UrlNormalizer.normalizeImageUrl(song.coverArtUrl),
                                               );
+                                              offlineNotifier.downloadSong(songToDownload);
                                             }
                                           },
                                         );
@@ -1578,6 +1540,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     ),
                                   ),
                                   const SizedBox(width: 12),
+                                  // Botón de Favorito - Animado
                                   Transform.translate(
                                     offset: const Offset(0, -4), // Subir más el botón
                                     child: FavoriteButton(

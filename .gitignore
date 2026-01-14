@@ -83,3 +83,6 @@ uploads/**/*
 *.bak
 
 backups/
+
+# AI Assistant temporary files
+.gemini/

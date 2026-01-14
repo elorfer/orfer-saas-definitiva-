@@ -204,35 +204,8 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     icon: Icons.download_outlined,
                     label: 'Descargas',
                     onTap: () {
-                      if (isPremium || hasDownloads) {
-                        context.push('/downloads');
-                      } else {
-                        showGeneralDialog(
-                          context: context,
-                          barrierDismissible: true,
-                          barrierLabel: 'Cerrar',
-                          barrierColor: Colors.black54,
-                          pageBuilder: (context, animation, secondaryAnimation) => const PremiumUpsellDialog(),
-                          transitionBuilder: (context, animation, secondaryAnimation, child) {
-                            final curvedAnimation = CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOut,
-                            );
-                            
-                            return SlideTransition(
-                              position: Tween<Offset>(
-                                begin: const Offset(0, 0.1),
-                                end: Offset.zero,
-                              ).animate(curvedAnimation),
-                              child: FadeTransition(
-                                opacity: curvedAnimation,
-                                child: child,
-                              ),
-                            );
-                          },
-                          transitionDuration: const Duration(milliseconds: 150),
-                        );
-                      }
+                      // ✅ Navegar siempre a descargas. El manejo de Offline/Premium se hará en la pantalla.
+                      context.push('/downloads');
                     },
                     textColor: textColorPrimary,
                     iconColor: iconColor,

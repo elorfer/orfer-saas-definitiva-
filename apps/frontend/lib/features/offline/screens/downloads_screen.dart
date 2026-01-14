@@ -7,6 +7,9 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/utils/logger.dart'; // ✅ Importar AppLogger
 
+import '../../../core/providers/auth_provider.dart';
+import '../../../core/models/user_model.dart';
+
 class DownloadsScreen extends ConsumerStatefulWidget {
   const DownloadsScreen({super.key});
 
@@ -20,6 +23,12 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Verificar estado Premium
+    final user = ref.watch(authStateProvider.select((state) => state.user));
+    final isPremium = user != null &&
+        (user.subscriptionStatus == SubscriptionStatus.premium ||
+         user.subscriptionStatus == SubscriptionStatus.vip);
+
     final offlineState = ref.watch(offlineManagerProvider);
     final songs = offlineState.downloadedSongs.values.toList();
 
@@ -63,140 +72,204 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
             ),
         ],
       ),
-      body: songs.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.download_done_rounded, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'No hay descargas',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Descarga música para escuchar sin conexión',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100), // ✅ Padding bottom para MiniPlayer
-              itemCount: songs.length,
-              itemBuilder: (context, index) {
-                final song = songs[index];
-                return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Container(
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: NeumorphismTheme.softShadow,
-                        ),
-                        child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: OptimizedImage(
-                                    imageUrl: song.coverArtUrl,
-                                    width: 50,
-                                    height: 50,
-                                    fit: BoxFit.cover,
-                                ),
-                            ),
-                            title: Text(
-                                song.title ?? 'Sin título',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(
-                                song.artist?.displayName ?? 'Desconocido',
-                                maxLines: 1,
-                                style: const TextStyle(fontSize: 12),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                  // ▶️ Botón Play/Pause (Dinámico)
-                                  IconButton(
-                                    // Feedback visual: Si es la canción actual y está sonando, mostrar Pausa
-                                    icon: Icon(
-                                      (ref.watch(playbackNotifierProvider).isPlaying && ref.watch(playbackNotifierProvider).currentSong?.id == song.id)
-                                          ? Icons.pause_circle_filled
-                                          : Icons.play_circle_fill,
-                                      color: NeumorphismTheme.accent,
-                                      size: 32,
-                                    ),
-                                    tooltip: (ref.watch(playbackNotifierProvider).isPlaying && ref.watch(playbackNotifierProvider).currentSong?.id == song.id)
-                                        ? 'Pausar'
-                                        : 'Reproducir ahora',
-                                    // 🛡️ Prevenir doble tap
-                                    onPressed: () async {
-                                      if (_isNavigating) return;
-                                      
-                                      final notifier = ref.read(playbackNotifierProvider.notifier);
-                                      final isPlayingCurrent = ref.read(playbackNotifierProvider).isPlaying && 
-                                                              ref.read(playbackNotifierProvider).currentSong?.id == song.id;
+      body: Column(
+        children: [
+          // 📢 Banner Premium (Solo si NO es premium)
+          if (!isPremium)
+            _buildPremiumBanner(),
 
-                                      if (isPlayingCurrent) {
-                                        notifier.play();
-                                      } else {
-                                        await notifier.playOfflineQueue(
-                                          songs,
-                                          initialIndex: index,
-                                          autoPlay: true, 
-                                        );
-                                      }
-                                    },
-                                  ),
-                                // 🗑️ Botón Eliminar
-                                IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                                    tooltip: 'Eliminar descarga',
-                                    onPressed: () {
-                                      if (_isNavigating) return;
-                                      ref.read(offlineManagerProvider.notifier).removeDownload(song.id);
-                                    },
-                                ),
-                              ],
+          Expanded(
+            child: songs.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.download_done_rounded, size: 64, color: Colors.grey[300]),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No hay descargas',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Descarga música para escuchar sin conexión',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100), // ✅ Padding bottom para MiniPlayer
+                  itemCount: songs.length,
+                  itemBuilder: (context, index) {
+                    final song = songs[index];
+                    return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: NeumorphismTheme.softShadow,
                             ),
-                            onTap: () async {
-                              if (_isNavigating) return;
-                              // Tocar el item abre la info (Preview) sin reproducir automáticamente
-                              setState(() => _isNavigating = true);
-                              try {
-                                await ref.read(playbackNotifierProvider.notifier).playOfflineQueue(
-                                  songs,
-                                  initialIndex: index,
-                                  autoPlay: false, // ✅ NO reproducir automáticamente (Preview Mode)
-                                );
-                                if (mounted) {
-                                  // 🚀 Navegar SIN esperar
-                                  context.push('/downloads/song/${song.id}', extra: song);
-                                }
-                              } catch (e) {
-                                AppLogger.error('Error opening song detail: $e');
-                                if (mounted) {
-                                   ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                                   );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  // 🔓 Liberar lock INMEDIATAMENTE para permitir interacción rápida
-                                  // Ya no esperamos a que termine la animación de navegación
-                                  setState(() => _isNavigating = false);
-                                }
-                              }
-                            },
+                            child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                leading: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: OptimizedImage(
+                                        imageUrl: song.coverArtUrl,
+                                        width: 50,
+                                        height: 50,
+                                        fit: BoxFit.cover,
+                                    ),
+                                ),
+                                title: Text(
+                                    song.title ?? 'Sin título',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                subtitle: Text(
+                                    song.artist?.displayName ?? 'Desconocido',
+                                    maxLines: 1,
+                                    style: const TextStyle(fontSize: 12),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                      // ▶️ Botón Play/Pause (Dinámico)
+                                      IconButton(
+                                        // Feedback visual: Si es la canción actual y está sonando, mostrar Pausa
+                                        icon: Icon(
+                                          (ref.watch(playbackNotifierProvider).isPlaying && ref.watch(playbackNotifierProvider).currentSong?.id == song.id)
+                                              ? Icons.pause_circle_filled
+                                              : Icons.play_circle_fill,
+                                          color: NeumorphismTheme.accent,
+                                          size: 32,
+                                        ),
+                                        tooltip: (ref.watch(playbackNotifierProvider).isPlaying && ref.watch(playbackNotifierProvider).currentSong?.id == song.id)
+                                            ? 'Pausar'
+                                            : 'Reproducir ahora',
+                                        // 🛡️ Prevenir doble tap
+                                        onPressed: () async {
+                                          if (_isNavigating) return;
+                                          
+                                          final notifier = ref.read(playbackNotifierProvider.notifier);
+                                          final isPlayingCurrent = ref.read(playbackNotifierProvider).isPlaying && 
+                                                                  ref.read(playbackNotifierProvider).currentSong?.id == song.id;
+
+                                          if (isPlayingCurrent) {
+                                            notifier.play();
+                                          } else {
+                                            await notifier.playOfflineQueue(
+                                              songs,
+                                              initialIndex: index,
+                                              autoPlay: true, 
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    // 🗑️ Botón Eliminar
+                                    IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                                        tooltip: 'Eliminar descarga',
+                                        onPressed: () {
+                                          if (_isNavigating) return;
+                                          ref.read(offlineManagerProvider.notifier).removeDownload(song.id);
+                                        },
+                                    ),
+                                  ],
+                                ),
+                                onTap: () async {
+                                  if (_isNavigating) return;
+                                  // Tocar el item abre la info (Preview) sin reproducir automáticamente
+                                  setState(() => _isNavigating = true);
+                                  try {
+                                    await ref.read(playbackNotifierProvider.notifier).playOfflineQueue(
+                                      songs,
+                                      initialIndex: index,
+                                      autoPlay: false, // ✅ NO reproducir automáticamente (Preview Mode)
+                                    );
+                                    if (mounted) {
+                                      // 🚀 Navegar SIN esperar
+                                      context.push('/downloads/song/${song.id}', extra: song);
+                                    }
+                                  } catch (e) {
+                                    AppLogger.error('Error opening song detail: $e');
+                                    if (mounted) {
+                                       ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                                       );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      // 🔓 Liberar lock INMEDIATAMENTE para permitir interacción rápida
+                                      // Ya no esperamos a que termine la animación de navegación
+                                      setState(() => _isNavigating = false);
+                                    }
+                                  }
+                                },
+                            ),
                         ),
-                    ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Banner Premium
+  Widget _buildPremiumBanner() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: NeumorphismTheme.coffeeMedium,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+             color: Colors.black.withValues(alpha: 0.1),
+             blurRadius: 8,
+             offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+           const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 28),
+           const SizedBox(width: 12),
+           Expanded(
+             child: Column(
+               crossAxisAlignment: CrossAxisAlignment.start,
+               children: [
+                 const Text(
+                   'Modo Offline Premium',
+                   style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
+                 ),
+                 Text(
+                   'Suscríbete para descargar música ilimitada.',
+                   style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+                 ),
+               ],
+             ),
+           ),
+           TextButton(
+             onPressed: () => context.push('/premium'),
+             style: TextButton.styleFrom(
+               backgroundColor: Colors.white,
+               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+               minimumSize: Size.zero,
+               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+             ),
+             child: Text(
+               'Ver Planes',
+               style: TextStyle(color: NeumorphismTheme.coffeeMedium, fontWeight: FontWeight.bold, fontSize: 12),
+             ),
+           ),
+        ],
+      ),
     );
   }
 }

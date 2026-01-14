@@ -311,12 +311,27 @@ class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> 
               _maxProgress = currentProgress;
             }
             
-            if (currentProgress > _maxProgress) {
+            // 🏆 PRO-LEVEL JITTER FILTER: Time-Based (not percentage-based)
+            // Esto garantiza precisión absoluta en canciones de cualquier duración.
+            
+            // Convertir a milisegundos para comparación precisa
+            final currentMs = position.inMilliseconds;
+            final maxMs = (_maxProgress * totalDuration.inMilliseconds).round();
+            
+            // 1. Si avanzamos, siempre actualizamos
+            if (currentMs >= maxMs) {
               _maxProgress = currentProgress;
-            } else if (currentProgress < _maxProgress - 0.02) {
-              if (_maxProgress - currentProgress > 0.5 || currentProgress < 0.05) {
-                _maxProgress = currentProgress;
+            } 
+            // 2. Si retrocedemos, usamos umbral de tiempo (250ms)
+            else {
+              final diffMs = maxMs - currentMs;
+              
+              // Si el salto es mayor a 250ms, es un SEEK intencional (o loop).
+              // Si es menor, es JITTER técnico del stream y lo ignoramos.
+              if (diffMs > 250) {
+                 _maxProgress = currentProgress;
               }
+              // else: ignorar jitter, mantener _maxProgress anterior
             }
             
             // ✅ ANIMACIÓN SUAVE: Usar TweenAnimationBuilder para interpolar el progreso

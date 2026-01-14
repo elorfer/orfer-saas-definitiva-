@@ -31,6 +31,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   with AutomaticKeepAliveClientMixin {
   bool _isLoaded = false;
   double? _cachedStatusBarHeight;
+  
+  // 🔥 THROTTLE: Prevenir refreshes repetitivos
+  DateTime? _lastRefreshTime;
+  static const _refreshCooldown = Duration(seconds: 3);
 
   // 🚀 OPTIMIZATION: Static overlay style to prevent object creation per-frame
   static final SystemUiOverlayStyle _overlayStyle = SystemUiOverlayStyle.dark.copyWith(
@@ -145,6 +149,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               // 🚀 CAPA 1: Contenido scrolleable
               RefreshIndicator(
                 onRefresh: () async {
+                    // 🔥 THROTTLE: Evitar refreshes repetitivos (cooldown de 3 segundos)
+                    final now = DateTime.now();
+                    if (_lastRefreshTime != null && 
+                        now.difference(_lastRefreshTime!) < _refreshCooldown) {
+                      return; // Ignorar refresh si fue hace menos de 3 segundos
+                    }
+                    _lastRefreshTime = now;
+                    
                     final isLoading = ref.read(
                       homeStateProvider.select((state) => state.isLoading),
                     );

@@ -140,6 +140,9 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
   String? _flagEmoji;
   bool _isAdmin = false; // Cachear estado de admin
   
+  // ✅ Estado local para el conteo de seguidores (actualización optimista)
+  int _localFollowersCount = 0;
+  
   // Cachear dimensiones de pantalla para evitar recálculos
   double? _cachedScreenWidth;
   double? _cachedCoverHeight;
@@ -208,7 +211,10 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     // Cargar artistas seguidos al inicializar (si está autenticado)
     if (currentUser != null) {
       Future.microtask(() {
-        ref.read(followProvider.notifier).loadFollowedArtists();
+        final notifier = ref.read(followProvider.notifier);
+        notifier.loadFollowedArtists();
+        // ✅ CRÍTICO: Verificar estado específico de ESTE artista inmediatamente para evitar falsos negativos
+        notifier.syncArtistStatus(widget.artist.id);
       });
     }
     _isAdmin = currentUser?.isAdmin == true;
@@ -237,6 +243,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         _nationality = cachedData['nationality'] as String?;
         _phone = cachedData['phone'] as String?;
         _flagEmoji = cachedData['flagEmoji'] as String?;
+        // ✅ CRÍTICO: Restaurar contador de seguidores desde caché
+        _localFollowersCount = cachedData['localFollowersCount'] as int? ?? widget.artist.totalFollowers;
         _hasLoadedOnce = true;
         // NO mostrar loading si tenemos datos en caché
       } else {
@@ -433,6 +441,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     _flagEmoji = _nationality != null ? _calculateFlagEmoji(_nationality!) : null;
     _bio = '';
     _phone = null;
+    _localFollowersCount = artist.totalFollowers; // ✅ Inicializar conteo local
   }
 
   // Actualizar valores calculados cuando llegan los detalles
@@ -472,7 +481,35 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                    const <String, dynamic>{};
     _phone = (social['phone'] as String?)?.trim();
     
+    // ✅ Actualizar conteo con datos frescos del servidor
+    // ✅ Actualizar conteo con datos frescos del servidor
+    final serverFollowers = (_details?['totalFollowers'] as int?) ?? 
+                           (_details?['total_followers'] as int?);
+                           
+    if (serverFollowers != null) {
+       _localFollowersCount = serverFollowers;
+    } else if (_localFollowersCount == 0) {
+       // Si el detalle no trajo seguidores, mantener el valor original del objeto artista
+       _localFollowersCount = artist.totalFollowers;
+    }
+    
     // Los widgets se reconstruirán automáticamente cuando cambien los datos
+  }
+
+  // ✅ Callback para actualizar el conteo localmente al pulsar seguir
+  void _handleFollowToggle() {
+    // El provider ya se actualizó en FollowButton, leemos el nuevo estado
+    final isFollowing = ref.read(followProvider).isFollowing(widget.artist.id);
+    
+    if (mounted) {
+      setState(() {
+        if (isFollowing) {
+          _localFollowersCount++;
+        } else {
+          if (_localFollowersCount > 0) _localFollowersCount--;
+        }
+      });
+    }
   }
 
   // 🔥 OPTIMIZACIÓN: Pre-cachear imágenes iniciales usando LazyImageLoader (como en Home)
@@ -648,6 +685,8 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         'nationality': _nationality,
         'phone': _phone,
         'flagEmoji': _flagEmoji,
+        // ✅ CRÍTICO: Guardar contador de seguidores en caché
+        'localFollowersCount': _localFollowersCount,
       };
       
       // Limpiar caché antiguo periódicamente (solo si hay muchas entradas)
@@ -983,9 +1022,9 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                       // Número de seguidores
                       Builder(
                         builder: (context) {
-                          final totalFollowers = (_details?['totalFollowers'] as int?) ?? 
-                                                (_details?['total_followers'] as int?) ??
-                                                widget.artist.totalFollowers;
+                          // ✅ Usar estado local actualizado
+                          final totalFollowers = _localFollowersCount;
+                          
                           if (totalFollowers > 0) {
                             final followerText = totalFollowers == 1 ? 'seguidor' : 'seguidores';
                             return Text.rich(
@@ -1020,6 +1059,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
                         alignment: Alignment.centerLeft,
                         child: FollowButton(
                           artistId: widget.artist.id,
+                          onToggle: _handleFollowToggle, // ✅ Conectar callback para actualizar contador
                           width: 85.0, // Reducido de 95 a 85
                           height: 28.0, // Reducido de 32 a 28
                         ),

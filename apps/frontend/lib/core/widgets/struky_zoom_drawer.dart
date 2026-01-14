@@ -152,8 +152,9 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                               // Definir el umbral según la intención (dirección)
                               double snapThreshold;
                               if (_isOpeningDirection) {
-                                // "Para ABRIR sea LA MITAD DEL DRAWER"
-                                snapThreshold = maxSlide * 0.5;
+                                // ✅ FIX: Umbral reducido al 30% para que sea MÁS FÁCIL abrir
+                                // Antes 50% requería arrastrar mucho. Ahora con un pequeño arrastre ya se abre.
+                                snapThreshold = maxSlide * 0.3;
                               } else {
                                 // "Para CERRAR se toma LA MITAD DE LA PANTALLA"
                                 snapThreshold = (screenWidth * 0.5).clamp(50.0, maxSlide - 10.0);
@@ -203,7 +204,7 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                               
                               double snapThreshold;
                               if (_isOpeningDirection) {
-                                snapThreshold = maxSlide * 0.5;
+                                snapThreshold = maxSlide * 0.3; // ✅ 30% para abrir fácil
                               } else {
                                 snapThreshold = (screenWidth * 0.5).clamp(50.0, maxSlide - 10.0);
                               }

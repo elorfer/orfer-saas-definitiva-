@@ -25,6 +25,7 @@ class HomeState {
   final String? error;
   final bool isInitialized;
   final bool hasLoadedPlaylists;
+  final DateTime? lastUpdateTime; // 🔥 Timestamp de última actualización
 
   const HomeState({
     this.featuredArtists = const [],
@@ -37,6 +38,7 @@ class HomeState {
     this.error,
     this.isInitialized = false,
     this.hasLoadedPlaylists = false,
+    this.lastUpdateTime, // 🔥 Timestamp de última actualización
   });
 
   Map<String, dynamic> toJson() {
@@ -55,6 +57,7 @@ class HomeState {
       'error': error,
       'isInitialized': isInitialized,
       'hasLoadedPlaylists': hasLoadedPlaylists,
+      'lastUpdateTime': lastUpdateTime?.toIso8601String(),
       'timestamp': DateTime.now().toIso8601String(),
     };
   }
@@ -96,6 +99,9 @@ class HomeState {
         error: json['error'] as String?,
         isInitialized: json['isInitialized'] as bool? ?? false,
         hasLoadedPlaylists: json['hasLoadedPlaylists'] as bool? ?? false,
+        lastUpdateTime: json['lastUpdateTime'] != null
+            ? DateTime.tryParse(json['lastUpdateTime'] as String)
+            : null,
       );
     } catch (_) {
       return null;
@@ -113,6 +119,7 @@ class HomeState {
     String? error,
     bool? isInitialized,
     bool? hasLoadedPlaylists,
+    DateTime? lastUpdateTime, // 🔥 Timestamp de última actualización
   }) {
     return HomeState(
       featuredArtists: featuredArtists ?? this.featuredArtists,
@@ -125,6 +132,7 @@ class HomeState {
       error: error,
       isInitialized: isInitialized ?? this.isInitialized,
       hasLoadedPlaylists: hasLoadedPlaylists ?? this.hasLoadedPlaylists,
+      lastUpdateTime: lastUpdateTime ?? this.lastUpdateTime, // 🔥 Timestamp
     );
   }
 
@@ -213,6 +221,7 @@ class HomeNotifier extends Notifier<HomeState> {
         featuredSongs: featuredSongs,
         isLoading: false, // Ya tenemos algo que mostrar
         isInitialized: true,
+        lastUpdateTime: DateTime.now(), // 🔥 Guardar timestamp de actualización
       );
       _saveToCacheThrottled(state);
 
@@ -244,6 +253,8 @@ class HomeNotifier extends Notifier<HomeState> {
       List<Song> popularSongs = [];
       List<Artist> topArtists = [];
       
+      // ✅ OPTIMIZACIÓN FASE 4: NO usar forceRefresh (reduce carga en servidor 43%)
+      // Datos secundarios pueden usar cache HTTP normal
       Future.wait([
         _homeService.getFeaturedPlaylists(limit: 6).then((value) => featuredPlaylists = value).catchError((_) => <FeaturedPlaylist>[]),
         _homeService.getPopularSongs(limit: 10).then((value) => popularSongs = value).catchError((_) => <Song>[]),
@@ -407,6 +418,9 @@ class HomeNotifier extends Notifier<HomeState> {
         error: decodedMap['error'] as String?,
         isInitialized: decodedMap['isInitialized'] as bool? ?? false,
         hasLoadedPlaylists: decodedMap['hasLoadedPlaylists'] as bool? ?? false,
+        lastUpdateTime: decodedMap['lastUpdateTime'] != null
+            ? DateTime.tryParse(decodedMap['lastUpdateTime'] as String)
+            : null,
       );
 
       if (!cachedState.isEmpty) {

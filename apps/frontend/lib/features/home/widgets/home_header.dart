@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/home_provider.dart';
 import '../../../core/providers/theme_provider.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
+import '../../../core/utils/time_ago_formatter.dart';
 
 import '../../../core/widgets/struky_zoom_drawer.dart';
-/// Widget del header scrolleable (avatar, bienvenido, nombre, logo)
+/// Widget del header scrolleable (avatar, bienvenido, nombre, logo, última actualización)
 /// Extracted for performance isolation and cleaner HomeScreen code.
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
@@ -20,13 +22,16 @@ class HomeHeader extends ConsumerWidget {
     // Solo observar firstName, no isLoading (evita rebuilds innecesarios)
     final userFirstName = ref.watch(currentUserProvider.select((u) => u?.firstName));
     
+    // 🔥 NUEVO: Obtener timestamp de última actualización
+    final lastUpdateTime = ref.watch(homeStateProvider.select((state) => state.lastUpdateTime));
+    
     // ⚡ OPTIMIZACIÓN: Remover watch de isLoading - solo se usa para skeleton inicial
     final isLoading = userFirstName == null;
     
     // OPTIMIZACIÓN: RepaintBoundary para aislar el header y evitar rebuilds innecesarios
     return RepaintBoundary(
       child: SizedBox(
-        height: 64, // ✅ Altura fija para evitar saltos de layout
+        height: 74, // ✅ Altura aumentada para timestamp (era 64)
         child: isLoading
             ? _buildHeaderSkeleton()
             : Row(
@@ -79,6 +84,19 @@ class HomeHeader extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        // 🔥 NUEVO: Mostrar timestamp de última actualización
+                        if (lastUpdateTime != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            TimeAgoFormatter.format(lastUpdateTime),
+                            style: AppTextStyles.welcomeText.copyWith(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
                     ),
                   ),

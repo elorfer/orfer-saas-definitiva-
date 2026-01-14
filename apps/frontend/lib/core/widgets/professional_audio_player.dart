@@ -543,37 +543,37 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                 children: [
                                   // ✅ FASE 5: Mostrar título del anuncio o de la canción
                                   // ✅ NUEVO: Agregar etiqueta "AD" al lado del título del anuncio
-                                  isPlayingAd && currentAd != null
-                                      ? Row(
-                                          crossAxisAlignment: CrossAxisAlignment.center,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                currentAd.title,
-                                                style: _adTitleStyle,
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.8),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                'AD',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Colors.white,
-                                                  letterSpacing: 0.5,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        )
+                                          isPlayingAd && currentAd != null
+                                              ? Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    Flexible(
+                                                      child: Text(
+                                                        currentAd.title,
+                                                        style: _adTitleStyle,
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.8),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        'AD',
+                                                        style: GoogleFonts.inter(
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.w700,
+                                                          color: Colors.white,
+                                                          letterSpacing: 0.5,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
                                       : Text(
                                           currentSong?.title ?? 'Sin título',
                                           style: _titleStyle,
@@ -635,7 +635,9 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                       // 🛑 BLOQUEO: Deshabilitar controles durante anuncios
                       Consumer(
                         builder: (context, ref, child) {
-                          final isPlayingAd = ref.watch(
+                          // ✅ FIX: Combinar conocimiento local (widget.ad) con estado del provider
+                          // para garantizar bloqueo INMEDIATO si el widget ya está mostrando un anuncio.
+                          final bool isPlayingAd = (widget.ad != null) || ref.watch(
                             unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
                           );
                           
@@ -1051,7 +1053,7 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
                 _lastSeekTime = DateTime.now();
                 setState(() => _isDraggingSeek = true);
               },
-              onSeekEnd: (position) {
+              onSeekEnd: (position) async {
                 // Debounce breve para evitar mezclar eventos muy rápidos
                 final now = DateTime.now();
                 if (_lastSeekTime != null && now.difference(_lastSeekTime!) < const Duration(milliseconds: 120)) {
@@ -1063,10 +1065,15 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
                   return;
                 }
 
-                setState(() {
-                  _isDraggingSeek = false;
-                  _dragPosition = null;
-                });
+                // EJECTUAR SEEK REALMENTE
+                await ref.read(unifiedAudioProviderFixed.notifier).seek(position);
+
+                if (mounted) {
+                  setState(() {
+                    _isDraggingSeek = false;
+                    _dragPosition = null;
+                  });
+                }
               },
               onSeekChange: (position) {
                 // Ignorar cambios de seek si la canción ya cambió
