@@ -178,47 +178,67 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             left: 0,
             right: 0,
             child: RepaintBoundary(
-              child: AnimatedCrossFade(
-                duration: const Duration(milliseconds: 200), // Transición rápida
-                // ✅ FIX DESYNC: Solo mostrar AdsMiniPlayer si AMBOS flags están activos
-                // isPlayingAd indica el estado lógico, currentAd != null verifica que hay datos
-                crossFadeState: (isPlayingAd && playbackState.currentAd != null)
-                    ? CrossFadeState.showFirst 
-                    : CrossFadeState.showSecond,
-                firstChild: AdsMiniPlayer(
-                  onTap: () {
-                    try {
-                      final audioState = ref.read(unifiedAudioProviderFixed);
-                      // ✅ FIX: Verificar que el reproductor no esté ya expandido
-                      if (!audioState.isPlayerExpanded) {
-                        PlayerNavigationService.openFullPlayer(
-                          context: context,
-                          ref: ref,
-                        );
-                      }
-                    } catch (e) {
-                      AppLogger.error('[PersistentNavigation] Error abriendo player desde ad: $e');
-                    }
-                  },
-                ),
-                secondChild: FinalMiniPlayer(
-                  onTap: () {
-                    try {
-                      final audioState = ref.read(unifiedAudioProviderFixed);
-                      if (audioState.currentSong != null && 
-                          !audioState.isPlayerExpanded) {
-                        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                        if (context.mounted) {
-                          context.push('/player');
-                        }
-                      }
-                    } catch (e) {
-                      AppLogger.error('[PersistentNavigation] Error: $e');
-                    }
-                  },
-                ),
-                // ✅ OPTIMIZACIÓN: Mantener el tamaño del más grande para evitar saltos
-                sizeCurve: Curves.easeInOut,
+              // ✅ PREMIUM TRANSITION: Usar AnimatedSwitcher con transición personalizada
+              // Esto da una sensación más fluida y profesional tipo Spotify/Apple Music
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400), // ✅ Transición más suave
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                // ✅ TRANSICIÓN PERSONALIZADA: Fade + Slide para efecto premium
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  // Slide desde abajo al entrar
+                  final offsetAnimation = Tween<Offset>(
+                    begin: const Offset(0.0, 0.1), // Sutil movimiento desde abajo
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ));
+                  
+                  // Fade in/out
+                  return SlideTransition(
+                    position: offsetAnimation,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+                // ✅ KEY ÚNICO: Cambiar key cuando cambia entre Ad y Song para forzar animación
+                child: (isPlayingAd && playbackState.currentAd != null)
+                    ? AdsMiniPlayer(
+                        key: const ValueKey('ad_mini_player'),
+                        onTap: () {
+                          try {
+                            final audioState = ref.read(unifiedAudioProviderFixed);
+                            if (!audioState.isPlayerExpanded) {
+                              PlayerNavigationService.openFullPlayer(
+                                context: context,
+                                ref: ref,
+                              );
+                            }
+                          } catch (e) {
+                            AppLogger.error('[PersistentNavigation] Error abriendo player desde ad: $e');
+                          }
+                        },
+                      )
+                    : FinalMiniPlayer(
+                        key: const ValueKey('song_mini_player'),
+                        onTap: () {
+                          try {
+                            final audioState = ref.read(unifiedAudioProviderFixed);
+                            if (audioState.currentSong != null && 
+                                !audioState.isPlayerExpanded) {
+                              ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+                              if (context.mounted) {
+                                context.push('/player');
+                              }
+                            }
+                          } catch (e) {
+                            AppLogger.error('[PersistentNavigation] Error: $e');
+                          }
+                        },
+                      ),
               ),
             ),
           ),

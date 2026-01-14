@@ -84,6 +84,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   int _songsPlayedCount = 0; // Contador de canciones reproducidas
   int _adFrequencyFromAdmin = 3; // Frecuencia de anuncios cargada desde el admin (default 3)
   bool _isTransitioningFromAd = false; // Flag para evitar reseteos de posición durante transición
+  DateTime? _lastAdTransitionTime; // 🛡️ HISTORY SHIELD: Timestamp de última transición de anuncio (manual skip)
+  bool _isFreezingUI = false; // ❄️ HARD FREEZE: Flag para congelar completamente la UI durante operaciones críticas
+
   
   // Prefetch para transición playlist -> algoritmo (evitar espera  // Cache para warm-up de algoritmo
   List<Song>? _prefetchedInitialSongs;
@@ -289,8 +292,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   }
   
   bool _subscriptionsPaused = false;
-  // ❄️ HARD FREEZE: Flag para congelar totalmente la UI durante operaciones delicadas (inserción de anuncios)
-  bool _isFreezingUI = false;
 
   /// 🚀 INSTANT PLAY: Precarga inteligente para inicio inmediato
   /// Estrategia: "Local-First" -> Buscar en disco, si no, red.
@@ -640,18 +641,28 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
 
       if (index != null && state.currentQueue.isNotEmpty && index < state.currentQueue.length) {
-        // Ignorar si el índice es el mismo y la canción es la misma
-        if (index == state.currentIndex && 
-            state.currentSong?.id == state.currentQueue[index].id) {
-          return;
-        }
-
         // 🛡️ PROTECCIÓN: Si se está reemplazando la cola o congelado, ignorar
         if (_isReplacingQueue || _isFreezingUI) return;
 
-        AppLogger.info('[PlaybackNotifier] 🔑 Master Key triggered: Índice cambió a $index');
+        // ✅ FIX CRÍTICO: Obtener canción del TAG del reproductor, NO del índice de la cola
+        // La cola interna puede estar desfasada debido a operaciones de pre-carga o deduplicación
+        final sequenceState = service.player.sequenceState;
+        final currentSource = sequenceState?.currentSource;
         
-        final newSong = state.currentQueue[index];
+        // Verificar que el source actual sea una canción
+        if (currentSource == null || currentSource.tag is! Song) {
+          AppLogger.debug('[PlaybackNotifier] 🔑 Master Key: Source no es una canción, ignorando');
+          return;
+        }
+        
+        final newSong = currentSource.tag as Song;
+        
+        // Ignorar si el índice es el mismo y la canción es la misma
+        if (index == state.currentIndex && state.currentSong?.id == newSong.id) {
+          return;
+        }
+
+        AppLogger.info('[PlaybackNotifier] 🔑 Master Key triggered: Índice cambió a $index');
         
         // FORZAR actualización del estado y asegurar limpieza de flags de anuncio
         state = state.copyWith(
@@ -665,7 +676,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         );
         
         // Registrar cambio
-        AppLogger.info('[PlaybackNotifier] ✅ Estado sincronizado por índice a: ${newSong.title}');
+        AppLogger.info('[PlaybackNotifier] ✅ Estado sincronizado por índice a: ${newSong.title} (TAG del reproductor)');
         
         // 🚀 WARM-UP: Verificar precarga
         _maybePrefetchAlgorithm(service.player.sequenceState);
@@ -728,15 +739,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
                AppLogger.warning('[PlaybackNotifier] No se pudo notificar al Reporter: $e');
             }
             
-            // ✅ FIX CRÍTICO: Registrar estadísticas ANTES de limpiar
-            if (state.currentAd != null) {
-               AppLogger.info('[PlaybackNotifier] 🛡️ EXIT GUARD: Logueando anuncio desde Exit Guard: ${state.currentAd?.title}');
-               // Usar unawaited o fire-and-forget para no bloquear el listener
-               // Llamamos a _handleAdCompletion con wasSkipped=false (asumimos completado si avanzó solo)
-               // Si fue skipped manualmente, skipAd() ya lo manejó y limpió el estado antes de llegar aquí.
-               _handleAdCompletion(state.currentAd!, false);
-            }
-
             // Paso 1: Limpiar flags de instancia
             _isInsertingAd = false;
             _isHandlingAdInsertion = false;
@@ -750,7 +752,12 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
                                      : Duration.zero);
             final newSongPosition = _service?.player.position ?? Duration.zero;
             
+            // Capturar referencia al anuncio antes de limpiar
+            final adToLog = state.currentAd;
+
             // Paso 3: Actualizar estado con TODOS los campos limpios
+            // 🛑 FIX: Actualizar estado PRIMERO para evitar que _handleAdCompletion
+            // use información obsoleta del getter de sequenceState
             state = state.copyWith(
               isPlayingAd: false,
               clearCurrentAd: true,
@@ -762,6 +769,18 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
             );
             
             AppLogger.info('[PlaybackNotifier] 🛡️ EXIT GUARD COMPLETO: isPlayingAd=false, currentAd=null, isInsertingAd=false, canción=${songAtCurrentIndex.title}');
+
+            // ✅ FIX CRÍTICO: Registrar estadísticas DESPUÉS de limpiar
+            // Al hacerlo después, _handleAdCompletion verá isPlayingAd=false y no intentará
+            // sobrescribir nuestro estado con data obsoleta del getter
+            if (adToLog != null) {
+               AppLogger.info('[PlaybackNotifier] 🛡️ EXIT GUARD: Logueando anuncio desde Exit Guard: ${adToLog.title}');
+               // Usar unawaited o fire-and-forget para no bloquear el listener
+               _handleAdCompletion(adToLog, false);
+            }
+            
+            // ✅ FIX: Marcar transición de anuncio para bloquear historial transitorio
+            _lastAdTransitionTime = DateTime.now();
             
             // Paso 4: Sincronizar y terminar - NO procesar más lógica
             _syncQueueWithAudioService(sequenceState, forceSync: true);
@@ -1285,21 +1304,29 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
 
         // 🎯 CRÍTICO: Guardar en historial SIEMPRE que cambie la canción (manual o automática)
         // Hacer esto ANTES del if(shouldUpdate) para capturar todas las transiciones
+        // 🛡️ PROTECCIÓN POST-ANUNCIO: NO guardar si acabamos de salir de un anuncio
         if (!isSameSong && currentSong.id.isNotEmpty) {
-          try {
-            AppLogger.info('[PlaybackNotifier] 💾 AUTO-GUARDANDO en historial (transición automática): ${currentSong.title}');
-            ref.read(playHistoryProvider.notifier).addToHistory(currentSong);
-            
-            // Verificar que se guardó
-            final historyAfter = ref.read(playHistoryProvider);
-            if (historyAfter.isNotEmpty && historyAfter.last.id == currentSong.id) {
-              AppLogger.success('[PlaybackNotifier] ✅ Canción AUTO-guardada exitosamente: ${currentSong.title} (Total: ${historyAfter.length})');
-            } else {
-              AppLogger.warning('[PlaybackNotifier] ⚠️ AUTO-guardado falló - diagnóstico...');
-              ref.read(playHistoryProvider.notifier).debugHistoryStatus();
+          // 🛡️ CRITICAL FIX: Bloquear guardado durante transiciones de anuncio
+          if (_lastAdTransitionTime != null && 
+              DateTime.now().difference(_lastAdTransitionTime!) < const Duration(seconds: 3)) {
+             AppLogger.debug('[PlaybackNotifier] 🛡️ AUTO-guardado bloqueado por transición de anuncio reciente');
+             // NO guardar - la canción puede ser transitoria/incorrecta
+          } else {
+            try {
+              AppLogger.info('[PlaybackNotifier] 💾 AUTO-GUARDANDO en historial (transición automática): ${currentSong.title}');
+              ref.read(playHistoryProvider.notifier).addToHistory(currentSong);
+              
+              // Verificar que se guardó
+              final historyAfter = ref.read(playHistoryProvider);
+              if (historyAfter.isNotEmpty && historyAfter.last.id == currentSong.id) {
+                AppLogger.success('[PlaybackNotifier] ✅ Canción AUTO-guardada exitosamente: ${currentSong.title} (Total: ${historyAfter.length})');
+              } else {
+                AppLogger.warning('[PlaybackNotifier] ⚠️ AUTO-guardado falló - diagnóstico...');
+                ref.read(playHistoryProvider.notifier).debugHistoryStatus();
+              }
+            } catch (e) {
+              AppLogger.error('[PlaybackNotifier] ❌ Error AUTO-guardando: $e');
             }
-          } catch (e) {
-            AppLogger.error('[PlaybackNotifier] ❌ Error AUTO-guardando: $e');
           }
         }
 
@@ -4871,6 +4898,26 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     _isTransitioning = true;
     
     try {
+      // ❄️ HARD FREEZE: Congelar COMPLETAMENTE la UI antes de cualquier operación
+      // Esto previene que el Mini Player muestre información transitoria durante el skip manual
+      AppLogger.info('[PlaybackNotifier] ❄️ Activando HARD FREEZE para skip manual de anuncio...');
+      _isFreezingUI = true;
+      _service?.setFreezeMode(true);
+      
+      // 🛡️ HISTORY SHIELD: Activar INMEDIATAMENTE para bloquear guardado en historial
+      // CRÍTICO: Debe estar ANTES del seek para que la protección esté activa cuando el stream detecte el cambio
+      _lastAdTransitionTime = DateTime.now();
+      AppLogger.info('[PlaybackNotifier] 🛡️ History Shield activado - protección de 3 segundos');
+      
+      // Safety: Descongelar automáticamente después de 3 segundos máximo
+      Timer(const Duration(seconds: 3), () {
+        if (_isFreezingUI) {
+          AppLogger.warning('[PlaybackNotifier] ⚠️ HARD FREEZE TIMEOUT: Forcing unfreeze after safety timeout');
+          _isFreezingUI = false;
+          _service?.setFreezeMode(false);
+        }
+      });
+      
       // ✅ FIX CRÍTICO: Buscar siguiente canción PRIMERO (antes de cambiar estados)
       final sequence = _service?.player.sequenceState?.sequence;
       final currentIdx = _service?.player.currentIndex;
@@ -4889,29 +4936,68 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         }
       }
       
-      // ✅ CONSOLIDACIÓN: Una sola actualización de estado con TODA la información
+      // ✅ ACTUALIZACIÓN ATÓMICA: Una sola actualización con TODA la información correcta
       if (targetSong != null) {
         AppLogger.info('[PlaybackNotifier] ⏭️ HARD SKIP: Saltando anuncio -> Índice canción: $targetIndex (${targetSong.title})');
         
+        // Actualizar estado de forma atómica mientras la UI está congelada
         state = state.copyWith(
           isPlayingAd: false,
           clearCurrentAd: true,
           currentSong: targetSong,
           lastConfirmedSong: targetSong,
-          currentPosition: Duration.zero,
+          // ✅ NO actualizar currentPosition aquí para evitar "tirón" en la barra de progreso
+          // El stream listener lo actualizará naturalmente después del seek
           totalDuration: targetSong.duration != null 
               ? Duration(seconds: targetSong.duration!) 
               : Duration.zero,
         );
-        AppLogger.info('[PlaybackNotifier] ✅ Estado consolidado: ${targetSong.title}');
+        AppLogger.info('[PlaybackNotifier] ✅ Estado actualizado (UI congelada): ${targetSong.title}');
         
-        // Seek explícito al inicio de la canción (UI ya está actualizada)
+        // Seek con UI congelada - no hay actualizaciones intermedias visibles
         await _service!.player.seek(Duration.zero, index: targetIndex);
         await _service!.player.play();
+        
+        // Capturar targetSong para usarlo en el closure (null-safety)
+        final songToSave = targetSong;
+        
+        // 🔓 Descongelar después de un pequeño delay para que el stream se asiente
+        Future.delayed(const Duration(milliseconds: 400), () {
+          // ✅ RESETEAR POSICIÓN: Ahora que el seek se completó, sincronizar la posición
+          state = state.copyWith(
+            currentPosition: Duration.zero,
+          );
+          
+          _isFreezingUI = false;
+          _service?.setFreezeMode(false);
+          AppLogger.info('[PlaybackNotifier] 🌡️ Desactivando HARD FREEZE - transición completada');
+          
+          // ✅ GUARDAR EXPLÍCITAMENTE: Después de descongelar, guardar la canción destino
+          // Esto se ejecuta DESPUÉS de que el History Shield haya sido activado,
+          // pero como sabemos que esta ES la canción correcta, la guardamos explícitamente
+          Future.delayed(const Duration(milliseconds: 100), () {
+            try {
+              AppLogger.info('[PlaybackNotifier] 💾 Guardando canción destino post-skip: ${songToSave.title}');
+              ref.read(playHistoryProvider.notifier).addToHistory(songToSave);
+              
+              // Verificar que se guardó
+              final historyAfter = ref.read(playHistoryProvider);
+              if (historyAfter.isNotEmpty && historyAfter.last.id == songToSave.id) {
+                AppLogger.success('[PlaybackNotifier] ✅ Canción post-skip guardada: ${songToSave.title} (Total: ${historyAfter.length})');
+              }
+            } catch (e) {
+              AppLogger.error('[PlaybackNotifier] ❌ Error guardando post-skip: $e');
+            }
+          });
+        });
         
       } else {
         // Caso borde: No hay más canciones en la secuencia física
         AppLogger.warning('[PlaybackNotifier] ⚠️ No se encontró siguiente canción, limpiando estado de anuncio...');
+        
+        // Descongelar inmediatamente si no hay siguiente canción
+        _isFreezingUI = false;
+        _service?.setFreezeMode(false);
         
         // Solo limpiar el anuncio
         state = state.copyWith(
@@ -4926,6 +5012,9 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
       }
       
       // ✅ REGISTRAR SKIP: Después de la transición exitosa (no bloquea UI)
+      // ✅ FIX: Marcar transición de anuncio para bloquear historial transitorio
+      _lastAdTransitionTime = DateTime.now();
+
       // Usar unawaited para no bloquear
       _handleAdCompletion(currentAd, true).catchError((e) {
         AppLogger.warning('[PlaybackNotifier] Error al registrar skip (no crítico): $e');
@@ -5643,20 +5732,27 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
           _currentSongId = currentSong.id;
           
           // 🎯 CRÍTICO: Guardar en historial INMEDIATAMENTE cuando detectamos cambio automático
-          try {
-            AppLogger.info('[PlaybackNotifier] 💾 AUTO-GUARDANDO (cambio detectado): ${currentSong.title}');
-            ref.read(playHistoryProvider.notifier).addToHistory(currentSong);
-            
-            // Verificar que se guardó
-            final historyAfter = ref.read(playHistoryProvider);
-            if (historyAfter.isNotEmpty && historyAfter.last.id == currentSong.id) {
-              AppLogger.success('[PlaybackNotifier] ✅ AUTO-guardado exitoso: ${currentSong.title} (Total: ${historyAfter.length})');
-            } else {
-              AppLogger.warning('[PlaybackNotifier] ⚠️ AUTO-guardado falló');
-              ref.read(playHistoryProvider.notifier).debugHistoryStatus();
+          // 🛡️ PROTECCIÓN POST-ANUNCIO: NO guardar si acabamos de salir de un anuncio
+          if (_lastAdTransitionTime != null && 
+              DateTime.now().difference(_lastAdTransitionTime!) < const Duration(seconds: 2)) {
+            AppLogger.debug('[PlaybackNotifier] 🛡️ AUTO-guardado bloqueado por transición de anuncio reciente');
+            // NO guardar - la canción puede ser transitoria/incorrecta
+          } else {
+            try {
+              AppLogger.info('[PlaybackNotifier] 💾 AUTO-GUARDANDO (cambio detectado): ${currentSong.title}');
+              ref.read(playHistoryProvider.notifier).addToHistory(currentSong);
+              
+              // Verificar que se guardó
+              final historyAfter = ref.read(playHistoryProvider);
+              if (historyAfter.isNotEmpty && historyAfter.last.id == currentSong.id) {
+                AppLogger.success('[PlaybackNotifier] ✅ AUTO-guardado exitoso: ${currentSong.title} (Total: ${historyAfter.length})');
+              } else {
+                AppLogger.warning('[PlaybackNotifier] ⚠️ AUTO-guardado falló');
+                ref.read(playHistoryProvider.notifier).debugHistoryStatus();
+              }
+            } catch (e) {
+              AppLogger.error('[PlaybackNotifier] ❌ Error AUTO-guardando: $e');
             }
-          } catch (e) {
-            AppLogger.error('[PlaybackNotifier] ❌ Error AUTO-guardando: $e');
           }
           
           // Limpieza atómica
@@ -6426,6 +6522,14 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
     // 🕒 HISTORIAL FALBBACK: Si el listener principal falló, asegurar registro aquí
     // Solo registrar si tenemos una canción válida y NO estamos en medio de un cambio rápido
     if (state.currentSong != null && !state.isPlayingAd && state.currentAd == null) {
+        // 🛡️ PROTECCIÓN POST-ANUNCIO: No registrar historial inmediatamente después de un anuncio
+        // Esto evita que estados transitorios (glitches) se guarden en el historial
+        if (_lastAdTransitionTime != null && 
+            DateTime.now().difference(_lastAdTransitionTime!) < const Duration(seconds: 2)) {
+             // AppLogger.debug('[PlaybackNotifier] 🛡️ Historial bloqueado por transición de anuncio reciente');
+             return;
+        }
+
         final currentId = state.currentSong!.id;
         // Evitar registros duplicados muy seguidos (debounce simple)
         final now = DateTime.now();
