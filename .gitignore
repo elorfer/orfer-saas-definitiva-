@@ -18,6 +18,10 @@ out/
 .env
 .env.local
 .env.*.local
+.env.railway.r2
+.env.railway.firebase
+.env.railway.revenuecat
+.env.railway.resend
 
 # IDE
 .vscode/
