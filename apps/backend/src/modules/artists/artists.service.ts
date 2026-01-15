@@ -7,7 +7,7 @@ import { User } from '../../common/entities/user.entity';
 import { Song } from '../../common/entities/song.entity';
 import { Album } from '../../common/entities/album.entity';
 import { ArtistFollower } from '../../common/entities/artist-follower.entity';
-import { CoversStorageService } from '../covers/covers-storage.service';
+import { S3Service } from '../upload/s3.service';
 import { FeaturedService } from '../featured/featured.service';
 
 @Injectable()
@@ -24,10 +24,10 @@ export class ArtistsService {
     @InjectRepository(ArtistFollower)
     private readonly artistFollowerRepository: Repository<ArtistFollower>,
     private readonly dataSource: DataSource,
-    private readonly coversStorageService: CoversStorageService,
+    private readonly s3Service: S3Service,
     @Inject(forwardRef(() => FeaturedService))
     private readonly featuredService?: FeaturedService,
-  ) {}
+  ) { }
 
   async findAll(page: number = 1, limit: number = 10): Promise<{ artists: Artist[]; total: number }> {
     // Listar todos los artistas (con o sin usuario asociado)
@@ -90,7 +90,7 @@ export class ArtistsService {
 
   async getArtistStats(artistId: string): Promise<any> {
     const artist = await this.findOne(artistId);
-    
+
     const totalSongs = await this.songRepository.count({
       where: { artistId },
     });
@@ -154,11 +154,11 @@ export class ArtistsService {
     }
 
     if (data.profileFile) {
-      const uploaded = await this.coversStorageService.uploadCoverImage(data.profileFile);
+      const uploaded = await this.s3Service.uploadImageFile(data.profileFile, 'system');
       artist.profilePhotoUrl = uploaded.url;
     }
     if (data.coverFile) {
-      const uploaded = await this.coversStorageService.uploadCoverImage(data.coverFile);
+      const uploaded = await this.s3Service.uploadImageFile(data.coverFile, 'system');
       artist.coverPhotoUrl = uploaded.url;
     }
 
@@ -201,11 +201,11 @@ export class ArtistsService {
       (artist.socialLinks as any).phone = data.phone;
     }
     if (data.profileFile) {
-      const uploaded = await this.coversStorageService.uploadCoverImage(data.profileFile);
+      const uploaded = await this.s3Service.uploadImageFile(data.profileFile, 'system');
       artist.profilePhotoUrl = uploaded.url;
     }
     if (data.coverFile) {
-      const uploaded = await this.coversStorageService.uploadCoverImage(data.coverFile);
+      const uploaded = await this.s3Service.uploadImageFile(data.coverFile, 'system');
       artist.coverPhotoUrl = uploaded.url;
     }
     return this.artistRepository.save(artist);
@@ -228,7 +228,7 @@ export class ArtistsService {
 
   async updateArtistProfile(artistId: string, updateData: any): Promise<Artist> {
     const artist = await this.findOne(artistId);
-    
+
     Object.assign(artist, updateData);
     return this.artistRepository.save(artist);
   }
@@ -263,31 +263,31 @@ export class ArtistsService {
 
   async verifyArtist(artistId: string, adminId?: string): Promise<Artist> {
     const artist = await this.findOne(artistId);
-    
+
     // Actualizar ambos campos para compatibilidad
     artist.isVerified = true;
     artist.verificationStatus = true;
-    
+
     const savedArtist = await this.artistRepository.save(artist);
-    
+
     // Log de auditoría (opcional - puedes crear una tabla de auditoría)
     console.log(`[AUDIT] Artist ${artistId} verified by admin ${adminId || 'unknown'} at ${new Date().toISOString()}`);
-    
+
     return savedArtist;
   }
 
   async unverifyArtist(artistId: string, adminId?: string): Promise<Artist> {
     const artist = await this.findOne(artistId);
-    
+
     // Actualizar ambos campos para compatibilidad
     artist.isVerified = false;
     artist.verificationStatus = false;
-    
+
     const savedArtist = await this.artistRepository.save(artist);
-    
+
     // Log de auditoría
     console.log(`[AUDIT] Artist ${artistId} unverified by admin ${adminId || 'unknown'} at ${new Date().toISOString()}`);
-    
+
     return savedArtist;
   }
 
@@ -334,7 +334,7 @@ export class ArtistsService {
 
   async deleteArtist(id: string): Promise<void> {
     const artist = await this.findOne(id);
-    
+
     // Verificar si el artista tiene canciones asociadas
     const songsCount = await this.songRepository.count({ where: { artistId: id } });
     if (songsCount > 0) {
@@ -365,7 +365,7 @@ export class ArtistsService {
   async followArtist(artistId: string, userId: string): Promise<{ isFollowing: boolean; followersCount: number }> {
     // Verificar que el artista existe
     const artist = await this.findOne(artistId);
-    
+
     // Verificar que el usuario existe
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -487,7 +487,7 @@ export class ArtistsService {
     const count = await this.artistFollowerRepository.count({
       where: { artistId },
     });
-    
+
     // Sincronizar el contador en la entidad Artist
     await this.artistRepository.update(
       { id: artistId },
