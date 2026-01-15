@@ -74,7 +74,7 @@ export class ImageProcessingService {
       this.logger.log('✅ Sharp disponible - compresión de imágenes habilitada');
     } else {
       // Sharp es opcional - el backend funciona sin él
-      this.logger.debug('ℹ️ Sharp no disponible - imágenes sin comprimir (opcional)');
+      this.logger.log('ℹ️ Sharp no disponible - imágenes sin comprimir (opcional)');
     }
   }
 
