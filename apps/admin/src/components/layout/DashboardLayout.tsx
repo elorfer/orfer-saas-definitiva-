@@ -93,13 +93,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl hc-shadow">
           <div className="flex h-20 items-center justify-between px-4">
             <div className="flex items-center">
-              <img 
-                src="/logo-icon.png" 
-                alt="Logo" 
+              <img
+                src="/logo-principal.webp"
+                alt="Struky Logo"
                 className="h-20 w-20 object-contain"
               />
               <span className="ml-2 text-lg font-vintage font-bold text-warm-900">
-                Vintage Music
+                STRUKY ADMIN
               </span>
             </div>
             <button
@@ -117,9 +117,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`sidebar-link ${
-                    isActive ? 'sidebar-link-active' : 'sidebar-link-inactive'
-                  }`}
+                  className={`sidebar-link ${isActive ? 'sidebar-link-active' : 'sidebar-link-inactive'
+                    }`}
                   onClick={() => setSidebarOpen(false)}
                 >
                   <item.icon className="mr-3 h-5 w-5" />
@@ -135,17 +134,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-grow bg-white/95 backdrop-blur border-r border-gray-200 shadow-sm hc-shadow">
           <div className="flex h-20 items-center px-4">
-            <img 
-              src="/logo-icon.png" 
-              alt="Logo" 
+            <img
+              src="/logo-principal.webp"
+              alt="Struky Logo"
               className="h-20 w-20 object-contain"
               onError={(e) => {
-                console.error('Error cargando logo-icon.png');
+                console.error('Error cargando logo-principal.webp');
                 e.currentTarget.style.display = 'none';
               }}
             />
             <span className="ml-2 text-lg font-vintage font-bold text-warm-900">
-              Vintage Music
+              STRUKY ADMIN
             </span>
           </div>
           <nav className="flex-1 px-4 py-4 space-y-1">
@@ -155,9 +154,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`sidebar-link ${
-                    isActive ? 'sidebar-link-active' : 'sidebar-link-inactive'
-                  }`}
+                  className={`sidebar-link ${isActive ? 'sidebar-link-active' : 'sidebar-link-inactive'
+                    }`}
                 >
                   <item.icon className="mr-3 h-5 w-5" />
                   {item.name}
@@ -186,11 +184,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {/* Toggle Alto Contraste */}
               <button
                 onClick={() => setHighContrast((v) => !v)}
-                className={`hidden sm:inline-flex items-center rounded-lg border px-3 py-1.5 text-sm transition ${
-                  highContrast
-                    ? 'bg-brown-700 text-white border-brown-700'
-                    : 'bg-white text-warm-700 border-gray-300 hover:border-brown-700'
-                }`}
+                className={`hidden sm:inline-flex items-center rounded-lg border px-3 py-1.5 text-sm transition ${highContrast
+                  ? 'bg-brown-700 text-white border-brown-700'
+                  : 'bg-white text-warm-700 border-gray-300 hover:border-brown-700'
+                  }`}
                 title="Alternar alto contraste"
               >
                 {highContrast ? 'Contraste: Alto' : 'Contraste: Normal'}

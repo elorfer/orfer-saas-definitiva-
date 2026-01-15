@@ -140,14 +140,16 @@ export class AuthService {
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(registerDto.password, saltRounds);
 
-    // Crear usuario - siempre como USER (no se permite registro como artista o admin)
+    // Crear usuario
+    // Si viene un rol en el DTO, usarlo (para creación desde admin panel)
+    // Si no viene, crear como USER por defecto (registro público)
     const user = this.userRepository.create({
       email: registerDto.email,
       username: registerDto.username,
       passwordHash,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
-      role: UserRole.USER, // Siempre usuario, sin importar lo que venga en el DTO
+      role: registerDto.role || UserRole.USER, // Usar rol del DTO si existe, sino USER por defecto
     });
 
     const savedUser = await this.userRepository.save(user);

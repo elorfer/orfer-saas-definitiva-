@@ -418,7 +418,6 @@ export default function AdsPage() {
           )}
         </>
       )}
-      )}
 
       {/* Stats Modal */}
       {selectedStatsAd && (

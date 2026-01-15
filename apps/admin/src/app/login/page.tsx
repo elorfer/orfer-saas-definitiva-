@@ -62,25 +62,8 @@ function LoginContent() {
 
       if (result?.ok || result?.url) {
         toast.success('Inicio de sesión exitoso');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        try {
-          const sessionResponse = await fetch('/api/auth/session');
-          const sessionData = await sessionResponse.json();
-
-          if (sessionData && sessionData.user) {
-            window.location.href = '/dashboard';
-          } else {
-            toast.error('Error: No se pudo establecer la sesión');
-            setIsLoading(false);
-          }
-        } catch (sessionError) {
-          console.error('[Login] Error al verificar sesión:', sessionError);
-          window.location.href = '/dashboard';
-        }
-      } else {
-        toast.error('Error al iniciar sesión');
-        setIsLoading(false);
+        // Usar replace para evitar agregar al historial
+        router.replace('/dashboard');
       }
     } catch (error) {
       console.error('Error en login:', error);
@@ -100,16 +83,16 @@ function LoginContent() {
           <div className='mb-10 text-center'>
             <div className='mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-brown-700 to-brown-800 shadow-lg shadow-brown-700/40'>
               <img
-                src="/logo-icon.png"
+                src="/logo-icon.svg"
                 alt="Logo"
                 className="h-24 w-24 object-contain"
                 onError={(e) => {
-                  console.error('Error cargando logo-icon.png');
+                  console.error('Error cargando logo-icon.svg');
                   e.currentTarget.style.display = 'none';
                 }}
               />
             </div>
-            <h1 className='text-3xl font-black text-gray-900 sm:text-4xl'>Vintage Music</h1>
+            <h1 className='text-3xl font-black text-gray-900 sm:text-4xl'>Struky</h1>
             <p className='mt-2 text-base font-medium text-gray-500'>Panel de Administración</p>
           </div>
 
@@ -179,7 +162,7 @@ function LoginContent() {
 
           <div className='mt-8 text-center text-sm text-gray-500'>
             <p>Solo administradores autorizados</p>
-            <p className='mt-3 text-xs text-gray-400'>© {currentYear} Vintage Music. Todos los derechos reservados.</p>
+            <p className='mt-3 text-xs text-gray-400'>© {currentYear} Struky. Todos los derechos reservados.</p>
           </div>
         </div>
       </div>

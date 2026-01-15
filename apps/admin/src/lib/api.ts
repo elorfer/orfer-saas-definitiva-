@@ -107,6 +107,11 @@ export const apiClient = {
 
   verifyUser: (id: string) => api.post(`/users/${id}/verify`),
 
+  // Verificar disponibilidad
+  checkUsernameAvailability: (username: string) => api.get(`/auth/check-username/${encodeURIComponent(username)}`),
+
+  checkEmailAvailability: (email: string) => api.get(`/auth/check-email/${encodeURIComponent(email)}`),
+
   // Premium users
   markAsPremium: (id: string, data?: { expiresAt?: string; plan?: 'quincenal' | 'mensual' | 'anual'; amount?: number }) =>
     api.post(`/users/${id}/premium`, data || {}),

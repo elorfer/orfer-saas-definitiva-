@@ -17,6 +17,7 @@ import {
   usePremiumUsersCount,
 } from '@/hooks/useUsers';
 import type { UserModel } from '@/types/user';
+import { apiClient } from '@/lib/api';
 
 const PAGE_SIZE = 10;
 const DEFAULT_CREATE_FORM = {
@@ -50,8 +51,52 @@ export default function UsersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState(DEFAULT_CREATE_FORM);
 
+  // 🔍 Verificador de username
+  const [usernameChecking, setUsernameChecking] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameDebounce, setUsernameDebounce] = useState<NodeJS.Timeout | null>(null);
+
+  const checkUsernameAvailability = async (username: string) => {
+    if (!username || username.length < 3) {
+      setUsernameAvailable(null);
+      return;
+    }
+
+    try {
+      setUsernameChecking(true);
+      const response = await apiClient.checkUsernameAvailability(username);
+      setUsernameAvailable(response.data.available);
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameAvailable(null);
+    } finally {
+      setUsernameChecking(false);
+    }
+  };
+
+  const handleUsernameChange = (value: string) => {
+    setCreateForm((prev) => ({ ...prev, username: value }));
+
+    // Limpiar timeout anterior
+    if (usernameDebounce) {
+      clearTimeout(usernameDebounce);
+    }
+
+    // Resetear estado
+    setUsernameAvailable(null);
+
+    // Debounce de 500ms
+    const timeout = setTimeout(() => {
+      checkUsernameAvailability(value);
+    }, 500);
+
+    setUsernameDebounce(timeout);
+  };
+
   const openCreateModal = () => {
     setCreateForm(DEFAULT_CREATE_FORM);
+    setUsernameAvailable(null);
+    setUsernameChecking(false);
     setShowCreateModal(true);
   };
 
@@ -405,16 +450,37 @@ export default function UsersPage() {
                   <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                     Usuario
                   </label>
-                  <input
-                    type="text"
-                    value={createForm.username}
-                    onChange={(event) =>
-                      setCreateForm((prev) => ({ ...prev, username: event.target.value }))
-                    }
-                    required
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
-                    placeholder="usuario123"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={createForm.username}
+                      onChange={(event) => handleUsernameChange(event.target.value)}
+                      required
+                      minLength={3}
+                      className={`w-full rounded-lg border px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 ${usernameAvailable === true
+                        ? 'border-green-500 focus:border-green-600 focus:ring-green-100'
+                        : usernameAvailable === false
+                          ? 'border-red-500 focus:border-red-600 focus:ring-red-100'
+                          : 'border-gray-200 focus:border-brown-700 focus:ring-brown-100'
+                        }`}
+                      placeholder="usuario123"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {usernameChecking ? (
+                        <ArrowPathIcon className="h-4 w-4 text-gray-400 animate-spin" />
+                      ) : usernameAvailable === true ? (
+                        <span className="text-green-600 font-bold">✓</span>
+                      ) : usernameAvailable === false ? (
+                        <span className="text-red-600 font-bold">✗</span>
+                      ) : null}
+                    </div>
+                  </div>
+                  {usernameAvailable === false && (
+                    <p className="text-xs text-red-600 mt-1">Este username ya está en uso</p>
+                  )}
+                  {usernameAvailable === true && (
+                    <p className="text-xs text-green-600 mt-1">Username disponible</p>
+                  )}
                 </div>
               </div>
 

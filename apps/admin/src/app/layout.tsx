@@ -6,8 +6,13 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Vintage Music Admin',
-  description: 'Panel de administración para Vintage Music Streaming',
+  title: 'Struky Admin',
+  description: 'Panel de administración para Struky Music Streaming',
+  icons: {
+    icon: '/logo-principal.webp',
+    shortcut: '/logo-principal.webp',
+    apple: '/logo-principal.webp',
+  },
 };
 
 export const viewport: Viewport = {

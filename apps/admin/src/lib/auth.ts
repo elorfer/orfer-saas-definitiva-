@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         console.log('[NextAuth] authorize llamado con:', { email: credentials?.email });
-        
+
         if (!credentials?.email || !credentials?.password) {
           console.log('[NextAuth] authorize: credenciales faltantes');
           return null;
@@ -134,7 +134,8 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 7 * 24 * 60 * 60, // 7 días
+    maxAge: 60 * 60, // 1 hora (en desarrollo, más corto para evitar sesiones fantasma)
+    updateAge: 5 * 60, // Actualizar cada 5 minutos
   },
   secret: nextAuthSecret,
   debug: process.env.NODE_ENV === 'development', // Habilitar debug en desarrollo

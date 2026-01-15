@@ -95,18 +95,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
-        <div className="flex flex-col items-center xl:items-start px-4 mb-8">
+        <div className="flex flex-col items-center px-4 mb-8">
           <img
-            src="/logo-icon.png"
-            alt="Logo"
-            className="h-20 w-20 object-contain"
+            src="/logo-principal.webp"
+            alt="Struky Logo"
+            className="h-20 w-20 object-contain rounded-2xl"
             onError={(e) => {
-              console.error('Error cargando logo-icon.png');
+              console.error('Error cargando logo-principal.webp');
               e.currentTarget.style.display = 'none';
             }}
           />
-          <span className="mt-3 text-sm font-semibold text-gray-900 hidden xl:block">
-            Vintage Admin
+          <span className="mt-3 text-sm font-semibold text-gray-900 text-center hidden xl:block">
+            STRUKY ADMIN
           </span>
         </div>
 
@@ -122,8 +122,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   }
                 }}
                 className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive
-                    ? 'bg-brown-100 text-brown-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-brown-100 text-brown-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
               >
                 <item.icon className="h-5 w-5" />

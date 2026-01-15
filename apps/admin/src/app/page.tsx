@@ -1,32 +1,51 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
-export default function HomePage() {
+export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (status === 'loading') return; // Still loading
-    
-    if (!session) {
-      router.push('/login');
-    } else {
-      router.push('/dashboard');
-    }
-  }, [session, status, router]);
+    // Prevenir múltiples redirects
+    if (hasRedirected.current || isRedirecting) return;
 
-  // Show loading while redirecting
+    if (status === 'loading') {
+      // Timeout de 3 segundos para prevenir infinite loader
+      const timeout = setTimeout(() => {
+        if (status === 'loading' && !session) {
+          hasRedirected.current = true;
+          setIsRedirecting(true);
+          router.replace('/login');
+        }
+      }, 3000);
+
+      return () => clearTimeout(timeout);
+    }
+
+    if (status === 'authenticated' && session) {
+      hasRedirected.current = true;
+      setIsRedirecting(true);
+      router.replace('/dashboard');
+    } else if (status === 'unauthenticated') {
+      hasRedirected.current = true;
+      setIsRedirecting(true);
+      router.replace('/login');
+    }
+  }, [session, status, router, isRedirecting]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brown-900 via-brown-800 to-brown-950 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brown-50 to-amber-50">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-        <p className="text-white text-lg">Cargando...</p>
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-brown-700 border-t-transparent mx-auto mb-4"></div>
+        <p className="text-gray-600 font-medium">
+          {isRedirecting ? 'Redirigiendo...' : 'Cargando...'}
+        </p>
       </div>
     </div>
   );
 }
-
-
