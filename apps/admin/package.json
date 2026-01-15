@@ -18,8 +18,7 @@
     "build:analyze": "ANALYZE=true next build",
     "clean": "rm -rf .next out dist",
     "validate": "npm run type-check && npm run lint",
-    "precommit": "npm run validate",
-    "postinstall": "npm run type-check"
+    "precommit": "npm run validate"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
