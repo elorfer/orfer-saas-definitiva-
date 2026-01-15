@@ -4,7 +4,7 @@
 # Forzar rebuild - instala TODAS las deps
 # ===================================
 
-FROM node:20-bullseye-slim
+FROM node:20.11.0-bullseye-slim
 
 WORKDIR /app
 
