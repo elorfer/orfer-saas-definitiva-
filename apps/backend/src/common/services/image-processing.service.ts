@@ -14,7 +14,7 @@ try {
     require.resolve('sharp');
     // Si puede resolverse, intentar cargarlo
     sharpModule = require('sharp');
-    
+
     // En versiones recientes de sharp (0.30+), puede exportarse de diferentes maneras
     // Intentar obtener la función correcta
     if (typeof sharpModule === 'function') {
@@ -39,7 +39,7 @@ try {
         }
       }
     }
-    
+
     // Verificar que realmente tengamos una función válida
     if (sharpAvailable && typeof sharpFunction !== 'function') {
       sharpAvailable = false;
@@ -71,14 +71,10 @@ export class ImageProcessingService {
   constructor() {
     this.sharpAvailable = sharpAvailable;
     if (this.sharpAvailable) {
-      this.logger.log('Sharp disponible - compresión de imágenes habilitada');
+      this.logger.log('✅ Sharp disponible - compresión de imágenes habilitada');
     } else {
-      // En desarrollo no queremos spam de warnings repetidos; usar debug
-      if (process.env.NODE_ENV === 'production') {
-        this.logger.warn('Sharp no está instalado - las imágenes se guardarán sin comprimir. Ejecuta: npm install sharp');
-      } else {
-        this.logger.debug('Sharp no está instalado (dev) - imágenes se guardarán sin comprimir');
-      }
+      // Sharp es opcional - el backend funciona sin él
+      this.logger.debug('ℹ️ Sharp no disponible - imágenes sin comprimir (opcional)');
     }
   }
 
@@ -89,12 +85,12 @@ export class ImageProcessingService {
     if (!this.sharpAvailable || !sharpFunction) {
       throw new Error('Sharp no está disponible');
     }
-    
+
     // Verificar que sea una función
     if (typeof sharpFunction !== 'function') {
       throw new Error('Sharp no es una función válida');
     }
-    
+
     return sharpFunction;
   }
 
@@ -127,13 +123,13 @@ export class ImageProcessingService {
 
     try {
       const sharp = this.getSharp();
-      
+
       // Verificar que sharp sea realmente una función
       if (typeof sharp !== 'function') {
         this.logger.error('Sharp no es una función válida en compressImage');
         throw new Error('Sharp no está configurado correctamente');
       }
-      
+
       const originalSize = fileBuffer.length;
 
       // Crear instancia de sharp con el buffer
@@ -225,16 +221,16 @@ export class ImageProcessingService {
 
     try {
       const sharp = this.getSharp();
-      
+
       // Verificar que sharp sea realmente una función antes de usarla
       if (typeof sharp !== 'function') {
         this.logger.error('Sharp no es una función válida');
         throw new Error('Sharp no está configurado correctamente');
       }
-      
+
       // Crear instancia de sharp con el buffer
       const sharpInstance = sharp(fileBuffer);
-      
+
       // Obtener metadatos
       const metadata = await sharpInstance.metadata();
 

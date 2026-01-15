@@ -33,16 +33,16 @@ RUN npm install --unsafe-perm
 # Copiar código fuente
 COPY . .
 
-# IMPORTANTE: Rebuild Sharp DESPUÉS de copiar código para evitar caché
-# Esto garantiza que Sharp se recompile con libvips en cada build
-RUN npm rebuild sharp --verbose || echo "Sharp rebuild failed, continuing..."
-
 # Compilar la aplicación (necesita @nestjs/cli de devDependencies)
 RUN npm run build
 
 # AHORA SÍ establecer NODE_ENV y limpiar devDependencies
 ENV NODE_ENV=production
 RUN npm prune --production
+
+# CRÍTICO: Reinstalar Sharp DESPUÉS de prune
+# npm prune elimina bindings, reinstalar garantiza compilación correcta
+RUN npm install sharp@^0.34.5 --verbose --build-from-source
 
 # Crear directorio para uploads
 RUN mkdir -p uploads/covers uploads/songs uploads/ads/audio uploads/ads/covers
