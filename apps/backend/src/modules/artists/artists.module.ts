@@ -10,19 +10,20 @@ import { Song } from '../../common/entities/song.entity';
 import { Album } from '../../common/entities/album.entity';
 import { ArtistFollower } from '../../common/entities/artist-follower.entity';
 import { CoversModule } from '../covers/covers.module';
+import { UploadModule } from '../upload/upload.module';
 import { FeaturedModule } from '../featured/featured.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Artist, User, Song, Album, ArtistFollower]),
-    CoversModule,
+    UploadModule,
     forwardRef(() => FeaturedModule),
   ],
   controllers: [ArtistsController, PublicArtistsController],
   providers: [ArtistsService],
   exports: [ArtistsService],
 })
-export class ArtistsModule {}
+export class ArtistsModule { }
 
 
 
