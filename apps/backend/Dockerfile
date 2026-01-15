@@ -30,11 +30,12 @@ COPY package*.json ./
 # Instalar TODAS las dependencias (prod + dev) - NO establecer NODE_ENV aún
 RUN npm install --unsafe-perm
 
-# Forzar recompilación de Sharp con libvips (Build: 2026-01-15T02:28:00Z)
-RUN npm rebuild sharp --verbose || echo "Sharp rebuild failed, continuing..."
-
 # Copiar código fuente
 COPY . .
+
+# IMPORTANTE: Rebuild Sharp DESPUÉS de copiar código para evitar caché
+# Esto garantiza que Sharp se recompile con libvips en cada build
+RUN npm rebuild sharp --verbose || echo "Sharp rebuild failed, continuing..."
 
 # Compilar la aplicación (necesita @nestjs/cli de devDependencies)
 RUN npm run build
