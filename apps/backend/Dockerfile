@@ -30,7 +30,7 @@ COPY package*.json ./
 # Instalar TODAS las dependencias (prod + dev) - NO establecer NODE_ENV aún
 RUN npm install --unsafe-perm
 
-# Forzar recompilación de Sharp con libvips
+# Forzar recompilación de Sharp con libvips (Build: 2026-01-15T02:28:00Z)
 RUN npm rebuild sharp --verbose || echo "Sharp rebuild failed, continuing..."
 
 # Copiar código fuente
