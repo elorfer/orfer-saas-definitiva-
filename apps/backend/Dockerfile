@@ -30,19 +30,21 @@ COPY package*.json ./
 # Instalar TODAS las dependencias (prod + dev) - NO establecer NODE_ENV aún
 RUN npm install --unsafe-perm
 
+# Verificar e instalar Sharp EXPLÍCITAMENTE con libvips
+RUN echo "=== INSTALANDO SHARP ===" && \
+    npm install sharp@^0.34.5 --verbose --build-from-source && \
+    echo "=== VERIFICANDO SHARP ===" && \
+    node -e "try { require('sharp'); console.log('✅ Sharp importado correctamente'); } catch(e) { console.log('❌ Error:', e.message); }"
+
 # Copiar código fuente
 COPY . .
 
 # Compilar la aplicación (necesita @nestjs/cli de devDependencies)
 RUN npm run build
 
-# AHORA SÍ establecer NODE_ENV y limpiar devDependencies
+# IMPORTANTE: NO hacer npm prune para mantener Sharp funcionando
+# Sharp necesita las librerías de sistema que podrían eliminarse
 ENV NODE_ENV=production
-RUN npm prune --production
-
-# CRÍTICO: Reinstalar Sharp DESPUÉS de prune
-# npm prune elimina bindings, reinstalar garantiza compilación correcta
-RUN npm install sharp@^0.34.5 --verbose --build-from-source
 
 # Crear directorio para uploads
 RUN mkdir -p uploads/covers uploads/songs uploads/ads/audio uploads/ads/covers
