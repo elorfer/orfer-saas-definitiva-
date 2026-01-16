@@ -1,3 +1,4 @@
+import imageCompression from 'browser-image-compression';
 import { useState } from 'react';
 
 interface PresignedUrlResponse {
@@ -34,13 +35,32 @@ export function usePresignedUpload({
             setProgress(0);
             setError(null);
 
+            let fileToUpload = file;
+
+            // 🚀 COMPRESIÓN DE IMÁGENES
+            if (folder === 'images' && file.type.startsWith('image/')) {
+                console.log(`📉 Comprimiendo imagen... Original: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+                try {
+                    const options = {
+                        maxSizeMB: 1,
+                        maxWidthOrHeight: 1920,
+                        useWebWorker: true,
+                        initialQuality: 0.8,
+                    };
+                    fileToUpload = await imageCompression(file, options);
+                    console.log(`✅ Comprimida: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`);
+                } catch (err) {
+                    console.warn('⚠️ Error comprimiendo, usando original:', err);
+                }
+            }
+
             // ✅ 1. VALIDACIONES CLIENT-SIDE
             const maxSizes = {
                 images: 5 * 1024 * 1024, // 5MB
                 audio: 100 * 1024 * 1024, // 100MB
             };
 
-            if (file.size > maxSizes[folder]) {
+            if (fileToUpload.size > maxSizes[folder]) {
                 throw new Error(
                     `Archivo muy grande. Máximo: ${Math.round(maxSizes[folder] / 1024 / 1024)}MB`
                 );
@@ -51,6 +71,7 @@ export function usePresignedUpload({
                 audio: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/flac', 'audio/aac'],
             };
 
+            // Validamos tipo original por seguridad, aunque compression puede cambiarlo a png/jpeg
             if (!allowedTypes[folder].includes(file.type)) {
                 throw new Error(`Tipo de archivo no permitido: ${file.type}`);
             }
@@ -66,10 +87,10 @@ export function usePresignedUpload({
                     Authorization: `Bearer ${authToken}`,
                 },
                 body: JSON.stringify({
-                    fileName: file.name,
-                    contentType: file.type,
+                    fileName: file.name, // Nombre original
+                    contentType: fileToUpload.type, // Tipo real (puede haber cambiado)
                     folder,
-                    expectedSize: file.size,
+                    expectedSize: fileToUpload.size,
                 }),
             });
 
@@ -88,9 +109,9 @@ export function usePresignedUpload({
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': file.type,
+                    'Content-Type': fileToUpload.type,
                 },
-                body: file,
+                body: fileToUpload,
             });
 
             if (!uploadResponse.ok) {
