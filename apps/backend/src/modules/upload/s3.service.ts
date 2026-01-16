@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as path from 'path';
+import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
+import * as https from 'https';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -42,7 +44,14 @@ export class S3Service {
           accessKeyId: accessKeyId,
           secretAccessKey: secretAccessKey,
         },
-        forcePathStyle: true, // Requerido para R2
+        forcePathStyle: true,
+        requestHandler: new NodeHttpHandler({
+          httpsAgent: new https.Agent({
+            // 🔓 MAGIC FIX: Bajar nivel de seguridad de OpenSSL 3 para permitir handshake
+            ciphers: 'DEFAULT@SECLEVEL=0',
+            rejectUnauthorized: false
+          }),
+        }),
       });
 
       console.log('✅ Storage: Configurado para Cloudflare R2 (Standard Mode)');
