@@ -6,6 +6,7 @@ import * as path from 'path';
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
 import * as https from 'https';
 import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class S3Service {
@@ -72,6 +73,80 @@ export class S3Service {
     }
   }
 
+  /**
+   * Genera firma AWS Signature V4 manualmente (sin SDK)
+   * Esto evita problemas de SSL al usar solo HTTP requests nativos
+   */
+  private generateAwsSignatureV4(
+    method: string,
+    url: string,
+    headers: Record<string, string>,
+    payload: Buffer,
+    accessKey: string,
+    secretKey: string,
+    region: string,
+  ): Record<string, string> {
+    const urlObj = new URL(url);
+    const host = urlObj.host;
+    const uri = urlObj.pathname;
+
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+    const dateStamp = amzDate.substring(0, 8);
+
+    // Canonical request
+    const payloadHash = crypto.createHash('sha256').update(payload).digest('hex');
+
+    headers['host'] = host;
+    headers['x-amz-date'] = amzDate;
+    headers['x-amz-content-sha256'] = payloadHash;
+
+    const canonicalHeaders = Object.keys(headers)
+      .sort()
+      .map(k => `${k.toLowerCase()}:${headers[k].trim()}`)
+      .join('\n') + '\n';
+
+    const signedHeaders = Object.keys(headers).sort().map(k => k.toLowerCase()).join(';');
+
+    const canonicalRequest = [
+      method,
+      uri,
+      '', // Query string (vacío)
+      canonicalHeaders,
+      signedHeaders,
+      payloadHash,
+    ].join('\n');
+
+    // String to sign
+    const algorithm = 'AWS4-HMAC-SHA256';
+    const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+    const canonicalRequestHash = crypto.createHash('sha256').update(canonicalRequest).digest('hex');
+
+    const stringToSign = [
+      algorithm,
+      amzDate,
+      credentialScope,
+      canonicalRequestHash,
+    ].join('\n');
+
+    // Signing key
+    const kDate = crypto.createHmac('sha256', `AWS4${secretKey}`).update(dateStamp).digest();
+    const kRegion = crypto.createHmac('sha256', kDate).update(region).digest();
+    const kService = crypto.createHmac('sha256', kRegion).update('s3').digest();
+    const kSigning = crypto.createHmac('sha256', kService).update('aws4_request').digest();
+
+    // Signature
+    const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+
+    // Authorization header
+    const authHeader = `${algorithm} Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    return {
+      ...headers,
+      'Authorization': authHeader,
+    };
+  }
+
   async uploadFile(
     file: Express.Multer.File,
     folder: string,
@@ -85,7 +160,7 @@ export class S3Service {
       const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
 
       if (useR2) {
-        // 🔥 NUEVO APPROACH: Upload directo con fetch (bypass AWS SDK SSL issues)
+        // 🔥 PROFESSIONAL APPROACH: AWS Signature V4 con axios (mejor manejo SSL que fetch)
         const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
         const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
         const rawAccessKey = this.configService.get<string>('R2_ACCESS_KEY_ID');
@@ -96,28 +171,43 @@ export class S3Service {
         const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
         const uploadUrl = `${endpoint}/${this.bucketName}/${key}`;
 
-        console.log(`🚀 Direct R2 Upload (fetch): ${uploadUrl}`);
+        console.log(`🔐 R2 Upload with AWS Signature V4: ${uploadUrl}`);
 
-        // Upload directo con fetch (sin AWS SDK)
-        const response = await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.mimetype,
-            'x-amz-acl': 'public-read',
-            'x-amz-meta-originalname': file.originalname,
-            'x-amz-meta-uploadedby': userId,
-            'x-amz-meta-uploadedat': new Date().toISOString(),
-          },
-          body: new Uint8Array(file.buffer),
-          // @ts-ignore - Node fetch tiene opciones adicionales
-          agent: new https.Agent({
-            rejectUnauthorized: false,
+        // Preparar headers sin firma
+        const baseHeaders: Record<string, string> = {
+          'Content-Type': file.mimetype,
+          'x-amz-acl': 'public-read',
+          'x-amz-meta-originalname': file.originalname,
+          'x-amz-meta-uploadedby': userId,
+          'x-amz-meta-uploadedat': new Date().toISOString(),
+        };
+
+        // Generar firma AWS V4
+        const signedHeaders = this.generateAwsSignatureV4(
+          'PUT',
+          uploadUrl,
+          baseHeaders,
+          file.buffer,
+          accessKeyId,
+          secretAccessKey,
+          this.region,
+        );
+
+        console.log(`✍️ Request firmado, subiendo...`);
+
+        // Upload con axios (mejor SSL handling que fetch)
+        const axios = require('axios');
+        const response = await axios.put(uploadUrl, file.buffer, {
+          headers: signedHeaders,
+          httpsAgent: new https.Agent({
+            rejectUnauthorized: false, // Necesario para algunos entornos
           }),
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`R2 upload failed: ${response.status} - ${errorText}`);
+        if (response.status !== 200) {
+          throw new Error(`R2 upload failed: ${response.status} - ${response.statusText}`);
         }
 
         console.log(`✅ R2 Upload Success: ${key}`);
