@@ -49,6 +49,13 @@ export default function CreateArtistPage() {
   const { data: genresData, isLoading: genresLoading } = useGenres({ all: true, limit: 100 });
   const availableGenres = genresData?.genres || [];
 
+  // Hook para presigned uploads
+  const { uploadFile: uploadToR2 } = usePresignedUpload({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '',
+    folder: 'images',
+  });
+
   const selectedCountry = useMemo(
     () => countries.find((c) => c.code === nationality),
     [nationality],
@@ -138,14 +145,34 @@ export default function CreateArtistPage() {
         await tryLinkUserByEmail(email);
       }
 
+      // 🔥 NUEVO: Subir imágenes con presigned URLs
+      let profileUrl: string | undefined;
+      let coverUrl: string | undefined;
+
+      if (profile) {
+        toast.loading('Subiendo foto de perfil...');
+        const { publicUrl } = await uploadToR2(profile);
+        profileUrl = publicUrl;
+        toast.dismiss();
+        toast.success('Foto de perfil subida');
+      }
+
+      if (cover) {
+        toast.loading('Subiendo portada...');
+        const { publicUrl } = await uploadToR2(cover);
+        coverUrl = publicUrl;
+        toast.dismiss();
+        toast.success('Portada subida');
+      }
+
       await apiClient.createArtist({
         name,
         nationalityCode: nationality || undefined,
         biography: [biography || '', phone ? `Tel: ${phone}` : ''].filter(Boolean).join('\n'),
         featured: false,
         genres: selectedGenres,
-        profileFile: profile,
-        coverFile: cover,
+        profileUrl, // 🔥 URL en lugar de archivo
+        coverUrl,   // 🔥 URL en lugar de archivo
         userId: linkedUserId || undefined,
       });
       toast.success('Artista creado');
@@ -280,8 +307,8 @@ export default function CreateArtistPage() {
                       <label
                         key={genre.id}
                         className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition ${selectedGenres.includes(genre.name)
-                            ? 'bg-brown-100 border-brown-500 text-brown-700'
-                            : 'bg-white border-gray-200 text-gray-700 hover:border-brown-300'
+                          ? 'bg-brown-100 border-brown-500 text-brown-700'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-brown-300'
                           }`}
                       >
                         <input
