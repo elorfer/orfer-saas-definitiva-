@@ -238,6 +238,7 @@ export class S3Service {
       // ✅ 3. EXPIRACIÓN CORTA (5 minutos seguridad)
       const expiresIn = 300; // 5 minutos
 
+
       // ✅ 4. GENERAR PRESIGNED URL
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -246,7 +247,12 @@ export class S3Service {
         // ACL removido - R2 no lo soporta como S3
       });
 
-      const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn });
+      // 🔥 IMPORTANTE: Deshabilitar checksums para R2 (no soporta x-amz-checksum-*)
+      const uploadUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn,
+        unhoistableHeaders: new Set(['x-amz-checksum-crc32', 'x-amz-sdk-checksum-algorithm']),
+      });
+
 
       // ✅ 5. GENERAR URL PÚBLICA (para cuando se complete el upload)
       const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
