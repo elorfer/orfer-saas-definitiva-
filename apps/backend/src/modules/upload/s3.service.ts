@@ -39,7 +39,7 @@ export class S3Service {
           accessKeyId: accessKeyId,
           secretAccessKey: secretAccessKey,
         },
-        forcePathStyle: false, // 🔥 CAMBIO: Usar virtual-hosted style (bucket.account.r2...) suele ser mejor para SSL
+        forcePathStyle: true, // 🔥 REVERTIDO: Path style es más seguro para certificados wildcard de R2
         requestChecksumCalculation: 'WHEN_REQUIRED', // Mantener deshabilitado checksum
         requestHandler: new NodeHttpHandler({
           httpsAgent: new https.Agent({
