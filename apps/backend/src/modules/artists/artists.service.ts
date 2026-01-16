@@ -127,6 +127,8 @@ export class ArtistsService {
     genres?: string[];
     profileFile?: Express.Multer.File;
     coverFile?: Express.Multer.File;
+    profileUrl?: string; // 🔥 NUEVO: URL desde presigned upload
+    coverUrl?: string;   // 🔥 NUEVO: URL desde presigned upload
   }): Promise<Artist> {
     // Validar que se proporcionen géneros (obligatorio)
     if (!data.genres || data.genres.length === 0) {
@@ -149,17 +151,25 @@ export class ArtistsService {
       (artist.socialLinks as any).phone = data.phone;
     }
 
-    if (!data.profileFile || !data.coverFile) {
-      throw new BadRequestException('Debe subir foto de perfil y portada para crear un artista');
-    }
-
-    if (data.profileFile) {
+    // 🔥 PRIORIZAR URLs (presigned) sobre archivos (legacy)
+    // Profile photo
+    if (data.profileUrl) {
+      artist.profilePhotoUrl = data.profileUrl;
+    } else if (data.profileFile) {
       const uploaded = await this.s3Service.uploadImageFile(data.profileFile, 'system');
       artist.profilePhotoUrl = uploaded.url;
+    } else {
+      throw new BadRequestException('Debe proporcionar foto de perfil (profileUrl o profileFile)');
     }
-    if (data.coverFile) {
+
+    // Cover photo
+    if (data.coverUrl) {
+      artist.coverPhotoUrl = data.coverUrl;
+    } else if (data.coverFile) {
       const uploaded = await this.s3Service.uploadImageFile(data.coverFile, 'system');
       artist.coverPhotoUrl = uploaded.url;
+    } else {
+      throw new BadRequestException('Debe proporcionar portada (coverUrl o coverFile)');
     }
 
     return this.artistRepository.save(artist);

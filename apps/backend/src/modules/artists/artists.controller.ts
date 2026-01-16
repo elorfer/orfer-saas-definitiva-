@@ -28,7 +28,7 @@ import { User, UserRole } from '../../common/entities/user.entity';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ArtistsController {
-  constructor(private readonly artistsService: ArtistsService) {}
+  constructor(private readonly artistsService: ArtistsService) { }
 
   @Get()
   @ApiOperation({ summary: 'Obtener todos los artistas' })
@@ -157,7 +157,7 @@ export class ArtistsController {
   ) {
     const profileFile = files?.profile?.[0];
     const coverFile = files?.cover?.[0];
-    
+
     // Procesar géneros desde el body (puede venir como array o string separado por comas)
     let genres: string[] = [];
     if (body?.genres) {
@@ -176,7 +176,7 @@ export class ArtistsController {
         genres = [body['genres[]']];
       }
     }
-    
+
     return this.artistsService.createArtist({
       name: body?.name,
       nationalityCode: body?.nationalityCode,
@@ -187,6 +187,8 @@ export class ArtistsController {
       genres: genres.length > 0 ? genres : undefined,
       profileFile,
       coverFile,
+      profileUrl: body?.profileUrl, // 🔥 NUEVO: Soporte para URLs desde presigned upload
+      coverUrl: body?.coverUrl,     // 🔥 NUEVO: Soporte para URLs desde presigned upload
     });
   }
 
@@ -224,7 +226,7 @@ export class ArtistsController {
   ) {
     const profileFile = files?.profile?.[0];
     const coverFile = files?.cover?.[0];
-    
+
     // Procesar géneros desde el body (puede venir como array o string separado por comas)
     let genres: string[] | undefined = undefined;
     if (body?.genres !== undefined) {
@@ -242,7 +244,7 @@ export class ArtistsController {
         genres = [body['genres[]']];
       }
     }
-    
+
     return this.artistsService.updateArtist(id, {
       name: body?.name,
       nationalityCode: body?.nationalityCode,
