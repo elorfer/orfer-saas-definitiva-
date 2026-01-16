@@ -22,7 +22,7 @@ export class S3Service {
       this.region = 'auto'; // R2 usa 'auto'
 
       this.s3Client = new S3Client({
-        region: 'wnam',
+        region: 'auto',
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
         credentials: {
           accessKeyId: this.configService.get<string>('R2_ACCESS_KEY_ID'),
