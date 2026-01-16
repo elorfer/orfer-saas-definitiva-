@@ -35,100 +35,59 @@ export class HealthController {
   }
 
   @Get('r2-debug')
-  @ApiOperation({ summary: 'Diagnosticar conexión R2 en profundidad' })
+  @ApiOperation({ summary: 'Batería de pruebas SSL para R2' })
   async checkR2Debug() {
     const accountId = process.env.R2_ACCOUNT_ID?.replace(/["']/g, '').trim();
     const domain = `${accountId}.r2.cloudflarestorage.com`;
+    const https = require('https');
 
-    return new Promise((resolve) => {
-      const results = {
-        step1_dns: 'Pending',
-        step2_tcp: 'Pending',
-        step3_ssl: 'Pending',
-        details: [] as string[],
-        error: null as any
+    const runTest = (name: string, agentOptions: any) => new Promise<{ result: string, details?: string }>((resolve) => {
+      const options = {
+        hostname: domain,
+        port: 443,
+        path: '/',
+        method: 'HEAD',
+        agent: new https.Agent(agentOptions),
       };
 
-      // Paso 1: DNS
-      require('dns').lookup(domain, (err, address) => {
-        if (err) {
-          results.step1_dns = 'FAILED';
-          results.details.push(`DNS Error: ${err.message}`);
-          resolve(results);
-          return;
-        }
-        results.step1_dns = `SUCCESS (${address})`;
-
-        // Paso 2: TCP Socket
-        const socket = new (require('net').Socket)();
-        socket.setTimeout(5000);
-
-        socket.connect(443, address, () => {
-          results.step2_tcp = 'SUCCESS';
-          socket.destroy();
-
-          // Paso 3: HTTPS Request (Native Node.js)
-          const https = require('https');
-          const options = {
-            hostname: domain,
-            port: 443,
-            path: '/',
-            method: 'HEAD',
-            rejectUnauthorized: false // Ignoramos validación para probar solo el handshake
-          };
-
-          const req = https.request(options, (res) => {
-            results.step3_ssl = `SUCCESS (Status: ${res.statusCode})`;
-            results.details.push(`Headers: ${JSON.stringify(res.headers)}`);
-            resolve(results);
-          });
-
-          req.on('error', (e) => {
-            results.step3_ssl = `FAILED: ${e.message}`;
-            results.error = e.message;
-            if ((e as any).opensslErrorStack) {
-              results.details.push(`OpenSSL Stack: ${(e as any).opensslErrorStack}`);
-            }
-            resolve(results);
-          });
-
-          req.end();
-        });
-
-        socket.on('error', (err) => {
-          results.step2_tcp = `FAILED: ${err.message}`;
-          resolve(results);
-        });
-
-        socket.on('timeout', () => {
-          results.step2_tcp = 'TIMEOUT';
-          socket.destroy();
-          resolve(results);
-        });
+      const req = https.request(options, (res: any) => {
+        resolve({ result: 'SUCCESS', details: `Status: ${res.statusCode}, Proto: ${res.socket.getProtocol ? res.socket.getProtocol() : 'unknown'}` });
       });
+
+      req.on('error', (e: any) => {
+        resolve({ result: 'FAILED', details: e.message });
+      });
+
+      req.end();
     });
+
+    // Ejecutar pruebas
+    const tests = {
+      timestamp: new Date().toISOString(),
+      node_version: process.version,
+      openssl: process.versions.openssl,
+      domain,
+      results: {} as any
+    };
+
+    // Test 1: Defecto (Inseguro)
+    tests.results.test1_default_insecure = await runTest('Default Insecure', { rejectUnauthorized: false });
+
+    // Test 2: Forzar TLS 1.2
+    tests.results.test2_force_tls1_2 = await runTest('Force TLS 1.2', {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2',
+      maxVersion: 'TLSv1.2',
+      secureProtocol: 'TLSv1_2_method'
+    });
+
+    // Test 3: Compatibility Mode (Ciphers antiguos)
+    tests.results.test3_compat_ciphers = await runTest('Compat Ciphers', {
+      rejectUnauthorized: false,
+      ciphers: 'ALL',
+      secureOptions: 0x4000000 // SSL_OP_NO_TLSv1_3 (Intentar desactivar 1.3 si falla)
+    });
+
+    return tests;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
