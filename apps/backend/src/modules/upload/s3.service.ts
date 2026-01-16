@@ -17,22 +17,33 @@ export class S3Service {
 
     if (useR2) {
       // Configuración para Cloudflare R2
-      const accountId = this.configService.get<string>('R2_ACCOUNT_ID');
+      // Limpiar variables de posibles espacios o comillas
+      const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
+      const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
+
+      const rawAccessKey = this.configService.get<string>('R2_ACCESS_KEY_ID');
+      const accessKeyId = rawAccessKey ? rawAccessKey.replace(/["']/g, '').trim() : '';
+
+      const rawSecretKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
+      const secretAccessKey = rawSecretKey ? rawSecretKey.replace(/["']/g, '').trim() : '';
+
       this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'struky-audio';
-      this.region = 'auto'; // R2 usa 'auto'
+      this.region = 'auto';
+
+      const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+      console.log(`🔌 R2 Endpoint: ${endpoint}`); // Log para debug
 
       this.s3Client = new S3Client({
         region: 'auto',
-        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        endpoint,
         credentials: {
-          accessKeyId: this.configService.get<string>('R2_ACCESS_KEY_ID'),
-          secretAccessKey: this.configService.get<string>('R2_SECRET_ACCESS_KEY'),
+          accessKeyId,
+          secretAccessKey,
         },
-        // R2-specific configuration
         forcePathStyle: true,
       });
 
-      console.log('✅ Storage: Usando Cloudflare R2');
+      console.log('✅ Storage: Configurado para Cloudflare R2');
     } else {
       // Configuración para AWS S3 (fallback)
       this.region = this.configService.get<string>('AWS_REGION') || 'us-east-1';
