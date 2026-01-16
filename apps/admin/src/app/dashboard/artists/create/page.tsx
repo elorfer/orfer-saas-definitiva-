@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { apiClient } from '@/lib/api';
 import { useGenres } from '@/hooks/useGenres';
+import { usePresignedUpload } from '@/hooks/usePresignedUpload';
 
 const countries: { code: string; name: string; flag: string }[] = [
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
@@ -43,7 +44,7 @@ export default function CreateArtistPage() {
   const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; phone?: string; genres?: string }>({});
   const [linkedUserId, setLinkedUserId] = useState<string | null>(null);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
-  
+
   // Obtener géneros disponibles
   const { data: genresData, isLoading: genresLoading } = useGenres({ all: true, limit: 100 });
   const availableGenres = genresData?.genres || [];
@@ -278,11 +279,10 @@ export default function CreateArtistPage() {
                     {availableGenres.map((genre) => (
                       <label
                         key={genre.id}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition ${
-                          selectedGenres.includes(genre.name)
+                        className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition ${selectedGenres.includes(genre.name)
                             ? 'bg-brown-100 border-brown-500 text-brown-700'
                             : 'bg-white border-gray-200 text-gray-700 hover:border-brown-300'
-                        }`}
+                          }`}
                       >
                         <input
                           type="checkbox"

@@ -37,12 +37,12 @@ class AppConfig {
     return 'http://localhost:3001/api/v1';
   }
 
-  static const String _productionUrl = 'http://backend-alb-1038609925.us-east-1.elb.amazonaws.com/api/v1';
+  static const String _productionUrl = 'https://orfer-saas-definitiva-production.up.railway.app/api/v1';
 
   static String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // 🚀 FIX: Usar URL local también en Profile Mode y RELEASE (temporalmente para benchmark local)
-    defaultValue: (kDebugMode || kProfileMode || kReleaseMode) ? _localBaseUrl : _productionUrl,
+    // Debug mode: localhost, Release/Profile mode: Railway
+    defaultValue: kDebugMode ? _localBaseUrl : _productionUrl,
   );
 
   // Llamar a este método desde `main()` para imprimir la URL que usa la app.

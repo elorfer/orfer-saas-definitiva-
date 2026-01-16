@@ -143,7 +143,7 @@ export const apiClient = {
 
   unverifyArtist: (id: string) => api.patch(`/artists/${id}/unverify`),
 
-  // Crear artista (multipart/form-data)
+  // Crear artista (ahora con URLs en lugar de archivos)
   createArtist: (data: {
     name: string;
     nationalityCode?: string;
@@ -152,6 +152,9 @@ export const apiClient = {
     userId?: string;
     phone?: string;
     genres?: string[];
+    profileUrl?: string; // 🔥 URL en lugar de File
+    coverUrl?: string;   // 🔥 URL en lugar de File
+    // Deprecated: mantener para compatibilidad temporal
     profileFile?: File | null;
     coverFile?: File | null;
   }) => {
@@ -168,8 +171,20 @@ export const apiClient = {
         form.append('genres[]', genre);
       });
     }
-    if (data.profileFile) form.append('profile', data.profileFile);
-    if (data.coverFile) form.append('cover', data.coverFile);
+
+    // 🔥 Priorizar URLs sobre archivos
+    if (data.profileUrl) {
+      form.append('profileUrl', data.profileUrl);
+    } else if (data.profileFile) {
+      form.append('profile', data.profileFile);
+    }
+
+    if (data.coverUrl) {
+      form.append('coverUrl', data.coverUrl);
+    } else if (data.coverFile) {
+      form.append('cover', data.coverFile);
+    }
+
     return api.post('/artists', form);
   },
 
