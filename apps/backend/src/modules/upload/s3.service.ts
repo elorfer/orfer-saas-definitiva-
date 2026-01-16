@@ -21,20 +21,14 @@ export class S3Service {
     if (useR2) {
       // Configuracion PROFESIONAL para Cloudflare R2
       // 1. Sanitización de credenciales (elimina espacios/comillas invisibles)
-      const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
-      const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
-
-      const rawAccessKey = this.configService.get<string>('R2_ACCESS_KEY_ID');
-      const accessKeyId = rawAccessKey ? rawAccessKey.replace(/["']/g, '').trim() : '';
-
-      const rawSecretKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
-      const secretAccessKey = rawSecretKey ? rawSecretKey.replace(/["']/g, '').trim() : '';
+      const accountId = this.configService.get<string>('R2_ACCOUNT_ID')?.trim(); // 🔥 Limpieza crítica
+      const accessKeyId = this.configService.get<string>('R2_ACCESS_KEY_ID')?.trim();
+      const secretAccessKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY')?.trim();
 
       this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'struky-media';
+      this.region = 'us-east-1'; // R2 requiere esto para compatibilidad S3
 
-      // 2. Región 'us-east-1' es la más compatible para clientes S3 genéricos conectando a R2
-      this.region = 'us-east-1';
-
+      // Endpoint base sin bucket (para virtual-hosted style)
       const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
       console.log(`🔌 R2 Connection Init: ${endpoint} (Region: ${this.region})`);
 
@@ -45,9 +39,8 @@ export class S3Service {
           accessKeyId: accessKeyId,
           secretAccessKey: secretAccessKey,
         },
-        forcePathStyle: true,
-        // 🔥 CRÍTICO para R2: Deshabilitar checksums automáticos
-        requestChecksumCalculation: 'WHEN_REQUIRED',
+        forcePathStyle: false, // 🔥 CAMBIO: Usar virtual-hosted style (bucket.account.r2...) suele ser mejor para SSL
+        requestChecksumCalculation: 'WHEN_REQUIRED', // Mantener deshabilitado checksum
         requestHandler: new NodeHttpHandler({
           httpsAgent: new https.Agent({
             // 🔓 MAGIC FIX: Bajar nivel de seguridad de OpenSSL 3 para permitir handshake
