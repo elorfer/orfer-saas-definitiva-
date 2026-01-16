@@ -14,7 +14,7 @@
     "start:dev": "cross-env NODE_OPTIONS='--max-old-space-size=4096' nest start --watch",
     "start:dev:with-admin": "concurrently \"nest start --watch\" \"node scripts/start-admin.js\"",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node --tls-cipher-list=\"DEFAULT@SECLEVEL=0\" dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
