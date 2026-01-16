@@ -52,7 +52,7 @@ export default function CreateArtistPage() {
   // Hook para presigned uploads
   const { uploadFile: uploadToR2 } = usePresignedUpload({
     apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
-    authToken: typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '',
     folder: 'images',
   });
 
