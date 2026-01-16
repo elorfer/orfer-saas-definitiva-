@@ -19,6 +19,8 @@ import {
   TagIcon,
   MegaphoneIcon,
   SparklesIcon,
+  Bars3Icon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 interface DashboardLayoutProps {
@@ -30,6 +32,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Nuevo estado para móvil
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -38,6 +41,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       router.push('/login');
     }
   }, [session, status, router]);
+
+  // Cerrar menú móvil al cambiar de ruta
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -94,7 +102,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6">
+      {/* Sidebar Desktop (Oculto en móvil) */}
+      <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6 sticky top-0 h-screen overflow-y-auto">
         <div className="flex flex-col items-center px-4 mb-8">
           <img
             src="/logo-principal.webp"
@@ -117,16 +126,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <button
                 key={item.href}
                 onClick={() => {
-                  if (!isActive) {
-                    router.push(item.href);
-                  }
+                  router.push(item.href);
                 }}
                 className={`flex items-center w-full gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${isActive
                   ? 'bg-brown-100 text-brown-700'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-5 w-5 flex-shrink-0" />
                 <span className="hidden xl:inline">{item.name}</span>
               </button>
             );
@@ -134,15 +141,92 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col">
+      {/* Mobile Drawer (Overlay + Sidebar) */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          {/* Overlay oscuro */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Sidebar Panel */}
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white pt-5 pb-4 animate-in slide-in-from-left duration-300 shadow-xl">
+            <div className="absolute top-0 right-0 -mr-12 pt-2">
+              <button
+                type="button"
+                className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className="sr-only">Cerrar menú</span>
+                <XMarkIcon className="h-6 w-6 text-white" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="flex-shrink-0 flex items-center px-4 mb-6">
+              <img
+                className="h-10 w-auto"
+                src="/logo-principal.webp"
+                alt="Struky"
+              />
+              <span className="ml-3 font-bold text-gray-900 text-lg">Struky Admin</span>
+            </div>
+
+            <div className="mt-2 flex-1 h-0 overflow-y-auto">
+              <nav className="px-2 space-y-1">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <button
+                      key={item.href}
+                      onClick={() => {
+                        router.push(item.href);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`group flex items-center px-2 py-2 text-base font-medium rounded-md w-full ${isActive
+                        ? 'bg-brown-50 text-brown-700'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
+                    >
+                      <item.icon
+                        className={`mr-4 h-6 w-6 flex-shrink-0 ${isActive ? 'text-brown-700' : 'text-gray-400 group-hover:text-gray-500'
+                          }`}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </button>
+                  )
+                })}
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="bg-white border-b border-gray-200 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
+
+              {/* Header Title + Hamburger */}
+              <div className="flex items-center justify-between md:justify-start gap-4">
+                {/* Botón Hamburguesa (Solo Móvil) */}
+                <button
+                  type="button"
+                  className="md:hidden -ml-2 p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brown-500"
+                  onClick={() => setMobileMenuOpen(true)}
+                >
+                  <span className="sr-only">Abrir menú</span>
+                  <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+                </button>
+
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
+                  Struky Panel
+                </h1>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="relative w-full sm:w-72">
+
+              <div className="flex items-center gap-2 justify-end">
+                <div className="hidden md:block relative w-full sm:w-72">
                   <input
                     type="text"
                     placeholder="Buscar..."
@@ -154,27 +238,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <BellIcon className="h-5 w-5" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
-                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition">
-                  <Cog6ToothIcon className="h-5 w-5" />
-                </button>
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen((prev) => !prev)}
                     className="flex items-center space-x-2 rounded-full bg-white border border-gray-200 px-3 py-1.5 shadow-sm hover:border-brown-700 transition"
                   >
-                    <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center">
+                    <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center overflow-hidden">
                       <span className="text-sm font-semibold text-brown-700">
-                        {session?.user?.name?.charAt(0)?.toUpperCase() ??
-                          session?.user?.email?.charAt(0)?.toUpperCase() ??
-                          'A'}
+                        {session?.user?.name?.charAt(0)?.toUpperCase() ?? 'A'}
                       </span>
                     </div>
                     <div className="hidden sm:block text-left">
                       <p className="text-xs font-medium text-gray-900 leading-tight">
-                        {session?.user?.name ?? 'Administrador'}
-                      </p>
-                      <p className="text-[11px] text-gray-500 leading-tight">
-                        {session?.user?.email ?? ''}
+                        {session?.user?.name ?? 'Admin'}
                       </p>
                     </div>
                     <ChevronDownIcon className="h-4 w-4 text-gray-400" />
@@ -204,7 +280,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
