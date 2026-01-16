@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-100 flex overscroll-none">
       {/* Sidebar Desktop (Oculto en móvil) */}
       <aside className="hidden md:flex w-20 xl:w-64 flex-col bg-white border-r border-gray-200 py-6 sticky top-0 h-screen overflow-y-auto">
         <div className="flex flex-col items-center px-4 mb-8">

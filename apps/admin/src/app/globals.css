@@ -55,8 +55,12 @@
   * {
     @apply border-gray-200;
   }
+
+  html,
   body {
     @apply bg-gray-50 text-gray-900;
+    overscroll-behavior-y: none;
+    /* Previene el rebote en iOS/Android */
   }
 }
 
@@ -177,12 +181,15 @@
   0% {
     transform: translate(0px, 0px) scale(1);
   }
+
   33% {
     transform: translate(30px, -50px) scale(1.1);
   }
+
   66% {
     transform: translate(-20px, 20px) scale(0.9);
   }
+
   100% {
     transform: translate(0px, 0px) scale(1);
   }
@@ -217,8 +224,11 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
-
-
