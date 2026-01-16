@@ -18,7 +18,7 @@ export class UploadService {
     @InjectRepository(Artist)
     private readonly artistRepository: Repository<Artist>,
     private readonly s3Service: S3Service,
-  ) {}
+  ) { }
 
   async uploadAudioFile(
     file: Express.Multer.File,
@@ -37,7 +37,7 @@ export class UploadService {
     try {
       // Procesar archivo de audio para obtener metadatos
       const metadata = await this.getAudioMetadata(file);
-      
+
       // Subir archivo a S3
       const uploadResult = await this.s3Service.uploadAudioFile(file, userId);
 
@@ -64,7 +64,7 @@ export class UploadService {
 
       // Procesar imagen para obtener metadatos
       const metadata = await this.getImageMetadata(file);
-      
+
       // Subir archivo a S3
       const uploadResult = await this.s3Service.uploadImageFile(file, userId);
 
@@ -99,7 +99,8 @@ export class UploadService {
     fileName: string,
     contentType: string,
     userId: string,
-  ): Promise<{ uploadUrl: string; key: string }> {
+    folder: string = 'images',
+  ): Promise<{ uploadUrl: string; key: string; publicUrl: string; expiresIn: number }> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
@@ -108,17 +109,14 @@ export class UploadService {
       throw new ForbiddenException('Usuario no encontrado');
     }
 
-    const fileExtension = path.extname(fileName);
-    const key = `uploads/${userId}/${Date.now()}-${fileName}`;
-
     try {
-      const uploadUrl = await this.s3Service.generatePresignedUploadUrl(
-        key,
+      // Llamar al S3Service con la nueva firma
+      return await this.s3Service.generatePresignedUploadUrl(
+        fileName,
         contentType,
-        3600, // 1 hora
+        userId,
+        folder,
       );
-
-      return { uploadUrl, key };
     } catch (error) {
       throw new BadRequestException(`Error al generar URL de subida: ${error.message}`);
     }
@@ -127,7 +125,7 @@ export class UploadService {
   private async getAudioMetadata(file: Express.Multer.File): Promise<any> {
     return new Promise((resolve, reject) => {
       const tempPath = `/tmp/${Date.now()}-${file.originalname}`;
-      
+
       // Escribir archivo temporal
       fs.writeFileSync(tempPath, file.buffer);
 
@@ -141,7 +139,7 @@ export class UploadService {
       //   }
 
       //   const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
-        
+
       //   if (!audioStream) {
       //     reject(new Error('No se encontró stream de audio en el archivo'));
       //     return;

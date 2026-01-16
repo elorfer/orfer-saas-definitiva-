@@ -24,7 +24,7 @@ import { User, UserRole } from '../../common/entities/user.entity';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(private readonly uploadService: UploadService) { }
 
   @Post('audio')
   @Roles(UserRole.ARTIST)
@@ -88,16 +88,37 @@ export class UploadController {
   }
 
   @Post('presigned-url')
-  @ApiOperation({ summary: 'Generar URL firmada para subida directa' })
+  @ApiOperation({ summary: '🔐 Generar URL firmada para upload directo (SEGURO)' })
   @ApiResponse({ status: 201, description: 'URL firmada generada exitosamente' })
+  @ApiResponse({ status: 400, description: 'Validación fallida' })
   async generatePresignedUrl(
-    @Body() body: { fileName: string; contentType: string },
+    @Body() body: {
+      fileName: string;
+      contentType: string;
+      folder?: string; // 'images' o 'audio'
+      expectedSize?: number; // Tamaño esperado en bytes
+    },
     @CurrentUser() user: User,
   ) {
+    // ✅ Validación de tamaño (5MB para imágenes, 100MB para audio)
+    if (body.expectedSize) {
+      const maxSizes = {
+        images: 5 * 1024 * 1024, // 5MB
+        audio: 100 * 1024 * 1024, // 100MB
+      };
+      const maxSize = maxSizes[body.folder || 'images'];
+      if (body.expectedSize > maxSize) {
+        throw new BadRequestException(
+          `Archivo muy grande. Máximo: ${Math.round(maxSize / 1024 / 1024)}MB`
+        );
+      }
+    }
+
     return this.uploadService.generatePresignedUploadUrl(
       body.fileName,
       body.contentType,
       user.id,
+      body.folder || 'images',
     );
   }
 

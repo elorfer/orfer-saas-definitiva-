@@ -289,22 +289,106 @@ export class S3Service {
     }
   }
 
+  /**
+   * 🔐 PROFESIONAL: Genera Presigned URL segura para upload directo a R2
+   * ✅ Validaciones de seguridad
+   * ✅ Nombres únicos (UUID)
+   * ✅ Expiración corta (5 min)
+   * ✅ Logging para auditoría
+   */
   async generatePresignedUploadUrl(
-    key: string,
+    fileName: string,
     contentType: string,
-    expiresIn: number = 3600,
-  ): Promise<string> {
+    userId: string,
+    folder: string = 'images',
+  ): Promise<{ uploadUrl: string; key: string; publicUrl: string; expiresIn: number }> {
     try {
+      // ✅ 1. VALIDAR MIME TYPE (Seguridad crítica)
+      const allowedTypes = {
+        images: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+        audio: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/flac', 'audio/aac'],
+      };
+
+      const allowedMimes = allowedTypes[folder] || [];
+      if (!allowedMimes.includes(contentType)) {
+        throw new BadRequestException(
+          `Tipo de archivo no permitido: ${contentType}. Permitidos: ${allowedMimes.join(', ')}`
+        );
+      }
+
+      // ✅ 2. GENERAR KEY ÚNICO (UUID + userId para aislamiento)
+      const fileExtension = path.extname(fileName) || this.getExtensionFromMime(contentType);
+      const uniqueFileName = `${uuidv4()}${fileExtension}`;
+      const key = `${folder}/${userId}/${uniqueFileName}`;
+
+      // ✅ 3. EXPIRACIÓN CORTA (5 minutos seguridad)
+      const expiresIn = 300; // 5 minutos
+
+      // ✅ 4. GENERAR PRESIGNED URL
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
         Key: key,
         ContentType: contentType,
+        ACL: 'public-read', // Para que sea accesible públicamente después
       });
 
-      return await getSignedUrl(this.s3Client, command, { expiresIn });
+      const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn });
+
+      // ✅ 5. GENERAR URL PÚBLICA (para cuando se complete el upload)
+      const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
+      let publicUrl: string;
+
+      if (useR2) {
+        const r2PublicDomain = this.configService.get<string>('R2_PUBLIC_DOMAIN');
+        if (r2PublicDomain) {
+          const cleanDomain = r2PublicDomain.replace(/["']/g, '').trim();
+          publicUrl = `https://${cleanDomain}/${key}`;
+        } else {
+          const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
+          const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
+          publicUrl = `https://pub-${accountId}.r2.dev/${key}`;
+        }
+      } else {
+        publicUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+      }
+
+      // ✅ 6. LOGGING PARA AUDITORÍA
+      console.log(`🔐 Presigned URL generada:`, {
+        userId,
+        key,
+        contentType,
+        expiresIn: `${expiresIn}s`,
+        timestamp: new Date().toISOString(),
+      });
+
+      return {
+        uploadUrl,
+        key,
+        publicUrl,
+        expiresIn,
+      };
     } catch (error) {
+      console.error('❌ Error generando presigned URL:', error);
       throw new BadRequestException(`Error al generar URL de subida: ${error.message}`);
     }
+  }
+
+  /**
+   * Helper: Obtener extensión desde MIME type
+   */
+  private getExtensionFromMime(mimeType: string): string {
+    const mimeMap: Record<string, string> = {
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'audio/mpeg': '.mp3',
+      'audio/mp3': '.mp3',
+      'audio/wav': '.wav',
+      'audio/flac': '.flac',
+      'audio/aac': '.aac',
+    };
+    return mimeMap[mimeType] || '';
   }
 
   extractKeyFromUrl(url: string): string {
