@@ -17,6 +17,7 @@ import {
   MusicalNoteIcon,
   PencilIcon,
   PauseIcon,
+  SpeakerWaveIcon,
 } from '@heroicons/react/24/outline';
 
 const resolveUrl = (url?: string, type: 'cover' | 'audio' = 'cover') => {
@@ -60,43 +61,147 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
+// Componente de Reproductor Fijo
+function StickyPlayer({ song, onClose }: { song: SongModel; onClose: () => void }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+
+  const audioUrl = resolveUrl(song.fileUrl, 'audio');
+  const coverUrl = resolveUrl(song.coverImageUrl, 'cover');
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) audioRef.current.pause();
+    else audioRef.current.play();
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setProgress(audioRef.current.currentTime);
+      setDuration(audioRef.current.duration || 0);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setProgress(time);
+    }
+  };
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 px-4 py-3 sm:px-6 lg:px-8 animate-in slide-in-from-bottom duration-300">
+      <div className="max-w-7xl mx-auto flex items-center gap-4 sm:gap-6">
+        {/* Info Canción */}
+        <div className="flex items-center gap-3 w-1/4 min-w-[150px]">
+          <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200">
+            {coverUrl ? (
+              <img src={coverUrl} alt={song.title} className="h-full w-full object-cover" />
+            ) : (
+              <MusicalNoteIcon className="h-6 w-6 m-auto text-gray-400" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-900 truncate">{song.title}</p>
+            <p className="text-xs text-gray-500 truncate">{song.artist?.stageName || 'Desconocido'}</p>
+          </div>
+        </div>
+
+        {/* Controles Centrales */}
+        <div className="flex-1 flex flex-col items-center gap-1">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={togglePlay}
+              className="h-10 w-10 flex items-center justify-center rounded-full bg-brown-700 text-white hover:bg-brown-800 transition shadow-sm"
+            >
+              {isPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5 ml-0.5" />}
+            </button>
+          </div>
+          <div className="w-full max-w-lg flex items-center gap-2 text-xs text-gray-500 font-medium">
+            <span>{formatDuration(progress)}</span>
+            <input
+              type="range"
+              min={0}
+              max={duration || 100}
+              value={progress}
+              onChange={handleSeek}
+              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brown-600 hover:accent-brown-700"
+            />
+            <span>{formatDuration(duration)}</span>
+          </div>
+        </div>
+
+        {/* Volumen y Cerrar */}
+        <div className="w-1/4 flex items-center justify-end gap-3 sm:gap-4">
+          {/* Volumen (Oculto en móvil muy pequeño) */}
+          <div className="hidden sm:flex items-center gap-2">
+            <SpeakerWaveIcon className="h-4 w-4 text-gray-400" />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={(e) => {
+                const vol = parseFloat(e.target.value);
+                setVolume(vol);
+                if (audioRef.current) audioRef.current.volume = vol;
+              }}
+              className="w-20 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-500"
+            />
+          </div>
+
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        {audioUrl && (
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            autoPlay
+            onTimeUpdate={handleTimeUpdate}
+            onEnded={() => setIsPlaying(false)}
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Componente para la fila de canción con manejo de imagen
 function SongRow({
   song,
   statusInfo,
   onDelete,
   onEdit,
-  isDeleting
+  isDeleting,
+  onPlay,
+  isPlayingSong
 }: {
   song: SongModel;
   statusInfo: { label: string; badge: string };
   onDelete: (song: SongModel) => void;
   onEdit: (song: SongModel) => void;
   isDeleting: boolean;
+  onPlay: (song: SongModel) => void;
+  isPlayingSong: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
 
   const coverUrl = resolveUrl(song.coverImageUrl, 'cover');
   const audioUrl = resolveUrl(song.fileUrl, 'audio');
-
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  const togglePlay = () => {
-    if (!audioRef.current || !audioUrl) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      // Pausar todos los otros audios en la página
-      document.querySelectorAll('audio').forEach(audio => {
-        if (audio !== audioRef.current) {
-          audio.pause();
-        }
-      });
-      audioRef.current.play().catch(e => console.error("Error reproduciendo:", e));
-    }
-  };
 
   return (
     <tr className="hover:bg-gray-50 transition">
@@ -187,23 +292,16 @@ function SongRow({
           </button>
 
           {audioUrl && (
-            <>
-              <audio
-                ref={audioRef}
-                src={audioUrl}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onEnded={() => setIsPlaying(false)}
-                className="hidden"
-              />
-              <button
-                onClick={togglePlay}
-                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-brown-500 hover:text-brown-700"
-                title="Escuchar previa"
-              >
-                {isPlaying ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
-              </button>
-            </>
+            <button
+              onClick={() => onPlay(song)}
+              className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${isPlayingSong
+                ? 'border-brown-500 bg-brown-50 text-brown-700'
+                : 'border-gray-200 bg-white text-gray-500 hover:border-brown-500 hover:text-brown-700'
+                }`}
+              title="Escuchar"
+            >
+              {isPlayingSong ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+            </button>
           )}
 
           <button
@@ -239,6 +337,7 @@ export default function SongsPage() {
   const notificationShownRef = useRef(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [currentSong, setCurrentSong] = useState<SongModel | null>(null);
 
   const { data, isLoading, isFetching, refetch } = useSongs({ page, limit: PAGE_SIZE, enabled: true });
   const songs = data?.songs ?? [];
@@ -562,6 +661,8 @@ export default function SongsPage() {
                         onDelete={handleDeleteSong}
                         onEdit={handleEditSong}
                         isDeleting={deletingId === song.id}
+                        onPlay={(s) => setCurrentSong(currentSong?.id === s.id ? null : s)}
+                        isPlayingSong={currentSong?.id === song.id}
                       />
                     );
                   })
@@ -1122,6 +1223,13 @@ export default function SongsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {currentSong && (
+        <StickyPlayer
+          song={currentSong}
+          onClose={() => setCurrentSong(null)}
+        />
       )}
     </>
   );

@@ -42,6 +42,7 @@ export interface CreatePlaylistInput {
   coverArtUrl?: string;
   songIds?: string[];
   isFeatured?: boolean;
+  isPublic?: boolean;
 }
 
 export interface UpdatePlaylistInput {
@@ -50,6 +51,7 @@ export interface UpdatePlaylistInput {
   coverArtUrl?: string;
   songIds?: string[];
   isFeatured?: boolean;
+  isPublic?: boolean;
 }
 
 export interface UsePlaylistsParams {

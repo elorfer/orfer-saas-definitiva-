@@ -16,6 +16,7 @@ import {
   PlayIcon,
 } from '@heroicons/react/24/outline';
 import { usePlaylists, useCreatePlaylist, useDeletePlaylist, useUpdatePlaylist } from '@/hooks/usePlaylists';
+import { useSongs } from '@/hooks/useSongs';
 import { usePresignedUpload } from '@/hooks/usePresignedUpload';
 import { apiClient } from '@/lib/api';
 import { useQuery, useQueryClient } from 'react-query';
@@ -134,6 +135,11 @@ export default function PlaylistsPage() {
   const total = data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  // Canciones para seleccionar (Cargamos las primeras 100 por simplicidad)
+  const { data: songsData, isLoading: songsLoading } = useSongs({ page: 1, limit: 100, enabled: showCreateModal || !!selectedPlaylist });
+  const availableSongs = songsData?.songs || [];
+  const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
+
   const { mutateAsync: createPlaylist } = useCreatePlaylist();
   const { mutateAsync: updatePlaylist } = useUpdatePlaylist();
   const { mutateAsync: deletePlaylist } = useDeletePlaylist();
@@ -153,6 +159,7 @@ export default function PlaylistsPage() {
     setPlaylistForm({ name: '', description: '', isPublic: true });
     setCoverFile(null);
     setCoverPreview(null);
+    setSelectedSongIds([]);
     setIsSubmitting(false);
     setShowCreateModal(true);
   };
@@ -213,17 +220,18 @@ export default function PlaylistsPage() {
         toast.loading('Subiendo portada...', { id: 'playlist-upload' });
         const result = await uploadCoverImage(coverFile);
         coverUrl = result.publicUrl;
-        toast.success('Portada subida', { id: 'playlist-upload' });
       }
 
       // 2. Crear playlist con la URL
       await createPlaylist({
         name: playlistForm.name,
         description: playlistForm.description,
+        isPublic: playlistForm.isPublic,
+        songIds: selectedSongIds,
         coverArtUrl: coverUrl,
       });
 
-      toast.success('Playlist creada correctamente');
+      toast.success('Playlist creada correctamente', { id: 'playlist-upload' });
       closeModals();
     } catch (err: any) {
       console.error(err);
@@ -255,11 +263,12 @@ export default function PlaylistsPage() {
         data: {
           name: playlistForm.name,
           description: playlistForm.description,
+          isPublic: playlistForm.isPublic,
           coverArtUrl: coverUrl,
         },
       });
 
-      toast.success('Playlist actualizada');
+      toast.success('Playlist actualizada', { id: 'playlist-upload' });
       closeModals();
     } catch (err: any) {
       console.error(err);
@@ -398,20 +407,58 @@ export default function PlaylistsPage() {
                   onChange={e => setPlaylistForm({ ...playlistForm, description: e.target.value })}
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-2">
                 <input
                   type="checkbox"
                   id="isPublic"
-                  disabled={isSubmitting}
                   checked={playlistForm.isPublic}
-                  onChange={e => setPlaylistForm({ ...playlistForm, isPublic: e.target.checked })}
+                  onChange={(e) => setPlaylistForm(prev => ({ ...prev, isPublic: e.target.checked }))}
                   className="rounded border-gray-300 text-brown-600 focus:ring-brown-500"
                 />
-                <label htmlFor="isPublic" className="text-sm text-gray-700">Playlist pública (visible para todos)</label>
+                <label htmlFor="isPublic" className="text-sm text-gray-700 font-medium select-none">
+                  Playlist pública (visible para todos)
+                </label>
+              </div>
+
+              {/* Selector de canciones */}
+              <div className="mt-4">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                  Agregar canciones iniciales
+                </label>
+                <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-gray-50 p-2">
+                  {songsLoading ? (
+                    <div className="p-4 text-center text-sm text-gray-500">Cargando canciones...</div>
+                  ) : availableSongs.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-gray-500">No hay canciones disponibles</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {availableSongs.map(song => (
+                        <label key={song.id} className="flex items-center p-2 hover:bg-white rounded cursor-pointer transition">
+                          <input
+                            type="checkbox"
+                            checked={selectedSongIds.includes(song.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedSongIds(p => [...p, song.id]);
+                              else setSelectedSongIds(p => p.filter(id => id !== song.id));
+                            }}
+                            className="rounded border-gray-300 text-brown-600 focus:ring-brown-500 mr-3"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">{song.title}</div>
+                            <div className="text-xs text-gray-500 truncate">{song.artist?.stageName || 'Artista desconocido'}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{selectedSongIds.length} canciones seleccionadas</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Portada (Opcional)</label>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                  Portada (opcional)
+                </label>
                 <div className={`border-2 border-dashed rounded-lg p-4 flex gap-4 transition ${isSubmitting ? 'bg-gray-50' : 'hover:border-brown-500'}`}>
                   {coverPreview ? (
                     <img src={coverPreview} alt="Preview" className="h-20 w-20 rounded-lg object-cover bg-gray-100" />

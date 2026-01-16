@@ -19,7 +19,7 @@ import {
 import { useGenres, useDeleteGenre, useCreateGenre, useUpdateGenre, GenreModel } from '@/hooks/useGenres';
 import { usePresignedUpload } from '@/hooks/usePresignedUpload';
 import { apiClient } from '@/lib/api';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import type { SongModel } from '@/types/song';
 
 const PAGE_SIZE = 20;
@@ -148,6 +148,7 @@ export default function GenresPage() {
   // Nuevo Estado de Progreso
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isFetching, refetch, error } = useGenres({ page, limit: PAGE_SIZE, all: false, enabled: true });
   const genres = data?.genres ?? [];
@@ -294,6 +295,8 @@ export default function GenresPage() {
       });
 
       toast.success('Género creado exitosamente');
+      await queryClient.invalidateQueries(['genres']);
+      refetch();
       closeModals();
     } catch (error: any) {
       console.error(error);

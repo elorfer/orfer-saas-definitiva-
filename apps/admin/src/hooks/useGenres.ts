@@ -83,14 +83,14 @@ export const useCreateGenre = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    async (data: { name: string; description?: string; colorHex?: string }) => {
+    async (data: { name: string; description?: string; colorHex?: string; imageUrl?: string }) => {
       const response = await apiClient.createGenre(data);
       return response.data;
     },
     {
       onSuccess: () => {
         queryClient.invalidateQueries([GENRES_QUERY_KEY]);
-        toast.success('Género creado exitosamente');
+        // toast.success('Género creado exitosamente'); Removed to avoid duplicates (handled in page)
       },
       onError: (error) => {
         toast.error(extractErrorMessage(error));
@@ -103,7 +103,7 @@ export const useUpdateGenre = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    async ({ id, data }: { id: string; data: { name?: string; description?: string; colorHex?: string } }) => {
+    async ({ id, data }: { id: string; data: { name?: string; description?: string; colorHex?: string; imageUrl?: string } }) => {
       const response = await apiClient.updateGenre(id, data);
       return response.data;
     },
