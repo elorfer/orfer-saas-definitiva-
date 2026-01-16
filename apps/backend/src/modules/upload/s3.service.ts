@@ -6,7 +6,6 @@ import * as path from 'path';
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
 import * as https from 'https';
 import { v4 as uuidv4 } from 'uuid';
-import * as crypto from 'crypto';
 
 @Injectable()
 export class S3Service {
@@ -69,79 +68,8 @@ export class S3Service {
   }
 
   /**
-   * Genera firma AWS Signature V4 manualmente (sin SDK)
-   * Esto evita problemas de SSL al usar solo HTTP requests nativos
+   * @deprecated Use generatePresignedUploadUrl instead. Direct uploads are disabled due to SSL issues in Railway/R2.
    */
-  private generateAwsSignatureV4(
-    method: string,
-    url: string,
-    headers: Record<string, string>,
-    payload: Buffer,
-    accessKey: string,
-    secretKey: string,
-    region: string,
-  ): Record<string, string> {
-    const urlObj = new URL(url);
-    const host = urlObj.host;
-    const uri = urlObj.pathname;
-
-    const now = new Date();
-    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
-    const dateStamp = amzDate.substring(0, 8);
-
-    // Canonical request
-    const payloadHash = crypto.createHash('sha256').update(payload).digest('hex');
-
-    headers['host'] = host;
-    headers['x-amz-date'] = amzDate;
-    headers['x-amz-content-sha256'] = payloadHash;
-
-    const canonicalHeaders = Object.keys(headers)
-      .sort()
-      .map(k => `${k.toLowerCase()}:${headers[k].trim()}`)
-      .join('\n') + '\n';
-
-    const signedHeaders = Object.keys(headers).sort().map(k => k.toLowerCase()).join(';');
-
-    const canonicalRequest = [
-      method,
-      uri,
-      '', // Query string (vacío)
-      canonicalHeaders,
-      signedHeaders,
-      payloadHash,
-    ].join('\n');
-
-    // String to sign
-    const algorithm = 'AWS4-HMAC-SHA256';
-    const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
-    const canonicalRequestHash = crypto.createHash('sha256').update(canonicalRequest).digest('hex');
-
-    const stringToSign = [
-      algorithm,
-      amzDate,
-      credentialScope,
-      canonicalRequestHash,
-    ].join('\n');
-
-    // Signing key
-    const kDate = crypto.createHmac('sha256', `AWS4${secretKey}`).update(dateStamp).digest();
-    const kRegion = crypto.createHmac('sha256', kDate).update(region).digest();
-    const kService = crypto.createHmac('sha256', kRegion).update('s3').digest();
-    const kSigning = crypto.createHmac('sha256', kService).update('aws4_request').digest();
-
-    // Signature
-    const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
-
-    // Authorization header
-    const authHeader = `${algorithm} Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-
-    return {
-      ...headers,
-      'Authorization': authHeader,
-    };
-  }
-
   async uploadFile(
     file: Express.Multer.File,
     folder: string,
