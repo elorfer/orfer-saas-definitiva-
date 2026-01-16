@@ -243,7 +243,7 @@ export class S3Service {
         Bucket: this.bucketName,
         Key: key,
         ContentType: contentType,
-        ACL: 'public-read', // Para que sea accesible públicamente después
+        // ACL removido - R2 no lo soporta como S3
       });
 
       const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn });
