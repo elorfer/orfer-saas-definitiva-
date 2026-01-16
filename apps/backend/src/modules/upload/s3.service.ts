@@ -22,12 +22,14 @@ export class S3Service {
       this.region = 'auto'; // R2 usa 'auto'
 
       this.s3Client = new S3Client({
-        region: this.region,
+        region: 'wnam',
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
         credentials: {
           accessKeyId: this.configService.get<string>('R2_ACCESS_KEY_ID'),
           secretAccessKey: this.configService.get<string>('R2_SECRET_ACCESS_KEY'),
         },
+        // R2-specific configuration
+        forcePathStyle: true,
       });
 
       console.log('✅ Storage: Usando Cloudflare R2');
