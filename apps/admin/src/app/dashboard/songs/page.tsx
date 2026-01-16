@@ -18,7 +18,8 @@ import {
   PencilIcon,
 } from '@heroicons/react/24/outline';
 
-import { useSongs, useUploadSong, useDeleteSong, useCreateSong, useUpdateSong } from '@/hooks/useSongs';
+import { useSongs, useDeleteSong, useCreateSong, useUpdateSong } from '@/hooks/useSongs';
+import { usePresignedUpload } from '@/hooks/usePresignedUpload';
 import { useAllArtists } from '@/hooks/useArtists';
 import { useGenres } from '@/hooks/useGenres';
 import type { SongModel } from '@/types/song';
@@ -47,21 +48,21 @@ const formatDuration = (seconds: number): string => {
 };
 
 // Componente para la fila de canción con manejo de imagen
-function SongRow({ 
-  song, 
-  statusInfo, 
-  onDelete, 
+function SongRow({
+  song,
+  statusInfo,
+  onDelete,
   onEdit,
-  isDeleting 
-}: { 
-  song: SongModel; 
+  isDeleting
+}: {
+  song: SongModel;
   statusInfo: { label: string; badge: string };
   onDelete: (song: SongModel) => void;
   onEdit: (song: SongModel) => void;
   isDeleting: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
-  
+
   // Construir URL completa de la portada
   const getCoverUrl = () => {
     if (!song.coverImageUrl) {
@@ -74,25 +75,25 @@ function SongRow({
       }
       return null;
     }
-    
+
     // Si ya es una URL completa, usarla tal cual
     if (song.coverImageUrl.startsWith('http://') || song.coverImageUrl.startsWith('https://')) {
       return song.coverImageUrl;
     }
-    
+
     // Si es una ruta relativa, construir URL completa
     if (song.coverImageUrl.startsWith('/')) {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
       return `${baseUrl}${song.coverImageUrl}`;
     }
-    
+
     // Si es una ruta sin /, agregar el prefijo del backend
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
     return `${baseUrl}/uploads/covers/${song.coverImageUrl}`;
   };
-  
+
   const coverUrl = getCoverUrl();
-  
+
   // Debug: mostrar si la duración es 0
   if (song.duration === 0 && process.env.NODE_ENV === 'development') {
     console.log(`⚠️ Canción "${song.title}" con duración 0:`, {
@@ -235,9 +236,27 @@ export default function SongsPage() {
   const { data: genresData, isLoading: genresLoading } = useGenres({ page: 1, limit: 100, all: true, enabled: true });
   const availableGenres = genresData?.genres?.map(g => g.name) ?? [];
 
-  const { mutateAsync: uploadSong } = useUploadSong();
+  // Hooks de mutación
+  const { mutateAsync: createSong } = useCreateSong();
   const { mutateAsync: updateSong } = useUpdateSong();
   const { mutateAsync: deleteSong } = useDeleteSong();
+
+  // 🔥 HOOKS DE SUBIDA DIRECTA
+  // Subida de Audio (Sin compresión, a la carpeta 'audio')
+  const { uploadFile: uploadAudio } = usePresignedUpload({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '',
+    folder: 'audio',
+    onError: (err) => toast.error(`Error subiendo audio: ${err.message}`),
+  });
+
+  // Subida de Cover (CON compresión, a la carpeta 'images')
+  const { uploadFile: uploadCover } = usePresignedUpload({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '',
+    folder: 'images',
+    onError: (err) => toast.error(`Error subiendo portada: ${err.message}`),
+  });
 
 
   const openUploadModal = () => {
@@ -254,7 +273,7 @@ export default function SongsPage() {
       // Validar tipo de archivo
       const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/m4a', 'audio/x-m4a', 'audio/flac', 'audio/x-flac'];
       if (!allowedTypes.includes(file.type)) {
-        alert('Tipo de archivo no permitido. Solo se permiten: .mp3, .wav, .m4a, .flac');
+        toast.error('Tipo de archivo no permitido. Solo se permiten: .mp3, .wav, .m4a, .flac');
         return;
       }
       setUploadForm((prev) => ({ ...prev, file }));
@@ -267,7 +286,7 @@ export default function SongsPage() {
       // Validar tipo de archivo
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
       if (!allowedTypes.includes(file.type)) {
-        alert('Tipo de archivo no permitido. Solo se permiten imágenes: .jpg, .jpeg, .png, .webp, .gif');
+        toast.error('Tipo de archivo no permitido. Solo se permiten imágenes: .jpg, .jpeg, .png, .webp, .gif');
         return;
       }
       setUploadForm((prev) => ({ ...prev, coverFile: file }));
@@ -278,22 +297,22 @@ export default function SongsPage() {
     event.preventDefault();
 
     if (!uploadForm.file) {
-      alert('Por favor selecciona un archivo');
+      toast.error('Por favor selecciona un archivo de audio');
       return;
     }
 
     if (!uploadForm.title.trim()) {
-      alert('Por favor ingresa un título para la canción');
+      toast.error('Por favor ingresa un título para la canción');
       return;
     }
 
     if (!uploadForm.artistId) {
-      alert('Por favor selecciona un artista');
+      toast.error('Por favor selecciona un artista');
       return;
     }
 
     if (!uploadForm.genres || uploadForm.genres.length === 0) {
-      alert('Por favor selecciona al menos un género musical. Es obligatorio para poder destacar la canción.');
+      toast.error('Por favor selecciona al menos un género musical');
       return;
     }
 
@@ -301,36 +320,50 @@ export default function SongsPage() {
       setUploading(true);
       setUploadProgress(0);
       notificationShownRef.current = false;
-      
-      // Subir archivos y crear registro en una sola petición transaccional
-      await uploadSong({
-        audioFile: uploadForm.file,
-        coverFile: uploadForm.coverFile || undefined,
-        songData: {
-          title: uploadForm.title,
-          artistId: uploadForm.artistId,
-          genres: uploadForm.genres, // Incluir géneros seleccionados
-          status: 'published', // Estado publicado por defecto
-        },
-        onProgress: (progress) => {
-          setUploadProgress(progress);
-          // Cuando el progreso llegue al 100%, la subida está completa
-          // Mostrar notificación solo una vez usando ref para evitar duplicados
-          if (progress === 100 && !notificationShownRef.current) {
-            notificationShownRef.current = true;
-            // Pequeño delay para asegurar que el estado se actualice
-            setTimeout(() => {
-              toast.success('¡Canción subida exitosamente! Procesando metadatos...');
-              setShowUploadModal(false);
-              setUploadForm(DEFAULT_UPLOAD_FORM);
-              setUploadProgress(0);
-              notificationShownRef.current = false;
-            }, 800);
-          }
-        },
+
+      // 1. SUBIR AUDIO (Directo a R2)
+      toast.loading('Subiendo audio...', { id: 'upload-audio' });
+      const audioResult = await uploadAudio(uploadForm.file);
+      const audioUrl = audioResult.publicUrl;
+      setUploadProgress(50);
+      toast.success('Audio subido', { id: 'upload-audio' });
+
+      // 2. SUBIR PORTADA (Opcional, directo a R2 con compresión)
+      let coverImageUrl = undefined;
+      if (uploadForm.coverFile) {
+        toast.loading('Subiendo portada...', { id: 'upload-cover' });
+        const coverResult = await uploadCover(uploadForm.coverFile);
+        coverImageUrl = coverResult.publicUrl;
+        toast.success('Portada subida', { id: 'upload-cover' });
+      }
+      setUploadProgress(80);
+
+      // 3. CREAR CANCIÓN EN DB
+      toast.loading('Guardando canción...', { id: 'save-song' });
+      await createSong({
+        title: uploadForm.title,
+        artistId: uploadForm.artistId,
+        genres: uploadForm.genres,
+        fileUrl: audioUrl,
+        coverImageUrl: coverImageUrl,
+        status: 'published',
+        duration: 0,
       });
-    } catch (error) {
-      // Error manejado por los hooks
+
+      setUploadProgress(100);
+      toast.success('¡Canción creada exitosamente!', { id: 'save-song' });
+
+      setShowUploadModal(false);
+      setUploadForm(DEFAULT_UPLOAD_FORM);
+      setUploadProgress(0);
+
+      refetch();
+
+    } catch (error: any) {
+      console.error(error);
+      toast.error(`Error al crear la canción: ${error.message || 'Error desconocido'}`, { id: 'save-song' });
+      // Limpiar estados de carga si falla
+      setUploading(false);
       setUploadProgress(0);
     } finally {
       setUploading(false);
@@ -342,7 +375,7 @@ export default function SongsPage() {
     setEditForm({
       title: song.title || '',
       artistId: song.artistId || '',
-      genres: song.genres || [], // Usar los géneros del modelo directamente
+      genres: song.genres || [],
       status: song.status || 'published',
     });
     setShowEditModal(true);
@@ -353,7 +386,7 @@ export default function SongsPage() {
     if (!editingSong) return;
 
     if (!editForm.genres || editForm.genres.length === 0) {
-      alert('Por favor selecciona al menos un género musical. Es obligatorio para poder destacar la canción.');
+      toast.error('Por favor selecciona al menos un género musical');
       return;
     }
 
@@ -445,105 +478,105 @@ export default function SongsPage() {
             </button>
           </div>
         </div>
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative w-full sm:w-72">
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Buscar por título o artista..."
-                    className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
-                  />
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                </div>
-                <p className="text-sm text-gray-500">{total.toLocaleString('es-ES')} canciones en total</p>
-              </div>
-
-              <div className="mt-6 overflow-hidden rounded-xl border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200 bg-white">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Canción
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Artista
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Duración
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Estado
-                      </th>
-                      <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Estadísticas
-                      </th>
-                      <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
-                          Cargando canciones...
-                        </td>
-                      </tr>
-                    ) : filteredSongs.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
-                          No se encontraron canciones.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredSongs.map((song: SongModel) => {
-                        const statusInfo = statusLabels[song.status] ?? statusLabels.draft;
-                        return (
-                          <SongRow
-                            key={song.id}
-                            song={song}
-                            statusInfo={statusInfo}
-                            onDelete={handleDeleteSong}
-                            onEdit={handleEditSong}
-                            isDeleting={deletingId === song.id}
-                          />
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
-                <p className="text-sm text-gray-500">
-                  Página {page} de {totalPages}
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handlePrev}
-                    disabled={page === 1}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={page === totalPages}
-                    className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              </div>
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por título o artista..."
+                className="w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 pl-10 text-sm text-gray-800 focus:border-brown-700 focus:outline-none focus:ring-2 focus:ring-brown-100"
+              />
+              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
+            <p className="text-sm text-gray-500">{total.toLocaleString('es-ES')} canciones en total</p>
+          </div>
+
+          <div className="mt-6 overflow-hidden rounded-xl border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 bg-white">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Canción
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Artista
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Duración
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Estado
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Estadísticas
+                  </th>
+                  <th className="py-3 px-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
+                      Cargando canciones...
+                    </td>
+                  </tr>
+                ) : filteredSongs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-sm text-gray-500">
+                      No se encontraron canciones.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSongs.map((song: SongModel) => {
+                    const statusInfo = statusLabels[song.status] ?? statusLabels.draft;
+                    return (
+                      <SongRow
+                        key={song.id}
+                        song={song}
+                        statusInfo={statusInfo}
+                        onDelete={handleDeleteSong}
+                        onEdit={handleEditSong}
+                        isDeleting={deletingId === song.id}
+                      />
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <p className="text-sm text-gray-500">
+              Página {page} de {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrev}
+                disabled={page === 1}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={page === totalPages}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-500 transition hover:border-brown-600 hover:text-brown-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {showUploadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 sticky top-0 bg-white z-10">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Subir nueva canción</h2>
                 <p className="text-sm text-gray-500">
@@ -573,16 +606,14 @@ export default function SongsPage() {
                 </label>
                 <div className="mt-1">
                   {uploadForm.file ? (
-                    <div className={`w-full border-2 rounded-lg p-4 transition ${
-                      uploading 
-                        ? 'border-brown-500 bg-brown-50' 
-                        : 'border-green-300 bg-green-50 border-dashed'
-                    }`}>
+                    <div className={`w-full border-2 rounded-lg p-4 transition ${uploading
+                      ? 'border-brown-500 bg-brown-50'
+                      : 'border-green-300 bg-green-50 border-dashed'
+                      }`}>
                       <div className="flex items-center gap-4">
                         <div className="flex-shrink-0 relative">
-                          <div className={`h-16 w-16 rounded-lg flex items-center justify-center ${
-                            uploading ? 'bg-brown-100 border-2 border-brown-600' : 'bg-green-100'
-                          }`}>
+                          <div className={`h-16 w-16 rounded-lg flex items-center justify-center ${uploading ? 'bg-brown-100 border-2 border-brown-600' : 'bg-green-100'
+                            }`}>
                             {uploading ? (
                               <ArrowPathIcon className="h-8 w-8 text-brown-700 animate-spin" />
                             ) : (
@@ -667,24 +698,21 @@ export default function SongsPage() {
                 </label>
                 <div className="mt-1">
                   {uploadForm.coverFile ? (
-                    <div className={`w-full border-2 rounded-lg p-4 transition ${
-                      uploading 
-                        ? 'border-brown-500 bg-brown-50' 
-                        : 'border-blue-300 bg-blue-50'
-                    }`}>
+                    <div className={`w-full border-2 rounded-lg p-4 transition ${uploading
+                      ? 'border-brown-500 bg-brown-50'
+                      : 'border-blue-300 bg-blue-50'
+                      }`}>
                       <div className="flex items-center gap-4">
                         <div className="flex-shrink-0 relative">
-                          <div className={`h-20 w-20 rounded-lg overflow-hidden border-2 ${
-                            uploading ? 'border-brown-600' : 'border-blue-300'
-                          }`}>
+                          <div className={`h-20 w-20 rounded-lg overflow-hidden border-2 ${uploading ? 'border-brown-600' : 'border-blue-300'
+                            }`}>
                             {uploadForm.coverFile.type.startsWith('image/') ? (
                               <>
                                 <img
                                   src={URL.createObjectURL(uploadForm.coverFile)}
                                   alt="Vista previa"
-                                  className={`h-full w-full object-cover ${
-                                    uploading ? 'opacity-50' : ''
-                                  }`}
+                                  className={`h-full w-full object-cover ${uploading ? 'opacity-50' : ''
+                                    }`}
                                 />
                                 {uploading && (
                                   <div className="absolute inset-0 flex items-center justify-center bg-brown-700/20 backdrop-blur-sm">
@@ -693,9 +721,8 @@ export default function SongsPage() {
                                 )}
                               </>
                             ) : (
-                              <div className={`h-full w-full flex items-center justify-center ${
-                                uploading ? 'bg-brown-100' : 'bg-blue-100'
-                              }`}>
+                              <div className={`h-full w-full flex items-center justify-center ${uploading ? 'bg-brown-100' : 'bg-blue-100'
+                                }`}>
                                 {uploading ? (
                                   <ArrowPathIcon className="h-8 w-8 text-brown-700 animate-spin" />
                                 ) : (
@@ -829,11 +856,10 @@ export default function SongsPage() {
                       return (
                         <label
                           key={genre}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
-                            isSelected
-                              ? 'bg-brown-100 border-2 border-brown-700 text-brown-800'
-                              : 'bg-white border border-gray-200 hover:border-brown-500 text-gray-700'
-                          }`}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${isSelected
+                            ? 'bg-brown-100 border-2 border-brown-700 text-brown-800'
+                            : 'bg-white border border-gray-200 hover:border-brown-500 text-gray-700'
+                            }`}
                         >
                           <input
                             type="checkbox"
@@ -1000,11 +1026,10 @@ export default function SongsPage() {
                       return (
                         <label
                           key={genre}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${
-                            isSelected
-                              ? 'bg-brown-100 border-2 border-brown-700 text-brown-800'
-                              : 'bg-white border border-gray-200 hover:border-brown-500 text-gray-700'
-                          }`}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition ${isSelected
+                            ? 'bg-brown-100 border-2 border-brown-700 text-brown-800'
+                            : 'bg-white border border-gray-200 hover:border-brown-500 text-gray-700'
+                            }`}
                         >
                           <input
                             type="checkbox"
@@ -1038,7 +1063,7 @@ export default function SongsPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -1055,13 +1080,13 @@ export default function SongsPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={updating || !editForm.title.trim() || !editForm.artistId}
+                  disabled={updating}
                   className="inline-flex items-center rounded-lg bg-brown-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brown-800 disabled:cursor-not-allowed disabled:bg-brown-600"
                 >
                   {updating ? (
                     <>
                       <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
-                      Actualizando...
+                      Guardando...
                     </>
                   ) : (
                     'Guardar cambios'
@@ -1075,4 +1100,3 @@ export default function SongsPage() {
     </>
   );
 }
-

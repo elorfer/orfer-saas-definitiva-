@@ -65,7 +65,7 @@ export function useAd(id: string) {
 
 export function useCreateAd() {
   const queryClient = useQueryClient();
-  
+
   return useMutation(
     async (data: any) => {
       const response = await apiClient.createAd(data);
@@ -85,7 +85,7 @@ export function useCreateAd() {
 
 export function useUpdateAd() {
   const queryClient = useQueryClient();
-  
+
   return useMutation(
     async ({ id, data }: { id: string; data: any }) => {
       const response = await apiClient.updateAd(id, data);
@@ -106,7 +106,7 @@ export function useUpdateAd() {
 
 export function useDeleteAd() {
   const queryClient = useQueryClient();
-  
+
   return useMutation(
     async (id: string) => {
       await apiClient.deleteAd(id);
@@ -125,7 +125,7 @@ export function useDeleteAd() {
 
 export function useActivateAd() {
   const queryClient = useQueryClient();
-  
+
   return useMutation(
     async (id: string) => {
       const response = await apiClient.activateAd(id);
@@ -146,7 +146,7 @@ export function useActivateAd() {
 
 export function usePauseAd() {
   const queryClient = useQueryClient();
-  
+
   return useMutation(
     async (id: string) => {
       const response = await apiClient.pauseAd(id);
@@ -160,48 +160,6 @@ export function usePauseAd() {
       },
       onError: (error: any) => {
         toast.error(error.response?.data?.message || 'Error al pausar anuncio');
-      },
-    }
-  );
-}
-
-export function useUploadAdAudio() {
-  const queryClient = useQueryClient();
-  
-  return useMutation(
-    async ({ id, file }: { id: string; file: File }) => {
-      const response = await apiClient.uploadAdAudio(id, file);
-      return response.data;
-    },
-    {
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries(['ad', variables.id]);
-        queryClient.invalidateQueries(['ads']);
-        toast.success('Audio subido exitosamente');
-      },
-      onError: (error: any) => {
-        toast.error(error.response?.data?.message || 'Error al subir audio');
-      },
-    }
-  );
-}
-
-export function useUploadAdCover() {
-  const queryClient = useQueryClient();
-  
-  return useMutation(
-    async ({ id, file }: { id: string; file: File }) => {
-      const response = await apiClient.uploadAdCover(id, file);
-      return response.data;
-    },
-    {
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries(['ad', variables.id]);
-        queryClient.invalidateQueries(['ads']);
-        toast.success('Carátula subida exitosamente');
-      },
-      onError: (error: any) => {
-        toast.error(error.response?.data?.message || 'Error al subir carátula');
       },
     }
   );
@@ -250,7 +208,7 @@ export function useAdFrequency() {
  */
 export function useUpdateAdFrequency() {
   const queryClient = useQueryClient();
-  
+
   return useMutation(
     async (value: number) => {
       const response = await apiClient.updateAdFrequency(value);

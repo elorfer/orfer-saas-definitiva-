@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { toast } from 'react-hot-toast';
 
 import { apiClient } from '@/lib/api';
-import { SongsResponse, SongModel, UseSongsParams, UploadSongInput } from '@/types/song';
+import { SongsResponse, SongModel, UseSongsParams } from '@/types/song';
 
 const SONGS_QUERY_KEY = 'songs';
 
@@ -25,10 +25,10 @@ const mapArtist = (artist: any) => ({
 const mapSong = (song: any): SongModel => {
   const duration = song?.duration ?? 0;
   const durationNumber = typeof duration === 'string' ? parseInt(duration, 10) : Number(duration);
-  
+
   // Mapear portada - intentar múltiples campos posibles
   const coverImageUrl = song?.coverImageUrl ?? song?.coverArtUrl ?? song?.cover_image_url ?? song?.cover_art_url ?? undefined;
-  
+
   // Log temporal para debug cuando hay problemas
   if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
     if (!coverImageUrl || durationNumber === 0) {
@@ -46,7 +46,7 @@ const mapSong = (song: any): SongModel => {
       });
     }
   }
-  
+
   // Mapear géneros - pueden venir como array o string (simple-array de TypeORM)
   let genres: string[] | undefined = undefined;
   if (song?.genres !== undefined && song?.genres !== null) {
@@ -114,78 +114,6 @@ export const useSongs = ({ page = 1, limit = 10, enabled = true }: UseSongsParam
   );
 };
 
-export const useUploadSong = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    async ({ 
-      audioFile, 
-      coverFile, 
-      songData,
-      onProgress
-    }: { 
-      audioFile: File; 
-      coverFile?: File;
-      songData: {
-        title: string;
-        artistId: string;
-        albumId?: string;
-        genreId?: string;
-        genres?: string[]; // Array de géneros musicales
-        status?: string;
-        duration?: number;
-      };
-      onProgress?: (progress: number) => void;
-    }) => {
-      const response = await apiClient.uploadSong(
-        audioFile, 
-        coverFile, 
-        songData,
-        (progressEvent) => {
-          if (onProgress) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            onProgress(percentCompleted);
-          }
-        }
-      );
-      return response.data;
-    },
-    {
-      onSuccess: async () => {
-        // Invalidar todas las queries relacionadas con canciones
-        await queryClient.invalidateQueries([SONGS_QUERY_KEY]);
-        
-        // Polling inteligente: refrescar hasta que la canción esté completamente procesada
-        // La notificación de éxito se muestra desde el componente cuando el progreso llega al 100%
-        let attempts = 0;
-        const maxAttempts = 20; // 20 intentos = 10 segundos máximo
-        
-        const pollUntilReady = async () => {
-          attempts++;
-          
-          // Refrescar queries
-          const result = await queryClient.refetchQueries([SONGS_QUERY_KEY]);
-          
-          // Si ya hemos intentado varias veces, dejar de intentar sin mostrar notificación
-          // La notificación ya se mostró cuando el progreso llegó al 100%
-          if (attempts >= maxAttempts) {
-            return;
-          }
-          
-          // Esperar 500ms antes del siguiente intento
-          setTimeout(pollUntilReady, 500);
-        };
-        
-        // Comenzar polling después de 2 segundos iniciales
-        setTimeout(pollUntilReady, 2000);
-      },
-      onError: (error) => {
-        toast.error(extractErrorMessage(error));
-      },
-    }
-  );
-};
-
 export const useCreateSong = () => {
   const queryClient = useQueryClient();
 
@@ -244,4 +172,3 @@ export const useDeleteSong = () => {
     }
   );
 };
-

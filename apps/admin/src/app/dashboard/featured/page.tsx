@@ -6,6 +6,7 @@ import {
   MusicalNoteIcon,
   StarIcon,
   ArrowPathIcon,
+  ListBulletIcon,
 } from '@heroicons/react/24/outline';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { toast } from 'react-hot-toast';
@@ -13,9 +14,24 @@ import { apiClient } from '@/lib/api';
 
 const TABS = [
   { id: 'songs', label: 'Canciones Destacadas', icon: MusicalNoteIcon },
-  { id: 'artists', label: 'Artistas Destacados', icon: UsersIcon }, // Solo lectura (desde sección Artistas)
-  { id: 'playlists', label: 'Playlists Destacadas', icon: MusicalNoteIcon },
+  { id: 'artists', label: 'Artistas Destacados', icon: UsersIcon },
+  { id: 'playlists', label: 'Playlists Destacadas', icon: ListBulletIcon },
 ];
+
+const resolveImageUrl = (url: string | undefined | null, type: 'cover' | 'profile' = 'cover') => {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+  if (url.startsWith('/')) return `${baseUrl}${url}`;
+
+  // Si no tiene slash, asumimos que es un nombre de archivo en la carpeta correspondiente
+  if (type === 'cover') return `${baseUrl}/uploads/covers/${url}`;
+  if (type === 'profile') return `${baseUrl}/uploads/profiles/${url}`;
+
+  return `${baseUrl}/${url}`;
+};
 
 export default function FeaturedPage() {
   const queryClient = useQueryClient();
@@ -45,48 +61,28 @@ export default function FeaturedPage() {
     ['songs', 'all'],
     async () => {
       const response = await apiClient.getSongs(1, 1000, true);
-      console.log('📊 Respuesta de canciones:', response.data);
       return response.data;
     },
-    { 
+    {
       enabled: activeTab === 'songs',
-      onError: (error: any) => {
-        console.error('❌ Error al cargar canciones:', error);
-        toast.error('Error al cargar canciones');
-      }
+      onError: () => toast.error('Error al cargar canciones')
     }
   );
-
-  // Nota: Eliminado listado completo de artistas aquí para evitar gestión duplicada de destacados
 
   const { data: allPlaylists, isLoading: playlistsAllLoading, error: playlistsError } = useQuery(
     ['playlists', 'all'],
     async () => {
       const response = await apiClient.getPlaylists(1, 1000);
-      console.log('📊 Respuesta de playlists:', response.data);
       return response.data;
     },
-    { 
+    {
       enabled: activeTab === 'playlists',
-      onError: (error: any) => {
-        console.error('❌ Error al cargar playlists:', error);
-        toast.error('Error al cargar playlists');
-      }
+      onError: () => toast.error('Error al cargar playlists')
     }
   );
 
   const playlists = allPlaylists?.playlists || [];
-  // En artistas, solo se muestra la lista de destacados proveniente del backend
   const songs = allSongs?.songs || [];
-
-  // Debug logs
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    console.log('🎵 Canciones cargadas:', songs.length, songs);
-    console.log('👤 Artistas destacados (solo lectura):', featuredArtists?.length || 0, featuredArtists);
-    console.log('📋 Playlists cargadas:', playlists.length, playlists);
-    console.log('📊 allSongs completo:', allSongs);
-    console.log('📊 allPlaylists completo:', allPlaylists);
-  }
 
   // Mutations para destacar/quitar destacado
   const featureSong = useMutation(
@@ -98,8 +94,7 @@ export default function FeaturedPage() {
         toast.success('Canción destacada exitosamente');
       },
       onError: (error: any) => {
-        const errorMessage = error?.response?.data?.message || error?.message || 'Error al destacar canción';
-        console.error('Error al destacar canción:', error);
+        const errorMessage = error?.response?.data?.message || 'Error al destacar canción';
         toast.error(errorMessage);
       },
     }
@@ -114,14 +109,11 @@ export default function FeaturedPage() {
         toast.success('Canción ya no está destacada');
       },
       onError: (error: any) => {
-        const errorMessage = error?.response?.data?.message || error?.message || 'Error al quitar destacado';
-        console.error('Error al quitar destacado:', error);
+        const errorMessage = error?.response?.data?.message || 'Error al quitar destacado';
         toast.error(errorMessage);
       },
     }
   );
-
-  // Eliminadas mutations de destacar/desdestacar artistas desde este módulo (gestión se hace en /artists)
 
   const featurePlaylist = useMutation(
     (id: string) => apiClient.featurePlaylist(id),
@@ -150,7 +142,6 @@ export default function FeaturedPage() {
   const isLoading = songsLoading || artistsLoading || playlistsLoading || songsAllLoading || playlistsAllLoading;
 
   const featuredSongsIds = new Set(featuredSongs?.map((s: any) => s.id) || []);
-  // No se necesitan IDs destacados de artistas aquí
   const featuredPlaylistsIds = new Set(featuredPlaylists?.map((p: any) => p.id) || []);
 
   return (
@@ -174,144 +165,143 @@ export default function FeaturedPage() {
           Actualizar
         </button>
       </div>
-          {/* Tabs */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                {TABS.map((tab) => {
-                  const Icon = tab.icon;
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition ${
-                        isActive
-                          ? 'border-brown-700 text-brown-700'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
 
-            {/* Content */}
-            <div className="mt-6">
-              {isLoading ? (
-                <div className="text-center py-12 text-sm text-gray-500">
-                  Cargando...
-                </div>
-              ) : activeTab === 'songs' && songsError ? (
-                <div className="text-center py-12">
-                  <p className="text-sm text-red-600 mb-2">Error al cargar canciones</p>
-                  <p className="text-xs text-gray-500">{songsError?.message || 'Error desconocido'}</p>
-                </div>
-              ) : activeTab === 'playlists' && playlistsError ? (
-                <div className="text-center py-12">
-                  <p className="text-sm text-red-600 mb-2">Error al cargar playlists</p>
-                  <p className="text-xs text-gray-500">{playlistsError?.message || 'Error desconocido'}</p>
-                </div>
-              ) : activeTab === 'songs' ? (
-                <SongsSection
-                  allSongs={songs}
-                  featuredSongsIds={featuredSongsIds}
-                  onFeature={featureSong.mutate}
-                  onUnfeature={unfeatureSong.mutate}
-                />
-              ) : activeTab === 'artists' ? (
-                <ArtistsReadOnlySection
-                  featuredArtists={featuredArtists || []}
-                />
-              ) : (
-                <PlaylistsSection
-                  allPlaylists={playlists}
-                  featuredPlaylistsIds={featuredPlaylistsIds}
-                  onFeature={featurePlaylist.mutate}
-                  onUnfeature={unfeaturePlaylist.mutate}
-                />
-              )}
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition ${isActive
+                      ? 'border-brown-700 text-brown-700'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="mt-6">
+          {isLoading ? (
+            <div className="text-center py-12 text-sm text-gray-500">
+              <div className="flex justify-center mb-2">
+                <ArrowPathIcon className="h-6 w-6 animate-spin text-gray-400" />
+              </div>
+              Cargando contenido...
             </div>
-          </div>
+          ) : activeTab === 'songs' ? (
+            <SongsSection
+              allSongs={songs}
+              featuredSongsIds={featuredSongsIds}
+              onFeature={featureSong.mutate}
+              onUnfeature={unfeatureSong.mutate}
+            />
+          ) : activeTab === 'artists' ? (
+            <ArtistsReadOnlySection
+              featuredArtists={featuredArtists || []}
+            />
+          ) : (
+            <PlaylistsSection
+              allPlaylists={playlists}
+              featuredPlaylistsIds={featuredPlaylistsIds}
+              onFeature={featurePlaylist.mutate}
+              onUnfeature={unfeaturePlaylist.mutate}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function SongsSection({ allSongs, featuredSongsIds, onFeature, onUnfeature }: any) {
-  if (!allSongs || allSongs.length === 0) {
+function ImageWithFallback({ src, alt, className, fallbackIcon: FallbackIcon }: any) {
+  const [error, setError] = useState(false);
+
+  if (!src || error) {
     return (
-      <div className="text-center py-12">
-        <p className="text-sm text-gray-500">No hay canciones disponibles</p>
+      <div className={`flex items-center justify-center bg-gray-100 text-gray-400 ${className}`}>
+        <FallbackIcon className="h-1/2 w-1/2" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Total: <span className="font-semibold">{allSongs.length}</span> canciones
-        </p>
-        <p className="text-sm text-gray-600">
-          Destacadas: <span className="font-semibold text-yellow-600">{featuredSongsIds.size}</span>
-        </p>
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => setError(true)}
+    />
+  );
+}
+
+function SongsSection({ allSongs, featuredSongsIds, onFeature, onUnfeature }: any) {
+  if (!allSongs?.length) {
+    return (
+      <div className="text-center py-12 text-gray-500 text-sm">
+        No hay canciones disponibles para destacar.
       </div>
-      <div className="grid gap-4">
-        {allSongs.map((song: any) => {
+    );
+  }
+
+  // Ordenar: Destacadas arriba
+  const sortedSongs = [...allSongs].sort((a, b) => {
+    const aFeatured = featuredSongsIds.has(a.id);
+    const bFeatured = featuredSongsIds.has(b.id);
+    return (bFeatured ? 1 : 0) - (aFeatured ? 1 : 0);
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between text-sm text-gray-500 mb-2">
+        <span>Total: {allSongs.length}</span>
+        <span className="text-yellow-600 font-medium">Destacadas: {featuredSongsIds.size}</span>
+      </div>
+      <div className="grid gap-3">
+        {sortedSongs.map((song: any) => {
           const isFeatured = featuredSongsIds.has(song.id);
+          const coverUrl = resolveImageUrl(song.coverArtUrl || song.coverImageUrl, 'cover');
+
           return (
             <div
               key={song.id}
-              className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition ${
-                isFeatured ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200'
-              }`}
+              className={`flex items-center justify-between p-3 border rounded-lg transition ${isFeatured ? 'border-yellow-300 bg-yellow-50' : 'border-gray-100 hover:bg-gray-50'
+                }`}
             >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                {song.coverArtUrl || song.coverImageUrl ? (
-                  <img
-                    src={song.coverArtUrl || song.coverImageUrl}
-                    alt={song.title}
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-brown-700 to-brown-700 flex items-center justify-center">
-                    <MusicalNoteIcon className="h-6 w-6 text-white" />
-                  </div>
-                )}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <ImageWithFallback
+                  src={coverUrl}
+                  alt={song.title}
+                  className="h-12 w-12 rounded-lg object-cover bg-gray-200"
+                  fallbackIcon={MusicalNoteIcon}
+                />
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-gray-900 truncate">{song.title}</p>
-                    {isFeatured && (
-                      <StarIcon className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                    )}
+                    <p className="text-sm font-semibold text-gray-900 truncate">{song.title}</p>
+                    {isFeatured && <StarIcon className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {song.artist?.stageName || song.artist?.user?.email || 'Sin artista'}
+                  <p className="text-xs text-gray-500 truncate">
+                    {song.artist?.stageName || song.artist?.user?.email || 'Desconocido'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => (isFeatured ? onUnfeature(song.id) : onFeature(song.id))}
-                className={`ml-4 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1 ${
-                  isFeatured
-                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${isFeatured
+                    ? 'bg-white text-yellow-700 border border-yellow-200 hover:bg-yellow-100'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
               >
-                {isFeatured ? (
-                  <>
-                    <StarIcon className="h-4 w-4" />
-                    Destacada
-                  </>
-                ) : (
-                  <>
-                    <StarIcon className="h-4 w-4" />
-                    Destacar
-                  </>
-                )}
+                {isFeatured ? 'Destacada' : 'Destacar'}
               </button>
             </div>
           );
@@ -322,115 +312,103 @@ function SongsSection({ allSongs, featuredSongsIds, onFeature, onUnfeature }: an
 }
 
 function ArtistsReadOnlySection({ featuredArtists }: any) {
-  if (!featuredArtists || featuredArtists.length === 0) {
+  if (!featuredArtists?.length) {
     return (
-      <div className="text-center py-12">
-        <p className="text-sm text-gray-500">No hay artistas destacados</p>
+      <div className="text-center py-12 text-gray-500 text-sm">
+        No hay artistas marcados como destacados desde la sección de Artistas.
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
-        {featuredArtists.map((artist: any) => {
-          return (
-            <div
-              key={artist.id}
-              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                {artist.profilePhotoUrl ? (
-                  <img
-                    src={artist.profilePhotoUrl}
-                    alt={artist.stageName || 'Artista'}
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold">
-                    {artist.stageName?.[0]?.toUpperCase() || 'A'}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {artist.stageName || artist.user?.email || 'Sin nombre'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {artist.totalFollowers || 0} seguidores
-                  </p>
-                </div>
+    <div className="grid gap-3">
+      {featuredArtists.map((artist: any) => {
+        const profileUrl = resolveImageUrl(artist.profilePhotoUrl, 'profile');
+
+        return (
+          <div
+            key={artist.id}
+            className="flex items-center justify-between p-3 border border-yellow-200 bg-yellow-50 rounded-lg"
+          >
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <ImageWithFallback
+                src={profileUrl}
+                alt={artist.stageName}
+                className="h-12 w-12 rounded-full object-cover bg-gray-200"
+                fallbackIcon={UsersIcon}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {artist.stageName || 'Sin nombre'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {artist.totalFollowers || 0} seguidores
+                </p>
               </div>
-              <span className="ml-4 px-3 py-1 rounded-lg text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200">
-                Destacado
-              </span>
             </div>
-          );
-        })}
-      </div>
+            <span className="ml-4 px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+              Destacado
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function PlaylistsSection({ allPlaylists, featuredPlaylistsIds, onFeature, onUnfeature }: any) {
-  if (!allPlaylists || allPlaylists.length === 0) {
+  if (!allPlaylists?.length) {
     return (
-      <div className="text-center py-12">
-        <p className="text-sm text-gray-500">No hay playlists disponibles</p>
+      <div className="text-center py-12 text-gray-500 text-sm">
+        No hay playlists disponibles.
       </div>
     );
   }
 
+  const sortedPlaylists = [...allPlaylists].sort((a, b) => {
+    const aFeatured = featuredPlaylistsIds.has(a.id);
+    const bFeatured = featuredPlaylistsIds.has(b.id);
+    return (bFeatured ? 1 : 0) - (aFeatured ? 1 : 0);
+  });
+
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
-        {allPlaylists.map((playlist: any) => {
-          const isFeatured = featuredPlaylistsIds.has(playlist.id);
-          return (
-            <div
-              key={playlist.id}
-              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                {playlist.coverArtUrl ? (
-                  <img
-                    src={playlist.coverArtUrl}
-                    alt={playlist.name}
-                    className="h-12 w-12 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                    <MusicalNoteIcon className="h-6 w-6 text-white" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{playlist.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {playlist.totalTracks || 0} canciones • {playlist.user?.email || 'Usuario'}
-                  </p>
-                </div>
+    <div className="grid gap-3">
+      {sortedPlaylists.map((playlist: any) => {
+        const isFeatured = featuredPlaylistsIds.has(playlist.id);
+        const coverUrl = resolveImageUrl(playlist.coverArtUrl, 'cover');
+
+        return (
+          <div
+            key={playlist.id}
+            className={`flex items-center justify-between p-3 border rounded-lg transition ${isFeatured ? 'border-yellow-300 bg-yellow-50' : 'border-gray-100 hover:bg-gray-50'
+              }`}
+          >
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <ImageWithFallback
+                src={coverUrl}
+                alt={playlist.name}
+                className="h-12 w-12 rounded-lg object-cover bg-gray-200"
+                fallbackIcon={ListBulletIcon}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">{playlist.name}</p>
+                <p className="text-xs text-gray-500">
+                  {playlist.totalTracks || 0} canciones
+                </p>
               </div>
-              <button
-                onClick={() => (isFeatured ? onUnfeature(playlist.id) : onFeature(playlist.id))}
-                className={`ml-4 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  isFeatured
-                    ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {isFeatured ? (
-                  <>
-                    <StarIcon className="h-4 w-4 inline mr-1" />
-                    Destacada
-                  </>
-                ) : (
-                  'Destacar'
-                )}
-              </button>
             </div>
-          );
-        })}
-      </div>
+            <button
+              onClick={() => (isFeatured ? onUnfeature(playlist.id) : onFeature(playlist.id))}
+              className={`ml-4 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${isFeatured
+                  ? 'bg-white text-yellow-700 border border-yellow-200 hover:bg-yellow-100'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+            >
+              {isFeatured ? 'Destacada' : 'Destacar'}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
-

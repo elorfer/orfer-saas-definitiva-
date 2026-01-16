@@ -25,21 +25,21 @@ const mapPlaylist = (playlist: any): PlaylistModel => {
       email: playlist.user.email ?? '',
       name: playlist.user.name ?? playlist.user.fullName ?? undefined,
     } : undefined,
-    playlistSongs: Array.isArray(playlist?.playlistSongs) 
+    playlistSongs: Array.isArray(playlist?.playlistSongs)
       ? playlist.playlistSongs.map((ps: any) => ({
-          id: ps?.id ?? '',
-          position: ps?.position ?? 0,
-          song: {
-            id: ps?.song?.id ?? '',
-            title: ps?.song?.title ?? '',
-            duration: ps?.song?.duration ?? 0,
-            coverImageUrl: ps?.song?.coverImageUrl ?? ps?.song?.cover_image_url ?? undefined,
-            artist: ps?.song?.artist ? {
-              id: ps.song.artist.id ?? '',
-              stageName: ps.song.artist.stageName ?? ps.song.artist.stage_name ?? undefined,
-            } : undefined,
-          },
-        }))
+        id: ps?.id ?? '',
+        position: ps?.position ?? 0,
+        song: {
+          id: ps?.song?.id ?? '',
+          title: ps?.song?.title ?? '',
+          duration: ps?.song?.duration ?? 0,
+          coverImageUrl: ps?.song?.coverImageUrl ?? ps?.song?.cover_image_url ?? undefined,
+          artist: ps?.song?.artist ? {
+            id: ps.song.artist.id ?? '',
+            stageName: ps.song.artist.stageName ?? ps.song.artist.stage_name ?? undefined,
+          } : undefined,
+        },
+      }))
       : undefined,
   };
 };
@@ -192,26 +192,6 @@ export const useToggleFeaturedPlaylist = () => {
   );
 };
 
-export const useUploadPlaylistCover = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    async ({ id, file }: { id: string; file: File }) => {
-      const response = await apiClient.uploadPlaylistCover(id, file);
-      return mapPlaylist(response.data);
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([PLAYLISTS_QUERY_KEY]);
-        toast.success('Portada actualizada exitosamente');
-      },
-      onError: (error) => {
-        toast.error(extractErrorMessage(error));
-      },
-    }
-  );
-};
-
 export const useAddSongToPlaylist = () => {
   const queryClient = useQueryClient();
 
@@ -251,4 +231,3 @@ export const useRemoveSongFromPlaylist = () => {
     }
   );
 };
-
