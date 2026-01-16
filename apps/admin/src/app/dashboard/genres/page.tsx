@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import {
   ArrowPathIcon,
@@ -48,6 +48,10 @@ function GenreRow({
   const imageUrl = resolveImageUrl(genre.imageUrl);
   const [imageError, setImageError] = useState(false);
 
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
+
   return (
     <tr className="hover:bg-gray-50 transition">
       <td className="py-4 px-4">
@@ -55,6 +59,7 @@ function GenreRow({
           {imageUrl && !imageError ? (
             <div className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden shadow-sm border border-gray-200">
               <img
+                key={imageUrl}
                 src={imageUrl}
                 alt={genre.name}
                 className="h-full w-full object-cover"

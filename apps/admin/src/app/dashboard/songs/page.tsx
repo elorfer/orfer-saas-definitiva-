@@ -32,6 +32,21 @@ const resolveUrl = (url?: string, type: 'cover' | 'audio' = 'cover') => {
   return `${baseUrl}/uploads/covers${cleanUrl}`;
 };
 
+const getAudioDuration = (file: File): Promise<number> => {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const audio = new Audio(objectUrl);
+    audio.onloadedmetadata = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(audio.duration);
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(0);
+    };
+  });
+};
+
 import { useSongs, useDeleteSong, useCreateSong, useUpdateSong } from '@/hooks/useSongs';
 import { usePresignedUpload } from '@/hooks/usePresignedUpload';
 import { useAllArtists } from '@/hooks/useArtists';
@@ -61,6 +76,7 @@ const formatDuration = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
+// Componente de Reproductor Fijo
 // Componente de Reproductor Fijo
 function StickyPlayer({ song, onClose }: { song: SongModel; onClose: () => void }) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -95,52 +111,96 @@ function StickyPlayer({ song, onClose }: { song: SongModel; onClose: () => void 
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 px-4 py-3 sm:px-6 lg:px-8 animate-in slide-in-from-bottom duration-300">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-50 px-4 py-3 sm:px-6 lg:px-8 animate-in slide-in-from-bottom duration-300">
       <div className="max-w-7xl mx-auto flex items-center gap-4 sm:gap-6">
         {/* Info Canción */}
         <div className="flex items-center gap-3 w-1/4 min-w-[150px]">
-          <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200">
+          <div className="h-14 w-14 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative group">
             {coverUrl ? (
-              <img src={coverUrl} alt={song.title} className="h-full w-full object-cover" />
+              <img src={coverUrl} alt={song.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
             ) : (
-              <MusicalNoteIcon className="h-6 w-6 m-auto text-gray-400" />
+              <MusicalNoteIcon className="h-6 w-6 m-auto text-gray-400 absolute inset-0" />
             )}
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">{song.title}</p>
-            <p className="text-xs text-gray-500 truncate">{song.artist?.stageName || 'Desconocido'}</p>
+          <div className="min-w-0 flex flex-col justify-center">
+            <p className="text-sm font-bold text-gray-900 truncate leading-tight">{song.title}</p>
+            <p className="text-xs text-gray-500 truncate font-medium">{song.artist?.stageName || 'Desconocido'}</p>
           </div>
         </div>
 
         {/* Controles Centrales */}
-        <div className="flex-1 flex flex-col items-center gap-1">
-          <div className="flex items-center gap-4">
+        <div className="flex-1 flex flex-col items-center gap-2 max-w-2xl">
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => {
+                if (audioRef.current) audioRef.current.currentTime -= 10;
+              }}
+              className="text-gray-400 hover:text-brown-600 transition p-1 rounded-full hover:bg-gray-100"
+              title="-10s"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
             <button
               onClick={togglePlay}
-              className="h-10 w-10 flex items-center justify-center rounded-full bg-brown-700 text-white hover:bg-brown-800 transition shadow-sm"
+              className="h-12 w-12 flex items-center justify-center rounded-full bg-brown-700 text-white hover:bg-brown-800 transition shadow-lg hover:shadow-xl hover:scale-105 transform active:scale-95"
             >
-              {isPlaying ? <PauseIcon className="h-5 w-5" /> : <PlayIcon className="h-5 w-5 ml-0.5" />}
+              {isPlaying ? <PauseIcon className="h-6 w-6" /> : <PlayIcon className="h-6 w-6 ml-1" />}
+            </button>
+
+            <button
+              onClick={() => {
+                if (audioRef.current) audioRef.current.currentTime += 10;
+              }}
+              className="text-gray-400 hover:text-brown-600 transition p-1 rounded-full hover:bg-gray-100"
+              title="+10s"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
-          <div className="w-full max-w-lg flex items-center gap-2 text-xs text-gray-500 font-medium">
-            <span>{formatDuration(progress)}</span>
-            <input
-              type="range"
-              min={0}
-              max={duration || 100}
-              value={progress}
-              onChange={handleSeek}
-              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brown-600 hover:accent-brown-700"
-            />
-            <span>{formatDuration(duration)}</span>
+
+          <div className="w-full flex items-center gap-3 text-xs text-gray-500 font-medium select-none group">
+            <span className="w-10 text-right tabular-nums">{formatDuration(progress)}</span>
+            <div className="relative flex-1 h-1.5 cursor-pointer flex items-center">
+              {/* Input rango "invisible" pero funcional */}
+              <input
+                type="range"
+                min={0}
+                max={duration || 100}
+                step={0.1}
+                value={progress}
+                onChange={handleSeek}
+                className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer"
+              />
+
+              {/* Fondo de la barra */}
+              <div className="absolute inset-0 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                {/* Progreso */}
+                <div
+                  className="h-full bg-brown-600 rounded-full transition-all duration-100 ease-out"
+                  style={{ width: `${(progress / (duration || 1)) * 100}%` }}
+                />
+              </div>
+
+              {/* Indicador (Thumb) visual */}
+              <div
+                className="absolute h-3.5 w-3.5 bg-white border-2 border-brown-600 rounded-full shadow-md z-10 pointer-events-none transition-transform duration-100"
+                style={{ left: `calc(${(progress / (duration || 1)) * 100}% - 6px)` }}
+              />
+            </div>
+            <span className="w-10 tabular-nums">{formatDuration(duration)}</span>
           </div>
         </div>
 
         {/* Volumen y Cerrar */}
         <div className="w-1/4 flex items-center justify-end gap-3 sm:gap-4">
           {/* Volumen (Oculto en móvil muy pequeño) */}
-          <div className="hidden sm:flex items-center gap-2">
-            <SpeakerWaveIcon className="h-4 w-4 text-gray-400" />
+          <div className="hidden sm:flex items-center gap-2 group">
+            <SpeakerWaveIcon className="h-5 w-5 text-gray-400 group-hover:text-brown-600 transition" />
             <input
               type="range"
               min={0}
@@ -152,15 +212,18 @@ function StickyPlayer({ song, onClose }: { song: SongModel; onClose: () => void 
                 setVolume(vol);
                 if (audioRef.current) audioRef.current.volume = vol;
               }}
-              className="w-20 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gray-500"
+              className="w-20 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brown-600"
             />
           </div>
 
+          <div className="h-8 w-[1px] bg-gray-200 mx-2 hidden sm:block"></div>
+
           <button
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-red-500 transition"
+            title="Cerrar reproductor"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
 
@@ -441,7 +504,11 @@ export default function SongsPage() {
       notificationShownRef.current = false;
 
       // 1. SUBIR AUDIO (Directo a R2)
-      toast.loading('Subiendo audio...', { id: 'upload-audio' });
+      toast.loading('Analizando y subiendo audio...', { id: 'upload-audio' });
+
+      // Calcular duración
+      const durationSeconds = await getAudioDuration(uploadForm.file);
+
       const audioResult = await uploadAudio(uploadForm.file);
       const audioUrl = audioResult.publicUrl;
       setUploadProgress(50);
@@ -466,7 +533,7 @@ export default function SongsPage() {
         fileUrl: audioUrl,
         coverImageUrl: coverImageUrl,
         status: 'published',
-        duration: 0,
+        duration: Math.round(durationSeconds), // Usar duración calculada
       });
 
       setUploadProgress(100);
