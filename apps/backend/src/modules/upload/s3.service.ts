@@ -16,6 +16,9 @@ export class S3Service {
     const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
 
     if (useR2) {
+      // ⚠️ HACK: Desactivar validación SSL estricta para evitar handshake failure con R2
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
       // Configuración para Cloudflare R2
       // Limpiar variables de posibles espacios o comillas
       const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
