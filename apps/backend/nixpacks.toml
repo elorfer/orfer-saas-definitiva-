@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ['nodejs-16_x']
+
+[phases.install]
+cmds = ['npm ci']
+
+[phases.build]
+cmds = ['npm run build']
+
+[start]
+cmd = 'node --tls-cipher-list="DEFAULT@SECLEVEL=0" dist/main'
