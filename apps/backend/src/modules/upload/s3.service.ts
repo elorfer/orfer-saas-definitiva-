@@ -82,46 +82,79 @@ export class S3Service {
       const fileName = `${uuidv4()}${fileExtension}`;
       const key = `${folder}/${userId}/${fileName}`;
 
-      const command = new PutObjectCommand({
-        Bucket: this.bucketName,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        ACL: 'public-read',
-        Metadata: {
-          originalName: file.originalname,
-          uploadedBy: userId,
-          uploadedAt: new Date().toISOString(),
-        },
-      });
-
-      await this.s3Client.send(command);
-
-      // Generar URL pública según el provider
       const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
-      let url: string;
 
       if (useR2) {
-        // URL pública de Cloudflare R2
+        // 🔥 NUEVO APPROACH: Upload directo con fetch (bypass AWS SDK SSL issues)
+        const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
+        const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
+        const rawAccessKey = this.configService.get<string>('R2_ACCESS_KEY_ID');
+        const accessKeyId = rawAccessKey ? rawAccessKey.replace(/["']/g, '').trim() : '';
+        const rawSecretKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
+        const secretAccessKey = rawSecretKey ? rawSecretKey.replace(/["']/g, '').trim() : '';
+
+        const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+        const uploadUrl = `${endpoint}/${this.bucketName}/${key}`;
+
+        console.log(`🚀 Direct R2 Upload (fetch): ${uploadUrl}`);
+
+        // Upload directo con fetch (sin AWS SDK)
+        const response = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.mimetype,
+            'x-amz-acl': 'public-read',
+            'x-amz-meta-originalname': file.originalname,
+            'x-amz-meta-uploadedby': userId,
+            'x-amz-meta-uploadedat': new Date().toISOString(),
+          },
+          body: new Uint8Array(file.buffer),
+          // @ts-ignore - Node fetch tiene opciones adicionales
+          agent: new https.Agent({
+            rejectUnauthorized: false,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`R2 upload failed: ${response.status} - ${errorText}`);
+        }
+
+        console.log(`✅ R2 Upload Success: ${key}`);
+
+        // Generar URL pública
         const r2PublicDomain = this.configService.get<string>('R2_PUBLIC_DOMAIN');
+        let url: string;
         if (r2PublicDomain) {
-          // Limpiar dominio público también por si acaso
           const cleanDomain = r2PublicDomain.replace(/["']/g, '').trim();
           url = `https://${cleanDomain}/${key}`;
         } else {
-          // Fallback a dominio R2 dev
-          const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
-          const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
           url = `https://pub-${accountId}.r2.dev/${key}`;
         }
-      } else {
-        // URL de S3
-        url = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
-      }
 
-      return { url, key };
+        return { url, key };
+      } else {
+        // Fallback a AWS S3 con SDK tradicional
+        const command = new PutObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          ACL: 'public-read',
+          Metadata: {
+            originalName: file.originalname,
+            uploadedBy: userId,
+            uploadedAt: new Date().toISOString(),
+          },
+        });
+
+        await this.s3Client.send(command);
+
+        const url = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+        return { url, key };
+      }
     } catch (error) {
-      console.error('❌ S3 Upload Error:', error);
+      console.error('❌ Upload Error:', error);
       throw new BadRequestException(`Error al subir archivo: ${error.message}`);
     }
   }
