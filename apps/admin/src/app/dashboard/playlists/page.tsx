@@ -18,7 +18,7 @@ import {
 import { usePlaylists, useCreatePlaylist, useDeletePlaylist, useUpdatePlaylist } from '@/hooks/usePlaylists';
 import { usePresignedUpload } from '@/hooks/usePresignedUpload';
 import { apiClient } from '@/lib/api';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 
 const PAGE_SIZE = 20;
 
@@ -140,6 +140,8 @@ export default function PlaylistsPage() {
 
   // Hook de subida directa a R2
   const { uploadFile: uploadCoverImage } = usePresignedUpload({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || '',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '',
     folder: 'images', // Compresión automática en el cliente (si está configurada en el hook)
     onError: (err) => toast.error(`Error al subir imagen: ${err.message}`),
   });
@@ -218,7 +220,6 @@ export default function PlaylistsPage() {
       await createPlaylist({
         name: playlistForm.name,
         description: playlistForm.description,
-        isPublic: playlistForm.isPublic,
         coverArtUrl: coverUrl,
       });
 
@@ -254,7 +255,6 @@ export default function PlaylistsPage() {
         data: {
           name: playlistForm.name,
           description: playlistForm.description,
-          isPublic: playlistForm.isPublic,
           coverArtUrl: coverUrl,
         },
       });
@@ -456,15 +456,17 @@ export default function PlaylistsPage() {
 // Subcomponente simple para gestionar canciones dentro de la playlist
 // (Idealmente esto podría ser más complejo, permitiendo buscar y añadir canciones)
 function PlaylistSongsModal({ playlist, onClose }: any) {
-  const { data, isLoading } = useQuery(['playlist-songs', playlist.id], () => apiClient.getPlaylistSongs(playlist.id).then(res => res.data));
+  const { data: fullPlaylist, isLoading } = useQuery(['playlist', playlist.id], () => apiClient.getPlaylist(playlist.id).then(res => res.data));
   const queryClient = useQueryClient();
+
+  const playlistSongs = fullPlaylist?.playlistSongs || [];
 
   // Mutation para remover canción (ejemplo)
   const removeSong = async (songId: string) => {
     try {
       await apiClient.removeSongFromPlaylist(playlist.id, songId);
       toast.success('Canción removida');
-      queryClient.invalidateQueries(['playlist-songs', playlist.id]);
+      queryClient.invalidateQueries(['playlist', playlist.id]);
       queryClient.invalidateQueries(['playlists']); // update count
     } catch (e) {
       toast.error('Error al remover canción');
@@ -485,35 +487,41 @@ function PlaylistSongsModal({ playlist, onClose }: any) {
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
             <div className="text-center py-10 text-gray-500">Cargando canciones...</div>
-          ) : !data?.songs?.length ? (
+          ) : !playlistSongs.length ? (
             <div className="text-center py-10 text-gray-500">
               <p>Esta playlist está vacía.</p>
               <p className="text-xs mt-1">Agrega canciones desde la sección "Canciones" o "Explorar".</p>
             </div>
           ) : (
             <ul className="space-y-2">
-              {data.songs.map((song: any) => (
-                <li key={song.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                  <div className="flex items-center gap-3">
-                    {song.coverArtUrl ? (
-                      <img src={resolveImageUrl(song.coverArtUrl)} className="h-10 w-10 rounded object-cover" alt="" />
-                    ) : (
-                      <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center"><MusicalNoteIcon className="h-5 w-5 text-gray-400" /></div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 line-clamp-1">{song.title}</p>
-                      <p className="text-xs text-gray-500 line-clamp-1">{song.artist?.stageName || 'Artista desconocido'}</p>
+              {playlistSongs.map((item: any) => {
+                const song = item.song;
+                if (!song) return null;
+                const cover = resolveImageUrl(song.coverImageUrl || song.coverArtUrl);
+
+                return (
+                  <li key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                    <div className="flex items-center gap-3">
+                      {cover ? (
+                        <img src={cover} className="h-10 w-10 rounded object-cover" alt="" />
+                      ) : (
+                        <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center"><MusicalNoteIcon className="h-5 w-5 text-gray-400" /></div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 line-clamp-1">{song.title}</p>
+                        <p className="text-xs text-gray-500 line-clamp-1">{song.artist?.stageName || 'Artista desconocido'}</p>
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={() => removeSong(song.id)}
-                    className="text-gray-400 hover:text-red-500 p-2"
-                    title="Quitar de la playlist"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </li>
-              ))}
+                    <button
+                      onClick={() => removeSong(song.id)}
+                      className="text-gray-400 hover:text-red-500 p-2"
+                      title="Quitar de la playlist"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

@@ -195,6 +195,8 @@ export const apiClient = {
     biography?: string;
     featured?: boolean;
     genres?: string[];
+    profileUrl?: string; // 🔥 URL en lugar de File
+    coverUrl?: string;   // 🔥 URL en lugar de File
     profileFile?: File | null;
     coverFile?: File | null;
   }) => {
@@ -214,8 +216,14 @@ export const apiClient = {
         form.append('genres[]', '');
       }
     }
-    if (data.profileFile) form.append('profile', data.profileFile);
-    if (data.coverFile) form.append('cover', data.coverFile);
+
+    // 🔥 Priorizar URLs sobre archivos
+    if (data.profileUrl) form.append('profileUrl', data.profileUrl);
+    else if (data.profileFile) form.append('profile', data.profileFile);
+
+    if (data.coverUrl) form.append('coverUrl', data.coverUrl);
+    else if (data.coverFile) form.append('cover', data.coverFile);
+
     return api.put(`/artists/${id}`, form);
   },
 

@@ -11,6 +11,13 @@ export interface ArtistModel {
   verificationStatus?: string;
   createdAt?: string;
   updatedAt?: string;
+  user?: {
+    id: string;
+    email: string;
+    username: string;
+    firstName?: string;
+    lastName?: string;
+  };
 }
 
 export interface SongModel {

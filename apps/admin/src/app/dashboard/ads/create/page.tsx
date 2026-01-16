@@ -40,11 +40,15 @@ export default function CreateAdPage() {
 
   // Hooks de subida directa a R2
   const { uploadFile: uploadAudio } = usePresignedUpload({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || '',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '',
     folder: 'audio',
     onError: (err) => toast.error(`Error subiendo audio: ${err.message}`),
   });
 
   const { uploadFile: uploadCover } = usePresignedUpload({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || '',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '',
     folder: 'images',
     onError: (err) => toast.error(`Error subiendo portada: ${err.message}`),
   });

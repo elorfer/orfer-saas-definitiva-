@@ -57,6 +57,8 @@ export default function EditArtistPage() {
 
   // Hook de subida directa a R2
   const { uploadFile: uploadToR2 } = usePresignedUpload({
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || '',
+    authToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : '',
     folder: 'images',
     onError: (err) => toast.error(`Error subiendo imagen: ${err.message}`),
   });
@@ -261,8 +263,8 @@ export default function EditArtistPage() {
                   <label
                     key={genre.id}
                     className={`inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition ${selectedGenres.includes(genre.name)
-                        ? 'bg-brown-100 border-brown-500 text-brown-700'
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-brown-300'
+                      ? 'bg-brown-100 border-brown-500 text-brown-700'
+                      : 'bg-white border-gray-200 text-gray-700 hover:border-brown-300'
                       }`}
                   >
                     <input

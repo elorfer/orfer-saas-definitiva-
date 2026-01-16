@@ -16,7 +16,20 @@ import {
   PhotoIcon,
   MusicalNoteIcon,
   PencilIcon,
+  PauseIcon,
 } from '@heroicons/react/24/outline';
+
+const resolveUrl = (url?: string, type: 'cover' | 'audio' = 'cover') => {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+
+  // Si es legacy y relativo, asumimos ruta estática uploads
+  if (type === 'audio') return `${baseUrl}/uploads/audio${cleanUrl}`;
+  return `${baseUrl}/uploads/covers${cleanUrl}`;
+};
 
 import { useSongs, useDeleteSong, useCreateSong, useUpdateSong } from '@/hooks/useSongs';
 import { usePresignedUpload } from '@/hooks/usePresignedUpload';
@@ -63,46 +76,27 @@ function SongRow({
 }) {
   const [imageError, setImageError] = useState(false);
 
-  // Construir URL completa de la portada
-  const getCoverUrl = () => {
-    if (!song.coverImageUrl) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`⚠️ Canción "${song.title}" sin portada:`, {
-          id: song.id,
-          coverImageUrl: song.coverImageUrl,
-          duration: song.duration,
-        });
-      }
-      return null;
-    }
+  const coverUrl = resolveUrl(song.coverImageUrl, 'cover');
+  const audioUrl = resolveUrl(song.fileUrl, 'audio');
 
-    // Si ya es una URL completa, usarla tal cual
-    if (song.coverImageUrl.startsWith('http://') || song.coverImageUrl.startsWith('https://')) {
-      return song.coverImageUrl;
-    }
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
-    // Si es una ruta relativa, construir URL completa
-    if (song.coverImageUrl.startsWith('/')) {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      return `${baseUrl}${song.coverImageUrl}`;
-    }
+  const togglePlay = () => {
+    if (!audioRef.current || !audioUrl) return;
 
-    // Si es una ruta sin /, agregar el prefijo del backend
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-    return `${baseUrl}/uploads/covers/${song.coverImageUrl}`;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      // Pausar todos los otros audios en la página
+      document.querySelectorAll('audio').forEach(audio => {
+        if (audio !== audioRef.current) {
+          audio.pause();
+        }
+      });
+      audioRef.current.play().catch(e => console.error("Error reproduciendo:", e));
+    }
   };
-
-  const coverUrl = getCoverUrl();
-
-  // Debug: mostrar si la duración es 0
-  if (song.duration === 0 && process.env.NODE_ENV === 'development') {
-    console.log(`⚠️ Canción "${song.title}" con duración 0:`, {
-      id: song.id,
-      duration: song.duration,
-      coverImageUrl: song.coverImageUrl,
-      coverUrl,
-    });
-  }
 
   return (
     <tr className="hover:bg-gray-50 transition">
@@ -174,7 +168,6 @@ function SongRow({
       <td className="py-4 px-4">
         <div className="flex items-center gap-4 text-xs text-gray-600">
           <div className="flex items-center gap-1">
-            <PlayIcon className="h-3 w-3" />
             {song.totalStreams.toLocaleString('es-ES')}
           </div>
           <div className="flex items-center gap-1">
@@ -192,6 +185,27 @@ function SongRow({
             <PencilIcon className="h-4 w-4" />
             <span className="ml-1">Editar</span>
           </button>
+
+          {audioUrl && (
+            <>
+              <audio
+                ref={audioRef}
+                src={audioUrl}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
+                className="hidden"
+              />
+              <button
+                onClick={togglePlay}
+                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-brown-500 hover:text-brown-700"
+                title="Escuchar previa"
+              >
+                {isPlaying ? <PauseIcon className="h-4 w-4" /> : <PlayIcon className="h-4 w-4" />}
+              </button>
+            </>
+          )}
+
           <button
             onClick={() => onDelete(song)}
             className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-500 transition hover:border-red-300 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
@@ -202,7 +216,7 @@ function SongRow({
           </button>
         </div>
       </td>
-    </tr>
+    </tr >
   );
 }
 
@@ -224,6 +238,7 @@ export default function SongsPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const notificationShownRef = useRef(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
 
   const { data, isLoading, isFetching, refetch } = useSongs({ page, limit: PAGE_SIZE, enabled: true });
   const songs = data?.songs ?? [];
@@ -262,6 +277,7 @@ export default function SongsPage() {
   const openUploadModal = () => {
     setUploadForm(DEFAULT_UPLOAD_FORM);
     setUploadProgress(0);
+    setAudioPreviewUrl(null);
     setUploading(false);
     notificationShownRef.current = false;
     setShowUploadModal(true);
@@ -277,6 +293,10 @@ export default function SongsPage() {
         return;
       }
       setUploadForm((prev) => ({ ...prev, file }));
+
+      // Crear preview URL
+      if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+      setAudioPreviewUrl(URL.createObjectURL(file));
     }
   };
 
@@ -355,6 +375,7 @@ export default function SongsPage() {
 
       setShowUploadModal(false);
       setUploadForm(DEFAULT_UPLOAD_FORM);
+      setAudioPreviewUrl(null);
       setUploadProgress(0);
 
       refetch();
@@ -668,6 +689,11 @@ export default function SongsPage() {
                           </button>
                         )}
                       </div>
+                      {audioPreviewUrl && (
+                        <div className="mt-3">
+                          <audio controls src={audioPreviewUrl} className="w-full h-8" />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 hover:border-brown-600 transition group">
