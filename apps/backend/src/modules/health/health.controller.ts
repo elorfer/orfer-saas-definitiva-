@@ -33,60 +33,79 @@ export class HealthController {
       },
     };
   }
-
   @Get('r2-debug')
-  @ApiOperation({ summary: 'Batería de pruebas SSL para R2' })
+  @ApiOperation({ summary: 'Batería de pruebas SSL para R2 (incluyendo Fetch)' })
   async checkR2Debug() {
     const accountId = process.env.R2_ACCOUNT_ID?.replace(/["']/g, '').trim();
     const domain = `${accountId}.r2.cloudflarestorage.com`;
+    const endpoint = `https://${domain}`;
     const https = require('https');
 
-    const runTest = (name: string, agentOptions: any) => new Promise<{ result: string, details?: string }>((resolve) => {
+    // Helper para HTTPS legacy
+    const runHttpsTest = (name: string, agentOptions: any) => new Promise<{ result: string, details?: string }>((resolve) => {
       const options = {
         hostname: domain,
         port: 443,
         path: '/',
         method: 'HEAD',
         agent: new https.Agent(agentOptions),
+        timeout: 5000
       };
 
-      const req = https.request(options, (res: any) => {
-        resolve({ result: 'SUCCESS', details: `Status: ${res.statusCode}, Proto: ${res.socket.getProtocol ? res.socket.getProtocol() : 'unknown'}` });
+      const req = https.request(options, (res) => {
+        resolve({ result: 'SUCCESS', details: `Status: ${res.statusCode}` });
       });
 
-      req.on('error', (e: any) => {
+      req.on('error', (e) => {
         resolve({ result: 'FAILED', details: e.message });
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        resolve({ result: 'TIMEOUT', details: 'Socket timeout' });
       });
 
       req.end();
     });
 
-    // Ejecutar pruebas
+    // Helper para Fetch Moderno
+    const runFetchTest = async () => {
+      try {
+        const res = await fetch(endpoint, { method: 'HEAD' });
+        return { result: 'SUCCESS', details: `Status: ${res.status} (via global fetch)` };
+      } catch (e) {
+        return { result: 'FAILED', details: e.message };
+      }
+    };
+
     const tests = {
       timestamp: new Date().toISOString(),
       node_version: process.version,
-      openssl: process.versions.openssl,
-      domain,
       results: {} as any
     };
 
-    // Test 1: Defecto (Inseguro)
-    tests.results.test1_default_insecure = await runTest('Default Insecure', { rejectUnauthorized: false });
+    try {
+      // Test 1: HTTPS Nativo (El que falla siempre)
+      tests.results.test1_legacy_https = await runHttpsTest('Legacy HTTPS', { rejectUnauthorized: false });
 
-    // Test 2: Forzar TLS 1.2
-    tests.results.test2_force_tls1_2 = await runTest('Force TLS 1.2', {
-      rejectUnauthorized: false,
-      minVersion: 'TLSv1.2',
-      maxVersion: 'TLSv1.2',
-      secureProtocol: 'TLSv1_2_method'
-    });
+      // Test 2: HTTPS + TLS 1.2
+      tests.results.test2_tls12 = await runHttpsTest('TLS 1.2', {
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2',
+        maxVersion: 'TLSv1.2'
+      });
 
-    // Test 3: Compatibility Mode (Ciphers antiguos)
-    tests.results.test3_compat_ciphers = await runTest('Compat Ciphers', {
-      rejectUnauthorized: false,
-      ciphers: 'ALL',
-      secureOptions: 0x4000000 // SSL_OP_NO_TLSv1_3 (Intentar desactivar 1.3 si falla)
-    });
+      // Test 3: FETCH Nativo (Undici/Moderno)
+      // Si este funciona, migramos el SDK a usar fetch-http-handler
+      if (typeof fetch !== 'undefined') {
+        tests.results.test3_native_fetch = await runFetchTest();
+      } else {
+        tests.results.test3_native_fetch = { result: 'SKIPPED', details: 'Fetch not available in this Node version' };
+      }
+
+    } catch (err) {
+      tests.results.error_global = err.message;
+    }
 
     return tests;
   }

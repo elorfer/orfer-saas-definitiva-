@@ -7,16 +7,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { join } from 'path';
 // import * as compression from 'compression';
+// import * as compression from 'compression';
 import { AppModule } from './app.module';
-import * as tls from 'tls';
-
-// ⚠️ HACK GLOBAL: Forzar compatibilidad TLS 1.2 y ciphers permisivos para Cloudflare R2
-// Esto resuelve el error "SSL alert number 40" en Railway/Node 18+
-try {
-  (tls as any).DEFAULT_MIN_VERSION = 'TLSv1.2';
-  // Permitir ciphers legacy si es necesario
-  // (aunque tls.DEFAULT_CIPHERS es read-only en algunas versiones, esto intenta configurarlo si es posible)
-} catch (e) { console.error('Error configurando TLS global:', e); }
 
 async function bootstrap() {
   const configService = new ConfigService();
