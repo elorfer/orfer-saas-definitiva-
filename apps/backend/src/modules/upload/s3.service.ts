@@ -3,8 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import * as path from 'path';
-import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
-import * as https from 'https';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -18,11 +16,8 @@ export class S3Service {
     const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
 
     if (useR2) {
-      // ⚠️ HACK: Desactivar validación SSL estricta para evitar handshake failure con R2
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
-      // Configuración para Cloudflare R2
-      // Limpiar variables de posibles espacios o comillas
+      // Configuracion PROFESIONAL para Cloudflare R2
+      // 1. Sanitización de credenciales (elimina espacios/comillas invisibles)
       const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
       const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
 
@@ -32,26 +27,25 @@ export class S3Service {
       const rawSecretKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
       const secretAccessKey = rawSecretKey ? rawSecretKey.replace(/["']/g, '').trim() : '';
 
-      this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'struky-audio';
-      this.region = 'auto';
+      this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'struky-media';
+
+      // 2. Región 'us-east-1' es la más compatible para clientes S3 genéricos conectando a R2
+      this.region = 'us-east-1';
 
       const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
-      console.log(`🔌 R2 Endpoint: ${endpoint}`); // Log para debug
+      console.log(`🔌 R2 Connection Init: ${endpoint} (Region: ${this.region})`);
 
       this.s3Client = new S3Client({
-        region: 'auto',
-        endpoint,
+        region: this.region,
+        endpoint: endpoint,
         credentials: {
-          accessKeyId,
-          secretAccessKey,
+          accessKeyId: accessKeyId,
+          secretAccessKey: secretAccessKey,
         },
-        forcePathStyle: true,
-        requestHandler: new NodeHttpHandler({
-          httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-        }),
+        forcePathStyle: true, // Requerido para R2
       });
 
-      console.log('✅ Storage: Configurado para Cloudflare R2');
+      console.log('✅ Storage: Configurado para Cloudflare R2 (Standard Mode)');
     } else {
       // Configuración para AWS S3 (fallback)
       this.region = this.configService.get<string>('AWS_REGION') || 'us-east-1';
@@ -102,10 +96,13 @@ export class S3Service {
         // URL pública de Cloudflare R2
         const r2PublicDomain = this.configService.get<string>('R2_PUBLIC_DOMAIN');
         if (r2PublicDomain) {
-          url = `https://${r2PublicDomain}/${key}`;
+          // Limpiar dominio público también por si acaso
+          const cleanDomain = r2PublicDomain.replace(/["']/g, '').trim();
+          url = `https://${cleanDomain}/${key}`;
         } else {
-          // Usar dominio público por defecto (necesitas configurar en Cloudflare)
-          const accountId = this.configService.get<string>('R2_ACCOUNT_ID');
+          // Fallback a dominio R2 dev
+          const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
+          const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
           url = `https://pub-${accountId}.r2.dev/${key}`;
         }
       } else {
@@ -115,6 +112,7 @@ export class S3Service {
 
       return { url, key };
     } catch (error) {
+      console.error('❌ S3 Upload Error:', error);
       throw new BadRequestException(`Error al subir archivo: ${error.message}`);
     }
   }
@@ -198,12 +196,3 @@ export class S3Service {
     return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
   }
 }
-
-
-
-
-
-
-
-
-
