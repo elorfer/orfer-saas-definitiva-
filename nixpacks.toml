@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["nodejs-16_x", "openssl-1_1"]
+
+[phases.build]
+cmds = ["npm install", "npm run build:backend"]
+
+[phases.start]
+cmds = ["node apps/backend/dist/main"]
