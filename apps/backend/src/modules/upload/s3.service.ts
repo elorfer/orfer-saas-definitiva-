@@ -152,101 +152,15 @@ export class S3Service {
     folder: string,
     userId: string,
   ): Promise<{ url: string; key: string }> {
-    try {
-      const fileExtension = path.extname(file.originalname);
-      const fileName = `${uuidv4()}${fileExtension}`;
-      const key = `${folder}/${userId}/${fileName}`;
-
-      const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
-
-      if (useR2) {
-        // 🔥 PROFESSIONAL APPROACH: AWS Signature V4 con axios (mejor manejo SSL que fetch)
-        const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
-        const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
-        const rawAccessKey = this.configService.get<string>('R2_ACCESS_KEY_ID');
-        const accessKeyId = rawAccessKey ? rawAccessKey.replace(/["']/g, '').trim() : '';
-        const rawSecretKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
-        const secretAccessKey = rawSecretKey ? rawSecretKey.replace(/["']/g, '').trim() : '';
-
-        const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
-        const uploadUrl = `${endpoint}/${this.bucketName}/${key}`;
-
-        console.log(`🔐 R2 Upload with AWS Signature V4: ${uploadUrl}`);
-
-        // Preparar headers sin firma
-        const baseHeaders: Record<string, string> = {
-          'Content-Type': file.mimetype,
-          'x-amz-acl': 'public-read',
-          'x-amz-meta-originalname': file.originalname,
-          'x-amz-meta-uploadedby': userId,
-          'x-amz-meta-uploadedat': new Date().toISOString(),
-        };
-
-        // Generar firma AWS V4
-        const signedHeaders = this.generateAwsSignatureV4(
-          'PUT',
-          uploadUrl,
-          baseHeaders,
-          file.buffer,
-          accessKeyId,
-          secretAccessKey,
-          this.region,
-        );
-
-        console.log(`✍️ Request firmado, subiendo...`);
-
-        // Upload con axios (mejor SSL handling que fetch)
-        const axios = require('axios');
-        const response = await axios.put(uploadUrl, file.buffer, {
-          headers: signedHeaders,
-          httpsAgent: new https.Agent({
-            rejectUnauthorized: false, // Necesario para algunos entornos
-          }),
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity,
-        });
-
-        if (response.status !== 200) {
-          throw new Error(`R2 upload failed: ${response.status} - ${response.statusText}`);
-        }
-
-        console.log(`✅ R2 Upload Success: ${key}`);
-
-        // Generar URL pública
-        const r2PublicDomain = this.configService.get<string>('R2_PUBLIC_DOMAIN');
-        let url: string;
-        if (r2PublicDomain) {
-          const cleanDomain = r2PublicDomain.replace(/["']/g, '').trim();
-          url = `https://${cleanDomain}/${key}`;
-        } else {
-          url = `https://pub-${accountId}.r2.dev/${key}`;
-        }
-
-        return { url, key };
-      } else {
-        // Fallback a AWS S3 con SDK tradicional
-        const command = new PutObjectCommand({
-          Bucket: this.bucketName,
-          Key: key,
-          Body: file.buffer,
-          ContentType: file.mimetype,
-          ACL: 'public-read',
-          Metadata: {
-            originalName: file.originalname,
-            uploadedBy: userId,
-            uploadedAt: new Date().toISOString(),
-          },
-        });
-
-        await this.s3Client.send(command);
-
-        const url = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
-        return { url, key };
-      }
-    } catch (error) {
-      console.error('❌ Upload Error:', error);
-      throw new BadRequestException(`Error al subir archivo: ${error.message}`);
-    }
+    // ⚠️ ESTE MÉTODO ESTÁ DESHABILITADO
+    // Railway tiene restricciones SSL que impiden upload directo a R2
+    // USA PRESIGNED URLs en su lugar:
+    // 1. POST /upload/presigned-url
+    // 2. PUT directo a R2 desde el cliente
+    throw new BadRequestException(
+      '⚠️ Upload directo deshabilitado debido a restricciones SSL de Railway. ' +
+      'Por favor usa presigned URLs: POST /upload/presigned-url'
+    );
   }
 
   async uploadAudioFile(
