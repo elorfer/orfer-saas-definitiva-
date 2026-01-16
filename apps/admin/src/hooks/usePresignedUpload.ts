@@ -59,7 +59,7 @@ export function usePresignedUpload({
             onProgress?.(10);
 
             // ✅ 2. SOLICITAR PRESIGNED URL AL BACKEND
-            const presignedResponse = await fetch(`${apiUrl}/upload/presigned-url`, {
+            const presignedResponse = await fetch(`${apiUrl}/api/v1/upload/presigned-url`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
