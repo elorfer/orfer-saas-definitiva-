@@ -26,7 +26,7 @@ export class S3Service {
       const secretAccessKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY')?.trim();
 
       this.bucketName = this.configService.get<string>('R2_BUCKET_NAME') || 'struky-media';
-      this.region = 'us-east-1'; // R2 requiere esto para compatibilidad S3
+      this.region = 'auto'; // 🔥 R2 prefiere 'auto'
 
       // Endpoint base sin bucket (para virtual-hosted style)
       const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
