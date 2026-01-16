@@ -46,6 +46,8 @@ export class S3Service {
           secretAccessKey: secretAccessKey,
         },
         forcePathStyle: true,
+        // 🔥 CRÍTICO para R2: Deshabilitar checksums automáticos
+        requestChecksumCalculation: 'WHEN_REQUIRED',
         requestHandler: new NodeHttpHandler({
           httpsAgent: new https.Agent({
             // 🔓 MAGIC FIX: Bajar nivel de seguridad de OpenSSL 3 para permitir handshake
