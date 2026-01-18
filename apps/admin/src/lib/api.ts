@@ -354,6 +354,10 @@ export const apiClient = {
 
   toggleFeaturedPlaylist: (id: string) => api.patch(`/playlists/${id}/feature`),
 
+  featurePlaylist: (id: string) => api.patch(`/playlists/${id}/feature`),
+
+  unfeaturePlaylist: (id: string) => api.patch(`/playlists/${id}/feature`),
+
   uploadPlaylistCover: (id: string, coverFile: File) => {
     const formData = new FormData();
     formData.append('cover', coverFile);
