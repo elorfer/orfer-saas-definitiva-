@@ -29,31 +29,18 @@ export class Genre {
   createdAt: Date;
 
   // Relaciones
-  @OneToMany(() => Song, (song) => song.genre)
+  @OneToMany(() =\u003e Song, (song) =\u003e song.genre)
   songs: Song[];
 
-  @OneToMany(() => Album, (album) => album.genre)
+  @OneToMany(() =\u003e Album, (album) =\u003e album.genre)
   albums: Album[];
+
+  // Contadores - Propiedades normales (no getters) para permitir loadRelationCountAndMap
+  songCount?: number;
+  albumCount?: number;
 
   // Métodos de utilidad
   get displayColor(): string {
     return this.colorHex || '#6B7280';
   }
-
-  get songCount(): number {
-    return this.songs?.length || 0;
-  }
-
-  get albumCount(): number {
-    return this.albums?.length || 0;
-  }
 }
-
-
-
-
-
-
-
-
-
