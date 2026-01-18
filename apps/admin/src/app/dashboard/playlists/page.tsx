@@ -67,7 +67,7 @@ function PlaylistRow({ playlist, onDelete, onEdit, onManageSongs, isDeleting }: 
         </div>
       </td>
       <td className="py-4 px-4">
-        {playlist.isPublic ? (
+        {playlist.visibility === 'public' || playlist.isPublic ? (
           <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
             Pública
           </span>

@@ -26,5 +26,10 @@ export class CreatePlaylistDto {
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
+
+  @ApiPropertyOptional({ description: 'Hacer pública la playlist', default: true })
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
 }
 

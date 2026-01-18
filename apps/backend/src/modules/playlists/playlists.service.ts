@@ -22,7 +22,7 @@ export class PlaylistsService {
     private readonly songRepository: Repository<Song>,
     @InjectRepository(PlaylistSong)
     private readonly playlistSongRepository: Repository<PlaylistSong>,
-  ) {}
+  ) { }
 
   async findAll(page: number = 1, limit: number = 10): Promise<{ playlists: PlaylistResponseDto[]; total: number }> {
     const [playlists, total] = await this.playlistRepository.findAndCount({
@@ -40,9 +40,9 @@ export class PlaylistsService {
     });
 
     // Transformar a DTOs para devolver en formato camelCase
-    return { 
-      playlists: PlaylistMapper.toResponseDtoArray(playlists), 
-      total 
+    return {
+      playlists: PlaylistMapper.toResponseDtoArray(playlists),
+      total
     };
   }
 
@@ -172,7 +172,7 @@ export class PlaylistsService {
       coverArtUrl: playlistData.coverArtUrl,
       userId,
       isFeatured: playlistData.isFeatured || false,
-      visibility: PlaylistVisibility.PUBLIC,
+      visibility: playlistData.isPublic === false ? PlaylistVisibility.PRIVATE : PlaylistVisibility.PUBLIC,
       totalTracks: 0,
       totalDuration: 0,
       totalFollowers: 0,
@@ -209,6 +209,9 @@ export class PlaylistsService {
     }
     if (updateData.isFeatured !== undefined) {
       playlist.isFeatured = updateData.isFeatured;
+    }
+    if (updateData.isPublic !== undefined) {
+      playlist.visibility = updateData.isPublic ? PlaylistVisibility.PUBLIC : PlaylistVisibility.PRIVATE;
     }
 
     await this.playlistRepository.save(playlist);
@@ -314,15 +317,15 @@ export class PlaylistsService {
     // Permitir a cualquier usuario autenticado destacar/desdestacar
     // En el futuro, solo admin debería poder hacer esto
     playlist.isFeatured = !playlist.isFeatured;
-    
+
     // Si se está destacando la playlist, asegurar que sea pública
     // Las playlists destacadas deben ser públicas para aparecer en el endpoint público
     if (playlist.isFeatured && playlist.visibility !== PlaylistVisibility.PUBLIC) {
       playlist.visibility = PlaylistVisibility.PUBLIC;
     }
-    
+
     await this.playlistRepository.save(playlist);
-    
+
     // Retornar como DTO (admin puede ver todas las playlists)
     return this.findOneForAdmin(id);
   }
@@ -380,11 +383,11 @@ export class PlaylistsService {
       where: { id: playlistId },
       relations: ['playlistSongs', 'playlistSongs.song'],
     });
-    
+
     if (!playlist) {
       return;
     }
-    
+
     // Actualizar contadores usando las relaciones cargadas
     playlist.updateTrackCount();
     playlist.updateTotalDuration();
