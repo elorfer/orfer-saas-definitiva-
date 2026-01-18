@@ -47,11 +47,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     
-    // 🚀 Cachear statusBarHeight en initState para evitar MediaQuery en build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _cachedStatusBarHeight = MediaQuery.paddingOf(context).top;
-      }
+    // 🚀 Listen to theme changes without triggering rebuilds
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.listen(themeProvider, (prev, next) {
+        // Theme changed - state will rebuild naturally
+      });
     });
     
     if (!_isLoaded) {
@@ -96,7 +97,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   bool get wantKeepAlive => true; // Mantener estado al cambiar de pestaña
 
-  // Header fijo visible siempre
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 🚀 Cache MediaQuery only once when dependencies change
+    _cachedStatusBarHeight ??= MediaQuery.paddingOf(context).top;
+  }
 
   @override
   void dispose() {
@@ -109,11 +115,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
-    // 🚀 Listen to theme changes to force background update
-    ref.watch(themeProvider);
-
-    // 🚀 OPTIMIZACIÓN: Usar statusBarHeight cacheado para evitar MediaQuery en cada build
-    final statusBarHeight = _cachedStatusBarHeight ?? MediaQuery.paddingOf(context).top;
+    // 🚀 OPTIMIZACIÓN: Usar statusBarHeight cacheado (ya no necesitamos fallback)
+    final statusBarHeight = _cachedStatusBarHeight ?? 0.0;
     
     // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
     // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
