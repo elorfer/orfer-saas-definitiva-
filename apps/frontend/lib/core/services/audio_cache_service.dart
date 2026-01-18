@@ -1,6 +1,7 @@
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:dio/dio.dart';
-import 'dart:io';
+import '../utils/universal_file.dart';
+import '../utils/platform_utils.dart';
 import 'dart:async';
 import 'http_client_service.dart';
 
@@ -63,6 +64,8 @@ class AudioCacheManager {
   /// ⚡ PRECARGA INTELIGENTE: Descarga primeros 300-500ms del audio
   /// Optimizado para range requests HTTP (primer chunk)
   static Future<void> _precacheInBackground(String url) async {
+    if (PlatformUtils.isWeb) return; // No precache en Web por CORS/Storage
+
       try {
         // Intentar precargar con range request (primeros 500ms aprox)
         // Esto es una aproximación - el servidor debe soportar range requests
@@ -121,8 +124,11 @@ class AudioCacheManager {
     }
   }
 
+
   /// Obtener archivo de audio desde caché o descargarlo
-  static Future<File?> getAudioFile(String url) async {
+  static Future<PlatformFile?> getAudioFile(String url) async {
+    if (PlatformUtils.isWeb) return null; // Web no usa sistema de archivos
+
     await ensureInitialized();
     
     try {
@@ -130,7 +136,7 @@ class AudioCacheManager {
       // Actualizar cache de estado
       _cacheStatus[url] = true;
       _cacheStatusTime[url] = DateTime.now();
-      return file;
+      return file as PlatformFile;
     } catch (e) {
       _cacheStatus[url] = false;
       _cacheStatusTime[url] = DateTime.now();

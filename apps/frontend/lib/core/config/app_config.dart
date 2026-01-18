@@ -1,4 +1,4 @@
-import 'dart:io';
+import '../utils/platform_utils.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/logger.dart';
 
@@ -28,7 +28,7 @@ class AppConfig {
 
   static String get _localBaseUrl {
     try {
-      if (Platform.isAndroid) {
+      if (PlatformUtils.isAndroid) {
         return useAndroidEmulator 
             ? 'http://10.0.2.2:3001/api/v1' 
             : 'http://localhost:3001/api/v1';
@@ -39,11 +39,15 @@ class AppConfig {
 
   static const String _productionUrl = 'https://orfer-saas-definitiva-production.up.railway.app/api/v1';
 
-  static String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
+  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+  static String get baseUrl {
+    if (_envBaseUrl.isNotEmpty) {
+      return _envBaseUrl;
+    }
     // Debug mode: localhost, Release/Profile mode: Railway
-    defaultValue: kDebugMode ? _localBaseUrl : _productionUrl,
-  );
+    return kDebugMode ? _localBaseUrl : _productionUrl;
+  }
 
   // Llamar a este método desde `main()` para imprimir la URL que usa la app.
   static void checkConnection() {

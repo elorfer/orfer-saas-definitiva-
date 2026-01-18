@@ -7,6 +7,7 @@ export interface PlaylistResponseDto {
   description?: string;
   coverArtUrl?: string;
   visibility: string;
+  isPublic: boolean;
   isFeatured: boolean;
   totalTracks: number;
   totalFollowers: number;
@@ -59,11 +60,11 @@ export class PlaylistMapper {
   static toResponseDto(playlist: Playlist): PlaylistResponseDto {
     // Normalizar coverArtUrl si existe
     let coverArtUrl = playlist.coverArtUrl;
-    
+
     // Si coverArtUrl es una ruta relativa, construir URL completa
     if (coverArtUrl && coverArtUrl.trim().length > 0 && !coverArtUrl.startsWith('http://') && !coverArtUrl.startsWith('https://')) {
       const baseUrl = this.getBaseUrl();
-      
+
       // Si ya tiene /uploads/, mantenerlo
       if (coverArtUrl.startsWith('/uploads/')) {
         coverArtUrl = `${baseUrl}${coverArtUrl}`;
@@ -74,7 +75,7 @@ export class PlaylistMapper {
         coverArtUrl = `${baseUrl}/uploads/covers/${coverArtUrl}`;
       }
     }
-    
+
     // Asegurar que coverArtUrl sea undefined si está vacío o null
     if (!coverArtUrl || coverArtUrl.trim().length === 0) {
       coverArtUrl = undefined;
@@ -83,7 +84,7 @@ export class PlaylistMapper {
     // Filtrar solo canciones publicadas y válidas
     const publishedSongs = playlist.playlistSongs
       ?.filter(ps => ps.song != null && ps.song.status === 'published') || [];
-    
+
     // Recalcular totalTracks y totalDuration basados solo en canciones publicadas
     const actualTotalTracks = publishedSongs.length;
     const actualTotalDuration = publishedSongs.reduce(
@@ -93,8 +94,8 @@ export class PlaylistMapper {
 
     // Normalizar nombre: si está vacío, null, o es "Sin nombre", usar null para que el frontend muestre "Playlist"
     const normalizedName = playlist.name?.trim();
-    const finalName = (normalizedName && normalizedName.length > 0 && normalizedName.toLowerCase() !== 'sin nombre') 
-      ? normalizedName 
+    const finalName = (normalizedName && normalizedName.length > 0 && normalizedName.toLowerCase() !== 'sin nombre')
+      ? normalizedName
       : null; // null será convertido a string vacío o manejado por el frontend
 
     // Crear objeto DTO directamente en formato camelCase
@@ -105,6 +106,7 @@ export class PlaylistMapper {
       description: playlist.description || undefined,
       coverArtUrl: coverArtUrl || undefined,
       visibility: playlist.visibility,
+      isPublic: playlist.visibility === 'public',
       isFeatured: playlist.isFeatured === true, // Asegurar que sea boolean explícito
       totalTracks: actualTotalTracks, // Usar el total real de canciones publicadas
       totalFollowers: playlist.totalFollowers ?? 0,
@@ -120,29 +122,29 @@ export class PlaylistMapper {
         avatarUrl: playlist.user.avatarUrl,
       } : undefined,
       playlistSongs: publishedSongs.length > 0 ? publishedSongs.map(ps => ({
-          id: ps.id,
-          playlistId: ps.playlistId,
-          songId: ps.songId,
-          position: ps.position,
-          song: ps.song ? {
-            id: ps.song.id,
-            title: ps.song.title ?? '',
-            duration: ps.song.duration ?? 0,
-            fileUrl: ps.song.fileUrl ?? '',
-            coverArtUrl: this.normalizeSongCoverUrl(ps.song.coverArtUrl),
-            artistId: ps.song.artistId,
-            artist: ps.song.artist ? {
-              id: ps.song.artist.id,
-              stageName: ps.song.artist.stageName ?? '',
-              displayName: ps.song.artist.displayName,
-              bio: ps.song.artist.bio,
-              avatarUrl: (ps.song.artist as any).profilePhotoUrl,
-              totalStreams: ps.song.artist.totalStreams ?? 0,
-            } : undefined,
-            totalStreams: ps.song.totalStreams ?? 0,
-            status: ps.song.status,
+        id: ps.id,
+        playlistId: ps.playlistId,
+        songId: ps.songId,
+        position: ps.position,
+        song: ps.song ? {
+          id: ps.song.id,
+          title: ps.song.title ?? '',
+          duration: ps.song.duration ?? 0,
+          fileUrl: ps.song.fileUrl ?? '',
+          coverArtUrl: this.normalizeSongCoverUrl(ps.song.coverArtUrl),
+          artistId: ps.song.artistId,
+          artist: ps.song.artist ? {
+            id: ps.song.artist.id,
+            stageName: ps.song.artist.stageName ?? '',
+            displayName: ps.song.artist.displayName,
+            bio: ps.song.artist.bio,
+            avatarUrl: (ps.song.artist as any).profilePhotoUrl,
+            totalStreams: ps.song.artist.totalStreams ?? 0,
           } : undefined,
-        })).filter(ps => ps.song != null) : [],
+          totalStreams: ps.song.totalStreams ?? 0,
+          status: ps.song.status,
+        } : undefined,
+      })).filter(ps => ps.song != null) : [],
     };
 
     return dto;
@@ -161,11 +163,11 @@ export class PlaylistMapper {
 
     // Construir URL completa desde ruta relativa
     const baseUrl = this.getBaseUrl();
-    
+
     if (coverArtUrl.startsWith('/uploads/')) {
       return `${baseUrl}${coverArtUrl}`;
     }
-    
+
     if (coverArtUrl.startsWith('/')) {
       return `${baseUrl}${coverArtUrl}`;
     }

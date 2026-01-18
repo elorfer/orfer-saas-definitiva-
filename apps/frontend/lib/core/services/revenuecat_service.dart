@@ -3,7 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import '../utils/platform_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
@@ -147,6 +147,12 @@ class RevenueCatService {
     required String userId,
     String? email,
   }) async {
+    if (PlatformUtils.isWeb) {
+      _logger.i('🌐 Web Mode: RevenueCat skipped (Mocking premium status recommended)');
+      _isInitialized = true; // Mark as initialized to prevent errors
+      return true;
+    }
+
     if (_isInitialized && _currentUserId == userId) {
       _logger.i('✅ RevenueCat ya inicializado para usuario: $userId');
       return true;
@@ -204,7 +210,7 @@ class RevenueCatService {
   
   /// Obtiene la API key correcta según la plataforma
   String _getApiKey() {
-    if (Platform.isAndroid) {
+    if (PlatformUtils.isAndroid) {
       if (_androidApiKey.isEmpty) {
         throw Exception(
           '⚠️ REVENUECAT_ANDROID_KEY no configurada. '
@@ -212,7 +218,7 @@ class RevenueCatService {
         );
       }
       return _androidApiKey;
-    } else if (Platform.isIOS) {
+    } else if (PlatformUtils.isIOS) {
       if (_iosApiKey.isEmpty) {
         throw Exception(
           '⚠️ REVENUECAT_IOS_KEY no configurada. '
@@ -221,7 +227,8 @@ class RevenueCatService {
       }
       return _iosApiKey;
     } else {
-      throw UnsupportedError('Plataforma no soportada para RevenueCat');
+      // Web o Desktop
+      return ''; // Retornar vacío para evitar crashes, el init debe manejar esto
     }
   }
   

@@ -15,6 +15,7 @@ import 'core/services/http_cache_service.dart';
 import 'core/services/playback_reporter_service.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/services/app_initializer.dart';
+import 'core/widgets/web_constrained_wrapper.dart';
 
 // #region Error Handling
 
@@ -188,7 +189,9 @@ class _VintageMusicAppState extends ConsumerState<VintageMusicApp> {
             if (ErrorWidget.builder != _errorWidgetBuilder) {
               ErrorWidget.builder = _errorWidgetBuilder;
             }
-            return child ?? const SizedBox.shrink();
+            return WebConstrainedWrapper(
+              child: child ?? const SizedBox.shrink(),
+            );
           },
           // Tema Claro (Default)
           theme: neumorphismTheme.theme.copyWith(

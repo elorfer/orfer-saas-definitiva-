@@ -68,6 +68,23 @@ class FeaturedPlaylistCard extends StatelessWidget {
                 skipFade: true, 
               ),
             ),
+            const SizedBox(height: 8),
+            
+            // Nombre de la playlist
+            SizedBox(
+              width: 160,
+              child: Text(
+                playlist.name ?? 'Playlist',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  decoration: TextDecoration.none,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(height: 4),
             
             // Información adicional
@@ -77,16 +94,14 @@ class FeaturedPlaylistCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center, // ✅ Centrar verticalmente
                 children: [
-                  if (playlist.user != null) ...[
-                    Expanded(
-                      child: Text(
-                        playlist.user?.firstName ?? 'Usuario',
-                        style: _userStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  Expanded(
+                    child: Text(
+                      'by Struky',
+                      style: _userStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ],
+                  ),
                   if (playlist.totalTracks != null && playlist.totalTracks! > 0) ...[
                     const SizedBox(width: 8),
                     Row(

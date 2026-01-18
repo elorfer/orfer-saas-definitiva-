@@ -1,5 +1,7 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import '../utils/platform_utils.dart';
+import '../utils/universal_file.dart';
 import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7422,7 +7424,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
              final decryptedPath = await offlineManager.getDecryptedFilePath(song.id);
              
              if (decryptedPath != null) {
-               final file = File(decryptedPath);
+               final file = PlatformFile(decryptedPath);
                if (await file.exists()) {
                   final size = await file.length();
                   AppLogger.info('[PlaybackNotifier] 📁 Playing Offline: $decryptedPath ($size bytes)');

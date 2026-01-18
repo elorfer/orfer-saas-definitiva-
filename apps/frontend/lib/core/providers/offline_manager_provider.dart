@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import '../utils/universal_file.dart';
+import '../utils/platform_utils.dart';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -55,7 +56,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
   String? _currentUserId;
 
   Box<String>? _box;
-  Directory? _baseDir;
+  PlatformDirectory? _baseDir;
   final _secureStorage = const FlutterSecureStorage();
   bool _isInitialized = false;
 
@@ -149,7 +150,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
   }
 
   /// Obtener directorio de descargas para un usuario específico
-  String _getUserDownloadDir(Directory appDir, String userId) {
+  String _getUserDownloadDir(PlatformDirectory appDir, String userId) {
     // Sanitizar userId para nombre de directorio seguro
     final safeUserId = userId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
     return path.join(appDir.path, _downloadDirName, safeUserId);
@@ -158,6 +159,11 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
   Future<void> _init() async {
     if (_currentUserId == null) {
       AppLogger.warning('[OfflineManager] ⚠️ No se puede inicializar sin userId');
+      return;
+    }
+
+    if (PlatformUtils.isWeb) {
+      AppLogger.info('[OfflineManager] 🌐 Web Mode: Offline downloads disabled');
       return;
     }
 
@@ -225,8 +231,8 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
 
       // 3. Inicializar directorio específico del usuario
       final appDir = await getApplicationDocumentsDirectory();
-      final userDirPath = _getUserDownloadDir(appDir, _currentUserId!);
-      _baseDir = Directory(userDirPath);
+      final userDirPath = _getUserDownloadDir(PlatformDirectory(appDir.path), _currentUserId!);
+      _baseDir = PlatformDirectory(userDirPath);
       
       if (!await _baseDir!.exists()) {
         await _baseDir!.create(recursive: true);
@@ -308,7 +314,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
 
       // 3. Guardar en disco (.struky)
       final filePath = path.join(_baseDir!.path, '${song.id}.struky');
-      final file = File(filePath);
+      final file = PlatformFile(filePath);
       await file.writeAsBytes(encrypted.bytes);
 
       // 4. Guardar metadatos en Hive
@@ -345,7 +351,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
     try {
         // Borrar archivo
         final filePath = path.join(_baseDir!.path, '$songId.struky');
-        final file = File(filePath);
+        final file = PlatformFile(filePath);
         if (await file.exists()) {
             await file.delete();
         }
@@ -374,19 +380,19 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
       try {
           if (_baseDir == null) await _init();
           final encryptedPath = path.join(_baseDir!.path, '$songId.struky');
-          final encryptedFile = File(encryptedPath);
+          final encryptedFile = PlatformFile(encryptedPath);
           
           if (!await encryptedFile.exists()) return null;
 
           // Comprobar existencia en cache
           final tempDir = await getTemporaryDirectory();
           final tempPath = path.join(tempDir.path, '$songId.mp3');
-          final tempFile = File(tempPath);
+          final tempFile = PlatformFile(tempPath);
           
           if (!await tempFile.exists()) {
                AppLogger.info('[OfflineManager] Decrypting to temp: $tempPath');
                final encryptedBytes = await encryptedFile.readAsBytes();
-               final decryptedBytes = _encrypter.decryptBytes(encrypt.Encrypted(encryptedBytes), iv: _iv);
+               final decryptedBytes = _encrypter.decryptBytes(encrypt.Encrypted(Uint8List.fromList(encryptedBytes)), iv: _iv);
                await tempFile.writeAsBytes(decryptedBytes);
           }
           
