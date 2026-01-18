@@ -20,6 +20,9 @@ const mapPlaylist = (playlist: any): PlaylistModel => {
     totalFollowers: playlist?.totalFollowers ?? playlist?.total_followers ?? 0,
     createdAt: playlist?.createdAt ?? playlist?.created_at ?? new Date().toISOString(),
     updatedAt: playlist?.updatedAt ?? playlist?.updated_at ?? new Date().toISOString(),
+    // Mapear campos de visibilidad desde el backend
+    visibility: playlist?.visibility ?? undefined,
+    isPublic: playlist?.isPublic ?? (playlist?.visibility === 'public'),
     user: playlist?.user ? {
       id: playlist.user.id ?? '',
       email: playlist.user.email ?? '',

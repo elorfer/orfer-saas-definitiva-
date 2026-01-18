@@ -5,6 +5,8 @@ export interface PlaylistModel {
   coverArtUrl?: string;
   userId: string;
   isFeatured: boolean;
+  visibility?: string;
+  isPublic?: boolean;
   totalTracks: number;
   totalDuration: number;
   totalFollowers: number;
