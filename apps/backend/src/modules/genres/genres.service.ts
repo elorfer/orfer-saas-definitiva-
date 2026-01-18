@@ -26,11 +26,16 @@ export class GenresService {
    * @returns Lista paginada de géneros
    */
   async findAll(page: number = 1, limit: number = 50): Promise<{ genres: Genre[]; total: number; page: number; limit: number; totalPages: number }> {
-    const [genres, total] = await this.genreRepository.findAndCount({
-      order: { name: 'ASC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const query = this.genreRepository
+      .createQueryBuilder('genre')
+      .orderBy('genre.name', 'ASC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      // 🎯 Cargar el conteo de canciones asociadas
+      .loadRelationCountAndMap('genre.songCount', 'genre.songs')
+      .loadRelationCountAndMap('genre.albumCount', 'genre.albums');
+
+    const [genres, total] = await query.getManyAndCount();
 
     return {
       genres,

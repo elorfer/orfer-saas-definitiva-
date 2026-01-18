@@ -54,14 +54,14 @@ export class AnalyticsService {
 
     const totalStreams = await this.songRepository
       .createQueryBuilder('song')
-      .select('SUM(song.totalStreams)', 'total')
+      .select('COALESCE(SUM(song.totalStreams), 0)', 'total')
       .getRawOne();
 
     return {
       totalSongs,
       totalArtists,
       totalUsers,
-      totalStreams: parseInt(totalStreams.total) || 0,
+      totalStreams: parseInt(totalStreams?.total || '0') || 0,
       verifiedUsers,
       activeUsers,
       featuredArtists,
