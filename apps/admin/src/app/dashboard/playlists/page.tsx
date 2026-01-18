@@ -510,14 +510,56 @@ export default function PlaylistsPage() {
 }
 
 // Subcomponente simple para gestionar canciones dentro de la playlist
-// (Idealmente esto podría ser más complejo, permitiendo buscar y añadir canciones)
 function PlaylistSongsModal({ playlist, onClose }: any) {
   const { data: fullPlaylist, isLoading } = useQuery(['playlist', playlist.id], () => apiClient.getPlaylist(playlist.id).then(res => res.data));
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [searchResults, setSearchResults] = React.useState<any[]>([]);
 
   const playlistSongs = fullPlaylist?.playlistSongs || [];
+  const playlistSongIds = new Set(playlistSongs.map((ps: any) => ps.song?.id).filter(Boolean));
 
-  // Mutation para remover canción (ejemplo)
+  // Buscar canciones disponibles
+  const searchSongs = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await apiClient.getSongs(1, 20, true);
+      const allSongs = response.data.songs || [];
+      // Filtrar por query y excluir las que ya están en la playlist
+      const filtered = allSongs.filter((song: any) =>
+        !playlistSongIds.has(song.id) &&
+        (song.title?.toLowerCase().includes(query.toLowerCase()) ||
+          song.artist?.stageName?.toLowerCase().includes(query.toLowerCase()))
+      );
+      setSearchResults(filtered);
+    } catch (e) {
+      toast.error('Error al buscar canciones');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Añadir canción a la playlist
+  const addSong = async (songId: string) => {
+    try {
+      await apiClient.addSongToPlaylist(playlist.id, songId);
+      toast.success('Canción añadida');
+      queryClient.invalidateQueries(['playlist', playlist.id]);
+      queryClient.invalidateQueries(['playlists']);
+      setSearchQuery('');
+      setSearchResults([]);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Error al añadir canción');
+    }
+  };
+
+  // Mutation para remover canción
   const removeSong = async (songId: string) => {
     try {
       await apiClient.removeSongFromPlaylist(playlist.id, songId);
@@ -540,13 +582,61 @@ function PlaylistSongsModal({ playlist, onClose }: any) {
           <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 transition"><XMarkIcon className="h-5 w-5 text-gray-500" /></button>
         </div>
 
+        {/* Buscador para añadir canciones */}
+        <div className="px-6 py-4 border-b bg-gray-50">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                searchSongs(e.target.value);
+              }}
+              placeholder="Buscar canciones para añadir..."
+              className="w-full rounded-lg border-gray-200 text-sm focus:ring-brown-500 focus:border-brown-500 pl-10"
+            />
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          </div>
+
+          {/* Resultados de búsqueda */}
+          {searchQuery && (
+            <div className="mt-2 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg">
+              {isSearching ? (
+                <div className="p-4 text-center text-sm text-gray-500">Buscando...</div>
+              ) : searchResults.length === 0 ? (
+                <div className="p-4 text-center text-sm text-gray-500">No se encontraron canciones</div>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {searchResults.map((song: any) => (
+                    <li key={song.id} className="p-3 hover:bg-gray-50 flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <MusicalNoteIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{song.title}</p>
+                          <p className="text-xs text-gray-500 truncate">{song.artist?.stageName || 'Artista desconocido'}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => addSong(song.id)}
+                        className="ml-2 px-3 py-1 bg-brown-700 text-white text-xs rounded-lg hover:bg-brown-800 transition flex-shrink-0"
+                      >
+                        Añadir
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="flex-1 overflow-y-auto p-6">
           {isLoading ? (
             <div className="text-center py-10 text-gray-500">Cargando canciones...</div>
           ) : !playlistSongs.length ? (
             <div className="text-center py-10 text-gray-500">
               <p>Esta playlist está vacía.</p>
-              <p className="text-xs mt-1">Agrega canciones desde la sección "Canciones" o "Explorar".</p>
+              <p className="text-xs mt-1">Usa el buscador arriba para añadir canciones.</p>
             </div>
           ) : (
             <ul className="space-y-2">
