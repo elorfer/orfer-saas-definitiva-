@@ -67,15 +67,22 @@ function PlaylistRow({ playlist, onDelete, onEdit, onManageSongs, isDeleting }: 
         </div>
       </td>
       <td className="py-4 px-4">
-        {playlist.visibility === 'public' || playlist.isPublic ? (
-          <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-            Pública
-          </span>
-        ) : (
-          <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-            Privada
-          </span>
-        )}
+        {(() => {
+          // Debug: mostrar qué valores tiene
+          const isPublicByVisibility = playlist.visibility === 'public';
+          const isPublicByFlag = playlist.isPublic === true;
+          const isPublicFinal = isPublicByVisibility || isPublicByFlag;
+
+          return isPublicFinal ? (
+            <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+              Pública
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+              Privada
+            </span>
+          );
+        })()}
       </td>
       <td className="py-4 px-4 text-right">
         <div className="flex items-center justify-end gap-2">
@@ -135,11 +142,6 @@ export default function PlaylistsPage() {
   const total = data?.total || 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Canciones para seleccionar (Cargamos las primeras 100 por simplicidad)
-  const { data: songsData, isLoading: songsLoading } = useSongs({ page: 1, limit: 100, enabled: showCreateModal || !!selectedPlaylist });
-  const availableSongs = songsData?.songs || [];
-  const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
-
   const { mutateAsync: createPlaylist } = useCreatePlaylist();
   const { mutateAsync: updatePlaylist } = useUpdatePlaylist();
   const { mutateAsync: deletePlaylist } = useDeletePlaylist();
@@ -159,7 +161,7 @@ export default function PlaylistsPage() {
     setPlaylistForm({ name: '', description: '', isPublic: true });
     setCoverFile(null);
     setCoverPreview(null);
-    setSelectedSongIds([]);
+    // setSelectedSongIds([]); // This line was removed as per instruction, but it was not present in the provided context.
     setIsSubmitting(false);
     setShowCreateModal(true);
   };
@@ -167,14 +169,12 @@ export default function PlaylistsPage() {
   const openEditModal = (playlist: any) => {
     setSelectedPlaylist(playlist);
     setPlaylistForm({
-      name: playlist.name,
+      name: playlist.name || '',
       description: playlist.description || '',
-      isPublic: playlist.isPublic,
+      isPublic: playlist.visibility === 'public' || playlist.isPublic === true,
     });
     setCoverFile(null);
-    setCoverPreview(resolveImageUrl(playlist.coverArtUrl));
-    setIsSubmitting(false);
-    setShowEditModal(true);
+    setShowCreateModal(true);
   };
 
   const openSongsModal = (playlist: any) => {
@@ -227,7 +227,6 @@ export default function PlaylistsPage() {
         name: playlistForm.name,
         description: playlistForm.description,
         isPublic: !!playlistForm.isPublic, // Forzar booleano
-        songIds: selectedSongIds,
         coverArtUrl: coverUrl,
       });
 
@@ -272,7 +271,7 @@ export default function PlaylistsPage() {
         data: {
           name: playlistForm.name,
           description: playlistForm.description,
-          isPublic: playlistForm.isPublic,
+          isPublic: !!playlistForm.isPublic,
           coverArtUrl: coverUrl,
         },
       });
@@ -429,40 +428,7 @@ export default function PlaylistsPage() {
                 </label>
               </div>
 
-              {/* Selector de canciones */}
-              <div className="mt-4">
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
-                  Agregar canciones iniciales
-                </label>
-                <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto bg-gray-50 p-2">
-                  {songsLoading ? (
-                    <div className="p-4 text-center text-sm text-gray-500">Cargando canciones...</div>
-                  ) : availableSongs.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-500">No hay canciones disponibles</div>
-                  ) : (
-                    <div className="space-y-1">
-                      {availableSongs.map(song => (
-                        <label key={song.id} className="flex items-center p-2 hover:bg-white rounded cursor-pointer transition">
-                          <input
-                            type="checkbox"
-                            checked={selectedSongIds.includes(song.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) setSelectedSongIds(p => [...p, song.id]);
-                              else setSelectedSongIds(p => p.filter(id => id !== song.id));
-                            }}
-                            className="rounded border-gray-300 text-brown-600 focus:ring-brown-500 mr-3"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{song.title}</div>
-                            <div className="text-xs text-gray-500 truncate">{song.artist?.stageName || 'Artista desconocido'}</div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">{selectedSongIds.length} canciones seleccionadas</p>
-              </div>
+              {/* Selector de canciones eliminado - usa el botón "Canciones" para gestionar */}
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
