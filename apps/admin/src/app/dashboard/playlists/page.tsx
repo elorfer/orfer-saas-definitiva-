@@ -222,14 +222,23 @@ export default function PlaylistsPage() {
         coverUrl = result.publicUrl;
       }
 
-      // 2. Crear playlist con la URL
-      await createPlaylist({
+      // 2. Crear playlist
+      const newPlaylist = await createPlaylist({
         name: playlistForm.name,
         description: playlistForm.description,
-        isPublic: playlistForm.isPublic,
+        isPublic: !!playlistForm.isPublic, // Forzar booleano
         songIds: selectedSongIds,
         coverArtUrl: coverUrl,
       });
+
+      // Fallback de seguridad: Si se pidió pública pero se creó privada (por problemas de API), forzar actualización
+      if (playlistForm.isPublic && (newPlaylist as any).visibility !== 'public') {
+        console.log('Forzando visibilidad pública...');
+        await updatePlaylist({
+          id: newPlaylist.id,
+          data: { isPublic: true }
+        });
+      }
 
       toast.success('Playlist creada correctamente', { id: 'playlist-upload' });
       closeModals();
