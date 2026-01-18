@@ -52,16 +52,22 @@ export class AnalyticsService {
       where: { status: SongStatus.PUBLISHED },
     });
 
-    const totalStreams = await this.songRepository
+    // 🐛 DEBUG: Verificar qué está pasando con totalStreams
+    const totalStreamsRaw = await this.songRepository
       .createQueryBuilder('song')
-      .select('COALESCE(SUM(song.totalStreams), 0)', 'total')
+      .select('COALESCE(SUM(song.total_streams), 0)', 'total')
       .getRawOne();
+
+    console.log('[getGlobalStats] totalStreamsRaw:', totalStreamsRaw);
+
+    const totalStreams = parseInt(totalStreamsRaw?.total || '0') || 0;
+    console.log('[getGlobalStats] totalStreams parsed:', totalStreams);
 
     return {
       totalSongs,
       totalArtists,
       totalUsers,
-      totalStreams: parseInt(totalStreams?.total || '0') || 0,
+      totalStreams,
       verifiedUsers,
       activeUsers,
       featuredArtists,

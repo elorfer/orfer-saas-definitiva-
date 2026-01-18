@@ -29,10 +29,10 @@ export class Genre {
   createdAt: Date;
 
   // Relaciones
-  @OneToMany(() =\u003e Song, (song) =\u003e song.genre)
+  @OneToMany(() => Song, (song) => song.genre)
   songs: Song[];
 
-  @OneToMany(() =\u003e Album, (album) =\u003e album.genre)
+  @OneToMany(() => Album, (album) => album.genre)
   albums: Album[];
 
   // Contadores - Propiedades normales (no getters) para permitir loadRelationCountAndMap
