@@ -78,12 +78,8 @@ class _SliverSongCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4), // Reduced padding
+      // No decoration -> Transparent background
       child: Row(
         children: [
           RepaintBoundary(

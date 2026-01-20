@@ -459,8 +459,8 @@ class IntelligentFeaturedSongCard extends StatelessWidget {
 
     return Container(
       key: ValueKey('intelligent_song_${song.id}'),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: cardDecoration,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 0), // Sin margen vertical
+      // decoration: cardDecoration, // 🗑️ Eliminado para fondo transparente
       child: Material(
           color: Colors.transparent,
           child: InkWell(

@@ -75,10 +75,10 @@ class FeaturedPlaylistCard extends StatelessWidget {
               width: 160,
               child: Text(
                 playlist.name ?? 'Playlist',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: NeumorphismTheme.textPrimary,
                   decoration: TextDecoration.none,
                 ),
                 maxLines: 1,

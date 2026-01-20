@@ -163,6 +163,8 @@ export class AnalyticsService {
 
   /**
    * Obtener reproducciones diarias de los últimos N días
+   * 🔥 FIX: Ahora usa la tabla 'streams' en lugar de 'play_history'
+   * para mostrar el conteo correcto (1 stream por canción por sesión)
    */
   async getDailyStreams(days: number = 7): Promise<Array<{ date: string; count: number }>> {
     const now = new Date();
@@ -170,12 +172,14 @@ export class AnalyticsService {
     startDate.setDate(now.getDate() - (days - 1));
     startDate.setHours(0, 0, 0, 0);
 
-    // 🎯 Consulta SQL con ajuste de zona horaria (UTC-5)
-    const playHistory = await this.playHistoryRepository.query(`
-      SELECT DATE(played_at - INTERVAL '5 hours') as date, COUNT(*) as count
-      FROM play_history 
-      GROUP BY DATE(played_at - INTERVAL '5 hours')
-      ORDER BY DATE(played_at - INTERVAL '5 hours') ASC
+    // 🔥 FIX: Usar tabla 'streams' en lugar de 'play_history'
+    // streams = 1 por canción por sesión (conteo correcto)
+    // play_history = múltiples checkpoints por sesión (inflado)
+    const streamsByDate = await this.playHistoryRepository.manager.query(`
+      SELECT DATE(created_at - INTERVAL '5 hours') as date, COUNT(*) as count
+      FROM streams 
+      GROUP BY DATE(created_at - INTERVAL '5 hours')
+      ORDER BY DATE(created_at - INTERVAL '5 hours') ASC
     `);
 
     // Función auxiliar para formatear fecha (YYYY-MM-DD)
@@ -196,7 +200,7 @@ export class AnalyticsService {
     }
 
     // Llenar con datos reales
-    playHistory.forEach((item: any) => {
+    streamsByDate.forEach((item: any) => {
       const dbDate = new Date(item.date);
       const dateStr = formatDate(dbDate);
       if (dateMap.has(dateStr)) {

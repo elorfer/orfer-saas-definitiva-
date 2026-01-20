@@ -397,64 +397,82 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ ANTI-FLICKER: Usar valores cacheados si los actuales son null
-    // Esto previene el parpadeo durante transiciones donde ambos son null momentáneamente
+    // ✅ ANTI-FLICKER: Usar valores cacheados
     final currentSong = widget.song ?? _lastSongId;
     final currentAd = widget.ad;
     
-    // Actualizar caché solo cuando hay valores válidos
+    // Actualizar caché
     if (widget.song != null) _lastSongId = widget.song;
     if (widget.ad != null) _lastAdId = widget.ad!.id;
     
-    // Determinar qué mostrar (prioridad a anuncios)
     final isPlayingAd = widget.ad != null;
+    final isDark = NeumorphismTheme.isDark;
     
-    // ✅ FIX CRÍTICO: Log removido del build - ya está en didUpdateWidget
-    // El build se ejecuta muchas veces, solo loguear cuando realmente cambia el contenido
+    // 🎨 Estilos dinámicos según el tema
+    final titleColor = isDark ? Colors.white : const Color(0xFF3E2723); // Marrón muy oscuro
+    final subtitleColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF6D4C41); // Marrón tierra
+    final iconColor = isDark ? Colors.white : const Color(0xFF4E342E); // Marrón oscuro
     
+    final titleStyle = GoogleFonts.inter(
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+      color: titleColor,
+      letterSpacing: -0.5,
+    );
+    
+    final artistStyle = GoogleFonts.inter(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: subtitleColor,
+      letterSpacing: -0.3,
+    );
+
+    final adTitleStyle = GoogleFonts.inter(
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+      color: titleColor,
+      letterSpacing: -0.5,
+    );
+    
+    final advertiserStyle = GoogleFonts.inter(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF4E342E),
+      letterSpacing: -0.3,
+    );
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      extendBody: true, // ✅ Extender el body debajo del sistema
-      extendBodyBehindAppBar: true, // ✅ Extender detrás de la app bar
+      extendBody: true,
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // ✅ 1. Fondo estático (NO cambia entre anuncio/canción - mismo color)
-          // ✅ ANTI-FLICKER: Fondo NUNCA parpadea porque es constante
+          // 1. Fondo
           SizedBox.expand(
             child: Container(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    NeumorphismTheme.coffeeDark.withValues(alpha: 0.95),
-                    NeumorphismTheme.coffeeDark.withValues(alpha: 1.0),
-                  ],
-                ),
+                color: NeumorphismTheme.background, 
               ),
             ),
           ),
 
-          // 2. Contenido seguro - OPTIMIZADO con CustomScrollView
+          // 2. Contenido
           SafeArea(
-            bottom: true, // ✅ Mantener padding inferior del SafeArea
+            bottom: true,
             child: Builder(
               builder: (context) {
-                // ✅ OPTIMIZACIÓN: CustomScrollView con Slivers para mejor rendimiento
-                // Usa lazy loading y mejor gestión de memoria que SingleChildScrollView
                 return CustomScrollView(
-                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone (consistente con Home)
-                  cacheExtent: 300, // ✅ Ajustado: menos trabajo fuera de viewport
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  cacheExtent: 300,
                   slivers: [
                     SliverToBoxAdapter(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                // Header - ESTÁTICO (con espacio para el botón de contraer)
-                // ✅ FASE 5: Mostrar "ANUNCIO" o "REPRODUCIENDO AHORA" según corresponda
+                // Header
                 RepaintBoundary(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 48, bottom: 12), // Espacio superior para no interferir con botón de contraer
+                    padding: const EdgeInsets.only(top: 48, bottom: 12),
                     child: Center(
                           child: isPlayingAd && currentAd != null
                           ? Container(
@@ -463,10 +481,10 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                 color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
                                 borderRadius: const BorderRadius.all(Radius.circular(12)),
                               ),
-                              child: Text(
+                                child: Text(
                                 "ANUNCIO",
                                 style: GoogleFonts.inter(
-                                  color: Colors.white.withValues(alpha: 0.9),
+                                  color: isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF3E2723),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.5,
@@ -476,7 +494,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                           : Text(
                               "REPRODUCIENDO AHORA",
                               style: GoogleFonts.inter(
-                                color: Colors.white.withValues(alpha: 0.7),
+                                color: isDark ? Colors.white.withValues(alpha: 0.7) : const Color(0xFF6D4C41),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: 1.5,
@@ -550,7 +568,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                                     Flexible(
                                                       child: Text(
                                                         currentAd.title,
-                                                        style: _adTitleStyle,
+                                                        style: adTitleStyle,
                                                         maxLines: 2,
                                                         overflow: TextOverflow.ellipsis,
                                                       ),
@@ -576,7 +594,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                                 )
                                       : Text(
                                           currentSong?.title ?? 'Sin título',
-                                          style: _titleStyle,
+                                          style: titleStyle,
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -585,7 +603,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                   isPlayingAd && currentAd != null
                                       ? Text(
                                           currentAd.advertiserName,
-                                          style: _advertiserStyle,
+                                          style: advertiserStyle,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         )
@@ -593,7 +611,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                           ? ArtistNameWithBadge(
                                               artistName: currentSong.artist?.displayName ?? 'Artista desconocido',
                                               isVerified: currentSong.artist?.isVerifiedValue ?? false,
-                                              textStyle: _artistStyle,
+                                              textStyle: artistStyle,
                                               badgeSize: 16.0,
                                             )
                                           : const SizedBox.shrink(),
@@ -613,7 +631,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                     ? FavoriteButton(
                                         songId: currentSong.id,
                                         song: currentSong, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
-                                        iconColor: Colors.white,
+                                        iconColor: iconColor, // Usar color dinámico
                                         iconSize: 28,
                                       )
                                     : const SizedBox.shrink(),
@@ -661,7 +679,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                                 Icons.shuffle_rounded,
                                                 color: isShuffled 
                                                   ? NeumorphismTheme.coffeeMedium 
-                                                  : Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7),
+                                                  : iconColor.withValues(alpha: isPlayingAd ? 0.3 : 0.7),
                                                 size: 24,
                                               ),
                                               onPressed: isPlayingAd ? null : () {
@@ -678,6 +696,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                         icon: Icons.skip_previous_rounded,
                                         size: 42,
                                         isLocked: isPlayingAd,
+                                        color: iconColor, // Color dinámico
                                         onTap: () async {
                                           await ref.read(unifiedAudioProviderFixed.notifier).previous();
                                         },
@@ -685,7 +704,12 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                     ),
                                     Flexible(
                                       flex: 0,
-                                      child: _PlayPauseButton(ref: ref, isLocked: isPlayingAd),
+                                      child: _PlayPauseButton(
+                                        ref: ref, 
+                                        isLocked: isPlayingAd,
+                                        // FIX: Ícono oscuro en modo oscuro para contrastar con fondo blanco
+                                        color: isDark ? const Color(0xFF1E1B19) : iconColor,
+                                      ),
                                     ),
                                     Flexible(
                                       fit: FlexFit.loose,
@@ -693,6 +717,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                         icon: Icons.skip_next_rounded,
                                         size: 42,
                                         isLocked: isPlayingAd,
+                                        color: iconColor, // Color dinámico
                                         onTap: () async {
                                           await ref.read(unifiedAudioProviderFixed.notifier).next(isManual: true);
                                         },
@@ -707,22 +732,22 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
                                               unifiedAudioProviderFixed.select((state) => state.repeatMode),
                                             );
                                             IconData icon = Icons.repeat_rounded; // ✅ Inicialización por defecto
-                                            Color color = Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7); // ✅ Inicialización por defecto
+                                            Color color = iconColor.withValues(alpha: isPlayingAd ? 0.3 : 0.7); // ✅ Inicialización por defecto
                                             switch (repeatMode) {
                                               case RepeatMode.off:
                                                 icon = Icons.repeat_rounded;
-                                                color = Colors.white.withValues(alpha: isPlayingAd ? 0.3 : 0.7);
+                                                color = iconColor.withValues(alpha: isPlayingAd ? 0.3 : 0.7);
                                                 break;
                                               case RepeatMode.all:
                                                 icon = Icons.repeat_rounded;
                                                 color = isPlayingAd 
-                                                  ? Colors.white.withValues(alpha: 0.3)
+                                                  ? iconColor.withValues(alpha: 0.3)
                                                   : NeumorphismTheme.coffeeMedium;
                                                 break;
                                               case RepeatMode.one:
                                                 icon = Icons.repeat_one_rounded;
                                                 color = isPlayingAd 
-                                                  ? Colors.white.withValues(alpha: 0.3)
+                                                  ? iconColor.withValues(alpha: 0.3)
                                                   : NeumorphismTheme.coffeeMedium;
                                                 break;
                                             }
@@ -772,10 +797,12 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
 class _PlayPauseButton extends ConsumerWidget {
   final WidgetRef ref;
   final bool isLocked;
+  final Color? color;
 
   const _PlayPauseButton({
     required this.ref,
     this.isLocked = false,
+    this.color,
   });
 
   @override
@@ -810,8 +837,8 @@ class _PlayPauseButton extends ConsumerWidget {
               child: Icon(
                 isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                 color: isLocked 
-                  ? Colors.black.withValues(alpha: 0.5)
-                  : Colors.black,
+                  ? (color ?? Colors.black).withValues(alpha: 0.5)
+                  : (color ?? Colors.black),
                 size: 36,
               ),
             ),
@@ -828,12 +855,14 @@ class _AsyncIconButton extends StatefulWidget {
   final double size;
   final Future<void> Function() onTap;
   final bool isLocked;
+  final Color? color;
 
   const _AsyncIconButton({
     required this.icon,
     required this.onTap,
     this.size = 36,
     this.isLocked = false,
+    this.color,
   });
 
   @override
@@ -859,8 +888,8 @@ class _AsyncIconButtonState extends State<_AsyncIconButton> {
             icon: Icon(
               widget.icon, 
               color: isDisabled 
-                ? Colors.white.withValues(alpha: 0.3)
-                : Colors.white, 
+                ? (widget.color ?? Colors.white).withValues(alpha: 0.3)
+                : (widget.color ?? Colors.white), 
               size: widget.size,
             ),
             onPressed: isDisabled
@@ -1021,6 +1050,15 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
         : effectivePosition;
 
     final currentDuration = progressData.totalDuration;
+    final isDark = NeumorphismTheme.isDark;
+    
+    // Colores dinámicos para la barra de progreso
+    // FIX: Modo Claro usa tonos marrones (Coffee)
+    final activeColor = isDark ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF5D4037).withValues(alpha: 0.9);
+    final inactiveColor = isDark ? Colors.white.withValues(alpha: 0.2) : const Color(0xFF5D4037).withValues(alpha: 0.2);
+    final bufferedColor = isDark ? Colors.white.withValues(alpha: 0.4) : const Color(0xFF5D4037).withValues(alpha: 0.4);
+    final thumbColor = isDark ? Colors.white : const Color(0xFF5D4037);
+    final textColor = isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF5D4037);
 
     return Column(
       children: [
@@ -1033,13 +1071,13 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
               height: 40,
               trackHeight: 4.0,
               thumbRadius: 6.0,
-              activeColor: Colors.white.withValues(alpha: 0.9),
-              inactiveColor: Colors.white.withValues(alpha: 0.2),
-              bufferedColor: Colors.white.withValues(alpha: 0.4),
-              thumbColor: Colors.white,
+              activeColor: activeColor,
+              inactiveColor: inactiveColor,
+              bufferedColor: bufferedColor,
+              thumbColor: thumbColor,
               showTooltip: true,
               tooltipStyle: GoogleFonts.inter(
-                color: Colors.white,
+                color: isDark ? Colors.white : const Color(0xFF3E2723),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -1096,7 +1134,7 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
                     child: Text(
                       _formatDuration(currentPosition, isCurrent: true),
                       style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: textColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.5, // Mejor legibilidad
@@ -1109,7 +1147,7 @@ class _ProgressControlState extends ConsumerState<_ProgressControl> {
                     child: Text(
                       _formatDuration(currentDuration, isCurrent: false),
                       style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: textColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.5, // Mejor legibilidad
@@ -1150,14 +1188,8 @@ class _AdArtworkBackground extends StatelessWidget {
     // Fondo con color sólido marrón más oscuro
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.coffeeDark.withValues(alpha: 0.95),
-            NeumorphismTheme.coffeeDark.withValues(alpha: 1.0),
-          ],
-        ),
+        // ✅ FIX: Usar el color de fondo exacto del tema (Casi Negro 0xFF1E1B19)
+        color: NeumorphismTheme.background,
       ),
     );
   }

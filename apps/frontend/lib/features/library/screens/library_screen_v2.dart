@@ -270,16 +270,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
                     physics: const BouncingScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: recentlyPlayed.take(10).length,
+                    itemExtent: 140, // 🚀 Fixed extent for max performance (width + spacing)
+                    cacheExtent: 500, // 🚀 Pre-render offscreen items
                     itemBuilder: (context, index) {
                       final song = recentlyPlayed[index];
-                      return Padding(
-                        padding: EdgeInsets.only(
+                      // Usar Container simple en lugar de Padding anidado para layout
+                      return Container(
+                        margin: EdgeInsets.only(
                           right: index < recentlyPlayed.length - 1 ? 14 : 0,
                         ),
-                        child: RepaintBoundary(
-                          key: ValueKey('recent_${song.id}'),
-                          child: _RecentSongCard(song: song),
-                        ),
+                        child: _RecentSongCard(song: song), // remove RepaintBoundary (overhead for simple items)
                       );
                     },
                   ),

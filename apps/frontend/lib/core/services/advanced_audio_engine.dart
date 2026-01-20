@@ -7,6 +7,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../providers/theme_provider.dart';
 import '../theme/neumorphism_theme.dart';
 
 import '../models/song_model.dart';
@@ -1311,6 +1312,11 @@ final smoothPositionSyncProvider = Provider<Duration>((ref) {
 /// Provider de la paleta dinámica
 final dynamicPaletteProvider = Provider<DynamicPalette>((ref) {
   final stateAsync = ref.watch(audioEngineStateProvider);
+  
+  // 🎨 FIX: Observar el tema para invalidar la paleta cuando cambie
+  // Esto asegura que DynamicPalette.defaultPalette use el valor correcto de isDark
+  ref.watch(themeProvider);
+  
   return stateAsync.when(
     data: (state) => state.palette ?? DynamicPalette.defaultPalette,
     loading: () => DynamicPalette.defaultPalette,

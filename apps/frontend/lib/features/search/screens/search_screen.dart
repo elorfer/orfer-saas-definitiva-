@@ -1012,16 +1012,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.surface, // 🚀 OPTIMIZACIÓN: Color dinámico
+          decoration: const BoxDecoration(
+            color: Colors.transparent, // 🚀 OPTIMIZACIÓN: Fondo transparente
             borderRadius: BorderRadius.all(Radius.circular(16)),
-            border: Border.all(
-              color: NeumorphismTheme.isDark 
-                  ? Colors.white.withValues(alpha: 0.05) 
-                  : Colors.transparent,
-              width: 1,
-            ),
-            // ⚡ GAMA BAJA: Sin boxShadow
+            // ⚡ GAMA BAJA: Sin boxShadow ni borde
           ),
           child: Row(
             children: [

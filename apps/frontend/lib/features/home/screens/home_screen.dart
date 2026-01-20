@@ -49,13 +49,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void initState() {
     super.initState();
     
-    // 🚀 Listen to theme changes without triggering rebuilds
-    Future.microtask(() {
-      if (!mounted) return;
-      ref.listen(themeProvider, (prev, next) {
-        // Theme changed - state will rebuild naturally
-      });
-    });
+    // 🔥 Nota: El tema se observa con ref.watch() en build()
+    // ya no necesitamos listener aquí
     
     if (!_isLoaded) {
       // Solo cargar datos si no se han cargado antes
@@ -117,6 +112,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context); // Requerido por AutomaticKeepAliveClientMixin
     
+    // 🔥 FIX: Watch themeProvider para forzar rebuild cuando cambie el tema
+    // Esto asegura que el gradiente de fondo se actualice en tiempo real
+    ref.watch(themeProvider);
+    
     // 🚀 OPTIMIZACIÓN: Usar statusBarHeight cacheado (ya no necesitamos fallback)
     final statusBarHeight = _cachedStatusBarHeight ?? 0.0;
     
@@ -138,6 +137,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: Stack(
               children: [
                 // 🚀 CAPA 0: Fondo fijo con gradiente (Isolado para el Raster)
+                // 🔥 FIX: Ahora se actualiza cuando themeProvider cambia
                 Positioned.fill(
                   child: RepaintBoundary(
                     child: DecoratedBox(

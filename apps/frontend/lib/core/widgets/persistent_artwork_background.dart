@@ -20,14 +20,8 @@ class PersistentArtworkBackground extends StatelessWidget {
     // Fondo con color sólido marrón más oscuro
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.coffeeDark.withValues(alpha: 0.95),
-            NeumorphismTheme.coffeeDark.withValues(alpha: 1.0),
-          ],
-        ),
+        // ✅ FIX: Usar el color de fondo exacto del tema (Casi Negro 0xFF1E1B19)
+        color: NeumorphismTheme.background,
       ),
     );
   }

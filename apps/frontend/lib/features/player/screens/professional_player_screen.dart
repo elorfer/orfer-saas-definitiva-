@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/optimized_cached_image.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/services/advanced_audio_engine.dart';
 import '../../../core/services/player_navigation_service.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/utils/url_normalizer.dart';
 import '../../../core/widgets/professional_seekbar.dart';
 
@@ -57,6 +59,10 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
   Widget build(BuildContext context) {
     final stateAsync = ref.watch(audioEngineStateProvider);
     final palette = ref.watch(dynamicPaletteProvider);
+    
+    // 🎨 FIX: Observar el tema para forzar reconstrucción cuando cambie
+    // Esto asegura que NeumorphismTheme.backgroundGradient use el valor correcto de isDark
+    ref.watch(themeProvider);
 
     // 🛡️ PROTECCIÓN CRÍTICA: Cerrar reproductor si hay un anuncio
     // El AdsMiniPlayer tomará el control de la UI durante los anuncios
@@ -163,14 +169,19 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
 );
   }
 
-  /// Fondo dinámico con blur y gradiente
   Widget _buildDynamicBackground(DynamicPalette palette, String? coverUrl) {
-    // Reemplazado por un fondo plano para evitar problemas con ImageFiltered/blur
+    // 🎨 Fondo idéntico al Home en Modo Oscuro (Struky Dark)
+    // FIX: Usar el color sólido exacto en modo oscuro para evitar discrepancias
+    final isDark = NeumorphismTheme.isDark;
+    
     return AnimatedContainer(
       duration: const Duration(milliseconds: 800),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: palette.background,
+        // En modo oscuro usamos color sólido para coincidencia perfecta
+        // En modo claro mantenemos el gradiente suave
+        color: isDark ? const Color(0xFF1E1B19) : null,
+        gradient: isDark ? null : NeumorphismTheme.backgroundGradient,
       ),
       child: const SizedBox.expand(),
     );
@@ -225,7 +236,7 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: palette.dominant.withValues(alpha: 0.5),
+              color: Colors.black.withValues(alpha: 0.3), // ⚡ FIX: Sombra negra neutra
               blurRadius: 40,
               spreadRadius: 5,
               offset: const Offset(0, 10),
@@ -240,9 +251,9 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
                   width: double.infinity,
                   height: double.infinity,
                   fit: BoxFit.cover,
-                  placeholder: null, // ⚡ FIX: Quitar "tarjeta" de carga (skeleton). Dejar ver el fondo o imagen previa.
+                  placeholder: null,
                   errorWidget: Container(
-                    color: Colors.transparent, // Error transparente para no ensuciar
+                    color: Colors.transparent,
                     child: Icon(
                       Icons.music_note_rounded,
                       size: 80,
@@ -251,7 +262,7 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
                   ),
                 )
               : Container(
-                  color: Colors.transparent, // No cover -> Transparente
+                  color: Colors.transparent,
                   child: Icon(
                     Icons.music_note_rounded,
                     size: 80,
@@ -436,24 +447,25 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
   }
 
   Widget _buildLoadingState(BuildContext context, DynamicPalette palette) {
+    // 🎨 FIX: Usar el mismo color de fondo que el tema dark
+    const u989Color = Color(0xFF1E1B19);
+    
     return Scaffold(
-      backgroundColor: Colors.transparent, // Transparente para ver fondo si lo hubiera, o manejado por container
-      body: AnimatedContainer(
-        duration: const Duration(milliseconds: 500),
-        color: palette.background,
-        child: Center(
-          child: CircularProgressIndicator(
-            color: palette.vibrant.withValues(alpha: 0.8),
-            strokeWidth: 3,
-          ),
+      backgroundColor: u989Color,
+      body: Center(
+        child: CircularProgressIndicator(
+          color: palette.vibrant.withValues(alpha: 0.8),
+          strokeWidth: 3,
         ),
       ),
     );
   }
 
   Widget _buildErrorState(BuildContext context, Object error) {
+    const u989Color = Color(0xFF1E1B19);
+    
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: u989Color,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -471,8 +483,10 @@ class _ProfessionalPlayerScreenState extends ConsumerState<ProfessionalPlayerScr
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    const u989Color = Color(0xFF1E1B19);
+    
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: u989Color,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -625,6 +639,9 @@ class ProfessionalMiniPlayer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stateAsync = ref.watch(audioEngineStateProvider);
     final palette = ref.watch(dynamicPaletteProvider);
+    
+    // 🎨 FIX: Observar el tema para mantener consistencia con el tema oscuro
+    ref.watch(themeProvider);
 
     return stateAsync.when(
       data: (state) {

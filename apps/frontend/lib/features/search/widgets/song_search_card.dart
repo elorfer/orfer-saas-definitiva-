@@ -27,11 +27,8 @@ class SongSearchCard extends ConsumerWidget {
 
     // ⚡ OPTIMIZADO: Tarjeta más pequeña y ligera sin botón de favorito
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // ⚡ Reducido de 6 a 4
-      decoration: BoxDecoration(
-        color: NeumorphismTheme.surface.withValues(alpha: 0.6), // ⚡ Sin gradiente (más ligero)
-        borderRadius: const BorderRadius.all(Radius.circular(16)), // ⚡ Reducido de 20 a 16
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 0), // Minimal margin
+      // ⚡ Sin decoración (fondo transparente) para estilo lista limpia
       child: Material(
         color: Colors.transparent,
         child: InkWell(

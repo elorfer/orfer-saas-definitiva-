@@ -39,7 +39,7 @@ class _FollowedArtistsScreenState extends ConsumerState<FollowedArtistsScreen> {
     final followState = ref.watch(followProvider);
 
     return Scaffold(
-      backgroundColor: NeumorphismTheme.surface,
+      backgroundColor: NeumorphismTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -142,7 +142,7 @@ class _FollowedArtistsScreenState extends ConsumerState<FollowedArtistsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
+        color: NeumorphismTheme.surface,
         borderRadius: const BorderRadius.all(Radius.circular(16)),
         boxShadow: NeumorphismTheme.neumorphismShadow,
       ),

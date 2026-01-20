@@ -15,8 +15,6 @@ class NeumorphismTheme {
     _currentMode = mode;
   }
 
-  // --- Dynamic Color Palette ---
-
   // Background: Light (Beige) / Dark (Deep Coffee)
   static Color get background => isDark 
       ? const Color(0xFF1E1B19) // Café muy oscuro (casi negro)
@@ -55,6 +53,7 @@ class NeumorphismTheme {
       ? const Color(0xFF8D7F78) // Café grisáceo
       : const Color(0xFFA89C94); // Gris cálido claro
 
+  // Gradiente de fondo sutil
   // Gradiente de fondo sutil
   static LinearGradient get backgroundGradient => LinearGradient(
     begin: Alignment.topCenter,
@@ -159,6 +158,11 @@ class NeumorphismTheme {
       ),
       
       scaffoldBackgroundColor: background,
+      
+      // 🚀 FIX: Subtle interactions to prevent "flashing"
+      splashColor: isDark ? const Color(0xFFD7CCC8).withValues(alpha: 0.05) : const Color(0xFF8D6E63).withValues(alpha: 0.05),
+      highlightColor: isDark ? const Color(0xFFD7CCC8).withValues(alpha: 0.02) : const Color(0xFF8D6E63).withValues(alpha: 0.02),
+      splashFactory: InkRipple.splashFactory, // Smoother ripple than default
       
       // Typography
       textTheme: GoogleFonts.interTextTheme(
