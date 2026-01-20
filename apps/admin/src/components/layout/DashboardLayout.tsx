@@ -45,10 +45,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/login', redirect: true });
+  const handleSignOut = async () => {
+    // Usamos redirect: false para manejar la redirección manualmente
+    // Esto asegura que se respete el puerto actual del navegador (sea 3000, 3002 u otro)
+    await signOut({ redirect: false });
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
+      window.location.href = '/login';
     }
   };
 

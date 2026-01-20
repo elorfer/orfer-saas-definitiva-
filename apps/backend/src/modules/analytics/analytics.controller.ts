@@ -5,6 +5,7 @@ import {
   UseGuards,
   Query,
   ParseIntPipe,
+  Post,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
@@ -104,6 +105,14 @@ export class AnalyticsController {
   @ApiResponse({ status: 200, description: 'Horas pico de actividad' })
   async getPeakHours() {
     return this.analyticsService.getPeakHours();
+  }
+
+  @Post('reset-stats')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Reiniciar todas las estadísticas del dashboard (Solo Admin)' })
+  @ApiResponse({ status: 200, description: 'Estadísticas reiniciadas exitosamente' })
+  async resetStats() {
+    return this.analyticsService.resetStats();
   }
 }
 

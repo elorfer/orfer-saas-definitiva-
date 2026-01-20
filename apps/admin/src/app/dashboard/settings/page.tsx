@@ -10,9 +10,13 @@ import {
     ArrowPathIcon,
     CheckCircleIcon,
     ExclamationCircleIcon,
-    AdjustmentsHorizontalIcon
+    AdjustmentsHorizontalIcon,
+    ShieldExclamationIcon,
+    XMarkIcon,
+    LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api';
+import { toast } from 'react-hot-toast';
 
 interface Setting {
     key: string;
@@ -298,6 +302,12 @@ export default function SettingsPage() {
     const [error, setError] = useState<string | null>(null);
     const [catalogSize, setCatalogSize] = useState<number>(0);
 
+    // 🔒 Estados para el modal de reiniciar estadísticas
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetPassword, setResetPassword] = useState('');
+    const [isResetting, setIsResetting] = useState(false);
+    const [resetError, setResetError] = useState<string | null>(null);
+
     useEffect(() => {
         fetchSettings();
         fetchCatalogSize();
@@ -409,6 +419,72 @@ export default function SettingsPage() {
     // 🎯 Obtener el preset actualmente activo (si alguno coincide)
     const getActivePreset = (): Preset | null => {
         return RECOMMENDED_PRESETS.find(p => isPresetActive(p)) || null;
+    };
+
+    // 🔒 Función para reiniciar estadísticas con verificación de contraseña
+    const handleResetStats = async () => {
+        if (!resetPassword.trim()) {
+            setResetError('Debes ingresar tu contraseña');
+            return;
+        }
+
+        setIsResetting(true);
+        setResetError(null);
+
+        try {
+            // Primero verificar la contraseña intentando un login
+            const profile = await apiClient.getProfile();
+            const userEmail = profile.data?.email;
+
+            if (!userEmail) {
+                throw new Error('No se pudo obtener el email del usuario');
+            }
+
+            // Intentar login para verificar contraseña
+            try {
+                await apiClient.login(userEmail, resetPassword);
+            } catch (loginError: any) {
+                if (loginError.response?.status === 401) {
+                    setResetError('Contraseña incorrecta');
+                    setIsResetting(false);
+                    return;
+                }
+                throw loginError;
+            }
+
+            // Si la contraseña es correcta, proceder con el reset
+            const loadingToast = toast.loading('Reiniciando estadísticas...');
+
+            const response = await apiClient.resetStats();
+            const data = response.data;
+
+            toast.dismiss(loadingToast);
+            toast.success(
+                `✅ Estadísticas reiniciadas exitosamente!\n\n` +
+                `📊 Detalles:\n` +
+                `• ${data.details.playHistoryDeleted} registros de reproducciones eliminados\n` +
+                `• ${data.details.songsReset} canciones reiniciadas\n` +
+                `• ${data.details.artistsReset} artistas reiniciados`,
+                { duration: 5000 }
+            );
+
+            // Cerrar modal y limpiar
+            setShowResetModal(false);
+            setResetPassword('');
+            setResetError(null);
+
+            // Refrescar estadísticas del catálogo
+            await fetchCatalogSize();
+        } catch (error: any) {
+            console.error('Error resetting stats:', error);
+            setResetError(error.response?.data?.message || error.message || 'Error desconocido');
+            toast.error(
+                `❌ Error al reiniciar estadísticas: ${error.message || 'Error desconocido'}`,
+                { duration: 5000 }
+            );
+        } finally {
+            setIsResetting(false);
+        }
     };
 
     const renderSettingCard = (key: keyof AlgorithmSettings) => {
@@ -839,6 +915,143 @@ export default function SettingsPage() {
                     💡 La app carga estos valores al iniciar. Cambia un preset y reinicia la app para ver los efectos.
                 </p>
             </motion.div>
+
+            {/* 🔒 Zona Peligrosa */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-6 bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 rounded-xl"
+            >
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                        <ShieldExclamationIcon className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-red-800">⚠️ Zona Peligrosa</h2>
+                        <p className="text-sm text-red-600">Acciones irreversibles que afectan los datos de la plataforma</p>
+                    </div>
+                </div>
+
+                <div className="bg-white/50 rounded-lg p-4 border border-red-200">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="font-semibold text-red-900">Reiniciar Todas las Estadísticas</h3>
+                            <p className="text-sm text-red-700 mt-1">
+                                Elimina el historial de reproducciones, reinicia contadores de streams de canciones y artistas.
+                                <strong> Esta acción NO elimina canciones, artistas ni usuarios.</strong>
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowResetModal(true)}
+                            className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 shadow-sm"
+                        >
+                            <ArrowPathIcon className="h-5 w-5" />
+                            Reiniciar Estadísticas
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Modal de confirmación con contraseña */}
+            {showResetModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-100 rounded-lg">
+                                    <LockClosedIcon className="h-6 w-6 text-red-600" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900">Confirmar Acción</h3>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowResetModal(false);
+                                    setResetPassword('');
+                                    setResetError(null);
+                                }}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <XMarkIcon className="h-5 w-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="mb-6">
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+                                <p className="text-sm text-red-700">
+                                    <strong>⚠️ ADVERTENCIA:</strong> Esta acción eliminará TODAS las estadísticas del dashboard incluyendo:
+                                </p>
+                                <ul className="text-sm text-red-600 mt-2 space-y-1 ml-4">
+                                    <li>• Historial de reproducciones</li>
+                                    <li>• Contadores de streams de canciones</li>
+                                    <li>• Contadores de streams de artistas</li>
+                                    <li>• Estadísticas de géneros</li>
+                                </ul>
+                            </div>
+
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Ingresa tu contraseña para confirmar:
+                            </label>
+                            <input
+                                type="password"
+                                value={resetPassword}
+                                onChange={(e) => {
+                                    setResetPassword(e.target.value);
+                                    setResetError(null);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !isResetting) {
+                                        handleResetStats();
+                                    }
+                                }}
+                                placeholder="••••••••"
+                                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${resetError ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                                autoFocus
+                            />
+                            {resetError && (
+                                <p className="text-sm text-red-600 mt-2 flex items-center gap-1">
+                                    <ExclamationCircleIcon className="h-4 w-4" />
+                                    {resetError}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowResetModal(false);
+                                    setResetPassword('');
+                                    setResetError(null);
+                                }}
+                                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                disabled={isResetting}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleResetStats}
+                                disabled={isResetting || !resetPassword.trim()}
+                                className="flex-1 px-4 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isResetting ? (
+                                    <>
+                                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                                        Procesando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShieldExclamationIcon className="h-5 w-5" />
+                                        Confirmar Reset
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }

@@ -390,6 +390,8 @@ export const apiClient = {
 
   getPeakHours: () => api.get('/analytics/peak-hours'),
 
+  resetStats: () => api.post('/analytics/reset-stats'),
+
   // Payments
   getPayments: (page = 1, limit = 10) =>
     api.get(`/payments?page=${page}&limit=${limit}`),

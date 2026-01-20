@@ -273,148 +273,122 @@ class _SongHistoryItem extends ConsumerWidget {
     // ✅ OPTIMIZACIÓN: Variables eliminadas ya que el botón play siempre inicia nueva reproducción
     // (no necesita verificar si es la canción actual o si está reproduciéndose)
 
-    // ✅ OPTIMIZACIÓN: Usar URL directamente, OptimizedImage se encarga de normalizarla
+    // ✅ OPTIM IZACIÓN: Usar URL directamente, OptimizedImage se encarga de normalizarla
     final coverUrl = song.coverArtUrl;
 
-    // OPTIMIZACIÓN: Opacidad simulada con color alpha para evitar `saveLayer`
-    return IgnorePointer(
-      ignoring: !isAvailable,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8), // ✅ Reducido de 12 a 8
-        decoration: BoxDecoration(
-          color: NeumorphismTheme.surface.withOpacity(isAvailable ? 1.0 : 0.5),
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          boxShadow: NeumorphismTheme.floatingCardShadow.map((s) => s.copyWith(
-            color: s.color.withOpacity(isAvailable ? s.color.opacity : s.color.opacity * 0.5)
-          )).toList(),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: isAvailable ? onTap : null, // Deshabilitar tap si no está disponible
-            borderRadius: const BorderRadius.all(Radius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // ✅ Reducido de all(12) a symmetric(12, 10)
-              child: Row(
+    // ⚡ OPTIMIZACIÓN CRÍTICA: Sin Container, sin BoxDecoration, sin shadows
+    // Solo InkWell + Padding (igual que playlist/artist) = MUCHO más rápido
+    return InkWell(
+      onTap: isAvailable ? onTap : null, // Deshabilitar tap si no está disponible
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10), // ⚡ Similar a playlist
+        child: Row(
+          children: [
+            // Número de posición
+            SizedBox(
+              width: 32, // ⚡ Similar a playlist
+              child: Center(
+                child: Text(
+                  '${index + 1}',
+                  style: GoogleFonts.inter(
+                    color: isAvailable 
+                        ? NeumorphismTheme.textSecondary 
+                        : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16), // ⚡ Similar a playlist
+            // Portada optimizada - CUADRADA
+            ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
+              clipBehavior: Clip.antiAlias,
+              child: coverUrl != null
+                  ? OptimizedImage(
+                      imageUrl: coverUrl,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      isLargeCover: false,
+                      maxCacheWidth: 112,
+                      maxCacheHeight: 112,
+                      useThumbnail: true,
+                      skipFade: true,
+                      lazyLoad: false,
+                    )
+                  : Container(
+                      width: 56,
+                      height: 56,
+                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                      child: const Icon(Icons.music_note, color: Colors.white30, size: 24),
+                    ),
+            ),
+            const SizedBox(width: 16), // ⚡ Más espacio
+            // Información
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Número de posición
-                  Container(
-                    width: 28, // ✅ Reducido de 32 a 28
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${index + 1}',
-                      style: GoogleFonts.inter(
-                        color: isAvailable 
-                            ? NeumorphismTheme.textSecondary 
-                            : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                        fontSize: 14, // ✅ Reducido de 16 a 14
-                        fontWeight: FontWeight.w600,
-                      ),
+                  Text(
+                    song.title ?? 'Sin título',
+                    style: GoogleFonts.inter(
+                      color: isAvailable 
+                          ? NeumorphismTheme.textPrimary 
+                          : NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(width: 10), // ✅ Reducido de 12 a 10
-                  // Portada optimizada con precarga - Más pequeña y CUADRADA
-                  Container(
-                    width: 56, // ✅ Reducido de 64 a 56
-                    height: 56, // ✅ Reducido de 64 a 56
-                    constraints: const BoxConstraints(
-                      minWidth: 56,
-                      maxWidth: 56,
-                      minHeight: 56,
-                      maxHeight: 56,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.all(Radius.circular(8)), // ✅ Más cuadrado (reducido de 12 a 8)
-                      clipBehavior: Clip.antiAlias,
-                      child: coverUrl != null
-                          ? OptimizedImage(
-                              imageUrl: coverUrl,
-                              width: 56, // ✅ CRÍTICO: Especificar width explícitamente para asegurar forma cuadrada
-                              height: 56, // ✅ CRÍTICO: Especificar height explícitamente para asegurar forma cuadrada
-                              fit: BoxFit.cover,
-                              isLargeCover: false,
-                              // 🔥 OPTIMIZADO: Tamaños de cache reducidos para mejor rendimiento con muchas imágenes
-                              maxCacheWidth: 112, // 2x el tamaño de visualización (56 * 2)
-                              maxCacheHeight: 112,
-                              useThumbnail: true, // Usar thumbnails cuando estén disponibles
-                              skipFade: true, // Sin fade para mejor rendimiento en scroll rápido
-                              lazyLoad: false, // ✅ DESACTIVADO: SliverChildBuilderDelegate ya maneja lazy loading
-                            )
-                          : Container(
-                              width: 56, // ✅ Reducido de 64 a 56
-                              height: 56, // ✅ Reducido de 64 a 56
-                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                              child: const Icon(Icons.music_note, color: Colors.white30, size: 24), // ✅ Reducido de tamaño por defecto
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Información
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min, // ✅ Evitar overflow
-                      children: [
-                        Text(
-                          song.title ?? 'Sin título',
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          song.artist?.displayName ?? 'Artista desconocido',
                           style: GoogleFonts.inter(
                             color: isAvailable 
-                                ? NeumorphismTheme.textPrimary 
-                                : NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
-                            fontSize: 15, // ✅ Reducido de 16 a 15
-                            fontWeight: FontWeight.w600,
+                                ? NeumorphismTheme.textSecondary 
+                                : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
+                            fontSize: 13,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 3), // ✅ Reducido de 4 a 3
-                        Row(
-                          children: [
-                            Flexible( // ✅ Cambiado de Expanded a Flexible para evitar overflow
-                              child: Text(
-                                song.artist?.displayName ?? 'Artista desconocido',
-                                style: GoogleFonts.inter(
-                                  color: isAvailable 
-                                      ? NeumorphismTheme.textSecondary 
-                                      : NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-                                  fontSize: 13, // ✅ Reducido de 14 a 13
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (!isAvailable) ...[
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.error_outline,
-                                size: 12, // ✅ Reducido de 14 a 12
-                                color: Colors.orange.withValues(alpha: 0.7),
-                              ),
-                            ],
-                          ],
+                      ),
+                      if (!isAvailable) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.error_outline,
+                          size: 12,
+                          color: Colors.orange.withValues(alpha: 0.7),
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: 6), // ✅ Agregado espacio antes del botón
-                  // Botón play - SIEMPRE muestra play ya que siempre inicia nueva reproducción (como tocar la tarjeta)
-                  IconButton(
-                    icon: Icon(
-                      // ✅ SIEMPRE mostrar play ya que siempre inicia nueva reproducción con algoritmo
-                      Icons.play_circle_filled,
-                      color: isAvailable 
-                          ? NeumorphismTheme.coffeeMedium 
-                          : NeumorphismTheme.textSecondary.withValues(alpha: 0.3),
-                      size: 36, // ✅ Reducido de 40 a 36
-                    ),
-                    padding: EdgeInsets.zero, // ✅ Reducir padding del botón
-                    constraints: const BoxConstraints(), // ✅ Sin constraints para que sea más pequeño
-                    onPressed: isAvailable ? onPlay : null,
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
+            const SizedBox(width: 6),
+            // Botón play - SIEMPRE muestra play
+            IconButton(
+              icon: Icon(
+                Icons.play_circle_filled,
+                color: isAvailable 
+                    ? NeumorphismTheme.coffeeMedium 
+                    : NeumorphismTheme.textSecondary.withValues(alpha: 0.3),
+                size: 36,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: isAvailable ? onPlay : null,
+            ),
+          ],
         ),
       ),
     );

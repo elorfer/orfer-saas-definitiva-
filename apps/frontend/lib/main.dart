@@ -189,9 +189,7 @@ class _VintageMusicAppState extends ConsumerState<VintageMusicApp> {
             if (ErrorWidget.builder != _errorWidgetBuilder) {
               ErrorWidget.builder = _errorWidgetBuilder;
             }
-            return WebConstrainedWrapper(
-              child: child ?? const SizedBox.shrink(),
-            );
+            return child ?? const SizedBox.shrink();
           },
           // Tema Claro (Default)
           theme: neumorphismTheme.theme.copyWith(

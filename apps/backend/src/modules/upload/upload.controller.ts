@@ -27,13 +27,13 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) { }
 
   @Post('audio')
-  @Roles(UserRole.ARTIST)
+  @Roles(UserRole.ARTIST, UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Subir archivo de audio' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Archivo de audio subido exitosamente' })
   @ApiResponse({ status: 400, description: 'Error en el archivo o formato no válido' })
-  @ApiResponse({ status: 403, description: 'Solo artistas pueden subir archivos de audio' })
+  @ApiResponse({ status: 403, description: 'Solo artistas o admins pueden subir archivos de audio' })
   async uploadAudio(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: User,

@@ -78,12 +78,17 @@ export class StreamsService {
     });
 
     if (!session) {
+      // ✅ FIX: Ajustar startedAt para reflejar el progreso ya acumulado
+      // Esto evita que el sistema anti-fraude detecte "progreso sospechoso"
+      // cuando el cliente ya tenía progreso acumulado antes de crear la sesión
+      const adjustedStartedAt = new Date(Date.now() - dto.progressMs);
+
       // Crear nueva sesión
       session = this.sessionRepository.create({
         userId,
         songId: dto.songId,
         maxProgressMs: dto.progressMs,
-        startedAt: new Date(),
+        startedAt: adjustedStartedAt, // ⚡ USAR TIEMPO AJUSTADO
         lastProgressUpdate: new Date(),
       });
       await this.sessionRepository.save(session);
@@ -96,9 +101,10 @@ export class StreamsService {
 
       // ✅ NUEVA LÓGICA: Una canción puede ser re-contabilizada si:
       // 1. El progreso es bajo (< 10s) Y ya fue validada -> REPLAY desde inicio
-      // 2. Han pasado más de 30s desde la última validación -> NUEVA ESCUCHA
+      // 2. Han pasado más de 5 MINUTOS desde la última validación -> NUEVA ESCUCHA
+      // 🔥 FIX: Cambiado de 30s a 5min para evitar múltiples streams en una sesión continua
       const isNewPlayback = dto.progressMs < 10000 && session.isStreamValidated;
-      const isNewListening = session.isStreamValidated && timeSinceValidation > 30000; // Más de 30s desde validación
+      const isNewListening = session.isStreamValidated && timeSinceValidation > 300000; // 5 minutos (antes 30s)
       const isLongPause = timeSinceLastUpdate > 60000 && session.isStreamValidated;
 
       if (isNewPlayback || isNewListening) {

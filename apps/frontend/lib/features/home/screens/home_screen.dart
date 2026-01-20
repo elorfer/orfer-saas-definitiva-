@@ -17,6 +17,8 @@ import '../widgets/featured_songs_section.dart';
 import '../widgets/featured_playlists_section.dart';
 import '../widgets/home_message_banner.dart';
 import '../widgets/home_header.dart'; // Extracted header
+import '../../../core/responsive/responsive_layout.dart';
+import 'web/web_home_screen.dart';
 
 /// HomeScreen optimizado con AutomaticKeepAliveClientMixin
 /// Evita reconstrucciones innecesarias al cambiar de pestañas
@@ -118,122 +120,117 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // 🚀 OPTIMIZACIÓN: Usar statusBarHeight cacheado (ya no necesitamos fallback)
     final statusBarHeight = _cachedStatusBarHeight ?? 0.0;
     
-    // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
-    // OPTIMIZACIÓN: Logging removido del build para mejor rendimiento
-    
-    // 🚀 INTEGRACIÓN STRUKY ZOOM DRAWER
-    // Reemplazamos el Scaffold con Drawer tradicional por el ZoomDrawer
-    return StrukyZoomDrawer(
-      // 1. EL MENÚ DEL FONDO
-      menuScreen: const StrukyDrawerMenu(),
-      
-      // 2. LA PANTALLA PRINCIPAL (Tu Scaffold original)
-      mainScreen: Scaffold(
-        key: const ValueKey('home_screen_scaffold'),
-        backgroundColor: Colors.transparent,
-        // drawer: const UltraLightProfileDrawer(), // ELIMINADO: Ya no usamos este drawer
-        // drawerEdgeDragWidth: 20,
-        // drawerEnableOpenDragGesture: true,
-        body: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: _overlayStyle, // 🚀 Used static constant
-          child: Stack(
-            children: [
-              // 🚀 CAPA 0: Fondo fijo con gradiente (Isolado para el Raster)
-              Positioned.fill(
-                child: RepaintBoundary(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: NeumorphismTheme.backgroundGradient,
+    // 🚀 INTEGRACIÓN STRUKY ZOOM DRAWER + RESPONSIVE WEB
+    // En móvil: Usamos ZoomDrawer (tu diseño actual)
+    // En Web: Usamos WebHomeScreen (diseño nuevo)
+    return ResponsiveLayout(
+      desktop: const WebHomeScreen(),
+      mobile: StrukyZoomDrawer(
+        // 1. EL MENÚ DEL FONDO
+        menuScreen: const StrukyDrawerMenu(),
+        
+        // 2. LA PANTALLA PRINCIPAL (Tu Scaffold original)
+        mainScreen: Scaffold(
+          key: const ValueKey('home_screen_scaffold'),
+          backgroundColor: Colors.transparent,
+          body: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: _overlayStyle, // 🚀 Used static constant
+            child: Stack(
+              children: [
+                // 🚀 CAPA 0: Fondo fijo con gradiente (Isolado para el Raster)
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: NeumorphismTheme.backgroundGradient,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              
-              // 🚀 CAPA 1: Contenido scrolleable
-              RefreshIndicator(
-                onRefresh: () async {
-                    // 🔥 THROTTLE: Evitar refreshes repetitivos (cooldown de 3 segundos)
-                    final now = DateTime.now();
-                    if (_lastRefreshTime != null && 
-                        now.difference(_lastRefreshTime!) < _refreshCooldown) {
-                      return; // Ignorar refresh si fue hace menos de 3 segundos
-                    }
-                    _lastRefreshTime = now;
-                    
-                    final isLoading = ref.read(
-                      homeStateProvider.select((state) => state.isLoading),
-                    );
-                    if (isLoading) return;
-                    ref.read(authStateProvider.notifier).refreshProfile().catchError((_) {});
-                    final homeNotifier = ref.read(homeStateProvider.notifier);
-                    await homeNotifier.refresh();
+                
+                // 🚀 CAPA 1: Contenido scrolleable
+                RefreshIndicator(
+                  onRefresh: () async {
+                      // 🔥 THROTTLE: Evitar refreshes repetitivos (cooldown de 3 segundos)
+                      final now = DateTime.now();
+                      if (_lastRefreshTime != null && 
+                          now.difference(_lastRefreshTime!) < _refreshCooldown) {
+                        return; // Ignorar refresh si fue hace menos de 3 segundos
+                      }
+                      _lastRefreshTime = now;
+                      
+                      final isLoading = ref.read(
+                        homeStateProvider.select((state) => state.isLoading),
+                      );
+                      if (isLoading) return;
+                      ref.read(authStateProvider.notifier).refreshProfile().catchError((_) {});
+                      final homeNotifier = ref.read(homeStateProvider.notifier);
+                      await homeNotifier.refresh();
 
-                },
-                color: Colors.white,
-                backgroundColor: NeumorphismTheme.coffeeMedium,
-                child: SafeArea(
-                 // 🚀 SCROLL PHYSICS: BouncingScrollPhysics para sensación nativa iOS/Android 12+
-            // Permite el "overscroll" elástico que pidio el usuario
-                  child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics(),
-                    ),
-                    cacheExtent: 500, // 🚀 BALANCED: Pre-renderiza lo necesario sin sobrecargar la GPU
-                    slivers: <Widget>[
-                    const SliverPadding(
-                      padding: EdgeInsets.only(
-                        top: 24.0, // ✅ Aumentado para más aire
-                        left: 24.0,
-                        right: 24.0,
+                  },
+                  color: Colors.white,
+                  backgroundColor: NeumorphismTheme.coffeeMedium,
+                  child: SafeArea(
+                   // 🚀 SCROLL PHYSICS: BouncingScrollPhysics para sensación nativa iOS/Android 12+
+                   // Permite el "overscroll" elástico que pidio el usuario
+                    child: CustomScrollView(
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
                       ),
-                      sliver: SliverToBoxAdapter(
-                        child: HomeHeader(key: ValueKey('home_header')), // 🚀 Using extracted widget
-                      ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)), // ✅ Aumentado de 8 a 24 para bajar "Novedades"
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      sliver: SliverToBoxAdapter(
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            final homeMessage = ref.watch(
-                              homeMessageProvider.select((msg) => msg != null && msg.isActive ? msg : null),
-                            );
-                            if (homeMessage == null) return const SizedBox.shrink();
-                            // 🚀 OPTIMIZACIÓN: HomeMessageBanner no necesita RepaintBoundary (contenido estático)
-                            return HomeMessageBanner(
-                              message: homeMessage.message,
-                              updatedAt: homeMessage.updatedAt,
-                            );
-                          },
+                      cacheExtent: 500, // 🚀 BALANCED: Pre-renderiza lo necesario sin sobrecargar la GPU
+                      slivers: <Widget>[
+                      const SliverPadding(
+                        padding: EdgeInsets.only(
+                          top: 24.0, // ✅ Aumentado para más aire
+                          left: 24.0,
+                          right: 24.0,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: HomeHeader(key: ValueKey('home_header')), // 🚀 Using extracted widget
                         ),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 6)),
-                    SliverToBoxAdapter(
-                      // 🚀 OPTIMIZACIÓN: Secciones ya gestionan su propio repintado si es complejo
-                      child: const FeaturedArtistsSection(key: ValueKey('artists')),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
-                    SliverToBoxAdapter(
-                      child: const FeaturedSongsSection(key: ValueKey('featured_songs')),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 48)),
-                    SliverToBoxAdapter(
-                      child: const FeaturedPlaylistsSection(key: ValueKey('playlists')),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                  ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)), // ✅ Aumentado de 8 a 24 para bajar "Novedades"
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        sliver: SliverToBoxAdapter(
+                          child: Consumer(
+                            builder: (context, ref, _) {
+                              final homeMessage = ref.watch(
+                                homeMessageProvider.select((msg) => msg != null && msg.isActive ? msg : null),
+                              );
+                              if (homeMessage == null) return const SizedBox.shrink();
+                              // 🚀 OPTIMIZACIÓN: HomeMessageBanner no necesita RepaintBoundary (contenido estático)
+                              return HomeMessageBanner(
+                                message: homeMessage.message,
+                                updatedAt: homeMessage.updatedAt,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 6)),
+                      SliverToBoxAdapter(
+                        // 🚀 OPTIMIZACIÓN: Secciones ya gestionan su propio repintado si es complejo
+                        child: const FeaturedArtistsSection(key: ValueKey('artists')),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                      SliverToBoxAdapter(
+                        child: const FeaturedSongsSection(key: ValueKey('featured_songs')),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 48)),
+                      SliverToBoxAdapter(
+                        child: const FeaturedPlaylistsSection(key: ValueKey('playlists')),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                    ],
+                  ),
                 ),
               ),
+              ],
             ),
-
-
-            ],
           ),
         ),
       ),
     ); 
   }
 }
-// Local _HomeHeader removed (moved to home_header.dart)

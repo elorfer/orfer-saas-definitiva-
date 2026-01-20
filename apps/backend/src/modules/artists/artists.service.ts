@@ -186,6 +186,8 @@ export class ArtistsService {
       genres?: string[];
       profileFile?: Express.Multer.File;
       coverFile?: Express.Multer.File;
+      profileUrl?: string; // 🔥 NUEVO: URL desde presigned upload
+      coverUrl?: string;   // 🔥 NUEVO: URL desde presigned upload
     },
   ): Promise<Artist> {
     const artist = await this.findOne(id);
@@ -210,14 +212,24 @@ export class ArtistsService {
       artist.socialLinks = artist.socialLinks || {};
       (artist.socialLinks as any).phone = data.phone;
     }
-    if (data.profileFile) {
+
+    // 🔥 PRIORIZAR URLs (presigned) sobre archivos (legacy)
+    // Profile photo
+    if (data.profileUrl) {
+      artist.profilePhotoUrl = data.profileUrl;
+    } else if (data.profileFile) {
       const uploaded = await this.s3Service.uploadImageFile(data.profileFile, 'system');
       artist.profilePhotoUrl = uploaded.url;
     }
-    if (data.coverFile) {
+
+    // Cover photo
+    if (data.coverUrl) {
+      artist.coverPhotoUrl = data.coverUrl;
+    } else if (data.coverFile) {
       const uploaded = await this.s3Service.uploadImageFile(data.coverFile, 'system');
       artist.coverPhotoUrl = uploaded.url;
     }
+
     return this.artistRepository.save(artist);
   }
 

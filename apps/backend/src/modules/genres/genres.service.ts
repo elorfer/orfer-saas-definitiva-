@@ -26,16 +26,29 @@ export class GenresService {
    * @returns Lista paginada de géneros
    */
   async findAll(page: number = 1, limit: number = 50): Promise<{ genres: Genre[]; total: number; page: number; limit: number; totalPages: number }> {
+    // 🔥 FIX: Contar canciones tanto por genre_id como por el campo genres (string)
+    // Esto es necesario porque algunas canciones usan genre_id y otras usan el campo genres
     const query = this.genreRepository
       .createQueryBuilder('genre')
+      .loadRelationCountAndMap('genre.albumCount', 'genre.albums')
       .orderBy('genre.name', 'ASC')
       .skip((page - 1) * limit)
-      .take(limit)
-      // 🎯 Cargar el conteo de canciones asociadas
-      .loadRelationCountAndMap('genre.songCount', 'genre.songs')
-      .loadRelationCountAndMap('genre.albumCount', 'genre.albums');
+      .take(limit);
 
     const [genres, total] = await query.getManyAndCount();
+
+    // 🔥 FIX: Contar canciones manualmente para incluir las que usan el campo 'genres' (string)
+    // en lugar de genre_id (relación)
+    for (const genre of genres) {
+      const songCountResult = await this.genreRepository.manager.query(
+        `SELECT COUNT(*) as count FROM songs 
+         WHERE genre_id = $1 
+         OR genres ILIKE $2 
+         OR genres ILIKE $3`,
+        [genre.id, genre.name, `%,${genre.name},%`]
+      );
+      (genre as any).songCount = parseInt(songCountResult[0]?.count || '0', 10);
+    }
 
     return {
       genres,

@@ -24,14 +24,16 @@ export class UploadService {
     file: Express.Multer.File,
     userId: string,
   ): Promise<{ url: string; key: string; duration: number; metadata: any }> {
-    // Verificar que el usuario sea artista
+    // Verificar que el usuario sea artista O admin
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['artist'],
     });
 
-    if (!user || !user.artist) {
-      throw new ForbiddenException('Solo los artistas pueden subir archivos de audio');
+    // Admins pueden subir sin perfil de artista
+    const isAdmin = user?.role === 'admin';
+    if (!user || (!user.artist && !isAdmin)) {
+      throw new ForbiddenException('Solo los artistas o admins pueden subir archivos de audio');
     }
 
     try {

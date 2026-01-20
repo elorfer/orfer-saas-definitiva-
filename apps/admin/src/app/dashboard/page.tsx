@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -8,9 +8,12 @@ import {
   UserGroupIcon,
   PlayIcon,
   ArrowTrendingUpIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { toast } from 'react-hot-toast';
+import { apiClient } from '@/lib/api';
 
 import { useUsers } from '@/hooks/useUsers';
 import { useArtists } from '@/hooks/useArtists';
@@ -38,31 +41,37 @@ const formatNumber = (num: number): string => {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
+
+
   // Hooks para obtener datos reales
   const {
     data: usersData,
     isLoading: usersLoading,
+    refetch: refetchUsers,
   } = useUsers({ page: 1, limit: 8, enabled: status === 'authenticated' });
 
   const {
     data: artistsData,
     isLoading: artistsLoading,
+    refetch: refetchArtists,
   } = useArtists({ page: 1, limit: 1, enabled: status === 'authenticated' });
 
   const {
     data: songsData,
     isLoading: songsLoading,
+    refetch: refetchSongs,
   } = useSongs({ page: 1, limit: 1, enabled: status === 'authenticated' });
 
   const {
     data: globalStats,
     isLoading: statsLoading,
+    refetch: refetchStats,
   } = useGlobalStats(status === 'authenticated');
 
   const {
     data: topSongs,
     isLoading: topSongsLoading,
+    refetch: refetchTopSongs,
   } = useTopSongs(5, status === 'authenticated');
 
   useEffect(() => {
@@ -71,6 +80,9 @@ export default function DashboardPage() {
       router.push('/login');
     }
   }, [session, status, router]);
+
+
+
 
   if (status === 'loading') {
     return (
@@ -175,6 +187,12 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 py-6">
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm text-gray-500 mt-1">Resumen de estadísticas y actividad</p>
+      </div>
+
       {/* Stats Cards - Compact */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {/* Usuarios Totales */}
@@ -204,8 +222,8 @@ export default function DashboardPage() {
               {usersLoading
                 ? 'Analizando actividad reciente...'
                 : totalUsers === 0
-                ? 'Sin registros de usuarios.'
-                : `Último registro ${formatRelativeDate(lastUserCreatedAt)}`}
+                  ? 'Sin registros de usuarios.'
+                  : `Último registro ${formatRelativeDate(lastUserCreatedAt)}`}
             </p>
           </div>
         </div>
@@ -237,8 +255,8 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="mt-2 bg-gray-200 rounded-full h-1.5">
-              <div 
-                className="bg-blue-600 rounded-full h-1.5 transition-all duration-300" 
+              <div
+                className="bg-blue-600 rounded-full h-1.5 transition-all duration-300"
                 style={{ width: isLoading ? '0%' : `${featuredArtistsPercentage}%` }}
               ></div>
             </div>
@@ -272,8 +290,8 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="mt-2 bg-gray-200 rounded-full h-1.5">
-              <div 
-                className="bg-green-600 rounded-full h-1.5 transition-all duration-300" 
+              <div
+                className="bg-green-600 rounded-full h-1.5 transition-all duration-300"
                 style={{ width: isLoading ? '0%' : `${publishedSongsPercentage}%` }}
               ></div>
             </div>
@@ -304,8 +322,8 @@ export default function DashboardPage() {
               {isLoading
                 ? 'Analizando reproducciones...'
                 : totalStreams === 0
-                ? 'Sin reproducciones aún.'
-                : `Total de reproducciones en la plataforma`}
+                  ? 'Sin reproducciones aún.'
+                  : `Total de reproducciones en la plataforma`}
             </p>
           </div>
         </div>

@@ -90,15 +90,133 @@ export class S3Service {
     folder: string,
     userId: string,
   ): Promise<{ url: string; key: string }> {
-    // ⚠️ ESTE MÉTODO ESTÁ DESHABILITADO
-    // Railway tiene restricciones SSL que impiden upload directo a R2
-    // USA PRESIGNED URLs en su lugar:
-    // 1. POST /upload/presigned-url
-    // 2. PUT directo a R2 desde el cliente
-    throw new BadRequestException(
-      '⚠️ Upload directo deshabilitado debido a restricciones SSL de Railway. ' +
-      'Por favor usa presigned URLs: POST /upload/presigned-url'
-    );
+    // 🌍 ENTORNO: Permitir upload directo SOLO en desarrollo o fuera de Railway
+    // Esto soluciona el problema local sin comprometer la seguridad en producción
+    const isDevelopment = this.configService.get('NODE_ENV') === 'development';
+    const isRailway = this.configService.get('RAILWAY_ENVIRONMENT');
+    const hasR2Credentials = this.configService.get<string>('R2_ACCOUNT_ID')?.trim() &&
+      this.configService.get<string>('R2_ACCESS_KEY_ID')?.trim() &&
+      this.configService.get<string>('R2_SECRET_ACCESS_KEY')?.trim();
+
+    if (!isDevelopment && isRailway) {
+      // ⚠️ PRODUCCIÓN: Upload directo deshabilitado por restricciones SSL
+      throw new BadRequestException(
+        '⚠️ Upload directo deshabilitado en producción. Usa presigned URLs: POST /upload/presigned-url'
+      );
+    }
+
+    // 🔄 MODO LOCAL SIN R2: Ir directo a disco local
+    if (isDevelopment && !hasR2Credentials) {
+      console.log('🏠 [Modo Local] Credenciales R2 no configuradas, usando disco local...');
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const fs = require('fs');
+
+        // Crear directorio si no existe (uploads/images/user-id/)
+        const uploadDir = path.join(process.cwd(), 'uploads', folder, userId);
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        // Guardar archivo
+        const fileExtension = path.extname(file.originalname);
+        const uniqueFileName = `${uuidv4()}${fileExtension}`;
+        const localFilePath = path.join(uploadDir, uniqueFileName);
+
+        fs.writeFileSync(localFilePath, file.buffer);
+
+        // Construir URL Local
+        const protocol = 'http';
+        const host = 'localhost';
+        const port = this.configService.get('PORT') || 3001;
+
+        const publicUrl = `${protocol}://${host}:${port}/uploads/${folder}/${userId}/${uniqueFileName}`;
+        const key = `${folder}/${userId}/${uniqueFileName}`; // Key compatible
+
+        console.log(`💾 ✅ Guardado en disco local: ${localFilePath}`);
+        return { url: publicUrl, key };
+
+      } catch (fsError) {
+        console.error('❌ Error guardando en disco local:', fsError);
+        throw new BadRequestException('No se pudo guardar el archivo en disco local.');
+      }
+    }
+
+    // ✅ LÓGICA DE UPLOAD A R2/S3 (Con credenciales válidas)
+    try {
+      const fileExtension = path.extname(file.originalname);
+      const uniqueFileName = `${uuidv4()}${fileExtension}`;
+      const key = `${folder}/${userId}/${uniqueFileName}`;
+
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      });
+
+      await this.s3Client.send(command);
+
+      // Generar URL pública
+      const useR2 = this.configService.get<string>('R2_ACCOUNT_ID');
+      let publicUrl: string;
+
+      if (useR2) {
+        const r2PublicDomain = this.configService.get<string>('R2_PUBLIC_DOMAIN');
+        if (r2PublicDomain) {
+          const cleanDomain = r2PublicDomain.replace(/["']/g, '').trim();
+          publicUrl = `https://${cleanDomain}/${key}`;
+        } else {
+          const rawAccountId = this.configService.get<string>('R2_ACCOUNT_ID');
+          const accountId = rawAccountId ? rawAccountId.replace(/["']/g, '').trim() : '';
+          publicUrl = `https://pub-${accountId}.r2.dev/${key}`;
+        }
+      } else {
+        publicUrl = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+      }
+
+      console.log(`✅ Upload a R2/S3 exitoso: ${key}`);
+      return { url: publicUrl, key };
+
+    } catch (error) {
+      console.error('❌ Error en upload S3/R2:', error);
+
+      // 💿 FALLBACK A DISCO LOCAL (Solo Development con error de R2)
+      if (isDevelopment) {
+        try {
+          console.log('⚠️ R2 falló, usando fallback a disco local...');
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const fs = require('fs');
+
+          const uploadDir = path.join(process.cwd(), 'uploads', folder, userId);
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+
+          const fileExtension = path.extname(file.originalname);
+          const uniqueFileName = `${uuidv4()}${fileExtension}`;
+          const localFilePath = path.join(uploadDir, uniqueFileName);
+
+          fs.writeFileSync(localFilePath, file.buffer);
+
+          const protocol = 'http';
+          const host = 'localhost';
+          const port = this.configService.get('PORT') || 3001;
+
+          const publicUrl = `${protocol}://${host}:${port}/uploads/${folder}/${userId}/${uniqueFileName}`;
+          const key = `${folder}/${userId}/${uniqueFileName}`;
+
+          console.log(`💾 Guardado en disco local (fallback): ${localFilePath}`);
+          return { url: publicUrl, key };
+
+        } catch (fsError) {
+          console.error('❌ Error crítico: Falló también guardado local:', fsError);
+          throw new BadRequestException('No se pudo guardar el archivo ni en R2 ni en local.');
+        }
+      }
+
+      throw new BadRequestException(`Error subiendo archivo: ${error.message}`);
+    }
   }
 
   async uploadAudioFile(

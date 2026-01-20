@@ -15,20 +15,20 @@ export class StreamingService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(PlayHistory)
     private readonly playHistoryRepository: Repository<PlayHistory>,
-  ) {}
+  ) { }
 
   async getStreamUrl(songId: string, userId: string): Promise<{ streamUrl: string; hlsUrl: string }> {
     const song = await this.songRepository.findOne({ where: { id: songId } });
-    
+
     if (!song) {
       throw new NotFoundException('Canción no encontrada');
     }
 
-    // Registrar reproducción
-    await this.recordPlay(songId, userId);
+    // ❌ REMOVED: No incrementar totalStreams aquí
+    // El conteo correcto se hace en StreamsService.trackProgress()
+    // después de validar que se escucharon al menos 30 segundos
 
-    // Incrementar contador de streams
-    await this.songRepository.increment({ id: songId }, 'totalStreams', 1);
+    // ℹ️ Solo devolver la URL - el tracking se hace via /streams/track-progress
 
     return {
       streamUrl: song.fileUrl,

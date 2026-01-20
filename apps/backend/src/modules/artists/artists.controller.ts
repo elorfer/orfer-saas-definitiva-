@@ -253,6 +253,8 @@ export class ArtistsController {
       genres,
       profileFile,
       coverFile,
+      profileUrl: body?.profileUrl, // 🔥 NUEVO: Soporte para URLs desde presigned upload
+      coverUrl: body?.coverUrl,     // 🔥 NUEVO: Soporte para URLs desde presigned upload
     });
   }
 

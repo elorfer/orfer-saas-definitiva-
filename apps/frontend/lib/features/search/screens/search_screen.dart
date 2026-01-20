@@ -16,6 +16,8 @@ import '../../../core/services/http_cache_service.dart';
 import '../widgets/artist_search_card.dart';
 import '../widgets/song_search_card.dart';
 import '../widgets/playlist_search_card.dart';
+import 'web/web_search_screen.dart'; // 🚀 Web UI
+import '../../../core/responsive/responsive_layout.dart'; // 🚀 Responsive Control
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -266,7 +268,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
   Widget build(BuildContext context) {
     super.build(context); // 🔥 Requerido por AutomaticKeepAliveClientMixin
     
-    // ✅ OPTIMIZACIÓN: usar select específico para cada campo y evitar rebuilds innecesarios
+    // ✅ OPTIMIZACIÓN: usar select específico para cada campo
     final isLoading = ref.watch(searchProvider.select((state) => state.isLoading));
     final error = ref.watch(searchProvider.select((state) => state.error));
     final isEmpty = ref.watch(searchProvider.select((state) => state.isEmpty));
@@ -276,7 +278,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     // 🚀 Refresh on Theme Change
     ref.watch(themeProvider);
 
-    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs solo cuando cambian los resultados (no en cada build)
+    // ✅ OPTIMIZACIÓN: Actualizar cache de URLs solo cuando cambian los resultados
     final resultsLength = (results?.artists.length ?? 0) + (results?.songs.length ?? 0) + (results?.playlists.length ?? 0) + (results?.genres.length ?? 0);
     if (resultsLength != _cachedResultsCount && results != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -286,120 +288,119 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
       });
     }
 
-    // 🚀 OPTIMIZACIÓN 60 FPS: RepaintBoundary y const donde sea posible
-    return RepaintBoundary(
-      child: Scaffold(
-        key: const ValueKey('search_screen_scaffold'),
-        resizeToAvoidBottomInset: false, // ✅ Evitar que el teclado empuje el contenido
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: NeumorphismTheme.backgroundGradient,
-          ),
-          child: SafeArea(
-          child: Column(
-            children: [
-              // ⚡ OPTIMIZADO: Header con RepaintBoundary
-              RepaintBoundary(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Buscar',
-                      style: AppTextStyles.searchTitle,
-                      textAlign: TextAlign.left,
-                    ),
-                  ),
-                ),
-              ),
-
-              // ⚡ OPTIMIZADO: Search Bar con RepaintBoundary
-              RepaintBoundary(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Container(
-                  decoration: BoxDecoration(
-                    color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
-                    borderRadius: const BorderRadius.all(Radius.circular(20)), // ⚡ Reducido de 26
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    focusNode: _searchFocusNode,
-                    autofocus: false, // ✅ No abrir teclado automáticamente
-                    keyboardType: TextInputType.text, // ✅ Tipo de teclado optimizado
-                    textInputAction: TextInputAction.search, // ✅ Acción de búsqueda
-                    enableInteractiveSelection: true, // ✅ Permitir selección de texto
-                    enableSuggestions: true, // ✅ Sugerencias del teclado
-                    autocorrect: true, // ✅ Autocorrección
-                    style: AppTextStyles.searchInput,
-                    decoration: InputDecoration(
-                      hintText: 'Buscar canciones, artistas, playlists... (ej: "artistas reggaeton")',
-                      hintStyle: AppTextStyles.searchHint,
-                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: _searchController,
-                        builder: (context, value, child) {
-                          return value.text.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(
-                                    Icons.clear,
-                                    color: NeumorphismTheme.textSecondary,
-                                  ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    ref.read(searchProvider.notifier).clear();
-                                    setState(() {
-                                      _selectedFilter = null; // Resetear filtro
-                                    });
-                                    // ✅ No forzar focus después de limpiar (mejor UX)
-                                  },
-                                )
-                              : const SizedBox.shrink();
-                        },
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
+    // 🚀 INTEGRACIÓN RESPONSIVE WEB
+    return ResponsiveLayout(
+      desktop: const WebSearchScreen(),
+      mobile: RepaintBoundary(
+        child: Scaffold(
+          key: const ValueKey('search_screen_scaffold'),
+          resizeToAvoidBottomInset: false,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: NeumorphismTheme.backgroundGradient,
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Header
+                  RepaintBoundary(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Buscar',
+                          style: AppTextStyles.searchTitle,
+                          textAlign: TextAlign.left,
+                        ),
                       ),
                     ),
-                    // ✅ onChanged ya está manejado por el listener del controller
-                    onSubmitted: (value) {
-                      // ✅ Ocultar teclado al presionar buscar
-                      _searchFocusNode.unfocus();
-                    },
                   ),
+
+                  // Search Bar
+                  RepaintBoundary(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: NeumorphismTheme.beigeMedium.withValues(alpha: 0.6),
+                          borderRadius: const BorderRadius.all(Radius.circular(20)),
+                        ),
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _searchFocusNode,
+                          autofocus: false,
+                          keyboardType: TextInputType.text,
+                          textInputAction: TextInputAction.search,
+                          enableInteractiveSelection: true,
+                          enableSuggestions: true,
+                          autocorrect: true,
+                          style: AppTextStyles.searchInput,
+                          decoration: InputDecoration(
+                            hintText: 'Buscar canciones, artistas, playlists...',
+                            hintStyle: AppTextStyles.searchHint,
+                            suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: _searchController,
+                              builder: (context, value, child) {
+                                return value.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: Icon(
+                                          Icons.clear,
+                                          color: NeumorphismTheme.textSecondary,
+                                        ),
+                                        onPressed: () {
+                                          _searchController.clear();
+                                          ref.read(searchProvider.notifier).clear();
+                                          setState(() {
+                                            _selectedFilter = null;
+                                          });
+                                          // No forzar focus
+                                        },
+                                      )
+                                    : const SizedBox.shrink();
+                              },
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                          onSubmitted: (value) {
+                            _searchFocusNode.unfocus();
+                          },
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+
+                  const SizedBox(height: 16),
+
+                  // Filtros
+                  if (query.isNotEmpty && results != null && !results.isEmpty)
+                    RepaintBoundary(
+                      child: _buildFilterChips(),
+                    ),
+
+                  const SizedBox(height: 8),
+
+                  // Resultados
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        _searchFocusNode.unfocus();
+                      },
+                      child: _buildResults(isLoading, error, isEmpty, query, results),
+                    ),
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 16),
-
-              // ⚡ OPTIMIZADO: Filtros de tipo con RepaintBoundary
-              if (query.isNotEmpty && results != null && !results.isEmpty)
-                RepaintBoundary(
-                  child: _buildFilterChips(),
-                ),
-
-              const SizedBox(height: 8),
-
-              // Results - con GestureDetector para ocultar teclado al tocar fuera
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    // ✅ Ocultar teclado al tocar fuera del campo de búsqueda
-                    _searchFocusNode.unfocus();
-                  },
-                  child: _buildResults(isLoading, error, isEmpty, query, results),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
-      ),
     );
   }
-
   Widget _buildResults(bool isLoading, String? error, bool isEmpty, String query, SearchResults? results) {
     // Si no hay búsqueda activa, mostrar secciones de inicio
     if (query.isEmpty && !isLoading && error == null) {

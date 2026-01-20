@@ -7,6 +7,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../theme/neumorphism_theme.dart';
 
 import '../models/song_model.dart';
 import '../utils/logger.dart';
@@ -175,13 +176,29 @@ class DynamicPalette {
     final muted = generator.mutedColor?.color ?? dominant;
     final darkMuted = generator.darkMutedColor?.color ?? const Color(0xFF0F0F1A);
     final lightVibrant = generator.lightVibrantColor?.color ?? vibrant;
+    final lightMuted = generator.lightMutedColor?.color ?? lightVibrant;
 
-    // Calcular color de fondo (oscurecido para UI)
-    final background = Color.lerp(darkMuted, Colors.black, 0.4) ?? darkMuted;
+    // 🌓 ADAPTACIÓN AL TEMA: Ajustar fondo según modo oscuro/claro
+    final isDark = NeumorphismTheme.isDark;
     
-    // Calcular color de texto (contraste)
-    final luminance = background.computeLuminance();
-    final onBackground = luminance > 0.5 ? Colors.black87 : Colors.white;
+    Color background;
+    Color onBackground;
+    
+    if (isDark) {
+      // MODO OSCURO: Oscurecer aún más el fondo para mejor contraste
+      background = Color.lerp(darkMuted, Colors.black, 0.65) ?? darkMuted;
+      // Asegurar que sea bien oscuro
+      final hsl = HSLColor.fromColor(background);
+      background = hsl.withLightness((hsl.lightness * 0.4).clamp(0.0, 0.15)).toColor();
+      onBackground = Colors.white;
+    } else {
+      // MODO CLARO: Usar colores más claros y suaves
+      background = Color.lerp(lightMuted, Colors.white, 0.3) ?? lightMuted;
+      // Asegurar que sea bien claro
+      final hsl = HSLColor.fromColor(background);
+      background = hsl.withLightness((hsl.lightness * 0.6 + 0.4).clamp(0.85, 1.0)).toColor();
+      onBackground = Colors.black87;
+    }
 
     return DynamicPalette(
       dominant: dominant,
@@ -194,16 +211,34 @@ class DynamicPalette {
     );
   }
 
-  /// Paleta por defecto (oscura)
-  static const DynamicPalette defaultPalette = DynamicPalette(
-    dominant: Color(0xFF1A1A2E),
-    vibrant: Color(0xFF6366F1),
-    muted: Color(0xFF4A4A6A),
-    darkMuted: Color(0xFF0F0F1A),
-    lightVibrant: Color(0xFF818CF8),
-    background: Color(0xFF0A0A14),
-    onBackground: Colors.white,
-  );
+  /// Paleta por defecto (adaptada al tema)
+  static DynamicPalette get defaultPalette {
+    final isDark = NeumorphismTheme.isDark;
+    
+    if (isDark) {
+      // Paleta oscura (modo oscuro)
+      return const DynamicPalette(
+        dominant: Color(0xFF1A1A2E),
+        vibrant: Color(0xFF6366F1),
+        muted: Color(0xFF4A4A6A),
+        darkMuted: Color(0xFF0F0F1A),
+        lightVibrant: Color(0xFF818CF8),
+        background: Color(0xFF0A0A14),
+        onBackground: Colors.white,
+      );
+    } else {
+      // Paleta clara (modo claro)
+      return const DynamicPalette(
+        dominant: Color(0xFFE8E2DD),
+        vibrant: Color(0xFF8D6E63),
+        muted: Color(0xFFBCAAA4),
+        darkMuted: Color(0xFF5D4037),
+        lightVibrant: Color(0xFFD7CCC8),
+        background: Color(0xFFF5F2F0),
+        onBackground: Color(0xFF2D2420),
+      );
+    }
+  }
 }
 
 /// Tipos de error del motor de audio

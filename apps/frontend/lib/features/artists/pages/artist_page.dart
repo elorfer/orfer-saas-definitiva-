@@ -1686,25 +1686,40 @@ class _SongRowWidget extends ConsumerWidget {
     required this.onPlaySong,
   });
 
-  // ✅ OPTIMIZACIÓN: Estilos dinámicos
-  TextStyle get _songTitleStyle => TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: NeumorphismTheme.textPrimary,
-    fontFamily: 'Inter',
-  );
-  TextStyle get _songNumberStyle => TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: NeumorphismTheme.textSecondary,
-    fontFamily: 'Inter',
-  );
-  TextStyle get _songNumberStyleDisabled => TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
-    fontFamily: 'Inter',
-  );
+  // ⚡ OPTIMIZACIÓN CRÍTICA: Estilos estáticos para evitar re-computación
+  // Los TextStyle se recomputaban en CADA build de CADA item de la lista
+  // Ahora se calculan una sola vez y se reusan
+  static TextStyle? _cachedSongTitleStyle;
+  static TextStyle? _cachedSongNumberStyle;
+  static TextStyle? _cachedSongNumberStyleDisabled;
+  
+  static TextStyle get _songTitleStyle {
+    return _cachedSongTitleStyle ??= TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: NeumorphismTheme.textPrimary,
+      fontFamily: 'Inter',
+    );
+  }
+  
+  static TextStyle get _songNumberStyle {
+    return _cachedSongNumberStyle ??= TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: NeumorphismTheme.textSecondary,
+      fontFamily: 'Inter',
+    );
+  }
+  
+  static TextStyle get _songNumberStyleDisabled {
+    return _cachedSongNumberStyleDisabled ??= TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),
+      fontFamily: 'Inter',
+    );
+  }
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1745,127 +1760,108 @@ class _SongRowWidget extends ConsumerWidget {
       ),
     );
 
-    // ✅ OPTIMIZACIÓN: Opacity eliminado para mejor rendimiento GPU
-    // Usar colores con alpha directamente en los hijos cuando sea necesario
-    return Container(
-      height: 72, // ✅ User fix: Altura fija consistente (80 total - 8 margin)
-      margin: const EdgeInsets.only(bottom: 8), // Reducido de 12 a 8
-      decoration: BoxDecoration(
-        color: NeumorphismTheme.surface.withValues(alpha: isAvailable ? 1.0 : 0.7), // ⚡ OPTIMIZACIÓN: Color dinámico
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
-         border: Border.all(
-          color: NeumorphismTheme.isDark 
-              ? Colors.white.withValues(alpha: 0.05) 
-              : Colors.transparent,
-          width: 1,
-        ),
-        // boxShadow removido
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: isAvailable
-              ? () {
-                  // ✅ Tocar la tarjeta = reproducir (igual que el botón play)
-                  onPlaySong(song);
-                }
-              : null, // Deshabilitar tap si no está disponible
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0), // ✅ Padding simétrico simplificado
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center, // ✅ Alineación vertical centrada explícita
-              children: [
-                  // Número de posición
-                SizedBox(
-                  width: 32,
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: (isAvailable 
-                          ? _songNumberStyle 
-                          : _songNumberStyleDisabled).copyWith(
-                            color: (isAvailable 
-                              ? _songNumberStyle.color 
-                              : _songNumberStyleDisabled.color)
-                              ?.withValues(alpha: isAvailable ? 1.0 : 0.5)
-                          ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Portada optimizada
-                // Portada optimizada con Overlay en lugar de Opacity
-                ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
-                  child: Stack(
-                    children: [
-                      processedSong.normalizedCoverUrl != null
-                          ? OptimizedImage(
-                              imageUrl: processedSong.normalizedCoverUrl,
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                              isLargeCover: false,
-                              maxCacheWidth: 96,
-                              maxCacheHeight: 96,
-                              useThumbnail: true,
-                              skipFade: true,
-                            )
-                          : Container(
-                              width: 48,
-                              height: 48,
-                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                              child: const Icon(Icons.music_note, color: Colors.white30),
-                            ),
-                      // Overlay para simular opacidad (más barato que Opacity widget)
-                      if (!isAvailable)
-                        Positioned.fill(
-                          child: Container(
-                            color: NeumorphismTheme.surface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16), // ✅ Más espacio (12 -> 16)
-                // ✅ TÍTULO - Expanded para empujar el botón
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        song.title ?? 'Sin título',
-                        style: (isAvailable 
-                            ? _songTitleStyle 
-                            : _songTitleStyle.copyWith(
-                                color: NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
-                              )).copyWith(
-                                color: (isAvailable 
-                                  ? _songTitleStyle.color 
-                                  : NeumorphismTheme.textPrimary.withValues(alpha: 0.6))
-                                  ?.withValues(alpha: contentOpacity)
-                              ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+    // ⚡ OPTIMIZACIÓN CRÍTICA: Sin Container, sin BoxDecoration, sin borders
+    // Solo InkWell + Padding (igual que playlist) = MUCHO más rápido
+    return InkWell(
+      onTap: isAvailable
+          ? () {
+              // ✅ Tocar la  = reproducir (igual que el botón play)
+              onPlaySong(song);
+            }
+          : null, // Deshabilitar tap si no está disponible
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10), // ⚡ Similar a playlist
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center, // ✅ Alineación vertical centrada explícita
+          children: [
+              // Número de posición
+            SizedBox(
+              width: 32,
+              child: Center(
+                child: Text(
+                  '${index + 1}',
+                  style: (isAvailable 
+                      ? _songNumberStyle 
+                      : _songNumberStyleDisabled).copyWith(
+                        color: (isAvailable 
+                          ? _songNumberStyle.color 
+                          : _songNumberStyleDisabled.color)
+                          ?.withValues(alpha: isAvailable ? 1.0 : 0.5)
                       ),
-                      if (!isAvailable) ...[
-                        const SizedBox(height: 4),
-                        Icon(
-                          Icons.error_outline,
-                          size: 14,
-                          color: Colors.orange.withValues(alpha: 0.7 * contentOpacity),
-                        ),
-                      ],
-                    ],
-                  ),
+                  textAlign: TextAlign.center,
                 ),
-                // Spacer eliminado - Expanded hace el trabajo
-                playingIcon,
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 16), // ⚡ Similar a playlist
+            // Portada optimizada con Overlay en lugar de Opacity
+            ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(8)), // ⚡ Menos redondeado = más rápido
+              child: Stack(
+                children: [
+                  processedSong.normalizedCoverUrl != null
+                      ? OptimizedImage(
+                          imageUrl: processedSong.normalizedCoverUrl,
+                          width: 56, // ⚡ Tamaño de playlist (48 -> 56)
+                          height: 56,
+                          fit: BoxFit.cover,
+                          isLargeCover: false,
+                          maxCacheWidth: 112,
+                          maxCacheHeight: 112,
+                          useThumbnail: true,
+                          skipFade: true,
+                        )
+                      : Container(
+                          width: 56,
+                          height: 56,
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
+                          child: const Icon(Icons.music_note, color: Colors.white30),
+                        ),
+                  // Overlay para simular opacidad (más barato que Opacity widget)
+                  if (!isAvailable)
+                    Positioned.fill(
+                      child: Container(
+                        color: NeumorphismTheme.surface.withValues(alpha: 0.5),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16), // ⚡ Más espacio
+            // ✅ TÍTULO - Expanded para empujar el botón
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    song.title ?? 'Sin título',
+                    style: (isAvailable 
+                        ? _songTitleStyle 
+                        : _songTitleStyle.copyWith(
+                            color: NeumorphismTheme.textPrimary.withValues(alpha: 0.6),
+                          )).copyWith(
+                            color: (isAvailable 
+                              ? _songTitleStyle.color 
+                              : NeumorphismTheme.textPrimary.withValues(alpha: 0.6))
+                              ?.withValues(alpha: contentOpacity)
+                          ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (!isAvailable) ...[
+                    const SizedBox(height: 4),
+                    Icon(
+                      Icons.error_outline,
+                      size: 14,
+                      color: Colors.orange.withValues(alpha: 0.7 * contentOpacity),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            // Spacer eliminado - Expanded hace el trabajo
+            playingIcon,
+          ],
         ),
       ),
     );
@@ -1873,6 +1869,7 @@ class _SongRowWidget extends ConsumerWidget {
 }
 
 /// Mini ecualizador ligero (3 barras) para indicar canción en reproducción.
+/// ⚡ OPTIMIZADO: RepaintBoundary por barra + animación más lenta
 class MiniEqualizer extends StatefulWidget {
   final bool active;
   final double size;
@@ -1898,7 +1895,7 @@ class _MiniEqualizerState extends State<MiniEqualizer>
     super.initState();
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: const Duration(milliseconds: 800), // ⚡ Más lento = menos repaints (650ms -> 800ms)
     );
     if (widget.active) _c.repeat();
   }
@@ -1928,29 +1925,33 @@ class _MiniEqualizerState extends State<MiniEqualizer>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: bars.map((phase) {
+          // ⚡ OPTIMIZACIÓN CRÍTICA: RepaintBoundary por cada barra
+          // Esto evita que las 3 barras se repinten juntas constantemente
           return Expanded(
-            child: AnimatedBuilder(
-              animation: _c,
-              builder: (_, __) {
-                final t = (_c.value + phase) % 1;
-                final h = lerpDouble(
-                  widget.size * 0.25,
-                  widget.size,
-                  Curves.easeInOut.transform(t),
-                )!;
-                final height = widget.active ? h : widget.size * 0.35;
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 1),
-                    height: height,
-                    decoration: BoxDecoration(
-                      color: widget.color,
-                      borderRadius: BorderRadius.circular(2),
+            child: RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: _c,
+                builder: (_, __) {
+                  final t = (_c.value + phase) % 1;
+                  final h = lerpDouble(
+                    widget.size * 0.25,
+                    widget.size,
+                    Curves.easeInOut.transform(t),
+                  )!;
+                  final height = widget.active ? h : widget.size * 0.35;
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      height: height,
+                      decoration: BoxDecoration(
+                        color: widget.color,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           );
         }).toList(),

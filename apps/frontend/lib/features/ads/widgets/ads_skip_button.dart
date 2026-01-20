@@ -56,6 +56,18 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
     final remainingSeconds = (skipAfterSeconds - currentPositionSeconds).clamp(0, skipAfterSeconds);
     final canSkip = currentPositionSeconds >= skipAfterSeconds && !_isSkipping;
 
+    // 🌓 ADAPTACIÓN AL TEMA: Colores dinámicos según modo oscuro/claro
+    final buttonColor = canSkip
+        ? NeumorphismTheme.accent
+        : NeumorphismTheme.accent.withValues(alpha: 0.3);
+    final borderColor = NeumorphismTheme.accentDark.withValues(alpha: 0.3);
+    final iconColor = canSkip 
+        ? (NeumorphismTheme.isDark ? Colors.white : NeumorphismTheme.textPrimary)
+        : NeumorphismTheme.textSecondary;
+    final textColor = canSkip 
+        ? (NeumorphismTheme.isDark ? Colors.white : NeumorphismTheme.textPrimary)
+        : NeumorphismTheme.textSecondary;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -64,12 +76,10 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: canSkip
-                ? NeumorphismTheme.coffeeMedium
-                : NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+            color: buttonColor,
             borderRadius: const BorderRadius.all(Radius.circular(20)),
             border: Border.all(
-              color: NeumorphismTheme.coffeeDark.withValues(alpha: 0.3),
+              color: borderColor,
               width: 1,
             ),
           ),
@@ -78,19 +88,19 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
             children: [
               // Mostrar spinner si está saltando
               if (_isSkipping)
-                const SizedBox(
+                SizedBox(
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(iconColor),
                   ),
                 )
               else
                 Icon(
                   Icons.skip_next,
                   size: 16,
-                  color: canSkip ? Colors.white : NeumorphismTheme.textSecondary,
+                  color: iconColor,
                 ),
               const SizedBox(width: 4),
               Text(
@@ -100,7 +110,7 @@ class _AdsSkipButtonState extends ConsumerState<AdsSkipButton> {
                 style: AppTextStyles.caption.copyWith(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: canSkip ? Colors.white : NeumorphismTheme.textSecondary,
+                  color: textColor,
                 ),
               ),
             ],

@@ -386,6 +386,74 @@ export class AnalyticsService {
       }))
       .sort((a, b) => a.hour - b.hour);
   }
+
+  /**
+   * 🔄 Reiniciar todas las estadísticas del dashboard
+   * Esta función elimina todo el historial de reproducciones y reinicia los contadores de streams
+   */
+  async resetStats(): Promise<{ message: string; details: any }> {
+    // Obtener el DataSource para usar transacciones
+    const dataSource = this.songRepository.manager.connection;
+    const queryRunner = dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      console.log('[resetStats] Iniciando reinicio de estadísticas...');
+
+      // 1. Contar registros antes de eliminar
+      const playHistoryCount = await this.playHistoryRepository.count();
+      const streamingStatsCount = await this.streamingStatsRepository.count();
+      const songsCount = await this.songRepository.count();
+      const artistsCount = await this.artistRepository.count();
+
+      console.log(`[resetStats] Datos a procesar: PlayHistory=${playHistoryCount}, StreamingStats=${streamingStatsCount}, Songs=${songsCount}, Artists=${artistsCount}`);
+
+      // 2. Eliminar todo el historial de reproducciones usando SQL directo para evitar FK issues
+      console.log('[resetStats] Eliminando play_history...');
+      await queryRunner.query('DELETE FROM play_history');
+      console.log('[resetStats] play_history eliminado');
+
+      // 3. Eliminar estadísticas de streaming usando SQL directo
+      console.log('[resetStats] Eliminando streaming_stats...');
+      await queryRunner.query('DELETE FROM streaming_stats');
+      console.log('[resetStats] streaming_stats eliminado');
+
+      // 4. Reiniciar contadores en todas las canciones
+      console.log('[resetStats] Reiniciando contadores de canciones...');
+      await queryRunner.query('UPDATE songs SET total_streams = 0, total_likes = 0');
+      console.log('[resetStats] Contadores de canciones reiniciados');
+
+      // 5. Reiniciar contadores en todos los artistas
+      console.log('[resetStats] Reiniciando contadores de artistas...');
+      await queryRunner.query('UPDATE artists SET total_streams = 0');
+      console.log('[resetStats] Contadores de artistas reiniciados');
+
+      // Confirmar transacción
+      await queryRunner.commitTransaction();
+      console.log('[resetStats] Transacción completada exitosamente');
+
+      return {
+        message: 'Estadísticas reiniciadas exitosamente',
+        details: {
+          playHistoryDeleted: playHistoryCount,
+          streamingStatsDeleted: streamingStatsCount,
+          songsReset: songsCount,
+          artistsReset: artistsCount,
+        },
+      };
+    } catch (error) {
+      // Rollback en caso de error
+      await queryRunner.rollbackTransaction();
+      console.error('[resetStats] Error reiniciando estadísticas:', error);
+      console.error('[resetStats] Error details:', error.stack || error.message || error);
+      throw new Error(`Error al reiniciar las estadísticas: ${error.message || 'Error desconocido'}`);
+    } finally {
+      // Liberar el queryRunner
+      await queryRunner.release();
+    }
+  }
 }
 
 

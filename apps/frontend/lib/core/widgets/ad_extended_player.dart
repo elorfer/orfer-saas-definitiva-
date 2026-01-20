@@ -138,14 +138,20 @@ class _AdExtendedProgressSection extends ConsumerWidget {
             trackHeight: 4, // ✅ Altura base (usada por el track inactivo)
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-            activeTrackColor: Colors.white.withValues(alpha: 0.7), // ✅ Opacidad reducida
-            inactiveTrackColor: Colors.white.withValues(alpha: 0.3),
+            activeTrackColor: NeumorphismTheme.isDark 
+                ? Colors.white.withValues(alpha: 0.7)
+                : NeumorphismTheme.accent.withValues(alpha: 0.8),
+            inactiveTrackColor: NeumorphismTheme.isDark
+                ? Colors.white.withValues(alpha: 0.3)
+                : NeumorphismTheme.accent.withValues(alpha: 0.3),
             trackShape: const _CustomSliderTrackShape(
               activeTrackHeight: 3.0, // ✅ Barra activa más gruesa
               inactiveTrackHeight: 4.0, // ✅ Barra inactiva más gruesa
             ),
-            thumbColor: Colors.white,
-            overlayColor: Colors.white.withValues(alpha: 0.2),
+            thumbColor: NeumorphismTheme.isDark ? Colors.white : NeumorphismTheme.accent,
+            overlayColor: NeumorphismTheme.isDark
+                ? Colors.white.withValues(alpha: 0.2)
+                : NeumorphismTheme.accent.withValues(alpha: 0.2),
           ),
           child: Slider(
             value: progress,
@@ -162,7 +168,9 @@ class _AdExtendedProgressSection extends ConsumerWidget {
                 child: Text(
                   _formatDuration(currentPosition),
                   style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: NeumorphismTheme.isDark
+                        ? Colors.white.withValues(alpha: 0.6)
+                        : NeumorphismTheme.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -174,7 +182,9 @@ class _AdExtendedProgressSection extends ConsumerWidget {
                 child: Text(
                   _formatDuration(effectiveDuration),
                   style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: NeumorphismTheme.isDark
+                        ? Colors.white.withValues(alpha: 0.6)
+                        : NeumorphismTheme.textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -206,17 +216,20 @@ class AdExtendedPlayer extends ConsumerStatefulWidget {
 }
 
 class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
-  // Estilos para el anuncio
-  static final TextStyle _adTitleStyle = GoogleFonts.inter(
+  // Getters para estilos dinámicos de anuncio que se adaptan al tema
+  TextStyle get _adTitleStyle => GoogleFonts.inter(
     fontSize: 24,
     fontWeight: FontWeight.w800,
-    color: Colors.white,
+    color: NeumorphismTheme.isDark ? Colors.white : NeumorphismTheme.textPrimary,
     letterSpacing: -0.5,
   );
-  static final TextStyle _advertiserStyle = GoogleFonts.inter(
+  
+  TextStyle get _advertiserStyle => GoogleFonts.inter(
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    color: Colors.white.withValues(alpha: 0.9),
+    color: NeumorphismTheme.isDark 
+        ? Colors.white.withValues(alpha: 0.9)
+        : NeumorphismTheme.textSecondary,
     letterSpacing: -0.3,
   );
 
@@ -243,18 +256,26 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // ✅ FIX: Fondo con color sólido profesional (sin imagen de carátula)
-          // Eliminado completamente cualquier referencia a imágenes de fondo
+          // ✅ FIX: Fondo con gradiente que se adapta al tema actual
+          // Modo oscuro: gradiente más oscuro para mejor contraste
+          // Modo claro: gradiente más claro y suave
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    NeumorphismTheme.coffeeMedium.withValues(alpha: 0.85),
-                    NeumorphismTheme.coffeeDark.withValues(alpha: 0.95),
-                  ],
+                  colors: NeumorphismTheme.isDark
+                      ? [
+                          // Modo oscuro: tonos oscuros profundos
+                          NeumorphismTheme.accentDark.withValues(alpha: 0.95),
+                          Colors.black.withValues(alpha: 0.98),
+                        ]
+                      : [
+                          // Modo claro: tonos cálidos y claros
+                          NeumorphismTheme.accent.withValues(alpha: 0.85),
+                          NeumorphismTheme.accentLight.withValues(alpha: 0.90),
+                        ],
                 ),
               ),
             ),
@@ -277,13 +298,15 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
+                              color: NeumorphismTheme.accent.withValues(alpha: 0.3),
                               borderRadius: const BorderRadius.all(Radius.circular(12)),
                             ),
                             child: Text(
                               "ANUNCIO",
                               style: GoogleFonts.inter(
-                                color: Colors.white.withValues(alpha: 0.9),
+                                color: NeumorphismTheme.isDark 
+                                    ? Colors.white.withValues(alpha: 0.9)
+                                    : NeumorphismTheme.textPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.5,
@@ -304,7 +327,7 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                             borderRadius: const BorderRadius.all(Radius.circular(20)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.3),
+                                color: Colors.black.withValues(alpha: NeumorphismTheme.isDark ? 0.5 : 0.2),
                                 blurRadius: 20,
                                 spreadRadius: 5,
                               ),
@@ -317,27 +340,27 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                                     imageUrl: UrlNormalizer.normalizeImageUrl(widget.ad.coverImageUrl) ?? widget.ad.coverImageUrl!,
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => Container(
-                                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                      child: const Icon(
+                                      color: NeumorphismTheme.surface.withValues(alpha: 0.5),
+                                      child: Icon(
                                         Icons.volume_up,
-                                        color: Colors.white,
+                                        color: NeumorphismTheme.textSecondary,
                                         size: 64,
                                       ),
                                     ),
                                     errorWidget: (context, url, error) => Container(
-                                      color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                      child: const Icon(
+                                      color: NeumorphismTheme.surface.withValues(alpha: 0.5),
+                                      child: Icon(
                                         Icons.volume_up,
-                                        color: Colors.white,
+                                        color: NeumorphismTheme.textSecondary,
                                         size: 64,
                                       ),
                                     ),
                                   )
                                 : Container(
-                                    color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
-                                    child: const Icon(
+                                    color: NeumorphismTheme.surface.withValues(alpha: 0.5),
+                                    child: Icon(
                                       Icons.volume_up,
-                                      color: Colors.white,
+                                      color: NeumorphismTheme.textSecondary,
                                       size: 64,
                                     ),
                                   ),
@@ -403,7 +426,9 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                                 IconButton(
                                   icon: Icon(
                                     Icons.shuffle,
-                                    color: Colors.white.withValues(alpha: 0.3),
+                                    color: NeumorphismTheme.isDark
+                                        ? Colors.white.withValues(alpha: 0.3)
+                                        : NeumorphismTheme.textLight,
                                     size: 24,
                                   ),
                                   onPressed: null,
@@ -411,7 +436,9 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                                 IconButton(
                                   icon: Icon(
                                     Icons.skip_previous_rounded,
-                                    color: Colors.white.withValues(alpha: 0.3),
+                                    color: NeumorphismTheme.isDark
+                                        ? Colors.white.withValues(alpha: 0.3)
+                                        : NeumorphismTheme.textLight,
                                     size: 42,
                                   ),
                                   onPressed: null,
@@ -425,10 +452,13 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                                     final isPlayingAd = ref.watch(
                                       unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
                                     );
+                                    final iconColor = NeumorphismTheme.isDark
+                                        ? Colors.white
+                                        : NeumorphismTheme.textPrimary;
                                     return IconButton(
                                       icon: Icon(
                                         isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                                        color: Colors.white.withValues(alpha: isPlayingAd ? 0.5 : 1.0),
+                                        color: iconColor.withValues(alpha: isPlayingAd ? 0.5 : 1.0),
                                         size: 64,
                                       ),
                                       onPressed: isPlayingAd ? null : () {
@@ -440,7 +470,9 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                                 IconButton(
                                   icon: Icon(
                                     Icons.skip_next_rounded,
-                                    color: Colors.white.withValues(alpha: 0.3),
+                                    color: NeumorphismTheme.isDark
+                                        ? Colors.white.withValues(alpha: 0.3)
+                                        : NeumorphismTheme.textLight,
                                     size: 42,
                                   ),
                                   onPressed: null,
@@ -448,7 +480,9 @@ class _AdExtendedPlayerState extends ConsumerState<AdExtendedPlayer> {
                                 IconButton(
                                   icon: Icon(
                                     Icons.repeat,
-                                    color: Colors.white.withValues(alpha: 0.3),
+                                    color: NeumorphismTheme.isDark
+                                        ? Colors.white.withValues(alpha: 0.3)
+                                        : NeumorphismTheme.textLight,
                                     size: 24,
                                   ),
                                   onPressed: null,

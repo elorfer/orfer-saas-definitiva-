@@ -12,6 +12,8 @@ import '../widgets/final_mini_player.dart';
 import '../../features/ads/widgets/ads_mini_player.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
+import '../responsive/responsive_layout.dart';
+import '../widgets/web_sidebar.dart'; // 🚀 Sidebar para Web
 
 /// 🔥 SISTEMA PROFESIONAL DE NAVEGACIÓN CON PERSISTENCIA
 /// 
@@ -68,6 +70,12 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
     final playbackState = ref.watch(unifiedAudioProviderFixed);
     final currentSong = playbackState.currentSong;
     final isPlayingAd = playbackState.isPlayingAd;
+
+    // ... (Listeners de Premium y Espera se mantienen igual que en original, omitidos para brevedad en diff, pero deben estar)
+    // NOTA: Para no borrar lógica existente, mejor envolveremos la estructura principal.
+
+    final navBarHeight = _cachedNavBarHeight ?? 80.0;
+    final isDesktop = ResponsiveLayout.isDesktop(context);
 
     // 🔥 LISTENER DE CAMBIO A PREMIUM (Nuevo: Post-Flash Bug Fix)
     // Detectar cuando el usuario pasa de Free -> Premium y redirigir
@@ -131,118 +139,136 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
         }
       },
     );
-    
-    final navBarHeight = _cachedNavBarHeight ?? 80.0;
 
     return Scaffold(
       backgroundColor: NeumorphismTheme.background,
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          // 🔥 NAVIGATION SHELL: GoRouter maneja automáticamente el IndexedStack
-          // Cada rama mantiene su propio Navigator y stack de navegación
-          // ✅ FIX LAYOUT SHIFT: Animar el padding inferior para evitar saltos bruscos
-          AnimatedPadding(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
-            padding: EdgeInsets.only(
-              bottom: (isPlayingAd || currentSong != null) ? 72.0 : 0.0,
+      body: isDesktop 
+      // 🖥️ DISEÑO ESCRITORIO: Row con Sidebar Lateral
+      ? Row(
+          children: [
+            WebSidebar(
+              currentIndex: currentIndex,
+              onTabSelected: (index) => _navigateToTab(index),
             ),
-            child: widget.navigationShell,
-          ),
-          
-          // Navigation Bar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: RepaintBoundary(
-              child: _buildBottomNavigationBar(currentIndex),
+            // Separador vertical sutil
+            VerticalDivider(
+              width: 1, 
+              thickness: 1, 
+              color: NeumorphismTheme.isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)
             ),
-          ),
-          
-          // 🎵 UNIFIED MINI PLAYER: CrossFade entre anuncio y canción
-          // ✅ ANTI-FLICKER: Usar crossfade en lugar de dos animaciones separadas
-          // Esto elimina el parpadeo durante la transición
-          // 🏆 SPOTIFY-LEVEL: Solo mostrar cuando hay sesión activa (usuario dio play explícito)
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
-            // 🏆 SPOTIFY-LEVEL: Logica de Visibilidad Robusta
-            // 1. isSessionActive: Usuario dio play explícito
-            // 2. isPlaying: Si hay sonido físico, SIEMPRE mostrar (Failsafe)
-            // 3. isLoading: Mostrar inmediatamente al cargar para feedback visual
-            bottom: ((playbackState.isSessionActive || playbackState.isPlaying || playbackState.isLoading) && (isPlayingAd || currentSong != null)) 
-                ? navBarHeight 
-                : -(navBarHeight + 100),
-            left: 0,
-            right: 0,
-            child: RepaintBoundary(
-              // ✅ PREMIUM TRANSITION: Usar AnimatedSwitcher con transición personalizada
-              // Esto da una sensación más fluida y profesional tipo Spotify/Apple Music
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 400), // ✅ Transición más suave
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                // ✅ TRANSICIÓN PERSONALIZADA: Fade + Slide para efecto premium
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  // Slide desde abajo al entrar
-                  final offsetAnimation = Tween<Offset>(
-                    begin: const Offset(0.0, 0.1), // Sutil movimiento desde abajo
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  ));
+            // Contenido Principal
+            Expanded(
+              child: Stack(
+                children: [
+                  widget.navigationShell,
                   
-                  // Fade in/out
-                  return SlideTransition(
-                    position: offsetAnimation,
-                    child: FadeTransition(
-                      opacity: animation,
-                      child: child,
-                    ),
-                  );
-                },
-                // ✅ KEY ÚNICO: Cambiar key cuando cambia entre Ad y Song para forzar animación
-                child: (isPlayingAd && playbackState.currentAd != null)
-                    ? AdsMiniPlayer(
-                        key: const ValueKey('ad_mini_player'),
-                        onTap: () {
-                          try {
-                            final audioState = ref.read(unifiedAudioProviderFixed);
-                            if (!audioState.isPlayerExpanded) {
-                              PlayerNavigationService.openFullPlayer(
-                                context: context,
-                                ref: ref,
-                              );
-                            }
-                          } catch (e) {
-                            AppLogger.error('[PersistentNavigation] Error abriendo player desde ad: $e');
-                          }
-                        },
-                      )
-                    : FinalMiniPlayer(
-                        key: const ValueKey('song_mini_player'),
-                        onTap: () {
-                          try {
-                            final audioState = ref.read(unifiedAudioProviderFixed);
-                            if (audioState.currentSong != null && 
-                                !audioState.isPlayerExpanded) {
-                              ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                              if (context.mounted) {
-                                context.push('/player');
-                              }
-                            }
-                          } catch (e) {
-                            AppLogger.error('[PersistentNavigation] Error: $e');
-                          }
-                        },
-                      ),
+                  // 🎵 MINI PLAYER EN DESKTOP (Flotante abajo a la derecha o ancho completo)
+                  _buildMiniPlayer(playbackState, navBarHeight, isDesktop: true),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        )
+      // 📱 DISEÑO MÓVIL: Stack Original
+      : Stack(
+          children: [
+            // Contenido con padding inferior para navbar
+             AnimatedPadding(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOutCubic,
+                padding: EdgeInsets.only(
+                  bottom: (isPlayingAd || currentSong != null) ? 72.0 : 0.0,
+                ),
+                child: widget.navigationShell,
+              ),
+            
+            // Navigation Bar
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: RepaintBoundary(
+                child: _buildBottomNavigationBar(currentIndex),
+              ),
+            ),
+            
+            // 🎵 MINI PLAYER MÓVIL
+            _buildMiniPlayer(playbackState, navBarHeight, isDesktop: false),
+          ],
+        ),
+    );
+  }
+
+  // Helper para el Mini Player (reutilizado)
+  Widget _buildMiniPlayer(dynamic playbackState, double navBarHeight, {required bool isDesktop}) {
+    final currentSong = playbackState.currentSong;
+    final isPlayingAd = playbackState.isPlayingAd;
+    
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
+      bottom: ((playbackState.isSessionActive || playbackState.isPlaying || playbackState.isLoading) && (isPlayingAd || currentSong != null)) 
+          ? (isDesktop ? 20 : navBarHeight) // En desktop flota un poco, en móvil está sobre navbar
+          : -(navBarHeight + 100),
+      left: isDesktop ? 20 : 0, // En desktop tiene margen
+      right: isDesktop ? 20 : 0,
+      child: RepaintBoundary(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            final offsetAnimation = Tween<Offset>(
+              begin: const Offset(0.0, 0.1),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            ));
+            return SlideTransition(
+              position: offsetAnimation,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
+            );
+          },
+          child: (isPlayingAd && playbackState.currentAd != null)
+              ? AdsMiniPlayer(
+                  key: const ValueKey('ad_mini_player'),
+                  onTap: () {
+                    try {
+                      final audioState = ref.read(unifiedAudioProviderFixed);
+                      if (!audioState.isPlayerExpanded) {
+                        PlayerNavigationService.openFullPlayer(
+                          context: context,
+                          ref: ref,
+                        );
+                      }
+                    } catch (e) {
+                      AppLogger.error('[PersistentNavigation] Error abriendo player desde ad: $e');
+                    }
+                  },
+                )
+              : FinalMiniPlayer(
+                  key: const ValueKey('song_mini_player'),
+                  onTap: () {
+                    try {
+                      final audioState = ref.read(unifiedAudioProviderFixed);
+                      if (audioState.currentSong != null && 
+                          !audioState.isPlayerExpanded) {
+                        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
+                        if (context.mounted) {
+                          context.push('/player');
+                        }
+                      }
+                    } catch (e) {
+                      AppLogger.error('[PersistentNavigation] Error: $e');
+                    }
+                  },
+                ),
+        ),
       ),
     );
   }
