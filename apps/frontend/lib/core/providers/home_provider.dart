@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,6 +13,11 @@ import '../models/app_message_model.dart';
 final homeServiceProvider = Provider<HomeService>((ref) {
   return HomeService();
 });
+
+/// Top-level function for isolate
+Map<String, dynamic> _decodeJsonIsolate(String json) {
+  return jsonDecode(json) as Map<String, dynamic>;
+}
 
 /// Estado de la pantalla de inicio
 class HomeState {
@@ -255,7 +261,7 @@ class HomeNotifier extends Notifier<HomeState> {
       
       // ✅ OPTIMIZACIÓN FASE 4: NO usar forceRefresh (reduce carga en servidor 43%)
       // Datos secundarios pueden usar cache HTTP normal
-      Future.wait([
+      Future.wait<void>([
         _homeService.getFeaturedPlaylists(limit: 6).then((value) => featuredPlaylists = value).catchError((_) => <FeaturedPlaylist>[]),
         _homeService.getPopularSongs(limit: 10).then((value) => popularSongs = value).catchError((_) => <Song>[]),
         _homeService.getTopArtists(limit: 8).then((value) => topArtists = value).catchError((_) => <Artist>[]),
@@ -359,7 +365,10 @@ class HomeNotifier extends Notifier<HomeState> {
         return false;
       }
 
-      final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
+      // 🚀 ISOLATE: Decodificar JSON en background para no bloquear UI
+      // Esto es crítico para dispositivos gama media/baja durante el arranque
+      final decoded = await compute(_decodeJsonIsolate, cachedJson);
+
       final timestampStr = decoded['timestamp'] as String?;
       
       if (timestampStr == null) {

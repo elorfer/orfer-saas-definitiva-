@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 
@@ -15,15 +16,19 @@ class NeumorphismTheme {
     _currentMode = mode;
   }
 
-  // Background: Light (Beige) / Dark (Deep Coffee)
+  // Background:
+  // Web: Deep Coffee (0xFF120C0A)
+  // Android/Mobile: Neutral Dark (0xFF000000 - matches system bars)
   static Color get background => isDark 
-      ? const Color(0xFF1E1B19) // Café muy oscuro (casi negro)
-      : const Color(0xFFF5F2F0); // Gris cálido muy claro
+      ? (kIsWeb ? const Color(0xFF120C0A) : const Color(0xFF000000)) 
+      : const Color(0xFFF5F2F0); 
 
-  // Surface: Light (White) / Dark (Dark Coffee)
+  // Surface:
+  // Web: Dark Roast (0xFF1E1614)
+  // Android/Mobile: Neutral Surface (0xFF141414)
   static Color get surface => isDark
-      ? const Color(0xFF2C2624) // Café oscuro para superficies
-      : const Color(0xFFFFFFFF); // Blanco puro
+      ? (kIsWeb ? const Color(0xFF1E1614) : const Color(0xFF141414))
+      : const Color(0xFFFFFFFF); 
 
   // Accent: Light (Coffee) / Dark (Light Coffee/Gold)
   static Color get accent => isDark
@@ -54,18 +59,17 @@ class NeumorphismTheme {
       : const Color(0xFFA89C94); // Gris cálido claro
 
   // Gradiente de fondo sutil
-  // Gradiente de fondo sutil
   static LinearGradient get backgroundGradient => LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: isDark 
-    ? [
-        const Color(0xFF1E1B19),
-        const Color(0xFF25211E),
-      ]
+    ? (kIsWeb 
+        ? [const Color(0xFF120C0A), const Color(0xFF1A110E)] // Web: Coffee
+        : [const Color(0xFF000000), const Color(0xFF101010)] // Mobile: Neutral Black
+      )
     : [
-        const Color(0xFFF2EFE9), // Slightly darker than FDFBF9
-        const Color(0xFFE8E2DD), // Slightly darker than F5F2F0
+        const Color(0xFFF2EFE9), 
+        const Color(0xFFE8E2DD),
       ],
   );
 

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'web/web_library_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +43,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    if (kIsWeb) {
+      return const WebLibraryScreen();
+    }
 
     // 🔥 Usar providers derivados para evitar rebuilds innecesarios
     final stats = ref.watch(libraryStatsProvider);

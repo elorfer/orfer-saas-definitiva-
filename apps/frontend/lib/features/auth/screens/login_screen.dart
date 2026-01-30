@@ -3,12 +3,15 @@ import 'package:flutter/foundation.dart'; // Para kDebugMode
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
 import '../widgets/auth_button.dart';
 import '../widgets/social_auth_button.dart';
+import '../widgets/landing_info_section.dart';
 import '../utils/validators.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -30,12 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void initState() {
     super.initState();
     // OPTIMIZACIÓN: Precargar imagen del logo para evitar lag al mostrarla
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      precacheImage(
-        const AssetImage('assets/images/Logo principal.webp'),
-        context,
-      );
-    });
+    // SVG se carga eficientemente, precache eliminado para la versión vectorial
   }
 
   @override
@@ -85,37 +83,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildLogoSection(double logoSize, double logoIconSize, bool isSmallScreen, bool isMediumScreen) {
     return Column(
       children: [
-        Container(
-          width: logoSize,
-          height: logoSize,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x66000000), // Colors.black.withValues(alpha: 0.4) precalculado
-                blurRadius: 15,
-                offset: Offset(0, 10),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            child: Image.asset(
-              'assets/images/Logo principal.webp',
-              width: logoSize,
-              height: logoSize,
-              fit: BoxFit.contain,
-              cacheWidth: logoSize.toInt(),
-              cacheHeight: logoSize.toInt(),
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(
-                  Icons.music_note,
-                  size: logoIconSize,
-                  color: Colors.white,
-                );
-              },
-            ),
+        SvgPicture.asset(
+          'assets/images/logo.svg',
+          width: logoSize * 1.2, // Slightly larger since no padding
+          height: logoSize * 1.2,
+          fit: BoxFit.contain,
+          placeholderBuilder: (BuildContext context) => Container(
+              padding: const EdgeInsets.all(30.0),
+              child: const CircularProgressIndicator(),
           ),
         ),
         SizedBox(height: isSmallScreen ? 12 : 16),
@@ -422,11 +397,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 ),
                 onPressed: () {
-                  _emailController.text = 'domi@gmail.com';
-                  _passwordController.text = 'domi321321';
+                  _emailController.text = 'damian23@gmail.com';
+                  _passwordController.text = 'damian233';
                 },
                 icon: const Icon(Icons.rocket_launch, size: 18),
-                label: const Text('⚡ DEV QUICK ACCESS'),
+                label: const Text('⚡ USER QUICK ACCESS'),
               ),
             ),
           ),
@@ -439,9 +414,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // OPTIMIZACIÓN: Cachear MediaQuery para evitar múltiples llamadas
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
-    final isSmallScreen = screenWidth < 360;
-    final isMediumScreen = screenWidth < 600;
+    final isMaxSmallScreen = screenWidth < 450;
     
+    // Detectar si debemos usar el layout Web (Split Screen)
+    // Usamos kIsWeb y un ancho mínimo para tablet/desktop
+    final useWebLayout = kIsWeb && screenWidth > 900;
+
     // OPTIMIZACIÓN: usar select para escuchar solo isLoading y evitar rebuilds innecesarios
     final isLoading = ref.watch(authStateProvider.select((state) => state.isLoading));
     final authNotifier = ref.read(authStateProvider.notifier);
@@ -460,19 +438,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
       }
     });
+    
+    if (useWebLayout) {
+      return _buildWebLayout(context, isLoading, authNotifier);
+    }
 
+    // MOBILE LAYOUT (Original)
+    return _buildMobileLayout(context, mediaQuery, screenWidth, isMaxSmallScreen, isLoading, authNotifier);
+  }
+
+  // ===========================================================================
+  // 📱 MOBILE LAYOUT (Preserved Exactly)
+  // ===========================================================================
+  Widget _buildMobileLayout(
+    BuildContext context, 
+    MediaQueryData mediaQuery, 
+    double screenWidth, 
+    bool isSmallScreen, // Now checking < 450 roughly
+    bool isLoading,
+    dynamic authNotifier,
+  ) {
+    final isThinkingSmall = screenWidth < 360;
+    final isMediumScreen = screenWidth < 600;
+    
     // Padding responsive
-    final horizontalPadding = isSmallScreen ? 16.0 : (isMediumScreen ? 20.0 : 24.0);
-    final formPadding = isSmallScreen ? 16.0 : (isMediumScreen ? 20.0 : 24.0);
-    final topSpacing = isSmallScreen ? 10.0 : (isMediumScreen ? 16.0 : 20.0);
+    final horizontalPadding = isThinkingSmall ? 16.0 : (isMediumScreen ? 20.0 : 24.0);
+    final formPadding = isThinkingSmall ? 16.0 : (isMediumScreen ? 20.0 : 24.0);
+    final topSpacing = isThinkingSmall ? 10.0 : (isMediumScreen ? 16.0 : 20.0);
     // Logo con tamaño aumentado y prominente
-    final logoSize = isSmallScreen ? 150.0 : (isMediumScreen ? 180.0 : 200.0);
-    final logoIconSize = isSmallScreen ? 75.0 : (isMediumScreen ? 90.0 : 100.0);
+    final logoSize = isThinkingSmall ? 150.0 : (isMediumScreen ? 180.0 : 200.0);
+    final logoIconSize = isThinkingSmall ? 75.0 : (isMediumScreen ? 90.0 : 100.0);
 
     return Scaffold(
-      // OPTIMIZACIÓN: resizeToAvoidBottomInset: false evita que el Scaffold redimensione el body
-      // Esto previene rebuilds masivos cuando aparece el teclado
-      // El padding del SingleChildScrollView maneja el espacio del teclado
       resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
@@ -484,8 +481,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             physics: const ClampingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
-            // OPTIMIZACIÓN: Agregar padding inferior cuando el teclado está visible
-            // Usar _keyboardHeight en lugar de mediaQuery.viewInsets para evitar rebuilds
             padding: EdgeInsets.only(
               left: horizontalPadding,
               right: horizontalPadding,
@@ -493,12 +488,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               bottom: _keyboardHeight > 0 ? _keyboardHeight + 16.0 : 16.0,
             ),
             clipBehavior: Clip.none,
-            // OPTIMIZACIÓN: Mejorar comportamiento del scroll con el teclado
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: 500, // Limitar ancho máximo para tablets
-                  // OPTIMIZACIÓN: No usar minHeight cuando el teclado está visible para mejor rendimiento
+                  maxWidth: 500, // Limitar ancho máximo para tablets en modo vertical
                   minHeight: _keyboardHeight > 0 
                       ? 0 
                       : (mediaQuery.size.height - 
@@ -511,17 +504,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                   SizedBox(height: topSpacing),
                   
-                  // Logo y título - OPTIMIZACIÓN: RepaintBoundary para aislar repaints
-                  // El logo no cambia cuando aparece el teclado, así que no necesita rebuilds
                   RepaintBoundary(
-                    child: _buildLogoSection(logoSize, logoIconSize, isSmallScreen, isMediumScreen),
+                    child: _buildLogoSection(logoSize, logoIconSize, isThinkingSmall, isMediumScreen),
                   ),
 
-                  SizedBox(height: isSmallScreen ? 20 : 28),
+                  SizedBox(height: isThinkingSmall ? 20 : 28),
 
-                  // Formulario de login
-                  // OPTIMIZACIÓN: RepaintBoundary para aislar repaints del formulario
-                  // OPTIMIZACIÓN: Deshabilitar animación cuando el teclado está visible para mejor rendimiento
                   RepaintBoundary(
                     child: Container(
                       padding: EdgeInsets.all(formPadding),
@@ -530,7 +518,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         borderRadius: BorderRadius.all(Radius.circular(20)),
                         boxShadow: [
                           BoxShadow(
-                            color: Color(0x1A000000), // Colors.black.withValues(alpha: 0.1) precalculado
+                            color: Color(0x1A000000),
                             blurRadius: 10,
                             offset: Offset(0, 10),
                           ),
@@ -541,18 +529,249 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: _buildFormContent(
                           isLoading,
                           authNotifier,
-                          isSmallScreen,
+                          isThinkingSmall,
                           isMediumScreen,
                         ),
                       ),
                     ),
                   ),
 
-                  SizedBox(height: isSmallScreen ? 16 : 24),
+                  SizedBox(height: isThinkingSmall ? 16 : 24),
+
+                  // Info Section (Only visible on Web - Android stays untouched)
+                  if (kIsWeb) ...[
+                    const SizedBox(height: 40),
+                    const LandingInfoSection(),
+                  ],
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // 💻 WEB LAYOUT (Split Screen)
+  // ===========================================================================
+  Widget _buildWebLayout(BuildContext context, bool isLoading, dynamic authNotifier) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // HERO SECTION (Full Screen Split)
+            SizedBox(
+              height: MediaQuery.of(context).size.height,
+              child: Row(
+                children: [
+                  // LEFT PANEL: BRANDING & HERO (50%)
+                  Expanded(
+                    flex: 1,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            NeumorphismTheme.accent.withOpacity(0.9), // Color principal
+                            const Color(0xFF1E1B19), // Darker tone
+                          ],
+                        ),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Decorative Abstract Circle (Top Left)
+                          Positioned(
+                            left: -100,
+                            top: -100,
+                            child: Container(
+                              width: 500,
+                              height: 500,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.05),
+                              ),
+                            ),
+                          ),
+                          // Decorative Abstract Circle (Bottom Right)
+                          Positioned(
+                            right: -150,
+                            bottom: -150,
+                            child: Container(
+                              width: 600,
+                              height: 600,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.03),
+                              ),
+                            ),
+                          ),
+                          
+                          // Content
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                // Glassy Logo Container
+                                Container(
+                                  padding: const EdgeInsets.all(30),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(40),
+                                    border: Border.all(color: Colors.white.withOpacity(0.2)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 30,
+                                        offset: const Offset(0, 15),
+                                      ),
+                                    ],
+                                  ),
+                                  child: SvgPicture.asset(
+                                    'assets/images/logo.svg',
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                const SizedBox(height: 40),
+                                Text(
+                                  'Struky',
+                                  style: AppTextStyles.displayLarge.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 64,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -1.0,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Música que conecta.',
+                                  style: AppTextStyles.headlineMedium.copyWith(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontWeight: FontWeight.w300,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+
+                  // Animated Scroll Indicator (Professional Flutter Animate)
+                  Positioned(
+                    bottom: 60,
+                    left: 0,
+                    right: 0,
+                    child: RepaintBoundary( // <--- OPTIMIZATION: Isolates painting
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'DESCUBRE MÁS',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              letterSpacing: 4,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 4, // <--- OPTIMIZATION: Reduced from 10
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: Colors.white,
+                            size: 36,
+                            shadows: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.5),
+                                  blurRadius: 4, // <--- OPTIMIZATION: Reduced from 10
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                          ),
+                        ],
+                      )
+                      .animate(onPlay: (controller) => controller.repeat())
+                      .fadeIn(duration: 600.ms, curve: Curves.easeOut)
+                      .moveY(begin: -10, end: 5, duration: 1200.ms, curve: Curves.easeInOut)
+                      .then(delay: 600.ms) 
+                      .fadeOut(duration: 600.ms, curve: Curves.easeIn),
+                    ),
+                  ),
+                      ],
+                      ),
+                    ),
+                  ),
+
+                  // RIGHT PANEL: FORM (50%)
+                  Expanded(
+                    flex: 1,
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(60),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 480),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Bienvenido de nuevo',
+                                style: AppTextStyles.headlineMedium.copyWith(
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.start,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Ingresa tus credenciales para continuar.',
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.start,
+                              ),
+                              const SizedBox(height: 40),
+                              
+                              Form(
+                                key: _formKey,
+                                child: _buildFormContent(
+                                  isLoading,
+                                  authNotifier,
+                                  false, 
+                                  false, 
+                                ),
+                              ),
+                              
+                              const SizedBox(height: 40),
+                              Center(
+                                child: Text(
+                                  '© 2024 Struky Music. Todos los derechos reservados.',
+                                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // LANDING PAGE CONTENT (Below Fold)
+            const LandingInfoSection(),
+          ],
         ),
       ),
     );

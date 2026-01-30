@@ -176,9 +176,10 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
     });
     
     return CustomScrollView(
+      key: const PageStorageKey('featured_songs_scroll'), // ✅ Fix Scroll Flicker
       controller: _scrollController, // ✅ OPTIMIZACIÓN: Conectar ScrollController
       physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()), // ✅ Scroll estilo iPhone
-      cacheExtent: 400.0, // ✅ Optimizado: cache de scroll para mejor rendimiento
+      cacheExtent: PerformanceConfig.listCacheExtent, // ✅ Optimizado: cache centralizado
       clipBehavior: Clip.none, // Evitar clipping innecesario
       slivers: [
         // Header mejorado con gradiente (similar a favoritos)

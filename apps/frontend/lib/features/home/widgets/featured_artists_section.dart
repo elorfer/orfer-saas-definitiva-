@@ -68,10 +68,12 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
         SizedBox(
           height: 140, // Altura suficiente para avatar + nombre
           child: ListView.builder(
+            key: const PageStorageKey('featured_artists_list'), // ✅ Store Scroll Position
             scrollDirection: Axis.horizontal,
-              itemCount: featuredArtists.length,
-              padding: const EdgeInsets.symmetric(horizontal: 24), // Padding alineado con header
-              physics: const BouncingScrollPhysics(),
+            itemExtent: 114.0, // ✅ ULTRA-OPTIMIZED: Fixed width (90 img + 8 pad + 16 margin)
+            itemCount: featuredArtists.length,
+            padding: const EdgeInsets.symmetric(horizontal: 24), // Padding alineado con header
+            physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) {
                 final artist = featuredArtists[index];
                 return Padding(

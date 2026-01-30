@@ -3,7 +3,7 @@ description: Aplicación de streaming musical vintage para usuarios y artistas
 
 publish_to: 'none'
 
-version: 1.0.0+2
+version: 1.0.0+5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -103,6 +103,7 @@ dependencies:
   encrypt: ^5.0.3
   sentry_flutter: ^9.9.2
   flutter_facebook_auth: ^7.1.5
+  flutter_animate: ^4.5.2
   # qr_code_scanner: ^1.0.1  # Temporalmente deshabilitado por problema de namespace
 
 dev_dependencies:
@@ -136,6 +137,12 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/images/vintage_hero_bg.png
+    - assets/images/vintage_hero_wide.png
+    - assets/images/feature_hidden_music.png
+    - assets/images/feature_algorithm.png
+    - assets/images/feature_composers.png
+    - assets/images/composer_service_bg.png
     - assets/images/onboarding/
   #   - assets/icons/
   #   - assets/animations/

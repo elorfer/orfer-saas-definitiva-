@@ -16,7 +16,8 @@ class ThemeNotifier extends Notifier<ThemeMode> {
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool(_themeKey) ?? false;
+    // Default to Dark Mode (true) if not set
+    final isDark = prefs.getBool(_themeKey) ?? true;
     // CRITICAL: Update the static instance immediately so the first build has correct colors
     final mode = isDark ? ThemeMode.dark : ThemeMode.light;
     state = mode;

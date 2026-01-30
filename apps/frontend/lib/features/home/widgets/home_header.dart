@@ -100,8 +100,72 @@ class HomeHeader extends ConsumerWidget {
                       ],
                     ),
                   ),
-                ],
+
+              const Spacer(), // Push buttons to right
+              
+              // Theme Toggle Button
+              Tooltip(
+                message: NeumorphismTheme.isDark ? 'Modo Claro' : 'Modo Oscuro',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(themeProvider.notifier).toggleTheme();
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.isDark 
+                            ? Colors.white.withOpacity(0.05) 
+                            : Colors.black.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        NeumorphismTheme.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                        size: 20,
+                        color: NeumorphismTheme.isDark 
+                            ? Colors.white.withOpacity(0.7) 
+                            : Colors.black.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ),
               ),
+              
+              const SizedBox(width: 12), // Space between buttons
+
+              // Logout Button
+              Tooltip(
+                message: 'Cerrar Sesión',
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(authStateProvider.notifier).logout();
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: NeumorphismTheme.isDark 
+                            ? Colors.white.withOpacity(0.05) 
+                            : Colors.black.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.logout_rounded,
+                        size: 20,
+                        color: NeumorphismTheme.isDark 
+                            ? Colors.white.withOpacity(0.7) 
+                            : Colors.black.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
       ),
     );
   }

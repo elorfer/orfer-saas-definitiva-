@@ -30,49 +30,29 @@ class WebConstrainedWrapper extends StatelessWidget {
         return Stack(
           children: [
             // 1. Fondo Premium (Gradients + Blur)
+            // 1. Fondo Premium (Color Beige + Imagen Logo)
             Positioned.fill(
               child: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF0F0F13), // Negro profundo
-                      Color(0xFF1A1A2E), // Azul oscuro
-                      Color(0xFF2C2C3E), // Gris azulado
-                    ],
-                  ),
+                  color: Color(0xFFF5F5DC), // Beige natural (Cream)
                 ),
                 child: Stack(
                   children: [
-                    // Orbes de color difuminados para ambiente
-                    Positioned(
-                      top: -100,
-                      right: -100,
-                      child: Container(
-                        width: 500,
-                        height: 500,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.purple.withOpacity(0.15),
+                    // Imagen de fondo (Logo repetido o grande)
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.1, // Sutil para no distraer
+                        child: Image.asset(
+                          'assets/images/web_background_logo.png',
+                          fit: BoxFit.cover, // Cubrir todo el fondo
+                          errorBuilder: (c, e, s) => const SizedBox(), // Fallback silencioso
                         ),
                       ),
                     ),
-                    Positioned(
-                      bottom: -100,
-                      left: -100,
-                      child: Container(
-                        width: 500,
-                        height: 500,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.blue.withOpacity(0.15),
-                        ),
-                      ),
-                    ),
-                    // Capa de blur sutil
+                    
+                    // Capa de blur sutil para suavizar
                     BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                       child: Container(color: Colors.transparent),
                     ),
                   ],

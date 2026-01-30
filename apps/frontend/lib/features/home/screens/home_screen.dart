@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -61,6 +62,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
         
 
+        // 🚀 Precarga completamente async sin bloquear
+        Future.microtask(() => _requestNotificationPermissions());
+
         _isLoaded = true;
 
         // 🚀 Precarga completamente async sin bloquear
@@ -104,6 +108,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Future<void> _requestNotificationPermissions() async {
+     try {
+       // Solicitar permisos de notificación (Android 13+)
+       final status = await Permission.notification.status;
+       if (status.isDenied) {
+         await Permission.notification.request();
+       }
+     } catch (_) {}
   }
   
   // Sin auto-hide: header fijo

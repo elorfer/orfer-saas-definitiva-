@@ -13,7 +13,6 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/playlists/screens/playlists_screen.dart';
 import '../../features/playlists/screens/playlist_detail_screen.dart';
 import '../../features/home/screens/home_screen.dart';
-import '../../features/home/screens/home_screen_v2.dart';
 import '../../features/home/screens/featured_songs_screen.dart';
 import '../../features/search/screens/search_screen.dart';
 import '../../features/library/screens/library_screen_v2.dart';
@@ -217,13 +216,6 @@ class GoRouterNotifier extends ChangeNotifier {
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
                     key: state.pageKey,
                     child: const HomeScreen(),
-                  ),
-                ),
-                GoRoute(
-                  path: '/home-v2',
-                  pageBuilder: (context, state) => createNoTransitionPage<void>(
-                    key: state.pageKey,
-                    child: const HomeScreenV2(),
                   ),
                 ),
                 // Compositores - subruta de Home (evita crear navigator separado)

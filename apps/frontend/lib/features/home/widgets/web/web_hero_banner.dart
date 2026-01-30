@@ -16,17 +16,14 @@ class WebHeroBanner extends ConsumerWidget {
       height: 380, // ✅ Aumentado para evitar overflow
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            NeumorphismTheme.accent.withOpacity(0.8), // Color principal (Naranja/Coffee)
-            NeumorphismTheme.isDark ? const Color(0xFF1E1B19) : const Color(0xFFF5F2F0),
-          ],
+        image: const DecorationImage(
+          image: AssetImage('assets/images/vintage_hero_wide.png'),
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high, // Ensure best scaling quality
         ),
         boxShadow: [
           BoxShadow(
-            color: NeumorphismTheme.accent.withOpacity(0.3),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 40,
             offset: const Offset(0, 10),
             spreadRadius: -5,
@@ -35,6 +32,20 @@ class WebHeroBanner extends ConsumerWidget {
       ),
       child: Stack(
         children: [
+          // Overlay para legibilidad del texto
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.black.withOpacity(0.7),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
           // Fondo Decorativo (Círculos abstractos)
           Positioned(
             right: -50,

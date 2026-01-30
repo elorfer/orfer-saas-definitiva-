@@ -19,8 +19,59 @@ import '../utils/logger.dart';
 /// - Buffer inteligente con precarga al 80%
 /// ═══════════════════════════════════════════════════════════════════════════
 
+import 'struky_audio_handler.dart';
+
 class AudioService {
+  /// 🛡️ FALLBACK PLAYER: Se usa si el Handler no está listo
+  /// Esto previene LateInitializationError y permite que la app arranque
+  AudioPlayer? _fallbackPlayer;
+  bool _fallbackWarningShown = false;
+  
+  /// Verificar si el audio handler está listo
+  bool get isReady => isAudioHandlerReady;
+  
+  /// Instancia única del reproductor gestionada por StrukyAudioHandler (Background Enabled)
+  /// Accedemos al player interno para mantener compatibilidad con la lógica existente,
+  /// mientras el Handler se encarga de la integración con Android/iOS.
+  /// ⚠️ Si el handler no está listo, usa un player fallback local
+  AudioPlayer get player {
+    if (isAudioHandlerReady) {
+      // Si teníamos fallback y ahora el handler está listo, migrar
+      if (_fallbackPlayer != null) {
+        AppLogger.info('[AudioService] ✅ AudioHandler listo, migrando desde fallback player');
+        _fallbackPlayer?.dispose();
+        _fallbackPlayer = null;
+        _fallbackWarningShown = false;
+      }
+      return globalAudioHandler.player;
+    }
+    // Fallback: crear player local si el handler no está listo
+    if (_fallbackPlayer == null) {
+      _fallbackPlayer = AudioPlayer(
+        audioLoadConfiguration: const AudioLoadConfiguration(
+          androidLoadControl: AndroidLoadControl(
+            minBufferDuration: Duration(seconds: 5),
+            maxBufferDuration: Duration(seconds: 50),
+            bufferForPlaybackDuration: Duration(milliseconds: 500),
+            bufferForPlaybackAfterRebufferDuration: Duration(seconds: 2),
+          ),
+          darwinLoadControl: DarwinLoadControl(
+            automaticallyWaitsToMinimizeStalling: false,
+          ),
+        ),
+      );
+    }
+    // Solo mostrar warning una vez
+    if (!_fallbackWarningShown) {
+      _fallbackWarningShown = true;
+      AppLogger.warning('[AudioService] ⚠️ Usando fallback player (Handler no listo)');
+    }
+    return _fallbackPlayer!;
+  }
+  
   // Instancia única del reproductor con configuración agresiva para "Instant Play"
+  // YA NO SE CREA AQUÍ, SE CREA EN EL HANDLER.
+  /*
   final AudioPlayer player = AudioPlayer(
     audioLoadConfiguration: const AudioLoadConfiguration(
       androidLoadControl: AndroidLoadControl(
@@ -35,6 +86,7 @@ class AudioService {
       ),
     ),
   );
+  */
   
   // ═══════════════════════════════════════════════════════════════════════
   // 🎛️ AUDIO SESSION - Manejo de foco e interrupciones

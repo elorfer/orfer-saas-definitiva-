@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Para kIsWeb
+import 'package:flutter_svg/flutter_svg.dart'; // Para Logo
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -171,8 +173,181 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
     });
 
+    // Detectar si debemos usar el layout Web (Split Screen)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final useWebLayout = kIsWeb && screenWidth > 900;
+
+    if (useWebLayout) {
+      return _buildWebLayout(context, isLoading, authNotifier);
+    }
+
+    return _buildMobileLayout(context, isLoading, authNotifier);
+  }
+
+  // ===========================================================================
+  // 💻 WEB LAYOUT (Split Screen)
+  // ===========================================================================
+  Widget _buildWebLayout(BuildContext context, bool isLoading, dynamic authNotifier) {
     return Scaffold(
-      // OPTIMIZACIÓN: Evitar redimensionamiento cuando aparece el teclado para reducir lag
+      backgroundColor: Colors.white,
+      body: Row(
+        children: [
+          // LEFT PANEL: BRANDING & HERO (50%)
+          Expanded(
+            flex: 1,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    NeumorphismTheme.accent.withOpacity(0.9), // Color principal
+                    const Color(0xFF1E1B19), // Darker tone
+                  ],
+                ),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Decorative Abstract Circle (Top Left)
+                  Positioned(
+                    left: -100,
+                    top: -100,
+                    child: Container(
+                      width: 500,
+                      height: 500,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.05),
+                      ),
+                    ),
+                  ),
+                  // Decorative Abstract Circle (Bottom Right)
+                  Positioned(
+                    right: -150,
+                    bottom: -150,
+                    child: Container(
+                      width: 600,
+                      height: 600,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.03),
+                      ),
+                    ),
+                  ),
+                  
+                  // Content
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Glassy Logo Container
+                        Container(
+                          padding: const EdgeInsets.all(30),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(40),
+                            border: Border.all(color: Colors.white.withOpacity(0.2)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 30,
+                                offset: const Offset(0, 15),
+                              ),
+                            ],
+                          ),
+                          child: SvgPicture.asset(
+                            'assets/images/logo.svg',
+                            width: 120,
+                            height: 120,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        Text(
+                          'Únete a Struky',
+                          style: AppTextStyles.displayLarge.copyWith(
+                            color: Colors.white,
+                            fontSize: 64,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Descubre, comparte y vive la música.',
+                          style: AppTextStyles.headlineMedium.copyWith(
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // RIGHT PANEL: FORM (50%)
+          Expanded(
+            flex: 1,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(60),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 550),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Crear Cuenta',
+                        style: AppTextStyles.headlineMedium.copyWith(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Completa el formulario para comenzar.',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: _buildFormContent(isLoading, authNotifier),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 40),
+                      Center(
+                        child: Text(
+                          '© 2024 Struky Music. Todos los derechos reservados.',
+                          style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // 📱 MOBILE LAYOUT (Preserved)
+  // ===========================================================================
+  Widget _buildMobileLayout(BuildContext context, bool isLoading, dynamic authNotifier) {
+    return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Container(
         decoration: BoxDecoration(
@@ -181,458 +356,104 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Obtener el tamaño del teclado
               final viewInsets = MediaQuery.of(context).viewInsets;
               final keyboardHeight = viewInsets.bottom;
               
               return SingleChildScrollView(
-                // OPTIMIZACIÓN: Agregar padding inferior cuando el teclado está visible
                 padding: EdgeInsets.only(
                   left: 24.0,
                   right: 24.0,
                   top: 24.0,
                   bottom: keyboardHeight > 0 ? keyboardHeight + 24.0 : 24.0,
                 ),
-                // OPTIMIZACIÓN: Mejorar comportamiento del scroll con el teclado
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-                
-                // Header con botón de regreso
-                FadeInDown(
-                  duration: const Duration(milliseconds: 300),
-                  child: Column(
-                    children: [
-                      // Botón de regreso alineado a la izquierda
-                      Row(
-                        children: [
-                          IconButton(
-                            onPressed: () => context.go('/login'),
-                            icon: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                borderRadius: const BorderRadius.all(Radius.circular(12)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back,
-                                color: Color(0xFF3E2723), // Marrón oscuro
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Título y subtítulo centrados
-                      Text(
-                        'Crear Cuenta',
-                        style: AppTextStyles.authFormTitle.copyWith(
-                          color: const Color(0xFF3E2723), // Marrón muy oscuro
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Únete a la comunidad musical',
-                        style: AppTextStyles.authFormSubtitle.copyWith(
-                          color: NeumorphismTheme.coffeeDark,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Formulario de registro
-                FadeInUp(
-                  duration: const Duration(milliseconds: 350), // Optimizado: reducido de 800ms a 350ms
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.all(Radius.circular(20)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha:0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 20),
+                    
+                    // Header con botón de regreso
+                    FadeInDown(
+                      duration: const Duration(milliseconds: 300),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Selector de rol eliminado - solo se permite registro como usuario
-
-                          // Campos de nombre
                           Row(
                             children: [
-                              Expanded(
-                                child: AuthTextField(
-                                  controller: _firstNameController,
-                                  label: 'Nombre',
-                                  hint: 'Tu nombre',
-                                  prefixIcon: Icons.person_outline,
-                                  validator: (value) => AuthValidators.name(value, fieldName: 'nombre'),
-                                  onChanged: (value) {
-                                    // Forzar validación cuando el usuario escribe
-                                    _formKey.currentState?.validate();
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: AuthTextField(
-                                  controller: _lastNameController,
-                                  label: 'Apellido',
-                                  hint: 'Tu apellido',
-                                  prefixIcon: Icons.person_outline,
-                                  validator: (value) => AuthValidators.name(value, fieldName: 'apellido'),
-                                  onChanged: (value) {
-                                    // Forzar validación cuando el usuario escribe
-                                    _formKey.currentState?.validate();
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Campo de email
-                          AuthTextField(
-                            controller: _emailController,
-                            label: 'Correo electrónico',
-                            hint: 'tu@email.com',
-                            keyboardType: TextInputType.emailAddress,
-                            prefixIcon: Icons.email_outlined,
-                            suffixIcon: _isCheckingEmail
-                                ? SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(12.0),
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          NeumorphismTheme.coffeeMedium,
-                                        ),
+                              IconButton(
+                                onPressed: () => context.go('/login'),
+                                icon: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.1),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
                                       ),
-                                    ),
-                                  )
-                                : _emailAvailable == false
-                                    ? const Icon(
-                                        Icons.error_outline,
-                                        color: Colors.red,
-                                        size: 20,
-                                      )
-                                    : _emailAvailable == true
-                                        ? const Icon(
-                                            Icons.check_circle_outline,
-                                            color: Colors.green,
-                                            size: 20,
-                                          )
-                                        : null,
-                            validator: (value) {
-                              final emailError = AuthValidators.email(value);
-                              if (emailError != null) return emailError;
-                              if (_emailAvailable == false) {
-                                return 'Este email ya está registrado';
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              _checkEmailAvailability(value);
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Campo de username
-                          AuthTextField(
-                            controller: _usernameController,
-                            label: 'Nombre de usuario',
-                            hint: '@tu_usuario',
-                            prefixIcon: Icons.alternate_email,
-                            suffixIcon: _isCheckingUsername
-                                ? SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(12.0),
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          NeumorphismTheme.coffeeMedium,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : _usernameAvailable == false
-                                    ? const Icon(
-                                        Icons.error_outline,
-                                        color: Colors.red,
-                                        size: 20,
-                                      )
-                                    : _usernameAvailable == true
-                                        ? const Icon(
-                                            Icons.check_circle_outline,
-                                            color: Colors.green,
-                                            size: 20,
-                                          )
-                                        : null,
-                            validator: (value) {
-                              // Primero validar formato básico (longitud mínima, caracteres válidos)
-                              final basicValidation = AuthValidators.username(value);
-                              if (basicValidation != null) {
-                                return basicValidation; // Si hay error de formato, retornar ese
-                              }
-                              
-                              // Verificar disponibilidad si ya se verificó (independientemente de la longitud)
-                              // Esto permite mostrar el error de disponibilidad incluso si el usuario está escribiendo
-                              if (value != null && _usernameAvailable != null && _usernameAvailable == false) {
-                                return 'Este nombre de usuario no está disponible';
-                              }
-                              
-                              return null;
-                            },
-                            onChanged: (value) {
-                              _checkUsernameAvailability(value);
-                              // Forzar validación cuando el usuario escribe
-                              _formKey.currentState?.validate();
-                            },
-                          ),
-
-                          // Campo de nombre artístico eliminado - solo se permite registro como usuario
-
-                          const SizedBox(height: 20),
-
-                          // Campo de contraseña
-                          AuthTextField(
-                            controller: _passwordController,
-                            label: 'Contraseña',
-                            hint: 'Mínimo 6 caracteres',
-                            obscureText: _obscurePassword,
-                            prefixIcon: Icons.lock_outline,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                                color: Colors.grey[600],
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            validator: AuthValidators.password,
-                            onChanged: (value) {
-                              // Forzar validación cuando el usuario escribe
-                              _formKey.currentState?.validate();
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Campo de confirmar contraseña
-                          AuthTextField(
-                            controller: _confirmPasswordController,
-                            label: 'Confirmar contraseña',
-                            hint: 'Repite tu contraseña',
-                            obscureText: _obscureConfirmPassword,
-                            prefixIcon: Icons.lock_outline,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                                color: Colors.grey[600],
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureConfirmPassword = !_obscureConfirmPassword;
-                                });
-                              },
-                            ),
-                            validator: (value) => AuthValidators.confirmPassword(value, _passwordController.text),
-                            onChanged: (value) {
-                              // Forzar validación cuando el usuario escribe
-                              _formKey.currentState?.validate();
-                            },
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          // Checkbox de términos y condiciones
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Checkbox(
-                                value: _acceptTerms,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _acceptTerms = value ?? false;
-                                  });
-                                },
-                                activeColor: NeumorphismTheme.coffeeMedium,
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: RichText(
-                                    text: TextSpan(
-                                      style: AppTextStyles.authText,
-                                      children: [
-                                        const TextSpan(text: 'Acepto los '),
-                                        TextSpan(
-                                          text: 'Términos y Condiciones',
-                                          style: AppTextStyles.authTextSecondary,
-                                        ),
-                                        const TextSpan(text: ' y la '),
-                                        TextSpan(
-                                          text: 'Política de Privacidad',
-                                          style: AppTextStyles.authTextSecondary,
-                                        ),
-                                      ],
-                                    ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_back,
+                                    color: Color(0xFF3E2723), 
+                                    size: 20,
                                   ),
                                 ),
                               ),
+                              const Spacer(),
                             ],
                           ),
-
-                          const SizedBox(height: 24),
-
-                          // Botón de registro
-                          AuthButton(
-                            text: 'Crear Cuenta',
-                            isLoading: isLoading,
-                            onPressed: _acceptTerms ? () async {
-                              if (_formKey.currentState!.validate()) {
-                                await authNotifier.register(
-                                  email: _emailController.text.trim(),
-                                  username: _usernameController.text.trim(),
-                                  password: _passwordController.text,
-                                  firstName: _firstNameController.text.trim(),
-                                  lastName: _lastNameController.text.trim(),
-                                  role: UserRole.user, // Siempre usuario
-                                  stageName: null, // No aplica para usuarios
-                                );
-                              }
-                            } : null,
+                          const SizedBox(height: 8),
+                          Text(
+                            'Crear Cuenta',
+                            style: AppTextStyles.authFormTitle.copyWith(
+                              color: const Color(0xFF3E2723), 
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-
-                          const SizedBox(height: 24),
-
-                          // Divider
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Divider(
-                                  color: Colors.grey[300],
-                                  thickness: 1,
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text(
-                                  'O regístrate con',
-                                  style: AppTextStyles.authText,
-                                ),
-                              ),
-                              Expanded(
-                                child: Divider(
-                                  color: Colors.grey[300],
-                                  thickness: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Botones de autenticación social
-                          Row(
-                            children: [
-                              Flexible(
-                                flex: 1,
-                                child: SocialAuthButton(
-                                  icon: Icons.g_mobiledata,
-                                  text: 'Google',
-                                  onPressed: isLoading
-                                      ? null
-                                      : () async {
-                                          try {
-                                            await authNotifier.signInWithGoogle();
-                                          } catch (e) {
-                                            // El error ya se maneja en el provider
-                                          }
-                                        },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Flexible(
-                                flex: 1,
-                                child: SocialAuthButton(
-                                  icon: Icons.facebook,
-                                  text: 'Facebook',
-                                  onPressed: isLoading
-                                      ? null
-                                      : () async {
-                                          try {
-                                            await authNotifier.signInWithFacebook();
-                                          } catch (e) {
-                                            // El error ya se maneja en el provider
-                                          }
-                                        },
-                                  backgroundColor: const Color(0xFF1877F2), // Azul de Facebook
-                                  textColor: Colors.white,
-                                  iconColor: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Enlace a login
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '¿Ya tienes cuenta? ',
-                                style: AppTextStyles.authText,
-                              ),
-                              TextButton(
-                                onPressed: () => context.go('/login'),
-                                child: Text(
-                                  'Inicia sesión',
-                                  style: AppTextStyles.authLink,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'Únete a la comunidad musical',
+                            style: AppTextStyles.authFormSubtitle.copyWith(
+                              color: NeumorphismTheme.coffeeDark,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: 24),
-              ],
+                    const SizedBox(height: 32),
+
+                    // Formulario de registro
+                    FadeInUp(
+                      duration: const Duration(milliseconds: 350), 
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.all(Radius.circular(20)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha:0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: _buildFormContent(isLoading, authNotifier),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                  ],
                 ),
               );
             },
@@ -640,5 +461,345 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ),
       ),
     );
+  }
+
+  // ===========================================================================
+  // 📝 SHARED FORM CONTENT
+  // ===========================================================================
+  List<Widget> _buildFormContent(bool isLoading, dynamic authNotifier) {
+    return [
+      // Campos de nombre
+      Row(
+        children: [
+          Expanded(
+            child: AuthTextField(
+              controller: _firstNameController,
+              label: 'Nombre',
+              hint: 'Tu nombre',
+              prefixIcon: Icons.person_outline,
+              validator: (value) => AuthValidators.name(value, fieldName: 'nombre'),
+              onChanged: (value) {
+                _formKey.currentState?.validate();
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AuthTextField(
+              controller: _lastNameController,
+              label: 'Apellido',
+              hint: 'Tu apellido',
+              prefixIcon: Icons.person_outline,
+              validator: (value) => AuthValidators.name(value, fieldName: 'apellido'),
+              onChanged: (value) {
+                _formKey.currentState?.validate();
+              },
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 20),
+
+      // Campo de email
+      AuthTextField(
+        controller: _emailController,
+        label: 'Correo electrónico',
+        hint: 'tu@email.com',
+        keyboardType: TextInputType.emailAddress,
+        prefixIcon: Icons.email_outlined,
+        suffixIcon: _isCheckingEmail
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      NeumorphismTheme.coffeeMedium,
+                    ),
+                  ),
+                ),
+              )
+            : _emailAvailable == false
+                ? const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 20,
+                  )
+                : _emailAvailable == true
+                    ? const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.green,
+                        size: 20,
+                      )
+                    : null,
+        validator: (value) {
+          final emailError = AuthValidators.email(value);
+          if (emailError != null) return emailError;
+          if (_emailAvailable == false) {
+            return 'Este email ya está registrado';
+          }
+          return null;
+        },
+        onChanged: (value) {
+          _checkEmailAvailability(value);
+        },
+      ),
+
+      const SizedBox(height: 20),
+
+      // Campo de username
+      AuthTextField(
+        controller: _usernameController,
+        label: 'Nombre de usuario',
+        hint: '@tu_usuario',
+        prefixIcon: Icons.alternate_email,
+        suffixIcon: _isCheckingUsername
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      NeumorphismTheme.coffeeMedium,
+                    ),
+                  ),
+                ),
+              )
+            : _usernameAvailable == false
+                ? const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 20,
+                  )
+                : _usernameAvailable == true
+                    ? const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.green,
+                        size: 20,
+                      )
+                    : null,
+        validator: (value) {
+          final basicValidation = AuthValidators.username(value);
+          if (basicValidation != null) {
+            return basicValidation;
+          }
+          if (value != null && _usernameAvailable != null && _usernameAvailable == false) {
+            return 'Este nombre de usuario no está disponible';
+          }
+          return null;
+        },
+        onChanged: (value) {
+          _checkUsernameAvailability(value);
+          _formKey.currentState?.validate();
+        },
+      ),
+
+      const SizedBox(height: 20),
+
+      // Campo de contraseña
+      AuthTextField(
+        controller: _passwordController,
+        label: 'Contraseña',
+        hint: 'Mínimo 6 caracteres',
+        obscureText: _obscurePassword,
+        prefixIcon: Icons.lock_outline,
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+            color: Colors.grey[600],
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+        ),
+        validator: AuthValidators.password,
+        onChanged: (value) {
+          _formKey.currentState?.validate();
+        },
+      ),
+
+      const SizedBox(height: 20),
+
+      // Campo de confirmar contraseña
+      AuthTextField(
+        controller: _confirmPasswordController,
+        label: 'Confirmar contraseña',
+        hint: 'Repite tu contraseña',
+        obscureText: _obscureConfirmPassword,
+        prefixIcon: Icons.lock_outline,
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+            color: Colors.grey[600],
+          ),
+          onPressed: () {
+            setState(() {
+              _obscureConfirmPassword = !_obscureConfirmPassword;
+            });
+          },
+        ),
+        validator: (value) => AuthValidators.confirmPassword(value, _passwordController.text),
+        onChanged: (value) {
+          _formKey.currentState?.validate();
+        },
+      ),
+
+      const SizedBox(height: 20),
+
+      // Checkbox de términos y condiciones
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: _acceptTerms,
+            onChanged: (value) {
+              setState(() {
+                _acceptTerms = value ?? false;
+              });
+            },
+            activeColor: NeumorphismTheme.coffeeMedium,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: RichText(
+                text: TextSpan(
+                  style: AppTextStyles.authText,
+                  children: [
+                    const TextSpan(text: 'Acepto los '),
+                    TextSpan(
+                      text: 'Términos y Condiciones',
+                      style: AppTextStyles.authTextSecondary,
+                    ),
+                    const TextSpan(text: ' y la '),
+                    TextSpan(
+                      text: 'Política de Privacidad',
+                      style: AppTextStyles.authTextSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 24),
+
+      // Botón de registro
+      AuthButton(
+        text: 'Crear Cuenta',
+        isLoading: isLoading,
+        onPressed: _acceptTerms ? () async {
+          if (_formKey.currentState!.validate()) {
+            await authNotifier.register(
+              email: _emailController.text.trim(),
+              username: _usernameController.text.trim(),
+              password: _passwordController.text,
+              firstName: _firstNameController.text.trim(),
+              lastName: _lastNameController.text.trim(),
+              role: UserRole.user, 
+              stageName: null, 
+            );
+          }
+        } : null,
+      ),
+
+      const SizedBox(height: 24),
+
+      // Divider
+      Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: Colors.grey[300],
+              thickness: 1,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'O regístrate con',
+              style: AppTextStyles.authText,
+            ),
+          ),
+          Expanded(
+            child: Divider(
+              color: Colors.grey[300],
+              thickness: 1,
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 24),
+
+      // Botones de autenticación social
+      Row(
+        children: [
+          Flexible(
+            flex: 1,
+            child: SocialAuthButton(
+              icon: Icons.g_mobiledata,
+              text: 'Google',
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      try {
+                        await authNotifier.signInWithGoogle();
+                      } catch (e) {
+                      }
+                    },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            flex: 1,
+            child: SocialAuthButton(
+              icon: Icons.facebook,
+              text: 'Facebook',
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      try {
+                        await authNotifier.signInWithFacebook();
+                      } catch (e) {
+                      }
+                    },
+              backgroundColor: const Color(0xFF1877F2), 
+              textColor: Colors.white,
+              iconColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+
+      const SizedBox(height: 32),
+
+      // Enlace a login
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '¿Ya tienes cuenta? ',
+            style: AppTextStyles.authText,
+          ),
+          TextButton(
+            onPressed: () => context.go('/login'),
+            child: Text(
+              'Inicia sesión',
+              style: AppTextStyles.authLink,
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 }

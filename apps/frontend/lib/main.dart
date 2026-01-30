@@ -67,6 +67,9 @@ void _setupErrorHandlers() {
 /// 🛡️ SENTRY: Wrapper principal con captura de errores
 Future<void> main() async {
   // Inicializar Sentry SOLO en producción
+  // Inicializar Sentry SOLO en producción
+  /* 
+  // Temporarily disabled for initial store upload
   if (kReleaseMode) {
     await SentryFlutter.init(
       (options) {
@@ -95,6 +98,8 @@ Future<void> main() async {
     // En desarrollo, ejecutar sin Sentry
     await _mainApp();
   }
+  */
+  await _mainApp();
 }
 
 /// Función principal separada para reutilización

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/intersection_observer.dart';
@@ -219,14 +220,19 @@ class _OptimizedImageState extends State<OptimizedImage> {
     final memCacheWidth = getMemCacheWidth();
     final memCacheHeight = getMemCacheHeight();
     
-    // ✅ OPTIMIZACIÓN AGRESIVA: SIEMPRE usar ResizeImage para liberar memoria GPU
-    // Incluso para thumbnails, el escalado en el hilo de decodificación es vital 
-    // si el archivo original es de alta resolución.
-    final ImageProvider effectiveImageProvider = ResizeImage(
-      imageProvider,
-      width: memCacheWidth,
-      height: memCacheHeight,
-    );
+    // ✅ FIX CRITICO: ResizeImage falla si ambos son null
+    final ImageProvider effectiveImageProvider;
+    if (memCacheWidth != null || memCacheHeight != null) {
+      effectiveImageProvider = ResizeImage(
+        imageProvider,
+        width: memCacheWidth,
+        // ⚡ FIX WEB: Si hay ancho, ignorar alto para mantener aspect ratio y evitar estiramiento
+        height: (kIsWeb && memCacheWidth != null) ? null : memCacheHeight,
+      );
+    } else {
+      // Si no tenemos dimensiones, no podemos optimizar memoria con ResizeImage
+      effectiveImageProvider = imageProvider;
+    }
     
     // final ImageProvider effectiveImageProvider = imageProvider; // Desactivado ResizeImage para compatibilidad 90 días cache
     

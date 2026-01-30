@@ -1,9 +1,8 @@
 package com.struky.app
 
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 
-class MainActivity : FlutterActivity() {
-    // MainActivity correctamente configurada para audio_service
-    // FlutterActivity es la clase base correcta para audio_service v0.18.12
-    // No requiere configuración adicional
+class MainActivity : AudioServiceActivity() {
+    // AudioServiceActivity es requerida para audio_service v0.18.12
+    // Proporciona el FlutterEngine correcto y conecta con el sistema de notificaciones
 }

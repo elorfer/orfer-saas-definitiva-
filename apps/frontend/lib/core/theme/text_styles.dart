@@ -5,6 +5,28 @@ import 'neumorphism_theme.dart';
 /// Reemplaza GoogleFonts.inter() para evitar cargas repetidas en cada build
 class AppTextStyles {
   // Títulos grandes
+  // 🆕 WEB / HERO STYLES
+  static TextStyle get displayLarge => TextStyle(
+    fontSize: 57,
+    fontWeight: FontWeight.w900,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -1.5,
+  );
+
+  static TextStyle get displayMedium => TextStyle(
+    fontSize: 45,
+    fontWeight: FontWeight.bold,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -1.0,
+  );
+
+  static TextStyle get headlineMedium => TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w600,
+    color: NeumorphismTheme.textPrimary,
+    letterSpacing: -0.5,
+  );
+
   static TextStyle get titleLarge => TextStyle(
     fontSize: 28,
     fontWeight: FontWeight.bold,
