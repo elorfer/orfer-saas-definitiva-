@@ -83,11 +83,13 @@ class ArtistNameWithBadge extends StatelessWidget {
       mainAxisAlignment: alignment,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(
-          artistName,
-          style: textStyle,
-          maxLines: maxLines,
-          overflow: overflow,
+        Flexible(
+          child: Text(
+            artistName,
+            style: textStyle,
+            maxLines: maxLines,
+            overflow: overflow,
+          ),
         ),
         const SizedBox(width: 4),
         // Badge con tamaño dinámico basado en badgeSize

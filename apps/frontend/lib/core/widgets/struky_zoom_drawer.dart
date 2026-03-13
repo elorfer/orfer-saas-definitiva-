@@ -27,7 +27,7 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400), // 400ms: Más lento para que "respire" y se sienta premium
+      duration: const Duration(milliseconds: 250), // ⚡ OPTIMIZACIÓN: 250ms para sensación instantánea
     );
   }
   
@@ -52,12 +52,12 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
     // 🔥 OPTIMIZACIÓN "ZERO LAG" + "DIRECT TOUCH" + "EDGE SWIPE":
     // 1. Edge Swipe: Abrir desde el borde izquierdo (eliminamos Bypass).
     // 2. Drag 1:1: Control total del movimiento.
-    // 3. Curve: easeInOutCubic para respuesta rápida.
+    // 3. Curve: easeOutQuart para respuesta rápida inicial y frenado suave.
     
     final animation = CurvedAnimation(
       parent: _controller, 
-      curve: Curves.easeInOutCubic, 
-      reverseCurve: Curves.easeInOutCubic,
+      curve: Curves.easeOutQuart, 
+      reverseCurve: Curves.easeInQuart,
     );
 
     return AnimatedBuilder(

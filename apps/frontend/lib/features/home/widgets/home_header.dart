@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
@@ -36,31 +37,28 @@ class HomeHeader extends ConsumerWidget {
             ? _buildHeaderSkeleton()
             : Row(
                 children: [
-                  // ⚡ Avatar clickeable para abrir drawer
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        context.findAncestorStateOfType<StrukyZoomDrawerState>()?.toggle();
-                      },
-                      borderRadius: const BorderRadius.all(Radius.circular(28)),
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: NeumorphismTheme.isDark 
-                              ? const Color(0xFFD7CCC8) 
-                              : NeumorphismTheme.coffeeMedium,
-                        ),
-                        child: Center(
-                          child: Text(
-                            _getInitialsFromFirstName(userFirstName),
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: NeumorphismTheme.isDark 
-                                  ? const Color(0xFF3E2723) 
-                                  : Colors.white,
-                            ),
+                  // ⚡ Avatar clickeable para abrir drawer (GestureDetector para 0 lag)
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      context.findAncestorStateOfType<StrukyZoomDrawerState>()?.toggle();
+                    },
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: NeumorphismTheme.isDark 
+                            ? const Color(0xFFD7CCC8) 
+                            : NeumorphismTheme.coffeeMedium,
+                      ),
+                      child: Center(
+                        child: Text(
+                          _getInitialsFromFirstName(userFirstName),
+                          style: AppTextStyles.titleMedium.copyWith(
+                            color: NeumorphismTheme.isDark 
+                                ? const Color(0xFF3E2723) 
+                                : Colors.white,
                           ),
                         ),
                       ),

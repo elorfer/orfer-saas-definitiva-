@@ -56,7 +56,7 @@ class RevenueCatService {
   
   /// API Key de RevenueCat (obtenerla desde el dashboard)
   /// ⚠️ CRÍTICO: Debe estar en variables de entorno o flutter_dotenv
-  static const String _androidApiKey = 'test_dlszADZNjJepsuXJHyLnzuRMydh';
+  static const String _androidApiKey = 'goog_eGCMsYOIXFbQHboGhJklWKGwMCq';
   
   static const String _iosApiKey = String.fromEnvironment(
     'REVENUECAT_IOS_KEY',

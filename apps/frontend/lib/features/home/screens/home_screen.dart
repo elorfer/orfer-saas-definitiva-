@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/providers/theme_provider.dart'; // 🚀 Added for theme reactivity
+import '../../../core/providers/search_provider.dart';
 
 import '../../../core/widgets/struky_drawer_menu.dart';
 import '../../../core/widgets/struky_zoom_drawer.dart';
@@ -180,6 +181,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ref.read(authStateProvider.notifier).refreshProfile().catchError((_) {});
                       final homeNotifier = ref.read(homeStateProvider.notifier);
                       await homeNotifier.refresh();
+
+                      // 🔥 Refrescar también los providers de búsqueda (Géneros, Tendencias)
+                      ref.invalidate(allGenresProvider);
+                      ref.invalidate(trendingArtistsProvider);
+                      ref.invalidate(topSongsProvider);
+                      ref.read(searchProvider.notifier).clearCacheOnly();
 
                   },
                   color: Colors.white,

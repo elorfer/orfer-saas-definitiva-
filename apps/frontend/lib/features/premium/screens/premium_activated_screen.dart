@@ -190,20 +190,12 @@ class _PremiumActivatedScreenState extends ConsumerState<PremiumActivatedScreen>
           alignment: Alignment.center,
           children: [
             Image.asset(
-              'assets/images/anciano_premiun.png',
+              'assets/images/IMAJEN DE LAS SUSCRIPCIONES.webp',
               width: _imageSize,
               height: _imageSize,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                return Image.asset(
-                  'assets/images/anciano_premiun.webp',
-                  width: _imageSize,
-                  height: _imageSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildImagePlaceholder();
-                  },
-                );
+                return _buildImagePlaceholder();
               },
             ),
             _buildGlowEffect(),

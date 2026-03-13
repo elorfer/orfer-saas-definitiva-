@@ -736,6 +736,23 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
     }
   }
 
+  // ✅ Pull to refresh method
+  Future<void> _handleRefresh() async {
+    // 1. Remove from static cache
+    _artistCache.remove(widget.artist.id);
+    
+    // 2. Reset local state
+    setState(() {
+      _hasLoadedOnce = false;
+      _lastLoadTime = null;
+      _allProcessedSongs = [];
+      _displayedSongs = [];
+    });
+    
+    // 3. Reload data
+    await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Requerido para AutomaticKeepAliveClientMixin
@@ -770,8 +787,12 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           child: SafeArea(
             top: false, // ✅ Contenido detrás del status bar
             bottom: false,
-            child: CustomScrollView(
-              key: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
+            child: RefreshIndicator(
+              onRefresh: _handleRefresh,
+              color: Colors.white,
+              backgroundColor: NeumorphismTheme.coffeeMedium,
+              child: CustomScrollView(
+                key: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
               controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
               // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
               // Mantiene solo ~5 items fuera de vista (400px / ~80px por item)
@@ -881,6 +902,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           ),
         ],
           ), // Cierra CustomScrollView
+            ), // Cierra RefreshIndicator
           ), // Cierra SafeArea
         ), // Cierra Container
       ),

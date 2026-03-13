@@ -833,8 +833,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                         imageUrl: profileUrl,
                         cacheManager: AlbumArtCacheManager.instance, // ✅ Cache persistente 90 días
                         fit: BoxFit.cover,
-                        // memCacheWidth: 200, // ⚡ Ajustado para tamaño 100x100
-                        // memCacheHeight: 200,
+                        memCacheWidth: 200, // ✅ Redimensionado en memoria para fluidez (100x100 @ 2x)
+                        memCacheHeight: 200,
                         fadeInDuration: Duration.zero, // ✅ Sin animación para evitar parpadeo
                         fadeOutDuration: Duration.zero,
                         useOldImageOnUrlChange: true, // ⚡ FIX PARPADEO: Mantener imagen anterior
@@ -1472,8 +1472,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                             imageUrl: normalizedImageUrl,
                             cacheManager: AlbumArtCacheManager.instance, // ✅ Cache persistente 90 días
                             fit: BoxFit.cover,
-                            // memCacheWidth: 160, // Desactivado para evitar redimensionamiento en memoria
-                            // memCacheHeight: 160, // Desactivado para evitar redimensionamiento en memoria
+                            memCacheWidth: 160, // ✅ Redimensionado en memoria para fluidez (80x80 @ 2x)
+                            memCacheHeight: 160,
                             fadeInDuration: Duration.zero, // ✅ Sin animación
                             fadeOutDuration: Duration.zero,
                             useOldImageOnUrlChange: true, // ⚡ FIX PARPADEO

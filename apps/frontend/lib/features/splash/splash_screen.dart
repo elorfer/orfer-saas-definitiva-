@@ -108,7 +108,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _preloadImage() async {
     try {
       await precacheImage(
-        const AssetImage('assets/images/Logo principal.webp'),
+        const AssetImage('assets/images/logo.webp'),
         context,
       );
       if (mounted) {
@@ -130,7 +130,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
     final isMediumScreen = screenWidth < 600;
-    final logoSize = isSmallScreen ? 150.0 : (isMediumScreen ? 180.0 : 200.0);
+    final logoSize = isSmallScreen ? 100.0 : (isMediumScreen ? 120.0 : 140.0);
     final logoIconSize = isSmallScreen ? 75.0 : (isMediumScreen ? 90.0 : 100.0);
 
     return Scaffold(
@@ -163,7 +163,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     borderRadius: const BorderRadius.all(Radius.circular(24)),
                     child: _imageLoaded
                         ? Image.asset(
-                            'assets/images/Logo principal.webp',
+                            'assets/images/logo.webp',
                             width: logoSize,
                             height: logoSize,
                             fit: BoxFit.contain,

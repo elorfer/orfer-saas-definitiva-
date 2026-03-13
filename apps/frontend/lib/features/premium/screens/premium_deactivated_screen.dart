@@ -36,6 +36,14 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
   bool get wantKeepAlive => true;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 🚀 Optimización: Pre-cargar imágenes para apertura instantánea
+    precacheImage(const AssetImage('assets/images/anciano_premiun.webp'), context);
+    precacheImage(const AssetImage('assets/images/IMAJEN DE LAS SUSCRIPCIONES.webp'), context);
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
 
@@ -152,29 +160,25 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: _borderRadius),
-            RepaintBoundary(
-              child: Center(
-                child: Image.asset(
-                  'assets/images/anciano_premiun.webp',
-                  width: _imageSize,
-                  height: _imageSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: _imageSize,
-                      height: _imageSize,
-                      decoration: BoxDecoration(
-                        color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
-                ),
+            SizedBox(
+              height: _imageSize,
+              width: _imageSize,
+              child: Image.asset(
+                'assets/images/IMAJEN DE LAS SUSCRIPCIONES.webp',
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.image_not_supported,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: _borderRadius),
@@ -577,12 +581,48 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
             ),
           ),
           const SizedBox(height: 24),
+
+          // Subtítulo llamativo (Contenedor con altura fija para evitar saltos)
+          SizedBox(
+            height: 60,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  '¡Estás a punto de apoyar a un compositor!',
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: NeumorphismTheme.accent,
+                    letterSpacing: -0.5,
+                    height: 1.1,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Imagen del anciano en el selector (Tamaño fijo y cacheado)
+          SizedBox(
+            height: 220,
+            width: 220,
+            child: Image.asset(
+              'assets/images/anciano_premiun.webp',
+              fit: BoxFit.contain,
+              cacheWidth: 500,
+              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+            ),
+          ),
+          const SizedBox(height: 20),
           
-          // Título
+          // Título equilibrado
           Text(
             'Elige tu plan',
             style: GoogleFonts.inter(
-              fontSize: 24,
+              fontSize: 26,
               fontWeight: FontWeight.bold,
               color: NeumorphismTheme.isDark 
                   ? Colors.white 
@@ -591,8 +631,11 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
           ),
           const SizedBox(height: 24),
           
-          // Lista de paquetes
-          ...packages.map((package) => _buildPackageCard(package)),
+          // Lista de paquetes estable
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: packages.map((package) => _buildPackageCard(package)).toList(),
+          ),
           
           const SizedBox(height: 16),
           
@@ -613,8 +656,63 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
     );
   }
 
+  String _getCleanTitle(Package package) {
+    // Si el identificador de RevenueCat es estándar, usamos nombres bonitos
+    switch (package.packageType) {
+      case PackageType.monthly:
+        return 'Suscripción Mensual';
+      case PackageType.annual:
+        return 'Suscripción Anual';
+      case PackageType.lifetime:
+        return 'Acceso de por Vida';
+      case PackageType.weekly:
+        return 'Suscripción Semanal';
+      default:
+        // Si no es estándar, limpiamos el título original de Google Play
+        return package.storeProduct.title
+            .replaceAll('(Struky)', '')
+            .replaceAll('Struky Premium', 'Premium')
+            .trim();
+    }
+  }
+
+  String _getCleanPeriod(StoreProduct? product) {
+    if (product == null || product.subscriptionPeriod == null) return '';
+    
+    final period = product.subscriptionPeriod!;
+    if (period.contains('P1M')) return '/Mes';
+    if (period.contains('P1Y')) return '/Año';
+    if (period.contains('P1W')) return '/Semana';
+    if (period.contains('P2W')) return '/Quincena';
+    
+    return '/${period.replaceAll('P', '').replaceAll('1', '')}';
+  }
+
+  String _getCleanDescription(Package package) {
+    final desc = package.storeProduct.description;
+    
+    // Si la descripción contiene el texto genérico que queremos quitar
+    if (desc.contains('Mensual o Anual') || desc.isEmpty) {
+      switch (package.packageType) {
+        case PackageType.monthly:
+          return 'Disfruta de música sin límites todos los meses.';
+        case PackageType.annual:
+          return 'Acceso total durante un año al mejor precio.';
+        case PackageType.lifetime:
+          return 'Un solo pago para música de por vida.';
+        default:
+          return 'Todos los beneficios premium incluidos.';
+      }
+    }
+    
+    return desc.trim();
+  }
+
   Widget _buildPackageCard(Package package) {
     final product = package.storeProduct;
+    final cleanTitle = _getCleanTitle(package);
+    final cleanPeriod = _getCleanPeriod(product);
+    final cleanDescription = _getCleanDescription(package);
     
     return GestureDetector(
       onTap: () => Navigator.pop(context, package),
@@ -659,7 +757,7 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product.title,
+                    cleanTitle,
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -670,7 +768,7 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    product.description,
+                    cleanDescription,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Colors.grey,
@@ -694,9 +792,9 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
                     color: NeumorphismTheme.accent,
                   ),
                 ),
-                if (product.subscriptionPeriod != null)
+                if (cleanPeriod.isNotEmpty)
                   Text(
-                    '/${product.subscriptionPeriod}',
+                    cleanPeriod,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Colors.grey,
