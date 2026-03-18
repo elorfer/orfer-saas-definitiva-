@@ -554,7 +554,7 @@ export class AuthService {
     };
   }
 
-  async verifyEmailByCode(email: string, code: string): Promise<{ message: string }> {
+  async verifyEmailByCode(email: string, code: string): Promise<any> {
     const user = await this.userRepository.findOne({
       where: { email },
     });
@@ -564,7 +564,17 @@ export class AuthService {
     }
 
     if (user.isVerified) {
-      return { message: 'Tu cuenta ya está verificada. ¡Puedes iniciar sesión!' };
+      const payload: JwtPayload = {
+        sub: user.id,
+        email: user.email,
+        username: user.username,
+        role: user.role,
+      };
+      return {
+        access_token: this.jwtService.sign(payload),
+        user: this.transformUserData(user),
+        message: 'Tu cuenta ya está verificada. ¡Iniciando sesión automáticamente!',
+      };
     }
 
     if (!user.verificationCode || user.verificationCode !== code) {
