@@ -174,8 +174,12 @@ class AuthNotifier extends Notifier<AuthState> {
         final playHistory = ref.read(playHistoryProvider.notifier);
         await playHistory.initializeForUser(authResponse.user.id);
         AppLogger.info('[AuthProvider] PlayHistory inicializado para usuario: ${authResponse.user.id}');
+        
+        // 🏁 Trigger onboarding check for the logged-in user
+        final onboarding = ref.read(onboardingProvider.notifier);
+        await onboarding.checkOnboardingStatusForUser(authResponse.user.id);
       } catch (e) {
-        AppLogger.error('[AuthProvider] ⚠️ Error inicializando OfflineManager: $e');
+        AppLogger.error('[AuthProvider] ⚠️ Error inicializando servicios post-login: $e');
       }
     } catch (e) {
       state = state.copyWith(
@@ -209,9 +213,9 @@ class AuthNotifier extends Notifier<AuthState> {
         stageName: stageName,
       );
       
+      // 📧 NO autenticar automáticamente. El usuario debe verificar su email primero.
+      // Solo actualizamos isLoading para que la UI sepa que terminó.
       state = state.copyWith(
-        user: authResponse.user,
-        isAuthenticated: true,
         isLoading: false,
         error: null,
       );
@@ -536,6 +540,39 @@ class AuthNotifier extends Notifier<AuthState> {
         isLoading: false,
         error: e is AuthException ? e.message : 'Error inesperado: $e',
       );
+      rethrow;
+    }
+  }
+
+  Future<void> verifyCode({required String email, required String code}) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final authResponse = await _authService.verifyEmailByCode(email: email, code: code);
+      
+      // ✅ Autenticar al usuario automáticamente
+      state = state.copyWith(
+        user: authResponse.user,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      );
+
+      // 🏁 Inicializar servicios post-login
+      try {
+        final offlineManager = ref.read(offlineManagerProvider.notifier);
+        await offlineManager.initializeForUser(authResponse.user.id);
+        
+        final playHistory = ref.read(playHistoryProvider.notifier);
+        await playHistory.initializeForUser(authResponse.user.id);
+        
+        // Trigger onboarding check
+        final onboarding = ref.read(onboardingProvider.notifier);
+        await onboarding.checkOnboardingStatusForUser(authResponse.user.id);
+      } catch (e) {
+        AppLogger.error('[AuthProvider] ⚠️ Error inicializando servicios post-verification: $e');
+      }
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }
   }

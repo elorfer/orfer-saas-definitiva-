@@ -27,6 +27,8 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   // Almacenamiento temporal de tokens de recuperación (en producción usar Redis o DB)
   private readonly passwordResetTokens = new Map<string, { userId: string; expiresAt: Date }>();
+  // Almacenamiento temporal de tokens de verificación de email
+  private readonly emailVerificationTokens = new Map<string, { userId: string; email: string; expiresAt: Date }>();
 
   constructor(
     @InjectRepository(User)
@@ -97,6 +99,10 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new UnauthorizedException('Cuenta desactivada');
+    }
+
+    if (!user.isVerified) {
+      throw new UnauthorizedException('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
     }
 
     // Actualizar último login
@@ -177,6 +183,25 @@ export class AuthService {
       } else {
         this.logger.error(`❌ Error creando usuario en Firebase Auth:`, firebaseError.message);
       }
+    }
+
+    // 📧 ENVIAR CÓDIGO DE VERIFICACIÓN (OTP) CON RESEND
+    try {
+      // Generar código de 6 dígitos
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // Válido por 24 horas
+
+      // Guardar en el usuario
+      await this.userRepository.update(savedUser.id, {
+        verificationCode,
+        verificationCodeExpiresAt: expiresAt,
+      });
+
+      await this.resendService.sendWelcomeVerificationEmail(savedUser.email, verificationCode);
+      this.logger.log(`📧 Código OTP enviado para: ${savedUser.email}`);
+    } catch (emailError) {
+      this.logger.error(`❌ Error al enviar código OTP:`, emailError);
     }
 
     // No se crea perfil de artista - solo se permite registro como usuario
@@ -529,11 +554,64 @@ export class AuthService {
     };
   }
 
+  async verifyEmailByCode(email: string, code: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (user.isVerified) {
+      return { message: 'Tu cuenta ya está verificada. ¡Puedes iniciar sesión!' };
+    }
+
+    if (!user.verificationCode || user.verificationCode !== code) {
+      throw new BadRequestException('El código ingresado es incorrecto');
+    }
+
+    if (user.verificationCodeExpiresAt && new Date() > user.verificationCodeExpiresAt) {
+      throw new BadRequestException('El código ha expirado. Por favor, solicita uno nuevo.');
+    }
+
+    // Actualizar estado de verificación y limpiar código
+    const updatedUser = await this.userRepository.save({
+      ...user,
+      isVerified: true,
+      verificationCode: null,
+      verificationCodeExpiresAt: null,
+    });
+
+    this.logger.log(`✅ Email verificado exitosamente con OTP para: ${user.email}`);
+
+    // 🔥 LOGIN AUTOMÁTICO: Generar JWT tras verificar
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: this.transformUserData(updatedUser),
+      message: 'Email verificado exitosamente. ¡Bienvenido a Struky!',
+    };
+  }
+
   private cleanExpiredTokens(): void {
     const now = new Date();
+    // Limpiar tokens de password reset
     for (const [token, data] of this.passwordResetTokens.entries()) {
       if (now > data.expiresAt) {
         this.passwordResetTokens.delete(token);
+      }
+    }
+    // Limpiar tokens de verificación de email
+    for (const [token, data] of this.emailVerificationTokens.entries()) {
+      if (now > data.expiresAt) {
+        this.emailVerificationTokens.delete(token);
       }
     }
   }

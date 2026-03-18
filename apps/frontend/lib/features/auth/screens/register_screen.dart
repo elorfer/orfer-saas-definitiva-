@@ -33,6 +33,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
+  bool _registrationSuccess = false;
   
   // Estados para validación en tiempo real
   bool? _usernameAvailable;
@@ -699,9 +700,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               password: _passwordController.text,
               firstName: _firstNameController.text.trim(),
               lastName: _lastNameController.text.trim(),
-              role: UserRole.user, 
-              stageName: null, 
+              role: UserRole.user,
+              stageName: null,
             );
+
+            if (mounted) {
+              // Navegar directamente a la pantalla de verificación
+              context.go('/verify-code/${_emailController.text.trim()}');
+            }
           }
         } : null,
       ),

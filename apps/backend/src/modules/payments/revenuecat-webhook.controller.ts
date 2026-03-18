@@ -81,10 +81,11 @@ export class RevenueCatWebhookController {
             }
 
         } catch (error) {
-            this.logger.error('❌ Error en webhook de RevenueCat', error.stack);
-
-            // NO lanzar excepción para que RevenueCat no reintente indefinidamente
-            // Retornar 200 pero loggear el error
+            // Devuelve 200 pero loggea el error usando un warning simple si es de validación
+            if (error instanceof UnauthorizedException) {
+                return { received: true, message: 'Invalid signature ignored' };
+            }
+            
             return {
                 received: true,
                 message: 'Error procesado, no se reintentará'
@@ -121,8 +122,6 @@ export class RevenueCatWebhookController {
 
         if (!isValid) {
             this.logger.error('❌ Firma de webhook inválida - posible intento de falsificación');
-            this.logger.debug(`Firma recibida: ${signature}`);
-            this.logger.debug(`Firma esperada: ${expectedSignature}`);
             throw new UnauthorizedException('Invalid webhook signature');
         }
 

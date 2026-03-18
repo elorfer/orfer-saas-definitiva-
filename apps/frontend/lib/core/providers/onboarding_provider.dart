@@ -22,30 +22,14 @@ class OnboardingNotifier extends Notifier<bool> {
     if (!_isInitialized) {
       _isInitialized = true;
       
-      // Configurar listener y verificar estado de forma asíncrona
+      // Verificar estado inicial de forma asíncrona
       Future.microtask(() async {
         try {
-          // Escuchar cambios en el usuario autenticado para verificar onboarding
-          ref.listen<AuthState>(
-            authStateProvider,
-            (previous, next) {
-              // Si el usuario cambió, verificar el onboarding para el nuevo usuario
-              if (next.isAuthenticated && next.user != null) {
-                _checkOnboardingStatusForUser(next.user!.id);
-              } else if (!next.isAuthenticated) {
-                // Si se desautenticó, marcar como completado (no mostrar onboarding sin usuario)
-                state = true;
-              }
-            },
-          );
-          
-          // Verificar estado inicial de forma asíncrona
           await _checkOnboardingStatus();
         } catch (e) {
           if (kDebugMode) {
             debugPrint('⚠️ [OnboardingProvider] Error durante inicialización: $e');
           }
-          // Si hay error, mantener como completado para no mostrar onboarding innecesariamente
           state = true;
         }
       });
@@ -62,7 +46,7 @@ class OnboardingNotifier extends Notifier<bool> {
       final authState = ref.read(authStateProvider);
       if (authState.isAuthenticated && authState.user != null) {
         // ✅ OPTIMIZACIÓN: Verificar inmediatamente para evitar mostrar onboarding prematuramente
-        await _checkOnboardingStatusForUser(authState.user!.id);
+        await checkOnboardingStatusForUser(authState.user!.id);
       } else {
         // Si no hay usuario autenticado, no mostrar onboarding
         state = true; // Marcar como completado para no mostrar onboarding sin usuario
@@ -78,7 +62,7 @@ class OnboardingNotifier extends Notifier<bool> {
   }
 
   /// Verificar si el onboarding ya fue completado para un usuario específico
-  Future<void> _checkOnboardingStatusForUser(String userId) async {
+  Future<void> checkOnboardingStatusForUser(String userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lastUserId = prefs.getString(_lastUserIdKey);

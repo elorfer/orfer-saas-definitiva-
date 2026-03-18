@@ -53,12 +53,15 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 
-                <!-- URL personalizada: struky://reset-password/token -->
+                <!-- URL personalizada: struky://reset-password/token o struky://verify-email/token -->
                 <data android:scheme="struky" android:host="reset-password" />
+                <data android:scheme="struky" android:host="verify-email" />
                 
-                <!-- HTTPS (para producción): https://struky.com/reset-password/token -->
+                <!-- HTTPS (para producción) -->
                 <data android:scheme="https" android:host="struky.com" android:pathPrefix="/reset-password" />
+                <data android:scheme="https" android:host="struky.com" android:pathPrefix="/verify-email" />
                 <data android:scheme="http" android:host="localhost" android:port="3000" android:pathPrefix="/reset-password" />
+                <data android:scheme="http" android:host="localhost" android:port="3000" android:pathPrefix="/verify-email" />
             </intent-filter>
         </activity>
         
@@ -113,6 +116,11 @@
                 <data android:scheme="@string/fb_login_protocol_scheme" />
             </intent-filter>
         </activity>
+
+        <!-- 📢 ADMOB: ID de Aplicación (Requerido para que la app no crashee) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-2929540794612262~9881124050"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

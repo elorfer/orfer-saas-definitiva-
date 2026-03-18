@@ -852,4 +852,40 @@ class AuthService {
     }
   }
 
+  /// Verificar email con código de 6 dígitos (OTP)
+  Future<AuthResponse> verifyEmailByCode({required String email, required String code}) async {
+    try {
+      final response = await _dio.post(
+        _buildUrl('auth/verify-email-code'),
+        data: {
+          'email': email,
+          'code': code,
+        },
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+        ),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data as Map<String, dynamic>;
+        
+        // Normalizar datos del usuario
+        if (data['user'] != null) {
+          data['user'] = DataNormalizer.normalizeUser(data['user']);
+        }
+        
+        final authResponse = AuthResponse.fromJson(data);
+        await _saveAuthData(authResponse);
+        return authResponse;
+      } else {
+        throw AuthException('Código de verificación incorrecto o expirado');
+      }
+    } on DioException catch (e) {
+      ErrorHandler.handleDioError(e, context: 'AuthService.verifyEmailByCode');
+      throw AuthException.fromDioError(e, context: 'AuthService.verifyEmailByCode');
+    } catch (e) {
+      ErrorHandler.handleGenericError(e, context: 'AuthService.verifyEmailByCode');
+      throw AuthException.fromGenericError(e, context: 'AuthService.verifyEmailByCode');
+    }
+  }
 }

@@ -10,6 +10,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
+import '../../features/auth/screens/verify_code_screen.dart';
 import '../../features/ads/screens/ad_stats_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/playlists/screens/playlists_screen.dart';
@@ -132,12 +133,14 @@ class GoRouterNotifier extends ChangeNotifier {
             child: const SplashScreen(),
           ),
         ),
-        // Onboarding - sin transición
+        // Onboarding - transición suave
         GoRoute(
           path: '/onboarding',
-          pageBuilder: (context, state) => createNoTransitionPage<void>(
+          pageBuilder: (context, state) => createCustomTransitionPage<void>(
             key: state.pageKey,
             child: const OnboardingScreen(),
+            transitionsBuilder: SpotifyPageTransitions.slideTransition,
+            transitionDuration: const Duration(milliseconds: 300),
           ),
         ),
         // Login - transición optimizada sin parpadeo
@@ -181,6 +184,20 @@ class GoRouterNotifier extends ChangeNotifier {
             return createCustomTransitionPage<void>(
               key: state.pageKey,
               child: ResetPasswordScreen(token: token),
+              transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
+              transitionDuration: const Duration(milliseconds: 200),
+              reverseTransitionDuration: const Duration(milliseconds: 150),
+            );
+          },
+        ),
+        // Verify Code - Nueva pantalla para OTP de 6 dígitos
+        GoRoute(
+          path: '/verify-code/:email',
+          pageBuilder: (context, state) {
+            final email = state.pathParameters['email'] ?? '';
+            return createCustomTransitionPage<void>(
+              key: state.pageKey,
+              child: VerifyCodeScreen(email: email),
               transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
               transitionDuration: const Duration(milliseconds: 200),
               reverseTransitionDuration: const Duration(milliseconds: 150),
@@ -733,7 +750,8 @@ class GoRouterNotifier extends ChangeNotifier {
     final isAuthRoute = location == '/login' ||
         location == '/register' ||
         location == '/forgot-password' ||
-        location.startsWith('/reset-password');
+        location.startsWith('/reset-password') ||
+        location.startsWith('/verify-code');
 
     // No redirigir rutas de player u otras rutas específicas fuera del ShellRoute
     // Nota: /song/ ahora está dentro del ShellRoute, así que no necesita tratamiento especial aquí

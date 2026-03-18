@@ -21,6 +21,8 @@ import '../widgets/home_message_banner.dart';
 import '../widgets/home_header.dart'; // Extracted header
 import '../../../core/responsive/responsive_layout.dart';
 import 'web/web_home_screen.dart';
+import '../../../core/widgets/unified_banner_ad.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// HomeScreen optimizado con AutomaticKeepAliveClientMixin
 /// Evita reconstrucciones innecesarias al cambiar de pestañas
@@ -264,6 +266,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           child: const FeaturedSongsSection(
                               key: ValueKey('featured_songs')),
                         ),
+                        
+                        // 📢 ADMOB: Banner integrado entre secciones
+                        const SliverToBoxAdapter(
+                          child: UnifiedBannerAd(
+                            key: ValueKey('home_section_ad'),
+                            adSize: AdSize.mediumRectangle,
+                          ),
+                        ),
+                        
                         const SliverToBoxAdapter(child: SizedBox(height: 48)),
                         SliverToBoxAdapter(
                           child: const FeaturedPlaylistsSection(

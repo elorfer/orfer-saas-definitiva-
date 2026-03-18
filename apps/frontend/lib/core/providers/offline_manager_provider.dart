@@ -47,7 +47,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
   static const String _downloadDirName = 'offline_music';
   
   static const String _keyStorageKey = 'offline_mode_encryption_key_v1';
-  late final encrypt.Encrypter _encrypter;
+  encrypt.Encrypter? _encrypter;
   // IV fijo para asegurar que lo que se encripta se pueda desencriptar tras reiniciar
   // (En producción ideal: guardar IV junto al archivo, pero para MVP usamos uno fijo de 16 bytes)
   static final _iv = encrypt.IV.fromUtf8('VintageMusicApp1'); // Exactly 16 chars = 16 bytes
@@ -222,7 +222,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
           AppLogger.warning('[OfflineManager] ⚠️ Generated NEW encryption key after corruption.');
         }
       }
-      _encrypter = encrypt.Encrypter(encrypt.AES(key));
+      _encrypter ??= encrypt.Encrypter(encrypt.AES(key));
 
       // 2. Inicializar Hive Box específico del usuario
       final boxName = _getUserBoxName(_currentUserId!);
@@ -310,7 +310,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
       final bytes = Uint8List.fromList(response.data!);
 
       // 2. Encriptar
-      final encrypted = _encrypter.encryptBytes(bytes, iv: _iv);
+      final encrypted = _encrypter!.encryptBytes(bytes, iv: _iv);
 
       // 3. Guardar en disco (.struky)
       final filePath = path.join(_baseDir!.path, '${song.id}.struky');
@@ -392,7 +392,7 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
           if (!await tempFile.exists()) {
                AppLogger.info('[OfflineManager] Decrypting to temp: $tempPath');
                final encryptedBytes = await encryptedFile.readAsBytes();
-               final decryptedBytes = _encrypter.decryptBytes(encrypt.Encrypted(Uint8List.fromList(encryptedBytes)), iv: _iv);
+                final decryptedBytes = _encrypter!.decryptBytes(encrypt.Encrypted(Uint8List.fromList(encryptedBytes)), iv: _iv);
                await tempFile.writeAsBytes(decryptedBytes);
           }
           

@@ -27,17 +27,16 @@ export class CleanupService {
         if (allFiles.length === 0) return;
 
         // 2. Obtener lista blanca de archivos EN USO desde la DB
-        // Hacemos una query unificada para mayor velocidad
         const usedFilesResult = await this.dataSource.query(`
-      SELECT profile_image_src as url FROM artists WHERE profile_image_src IS NOT NULL
+      SELECT profile_photo_url as url FROM artists WHERE profile_photo_url IS NOT NULL
       UNION
-      SELECT cover_image_src as url FROM artists WHERE cover_image_src IS NOT NULL
+      SELECT cover_photo_url as url FROM artists WHERE cover_photo_url IS NOT NULL
       UNION
-      SELECT image_src as url FROM songs WHERE image_src IS NOT NULL
+      SELECT cover_art_url as url FROM songs WHERE cover_art_url IS NOT NULL
       UNION
-      SELECT audio_src as url FROM songs WHERE audio_src IS NOT NULL
+      SELECT file_url as url FROM songs WHERE file_url IS NOT NULL
       UNION
-      SELECT avatar as url FROM users WHERE avatar IS NOT NULL
+      SELECT avatar_url as url FROM users WHERE avatar_url IS NOT NULL
     `);
 
         // Extraer keys de las URLs

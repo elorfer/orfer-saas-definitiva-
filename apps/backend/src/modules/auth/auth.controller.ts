@@ -140,6 +140,15 @@ export class AuthController {
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
   }
+
+  @Post('verify-email-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verificar email con código de 6 dígitos (OTP)' })
+  @ApiResponse({ status: 200, description: 'Email verificado exitosamente' })
+  @ApiResponse({ status: 400, description: 'Código incorrecto o expirado' })
+  async verifyEmailByCode(@Body() body: { email: string; code: string }) {
+    return this.authService.verifyEmailByCode(body.email, body.code);
+  }
 }
 
 

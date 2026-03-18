@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,7 @@ import 'core/services/http_cache_service.dart';
 import 'core/services/playback_reporter_service.dart';
 import 'core/providers/theme_provider.dart';
 import 'core/services/app_initializer.dart';
+import 'features/ads/services/admob_service.dart';
 
 // #region Error Handling
 
@@ -109,6 +111,10 @@ Future<void> _mainApp() async {
   // 🚀 OPTIMIZACIÓN "INSTANT PLAY": Inicialización paralela
   // Carga Hive y AuthService simultáneamente sin bloquear innecesariamente
   await AppInitializer.init();
+  
+  // 📢 ADMOB: Inicializar SDK en segundo plano
+  // No bloquea el inicio de la app pero asegura que esté listo para el primer anuncio
+  unawaited(AdMobService.initialize());
   
   // 🚀 OPTIMIZACIÓN DE MEMORIA: Limitar caché de imágenes
   // Evita que la app consuma GBs de RAM en sesiones largas

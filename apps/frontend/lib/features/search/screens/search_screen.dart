@@ -18,6 +18,8 @@ import '../widgets/song_search_card.dart';
 import '../widgets/playlist_search_card.dart';
 import 'web/web_search_screen.dart'; // 🚀 Web UI
 import '../../../core/responsive/responsive_layout.dart'; // 🚀 Responsive Control
+import '../../../core/widgets/unified_banner_ad.dart'; // 📢 AdMob
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -541,6 +543,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           ),
         ],
 
+        // 📢 ADMOB: Banner entre Artistas y Canciones
+        const SliverToBoxAdapter(
+          child: UnifiedBannerAd(
+            key: ValueKey('search_results_ad'),
+            adSize: AdSize.banner,
+          ),
+        ),
+
         // ⚡ OPTIMIZADO: Canciones con RepaintBoundary
         if (filteredResults.songs.isNotEmpty) ...[
           SliverToBoxAdapter(
@@ -671,6 +681,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               ),
             ),
           ),
+          
+          // 📢 ADMOB: Banner en Home de búsqueda
+          const SliverToBoxAdapter(
+            child: UnifiedBannerAd(
+              key: ValueKey('search_home_ad'),
+              adSize: AdSize.largeBanner,
+            ),
+          ),
+          
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
           // ⚡ OPTIMIZADO: Géneros con RepaintBoundary

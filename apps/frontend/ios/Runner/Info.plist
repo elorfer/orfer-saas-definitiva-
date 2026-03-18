@@ -49,9 +49,28 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
-		<key>UIBackgroundModes</key>
+	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
 	</array>
+
+	<!-- 🔗 DEEP LINK CONFIGURATION -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>struky.com</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>struky</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- 📢 ADMOB: ID de Aplicación (Requerido para iOS) -->
+	<key>GADApplicationIdentifier</key>
+	<string>AQUÍ_TU_ID_REAL_IOS</string>
 </dict>
 </plist>

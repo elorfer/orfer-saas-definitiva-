@@ -75,6 +75,12 @@ export class User {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @Column({ name: 'verification_code', length: 6, nullable: true })
+  verificationCode?: string;
+
+  @Column({ name: 'verification_code_expires_at', nullable: true })
+  verificationCodeExpiresAt?: Date;
+
   @Column({ name: 'last_login_at', nullable: true })
   lastLoginAt?: Date;
 
