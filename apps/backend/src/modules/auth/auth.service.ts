@@ -29,6 +29,8 @@ export class AuthService {
   private readonly passwordResetTokens = new Map<string, { userId: string; expiresAt: Date }>();
   // Almacenamiento temporal de tokens de verificación de email
   private readonly emailVerificationTokens = new Map<string, { userId: string; email: string; expiresAt: Date }>();
+  // Contador de reenvíos OTP por email (máximo 5 códigos por sesión de servidor)
+  private readonly otpResendCounts = new Map<string, number>();
 
   constructor(
     @InjectRepository(User)
@@ -102,42 +104,20 @@ export class AuthService {
     }
 
     if (!user.isVerified) {
-      // 🔄 OTP RESEND: En lugar de bloquear al usuario, reenviar un nuevo código OTP
-      // Límite de 5 intentos: contar por número de veces que el código fue regenerado
-      const MAX_OTP_ATTEMPTS = 5;
+      const MAX_OTP_RESENDS = 5;
+      const emailKey = user.email.toLowerCase();
 
-      // Obtener el usuario completo con los campos de OTP de la base de datos
-      const fullUser = await this.userRepository.findOne({ where: { id: user.id } });
+      // Obtener el contador actual de reenvíos para este email
+      const currentCount = this.otpResendCounts.get(emailKey) ?? 0;
 
-      // Contar intentos previos revisando si ya hay un código activo (campo reutilizado como contador en metadata)
-      // Usamos el campo verificationCode para rastrear si ya se envió antes
-      let otpSendCount = 0;
-      // Verificar si el código actual sigue vigente (no expiró) = ya se ha enviado al menos 1 vez
-      if (fullUser.verificationCodeExpiresAt) {
-        const now = new Date();
-        // Cada nuevo código tiene 10 minutos. Inferimos los reenvíos del tiempo de expiración original vs ahora
-        // Guardamos el conteo en el propio código: si empieza con 'R' más un dígito es un reenvío
-        if (fullUser.verificationCode && fullUser.verificationCode.match(/^\d{6}$/)) {
-          // Intentar obtener desde metadata (guardado en verificationCode con prefijo especial)
-          // Por simplicidad, rastreamos que si el código existe y no expiró, ya se envió al menos 1 vez
-          otpSendCount = 1;
-        }
+      if (currentCount >= MAX_OTP_RESENDS) {
+        throw new UnauthorizedException(
+          `Has superado el límite de ${MAX_OTP_RESENDS} códigos de verificación. Contacta a soporte en strukyapp@gmail.com`
+        );
       }
 
-      // Buscar si hay un campo para rastrear reenvíos - si no, permitir el envío
-      // Solución simple: permitir hasta MAX_OTP_ATTEMPTS veces basado en tiempo de expiración acumulado
-      // Si el código expiró hace más de 24h * 5 = 120h, es límite superado
-      if (fullUser.verificationCodeExpiresAt) {
-        const expiresAt = new Date(fullUser.verificationCodeExpiresAt);
-        const now = new Date();
-        const diffHours = (now.getTime() - expiresAt.getTime()) / (1000 * 60 * 60);
-        // Si expiró hace más de 5 días (5 * 24h), el usuario ha agotado sus intentos
-        if (diffHours > 120) {
-          throw new UnauthorizedException(
-            `Has superado el límite de ${MAX_OTP_ATTEMPTS} reenvíos de código de verificación. Contacta soporte.`
-          );
-        }
-      }
+      // Incrementar el contador
+      this.otpResendCounts.set(emailKey, currentCount + 1);
 
       // Generar un nuevo código OTP de 6 dígitos
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -152,20 +132,20 @@ export class AuthService {
       // Enviar el nuevo código por correo
       try {
         await this.resendService.sendWelcomeVerificationEmail(user.email, newCode);
-        this.logger.log(`📧 OTP reenviado a ${user.email} (usuario no verificado intentó iniciar sesión)`);
+        this.logger.log(`📧 OTP reenviado a ${user.email} (intento ${currentCount + 1}/${MAX_OTP_RESENDS})`);
       } catch (emailError) {
         this.logger.error('Error enviando OTP en login de usuario no verificado:', emailError);
       }
 
-      // Retornar respuesta especial 403 con código EMAIL_NOT_VERIFIED
+      // Retornar respuesta especial con código EMAIL_NOT_VERIFIED
       throw Object.assign(
         new UnauthorizedException({
           statusCode: 401,
           code: 'EMAIL_NOT_VERIFIED',
-          message: 'Debes verificar tu email. Te hemos enviado un nuevo código de verificación.',
+          message: `Debes verificar tu email. Te hemos enviado un nuevo código (intento ${currentCount + 1}/${MAX_OTP_RESENDS}).`,
           email: user.email,
         }),
-        { response: { statusCode: 401, code: 'EMAIL_NOT_VERIFIED', message: 'Debes verificar tu email. Te hemos enviado un nuevo código de verificación.', email: user.email } }
+        { response: { statusCode: 401, code: 'EMAIL_NOT_VERIFIED', message: `Debes verificar tu email. Te hemos enviado un nuevo código (intento ${currentCount + 1}/${MAX_OTP_RESENDS}).`, email: user.email } }
       );
     }
 
