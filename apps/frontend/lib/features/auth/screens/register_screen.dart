@@ -706,7 +706,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
             if (mounted) {
               // Navegar directamente a la pantalla de verificación
-              context.go('/verify-code/${_emailController.text.trim()}');
+              // Usamos push en lugar de go para poder volver atrás si el correo estuvo mal escrito
+              context.push('/verify-code/${Uri.encodeComponent(_emailController.text.trim())}');
             }
           }
         } : null,

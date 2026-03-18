@@ -117,7 +117,13 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => context.go('/login'),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/login');
+            }
+          },
         ),
       ),
       body: SafeArea(
