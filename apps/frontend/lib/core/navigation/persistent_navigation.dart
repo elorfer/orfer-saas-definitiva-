@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:go_router/go_router.dart'; // StatefulNavigationShell + context.push
 import 'package:google_fonts/google_fonts.dart';
 import '../models/user_model.dart'; // Import user model
 import '../providers/auth_provider.dart'; // Import auth provider
 import '../providers/theme_provider.dart'; // Import theme provider
 import '../providers/unified_audio_provider_fixed.dart';
-import '../services/player_navigation_service.dart';
-import '../widgets/final_mini_player.dart';
-import '../../features/ads/widgets/ads_mini_player.dart';
+import '../widgets/spotify_player_sheet.dart';
 import '../theme/neumorphism_theme.dart';
-import '../utils/logger.dart';
 import '../responsive/responsive_layout.dart';
 import '../widgets/web_sidebar.dart'; // 🚀 Sidebar para Web
 
@@ -67,14 +64,6 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
     _cachedSelectedStyle = null;
     _cachedUnselectedStyle = null;
 
-    final playbackState = ref.watch(unifiedAudioProviderFixed);
-    final currentSong = playbackState.currentSong;
-    final isPlayingAd = playbackState.isPlayingAd;
-
-    // ... (Listeners de Premium y Espera se mantienen igual que en original, omitidos para brevedad en diff, pero deben estar)
-    // NOTA: Para no borrar lógica existente, mejor envolveremos la estructura principal.
-
-    final navBarHeight = _cachedNavBarHeight ?? 80.0;
     final isDesktop = ResponsiveLayout.isDesktop(context);
 
     // 🔥 LISTENER DE CAMBIO A PREMIUM (Nuevo: Post-Flash Bug Fix)
@@ -163,8 +152,8 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
                 children: [
                   widget.navigationShell,
                   
-                  // 🎵 MINI PLAYER EN DESKTOP (Flotante abajo a la derecha o ancho completo)
-                  _buildMiniPlayer(playbackState, navBarHeight, isDesktop: true),
+                  // 🎵 SPOTIFY-STYLE DRAG-TO-EXPAND PLAYER SHEET (Desktop)
+                  const SpotifyPlayerSheet(),
                 ],
               ),
             ),
@@ -177,9 +166,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
              AnimatedPadding(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOutCubic,
-                padding: EdgeInsets.only(
-                  bottom: (isPlayingAd || currentSong != null) ? 72.0 : 0.0,
-                ),
+                padding: const EdgeInsets.only(bottom: 84.0),
                 child: widget.navigationShell,
               ),
             
@@ -193,85 +180,13 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
               ),
             ),
             
-            // 🎵 MINI PLAYER MÓVIL
-            _buildMiniPlayer(playbackState, navBarHeight, isDesktop: false),
+            // 🎵 SPOTIFY-STYLE DRAG-TO-EXPAND PLAYER SHEET
+            const SpotifyPlayerSheet(),
           ],
         ),
     );
   }
 
-  // Helper para el Mini Player (reutilizado)
-  Widget _buildMiniPlayer(dynamic playbackState, double navBarHeight, {required bool isDesktop}) {
-    final currentSong = playbackState.currentSong;
-    final isPlayingAd = playbackState.isPlayingAd;
-    
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOutCubic,
-      bottom: ((playbackState.isSessionActive || playbackState.isPlaying || playbackState.isLoading) && (isPlayingAd || currentSong != null)) 
-          ? (isDesktop ? 20 : navBarHeight) // En desktop flota un poco, en móvil está sobre navbar
-          : -(navBarHeight + 100),
-      left: isDesktop ? 20 : 0, // En desktop tiene margen
-      right: isDesktop ? 20 : 0,
-      child: RepaintBoundary(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            final offsetAnimation = Tween<Offset>(
-              begin: const Offset(0.0, 0.1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            ));
-            return SlideTransition(
-              position: offsetAnimation,
-              child: FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-            );
-          },
-          child: (isPlayingAd && playbackState.currentAd != null)
-              ? AdsMiniPlayer(
-                  key: const ValueKey('ad_mini_player'),
-                  onTap: () {
-                    try {
-                      final audioState = ref.read(unifiedAudioProviderFixed);
-                      if (!audioState.isPlayerExpanded) {
-                        PlayerNavigationService.openFullPlayer(
-                          context: context,
-                          ref: ref,
-                        );
-                      }
-                    } catch (e) {
-                      AppLogger.error('[PersistentNavigation] Error abriendo player desde ad: $e');
-                    }
-                  },
-                )
-              : FinalMiniPlayer(
-                  key: const ValueKey('song_mini_player'),
-                  onTap: () {
-                    try {
-                      final audioState = ref.read(unifiedAudioProviderFixed);
-                      if (audioState.currentSong != null && 
-                          !audioState.isPlayerExpanded) {
-                        ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-                        if (context.mounted) {
-                          context.push('/player');
-                        }
-                      }
-                    } catch (e) {
-                      AppLogger.error('[PersistentNavigation] Error: $e');
-                    }
-                  },
-                ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildBottomNavigationBar(int currentIndex) {
     final bottomPadding = _cachedBottomPadding ?? 0.0;

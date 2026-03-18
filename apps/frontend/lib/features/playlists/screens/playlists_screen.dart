@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
 // OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
-import 'package:shimmer/shimmer.dart';
 import '../../../core/providers/playlist_provider.dart';
 import '../../../core/providers/saved_playlists_provider.dart';
 import '../../../core/models/playlist_model.dart';

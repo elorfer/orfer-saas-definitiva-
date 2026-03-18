@@ -117,7 +117,7 @@ class SpotifyRecommendationService {
       try {
         final raw = response.data;
         final rawStr = raw is String ? raw : raw.toString();
-        debugPrint('🔎 [SpotifyRecommendation] RAW response body (trunc 2000): ${rawStr.length > 2000 ? rawStr.substring(0, 2000) + "..." : rawStr}');
+        debugPrint('🔎 [SpotifyRecommendation] RAW response body (trunc 2000): ${rawStr.length > 2000 ? "${rawStr.substring(0, 2000)}..." : rawStr}');
       } catch (_) {}
 
       if (response.statusCode == 200) {
@@ -370,7 +370,7 @@ class SpotifyRecommendationService {
       try {
         final raw = response.data;
         final rawStr = raw is String ? raw : raw.toString();
-        debugPrint('🔎 [SpotifyRec Batch] RAW response body (trunc 4000): ${rawStr.length > 4000 ? rawStr.substring(0, 4000) + "..." : rawStr}');
+        debugPrint('🔎 [SpotifyRec Batch] RAW response body (trunc 4000): ${rawStr.length > 4000 ? "${rawStr.substring(0, 4000)}..." : rawStr}');
       } catch (_) {}
 
       if (response.statusCode == 200) {

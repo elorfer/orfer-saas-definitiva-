@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/neumorphism_theme.dart';
-import '../../../../core/theme/text_styles.dart';
 import '../../widgets/home_header.dart';
 // import '../../widgets/featured_artists_section.dart'; // Replaced by Web version
 // import '../../widgets/featured_songs_section.dart';   // Replaced by Web version
@@ -13,7 +12,6 @@ import '../../widgets/web/web_featured_artists_section.dart';
 import '../../widgets/web/web_featured_songs_section.dart';
 import '../../widgets/web/web_featured_playlists_section.dart';
 import '../../../../core/providers/home_provider.dart';
-import '../../../../core/providers/auth_provider.dart';
 
 class WebHomeScreen extends ConsumerWidget {
   const WebHomeScreen({super.key});

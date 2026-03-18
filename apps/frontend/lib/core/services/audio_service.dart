@@ -46,8 +46,7 @@ class AudioService {
       return globalAudioHandler.player;
     }
     // Fallback: crear player local si el handler no está listo
-    if (_fallbackPlayer == null) {
-      _fallbackPlayer = AudioPlayer(
+    _fallbackPlayer ??= AudioPlayer(
         audioLoadConfiguration: const AudioLoadConfiguration(
           androidLoadControl: AndroidLoadControl(
             minBufferDuration: Duration(seconds: 5),
@@ -60,7 +59,6 @@ class AudioService {
           ),
         ),
       );
-    }
     // Solo mostrar warning una vez
     if (!_fallbackWarningShown) {
       _fallbackWarningShown = true;
@@ -1224,7 +1222,7 @@ class AudioService {
       // 🔄 CRÍTICO: Guardar estado de reproducción ANTES de insertar
       // seek() y seekToPrevious() pueden pausar el reproductor automáticamente
       final wasPlaying = player.playing;
-      final initialQueueLength = player.sequence?.length ?? 0;
+      final initialQueueLength = player.sequence.length ?? 0;
       
       // Insertar la nueva canción en el índice 0
       await currentSource.insert(0, source);
@@ -1232,7 +1230,7 @@ class AudioService {
       // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice su sequenceState
       // ⚡ OPTIMIZACIÓN: Usar evento en lugar de delay
       await _waitForCondition(
-        (state) => (player.sequence?.length ?? 0) > initialQueueLength,
+        (state) => (player.sequence.length ?? 0) > initialQueueLength,
         timeout: const Duration(milliseconds: 100),
         debugLabel: 'Sequence Update',
       );

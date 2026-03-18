@@ -194,7 +194,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/library');
+              // Si no puede hacer pop, ir a biblioteca (su lugar natural)
+              context.go('/profile'); 
             }
           },
         ),

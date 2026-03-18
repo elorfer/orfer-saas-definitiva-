@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/theme_provider.dart';
@@ -26,7 +27,7 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
   static const double _verticalPadding = 20.0;
   static const double _sectionSpacing = 32.0;
   static const double _largeSpacing = 40.0;
-  static const double _imageSize = 280.0;
+  static const double _imageSize = 300.0;
   static const double _iconSize = 64.0;
   static const double _borderRadius = 24.0;
   static const double _buttonHeight = 56.0;
@@ -34,6 +35,25 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
 
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    // 🚀 Abrir automáticamente el selector si venimos con el parámetro showPackages
+    // Esto responde al bug reportado donde el usuario quiere ir "directamente" al pago
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        try {
+          final state = GoRouterState.of(context);
+          if (state.uri.queryParameters['showPackages'] == 'true') {
+            _handleSubscribeTap();
+          }
+        } catch (e) {
+          // Silencioso si falla el acceso al router state
+        }
+      }
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -567,91 +587,142 @@ class _PremiumDeactivatedScreenState extends ConsumerState<PremiumDeactivatedScr
           top: Radius.circular(24),
         ),
       ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12), // Espacio superior para evitar notch
+            // Handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 32), // Aumentado de 24 a 32
 
-          // Subtítulo llamativo (Contenedor con altura fija para evitar saltos)
-          SizedBox(
-            height: 60,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text(
-                  '¡Estás a punto de apoyar a un compositor!',
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: NeumorphismTheme.accent,
-                    letterSpacing: -0.5,
-                    height: 1.1,
+            // Título con botón de cerrar a la izquierda
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12), // Ajustado padding
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.close_rounded, // Cambiado a cruz
+                        color: Colors.grey,
+                        size: 28, // Tamaño ligeramente más contenido para alineación
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Cerrar',
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
+                ),
+                // Subtítulo llamativo (Contenedor con altura fija para evitar saltos)
+                SizedBox(
+                  height: 60,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 56),
+                      child: Text(
+                        '¡Estás a punto de apoyar a un compositor!',
+                        style: GoogleFonts.inter(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: NeumorphismTheme.accent,
+                          letterSpacing: -0.5,
+                          height: 1.1,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Imagen del anciano en el selector
+            SizedBox(
+              height: 320,
+              width: 320,
+              child: Image.asset(
+                'assets/images/anciano_premiun.webp',
+                fit: BoxFit.contain,
+                cacheWidth: 800,
+                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // Título equilibrado
+            Text(
+              'Elige tu plan',
+              style: GoogleFonts.inter(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: NeumorphismTheme.isDark 
+                    ? Colors.white 
+                    : NeumorphismTheme.coffeeDark,
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Lista de paquetes estable
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: packages.map((package) => _buildPackageCard(package)).toList(),
+            ),
+            
+            const SizedBox(height: 16),
+
+            // Botón alternativo: Invitar un café
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  context.push('/invite-coffee');
+                },
+                icon: const Icon(Icons.coffee_rounded, size: 20),
+                label: const Text(
+                  'o invita a un café',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  foregroundColor: NeumorphismTheme.accent,
+                  side: BorderSide(color: NeumorphismTheme.accent.withValues(alpha: 0.5), width: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-
-          // Imagen del anciano en el selector (Tamaño fijo y cacheado)
-          SizedBox(
-            height: 220,
-            width: 220,
-            child: Image.asset(
-              'assets/images/anciano_premiun.webp',
-              fit: BoxFit.contain,
-              cacheWidth: 500,
-              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-            ),
-          ),
-          const SizedBox(height: 20),
-          
-          // Título equilibrado
-          Text(
-            'Elige tu plan',
-            style: GoogleFonts.inter(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: NeumorphismTheme.isDark 
-                  ? Colors.white 
-                  : NeumorphismTheme.coffeeDark,
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Lista de paquetes estable
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: packages.map((package) => _buildPackageCard(package)).toList(),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Botón cancelar
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancelar',
-              style: GoogleFonts.inter(
-                color: Colors.grey,
+            
+            const SizedBox(height: 12),
+            
+            // Botón cancelar
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancelar',
+                style: GoogleFonts.inter(
+                  color: Colors.grey,
+                ),
               ),
             ),
-          ),
-          
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-        ],
+            
+            // Se agrega espacio adicional (180) para que no choque con el mini reproductor
+            // (Aumentado de 90 a 180 porque el mini reproductor ahora está más alto)
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 180),
+          ],
+        ),
       ),
     );
   }

@@ -10,13 +10,11 @@ import '../../../../core/providers/search_provider.dart';
 import '../../../../core/services/search_service.dart';
 import '../../../../core/models/genre_model.dart';
 import '../../../../core/models/artist_model.dart';
-import '../../../../core/models/song_model.dart';
 import '../../widgets/artist_search_card.dart'; // ✅ Ruta corregida
 import '../../widgets/song_search_card.dart'; // ✅ Ruta corregida
 import '../../widgets/playlist_search_card.dart'; // ✅ Ruta corregida
 
 // Import de widgets web específicos si los hay
-import '../../../home/widgets/web/web_hero_banner.dart';
 
 class WebSearchScreen extends ConsumerStatefulWidget {
   const WebSearchScreen({super.key});

@@ -2,7 +2,6 @@
 // Gestiona suscripciones premium de Struky con RevenueCat
 
 import 'dart:async';
-import 'dart:convert';
 import '../utils/platform_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -381,6 +380,38 @@ class RevenueCatService {
       
     } catch (e) {
       _logger.e('❌ Error inesperado al obtener offerings', error: e);
+      return [];
+    }
+  }
+  
+  /// Obtiene los paquetes de un offering específico configurado en RevenueCat
+  /// 
+  /// [offeringId] - El ID del offering a buscar
+  Future<List<Package>> getOfferingPackages(String offeringId) async {
+    if (!_isInitialized) {
+      _logger.w('⚠️ RevenueCat no inicializado. Llama a initialize() primero.');
+      return [];
+    }
+    
+    try {
+      _logger.d('📦 Obteniendo offering: $offeringId...');
+      
+      final offerings = await Purchases.getOfferings();
+      final offering = offerings.all[offeringId];
+      
+      if (offering != null && offering.availablePackages.isNotEmpty) {
+        final packages = offering.availablePackages;
+        _logger.i('✅ Encontrados ${packages.length} paquetes en el offering $offeringId');
+        return packages;
+      } else {
+        _logger.w('⚠️ Offering $offeringId no encontrado o vacío');
+        return [];
+      }
+    } on PlatformException catch (e) {
+      _logger.e('❌ Error al obtener offering $offeringId', error: e);
+      return [];
+    } catch (e) {
+      _logger.e('❌ Error inesperado al obtener offering', error: e);
       return [];
     }
   }

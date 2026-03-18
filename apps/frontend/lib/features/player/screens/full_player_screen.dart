@@ -94,53 +94,81 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
     // ✅ OPTIMIZACIÓN: Mostrar UI básica primero, luego cargar fondo premium
     return PopScope(
       canPop: false, // ✅ Prevenir cierre automático con botón de retroceso
-      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+      onPopInvokedWithResult: (bool didPop, dynamic result) {
         if (didPop) return; // Ya se cerró, no hacer nada
         
         // ✅ MEJOR PRÁCTICA: Usar servicio centralizado para cerrar
         if (mounted && context.mounted) {
-          await PlayerNavigationService.closeFullPlayer(
+          PlayerNavigationService.closeFullPlayer(
             context: context,
             ref: ref,
           );
         }
       },
-      child: RepaintBoundary(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          extendBody: true, // ✅ Extender el body debajo del sistema
-          extendBodyBehindAppBar: true, // ✅ Extender detrás de la app bar
-          body: RepaintBoundary(
-          child: Stack(
-            children: [
-              // ✅ Reproductor profesional completo (con fondo lazy)
-              // 🆕 FIX PARPADEO: Eliminada la Key dinámica que causaba reconstrucción
-              // al cambiar de canción, reiniciando el estado del Seekbar
-              const ProfessionalAudioPlayer(),
-              
-              // Botón de cerrar - OPTIMIZADO con const
-              Positioned(
-                top: 12,
-                left: 16,
-                child: SafeArea(
-                  child: RepaintBoundary(
-                    child: _CloseButton(
-                      onPressed: () async {
-                        if (mounted && context.mounted) {
-                          // ✅ MEJOR PRÁCTICA: Usar servicio centralizado para cerrar
-                          await PlayerNavigationService.closeFullPlayer(
-                            context: context,
-                            ref: ref,
-                          );
-                        }
-                      },
+      child: GestureDetector(
+        onVerticalDragEnd: (details) {
+          // Si el usuario desliza hacia abajo (velocidad positiva) fuera del área scrolleable
+          // Velocity > 300 is a fast downward swipe.
+          if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
+            if (mounted && context.mounted) {
+              PlayerNavigationService.closeFullPlayer(
+                context: context,
+                ref: ref,
+              );
+            }
+          }
+        },
+        child: RepaintBoundary(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            extendBody: true, // ✅ Extender el body debajo del sistema
+            extendBodyBehindAppBar: true, // ✅ Extender detrás de la app bar
+            body: RepaintBoundary(
+            child: Stack(
+              children: [
+                // ✅ Reproductor profesional completo (con fondo lazy)
+                // 🆕 FIX PARPADEO: Eliminada la Key dinámica que causaba reconstrucción
+                // al cambiar de canción, reiniciando el estado del Seekbar
+                NotificationListener<ScrollUpdateNotification>(
+                  onNotification: (notification) {
+                    // Cerrar el reproductor si el usuario hace overscroll hacia abajo
+                    if (notification.metrics.pixels < -100) {
+                      if (mounted && context.mounted) {
+                        PlayerNavigationService.closeFullPlayer(
+                          context: context,
+                          ref: ref,
+                        );
+                      }
+                    }
+                    return false; // Importante: retornar false para no bloquear el scroll
+                  },
+                  child: const ProfessionalAudioPlayer(),
+                ),
+                
+                // Botón de cerrar - OPTIMIZADO con const
+                Positioned(
+                  top: 12, // Subido un poco para alinearse mejor
+                  left: 16,
+                  child: SafeArea(
+                    child: RepaintBoundary(
+                      child: _CloseButton(
+                        onPressed: () {
+                          if (mounted && context.mounted) {
+                            // ✅ MEJOR PRÁCTICA: Usar servicio centralizado para cerrar
+                            PlayerNavigationService.closeFullPlayer(
+                              context: context,
+                              ref: ref,
+                            );
+                          }
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          ),
         ),
       ),
     );

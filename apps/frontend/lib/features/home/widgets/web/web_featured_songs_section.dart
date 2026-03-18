@@ -27,7 +27,7 @@ class WebFeaturedSongsSection extends ConsumerWidget {
         SectionHeader(
           title: 'Canciones Destacadas',
           actionLabel: 'Ver todas',
-          onTapMore: () => context.push('/search'),
+          onTapMore: () => context.push('/featured-songs'),
         ),
         const SizedBox(height: 20),
         

@@ -302,7 +302,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: ElevatedButton(
           onPressed: _nextPage,
           style: ElevatedButton.styleFrom(
-            backgroundColor: NeumorphismTheme.coffeeMedium,
+            backgroundColor: const Color(0xFF8D6E63), // 🔥 Café Premium (Constante para branding)
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: const BorderRadius.all(Radius.circular(16)),

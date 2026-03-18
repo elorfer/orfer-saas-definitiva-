@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../../core/models/song_model.dart';
 import '../../../../../../core/widgets/optimized_image.dart';
 import '../../../../../../core/theme/neumorphism_theme.dart';

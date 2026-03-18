@@ -8,7 +8,6 @@ import '../../../core/models/playlist_model.dart';
 import 'featured_playlist_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/theme/neumorphism_theme.dart';
-import 'package:animate_do/animate_do.dart';
 
 /// ✅ OPTIMIZADO: ConsumerStatefulWidget con precache basado en visibilidad
 /// Usa directamente los providers para evitar rebuilds innecesarios

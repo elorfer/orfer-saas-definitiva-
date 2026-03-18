@@ -22,7 +22,6 @@ import '../../../core/utils/number_formatter.dart';
 import '../../../core/providers/offline_manager_provider.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/models/user_model.dart'; // For User/SubscriptionStatus
-import '../../premium/widgets/premium_upsell_dialog.dart';
 
 /// Pantalla de detalle de canción estilo Spotify con diseño moderno
 class SongDetailScreen extends ConsumerStatefulWidget {
@@ -1518,8 +1517,8 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                                  user.subscriptionStatus == SubscriptionStatus.vip);
 
                                             if (!isPremium) {
-                                              // ⚡ OPTIMIZACIÓN: Navegación DIRECTA y fluida en lugar de diálogo pesado
-                                              context.push('/premium');
+                                              // ⚡ OPTIMIZACIÓN: Navegación DIRECTA y fluida a la rama Premium
+                                              context.go('/premium?showPackages=true');
                                               return;
                                             }
 

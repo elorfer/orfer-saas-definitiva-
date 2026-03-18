@@ -303,43 +303,37 @@ class _ProfessionalSeekbarState extends ConsumerState<ProfessionalSeekbar>
           ),
         ),
 
-        // Tiempos
-                ),
-              ),
-            ),
-          ),
-        ),
-
         // Tiempos - 🆕 DECOUPLED: Optimizacion 120 FPS
         if (widget.showTimes)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: _TimeLabels(
-              displayPositionStream: _isDragging 
-                  ? Stream.value(displayPosition) 
+              displayPositionStream: _isDragging
+                  ? Stream.value(displayPosition)
                   // Convertir ValueNotifier a Stream para el widget desacoplado
-                  : (smoothPosition == Duration.zero 
-                      ? Stream.value(Duration.zero) 
+                  : (smoothPosition == Duration.zero
+                      ? Stream.value(Duration.zero)
                       : Stream.periodic(const Duration(seconds: 1), (_) {
                           // Hack simple para forzar update solo cada segundo
                           // Idealmente usaríamos un ValueNotifier<int> separado para segundos
                           // pero aquí aprovechamos el rebuild del padre solo si es necesario
-                          return smoothPosition; 
+                          return smoothPosition;
                         }).map((_) => smoothPosition)),
-              
+
               // ⚡ MEJOR APROXIMACIÓN: Pasar el valor directo y dejar que el hijo decida si repintar
               // En este caso, el padre (Seekbar) YA se está reconstruyendo a 60fps por el ref.watch.
               // Para evitar que el Text haga layout a 60fps, usamos un widget const con Equality check
               // o un RepaintBoundary interno.
-              
+
               currentParams: _TimeParams(
-                 current: displayPosition,
-                 total: duration,
-                 style: widget.timeStyle ?? TextStyle(
-                    fontSize: 12,
-                    color: palette.onBackground.withValues(alpha: 0.7),
-                    fontWeight: FontWeight.w500,
-                  ),
+                current: displayPosition,
+                total: duration,
+                style: widget.timeStyle ??
+                    TextStyle(
+                      fontSize: 12,
+                      color: palette.onBackground.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.w500,
+                    ),
               ),
             ),
           ),
@@ -347,7 +341,58 @@ class _ProfessionalSeekbarState extends ConsumerState<ProfessionalSeekbar>
     );
   }
 
-  // ... (rest of the file)
+  void _onDragStart(DragStartDetails details, BuildContext context) {
+    setState(() => _isDragging = true);
+    _thumbController.forward();
+    widget.onDragStart?.call();
+    HapticFeedback.lightImpact();
+  }
+
+  void _onDragUpdate(DragUpdateDetails details, BuildContext context) {
+    final box = context.findRenderObject() as RenderBox;
+    final width = box.size.width;
+    final localX = details.localPosition.dx.clamp(0.0, width);
+
+    setState(() {
+      _dragProgress = localX / width;
+    });
+  }
+
+  void _onDragEnd(DragEndDetails details, Duration duration) {
+    final seekPosition = Duration(
+      milliseconds: (duration.inMilliseconds * _dragProgress).round(),
+    );
+
+    // Ejecutar seek
+    ref.read(advancedAudioEngineProvider).seek(seekPosition);
+    widget.onSeek?.call(seekPosition);
+
+    setState(() => _isDragging = false);
+    _thumbController.reverse();
+    widget.onDragEnd?.call();
+    HapticFeedback.lightImpact();
+  }
+
+  void _onTap(TapDownDetails details, BuildContext context, Duration duration) {
+    final box = context.findRenderObject() as RenderBox;
+    final width = box.size.width;
+    final localX = details.localPosition.dx.clamp(0.0, width);
+    final progress = localX / width;
+
+    final seekPosition = Duration(
+      milliseconds: (duration.inMilliseconds * progress).round(),
+    );
+
+    ref.read(advancedAudioEngineProvider).seek(seekPosition);
+    widget.onSeek?.call(seekPosition);
+    HapticFeedback.selectionClick();
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
 }
 
 class _TimeParams {
@@ -380,7 +425,6 @@ class _TimeLabels extends StatelessWidget {
 
   const _TimeLabels({
     // ignore: unused_element
-    super.key, 
     required this.currentParams, required Stream<Duration> displayPositionStream,
   });
 
@@ -408,62 +452,6 @@ class _TimeLabels extends StatelessWidget {
   }
 } // End of _TimeLabels class
 
-// Note: Removed duplicate code block that was inadvertently added.
-
-
-  void _onDragStart(DragStartDetails details, BuildContext context) {
-    setState(() => _isDragging = true);
-    _thumbController.forward();
-    widget.onDragStart?.call();
-    HapticFeedback.lightImpact();
-  }
-
-  void _onDragUpdate(DragUpdateDetails details, BuildContext context) {
-    final box = context.findRenderObject() as RenderBox;
-    final width = box.size.width;
-    final localX = details.localPosition.dx.clamp(0.0, width);
-    
-    setState(() {
-      _dragProgress = localX / width;
-    });
-  }
-
-  void _onDragEnd(DragEndDetails details, Duration duration) {
-    final seekPosition = Duration(
-      milliseconds: (duration.inMilliseconds * _dragProgress).round(),
-    );
-    
-    // Ejecutar seek
-    ref.read(advancedAudioEngineProvider).seek(seekPosition);
-    widget.onSeek?.call(seekPosition);
-    
-    setState(() => _isDragging = false);
-    _thumbController.reverse();
-    widget.onDragEnd?.call();
-    HapticFeedback.lightImpact();
-  }
-
-  void _onTap(TapDownDetails details, BuildContext context, Duration duration) {
-    final box = context.findRenderObject() as RenderBox;
-    final width = box.size.width;
-    final localX = details.localPosition.dx.clamp(0.0, width);
-    final progress = localX / width;
-    
-    final seekPosition = Duration(
-      milliseconds: (duration.inMilliseconds * progress).round(),
-    );
-    
-    ref.read(advancedAudioEngineProvider).seek(seekPosition);
-    widget.onSeek?.call(seekPosition);
-    HapticFeedback.selectionClick();
-  }
-
-  String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
-  }
-}
 
 /// ═══════════════════════════════════════════════════════════════════════════
 /// 🎛️ MINI SEEKBAR - Versión compacta para mini player

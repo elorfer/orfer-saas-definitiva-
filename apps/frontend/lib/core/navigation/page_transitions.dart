@@ -63,6 +63,36 @@ class SpotifyPageTransitions {
     return songDetailTransition(context, animation, secondaryAnimation, child);
   }
 
+  /// Transición genérica de deslizamiento y fade para pantallas del menú lateral
+  /// Animación en ambas direcciones (entrada y salida)
+  static Widget slideTransition(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    const begin = Offset(1.0, 0.0); // Entra desde la derecha
+    const end = Offset.zero;
+    const curve = Curves.easeInOutCubic;
+
+    final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+    final offsetAnimation = animation.drive(tween);
+
+    final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: animation, curve: curve),
+    );
+
+    return RepaintBoundary(
+      child: SlideTransition(
+        position: offsetAnimation,
+        child: FadeTransition(
+          opacity: fadeAnimation,
+          child: child,
+        ),
+      ),
+    );
+  }
+
   /// Animación optimizada estilo Spotify: Slide + Scale + Opacity para máxima fluidez
   /// Aplicando principios de performance: RepaintBoundary, curvas optimizadas, transformaciones eficientes
   static Widget playerExpansionTransition(

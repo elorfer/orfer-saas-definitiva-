@@ -1,10 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../services/ads_service.dart';
 import '../models/audio_ad_model.dart';
-import '../../../core/utils/logger.dart';
 import '../providers/ads_provider.dart'; // To reuse service provider
 
 // Private Provider for fetching all ads (Admin)

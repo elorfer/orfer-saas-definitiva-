@@ -79,7 +79,7 @@ class PremiumUpsellDialog extends StatelessWidget {
                   Navigator.of(context).pop();
                   // Navegar a la pantalla de Premium
                   // Asegurar import de go_router
-                  GoRouter.of(context).push('/premium'); 
+                  context.go('/premium?showPackages=true'); 
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: NeumorphismTheme.accent,

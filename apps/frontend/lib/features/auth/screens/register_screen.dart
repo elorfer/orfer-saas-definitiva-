@@ -350,8 +350,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Container(
-        decoration: BoxDecoration(
-          gradient: NeumorphismTheme.backgroundGradient,
+        decoration: const BoxDecoration(
+          color: Color(0xFF3E2723), // Marrón oscuro
         ),
         child: SafeArea(
           child: LayoutBuilder(
@@ -384,19 +384,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 icon: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.9),
+                                    color: Colors.white.withValues(alpha: 0.2), // Traslúcido
                                     borderRadius: const BorderRadius.all(Radius.circular(12)),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.1),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
                                   ),
                                   child: const Icon(
                                     Icons.arrow_back,
-                                    color: Color(0xFF3E2723), 
+                                    color: Colors.white, // Blanco para resaltar sobre café 
                                     size: 20,
                                   ),
                                 ),
@@ -408,7 +401,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           Text(
                             'Crear Cuenta',
                             style: AppTextStyles.authFormTitle.copyWith(
-                              color: const Color(0xFF3E2723), 
+                              color: Colors.white, // Blanco
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -416,7 +409,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           Text(
                             'Únete a la comunidad musical',
                             style: AppTextStyles.authFormSubtitle.copyWith(
-                              color: NeumorphismTheme.coffeeDark,
+                              color: Colors.white70, // Blanco atenuado
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -695,6 +688,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       // Botón de registro
       AuthButton(
+        backgroundColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium
         text: 'Crear Cuenta',
         isLoading: isLoading,
         onPressed: _acceptTerms ? () async {
@@ -793,9 +787,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           ),
           TextButton(
             onPressed: () => context.go('/login'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
             child: Text(
               'Inicia sesión',
-              style: AppTextStyles.authLink,
+              style: AppTextStyles.authLink.copyWith(
+                color: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium
+              ),
             ),
           ),
         ],

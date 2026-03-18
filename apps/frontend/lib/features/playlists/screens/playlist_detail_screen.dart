@@ -551,7 +551,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     // Validar que el ID no esté vacío
     if (widget.playlistId.trim().isEmpty) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: NeumorphismTheme.background,
         body: _buildNotFoundState(context, 'ID de playlist inválido'),
       );
     }
@@ -841,15 +841,15 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
                         Icon(
                           Icons.music_off,
                           size: 48,
-                          color: Colors.grey[400],
+                          color: NeumorphismTheme.textSecondary.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'Esta playlist no tiene canciones',
                           // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Colors.grey,
+                            color: NeumorphismTheme.textSecondary,
                           ),
                         ),
                       ],
@@ -935,11 +935,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
 
   Widget _buildNotFoundState(BuildContext context, [String? message]) {
     return Scaffold(
+      backgroundColor: NeumorphismTheme.background,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: NeumorphismTheme.background,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
           onPressed: () => context.pop(),
         ),
       ),
@@ -983,7 +984,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
-      backgroundColor: Colors.white,
+      backgroundColor: NeumorphismTheme.background,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => context.pop(),
@@ -1177,11 +1178,12 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
 
   Widget _buildErrorState(BuildContext context, Object error) {
     return Scaffold(
+      backgroundColor: NeumorphismTheme.background,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: NeumorphismTheme.background,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
           onPressed: () => context.pop(),
         ),
       ),
@@ -1198,19 +1200,19 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
             Text(
               'Error al cargar playlist',
               // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87,
+                color: NeumorphismTheme.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               error.toString(),
               // OPTIMIZACIÓN: Usar estilo constante en lugar de GoogleFonts.inter()
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: NeumorphismTheme.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),

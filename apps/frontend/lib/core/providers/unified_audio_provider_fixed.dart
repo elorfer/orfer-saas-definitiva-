@@ -61,7 +61,7 @@ final realCurrentSongProvider = Provider<Song?>((ref) {
   final sequenceState = audioService.player.sequenceState;
   
   Song? streamSong;
-  if (sequenceState != null && sequenceState.currentSource != null) {
+  if (sequenceState.currentSource != null) {
     final tag = sequenceState.currentSource!.tag;
     // 🛡️ PROTECCIÓN ADICIONAL: Si el tag es un anuncio, IGNORARLO.
     // Esto previene que un anuncio "disfrazado" o mal etiquetado se cuele aquí.

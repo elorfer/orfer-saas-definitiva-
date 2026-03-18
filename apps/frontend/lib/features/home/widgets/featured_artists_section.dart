@@ -5,14 +5,10 @@ import '../../../core/providers/home_provider.dart';
 
 import '../../../core/providers/theme_provider.dart';
 
-import '../../../core/models/artist_model.dart';
-import '../../../core/widgets/optimized_image.dart';
 
 import '../../../core/theme/neumorphism_theme.dart';
-import '../../../core/widgets/verified_badge.dart';
 import 'featured_artist_card.dart';
 import '../../../core/widgets/section_header.dart';
-import 'package:animate_do/animate_do.dart';
 
 class FeaturedArtistsSection extends ConsumerStatefulWidget {
   const FeaturedArtistsSection({super.key});

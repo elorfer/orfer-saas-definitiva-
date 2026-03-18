@@ -14,7 +14,6 @@ import '../services/algorithm_config_service.dart'; // ⚡ ADMIN CONTROLADO
 import 'package:cached_network_image/cached_network_image.dart';
 import 'favorite_button.dart';
 import 'album_swiper.dart';
-import 'persistent_artwork_background.dart';
 import 'verified_badge.dart';
 import 'smooth_seekbar.dart'; // 🎚️ NUEVO: Seekbar suavizado sin parpadeo
 // import 'vibe_selector_widget.dart'; // 🎛️ VIBE SELECTOR (no usado actualmente)
@@ -1179,7 +1178,6 @@ class _AdArtworkBackground extends StatelessWidget {
   final AudioAd ad;
 
   const _AdArtworkBackground({
-    super.key, // ✅ ANTI-FLICKER: Key para AnimatedSwitcher
     required this.ad,
   });
 

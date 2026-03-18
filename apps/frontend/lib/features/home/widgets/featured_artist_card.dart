@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/artist_model.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/widgets/verified_badge.dart'; // Import VerifiedBadge

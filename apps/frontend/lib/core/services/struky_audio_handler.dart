@@ -118,13 +118,13 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     AppLogger.info('[StrukyAudioHandler] 🎧 Configurando listener de sequenceStateStream');
     _player.sequenceStateStream.listen((sequenceState) {
       AppLogger.debug('[StrukyAudioHandler] 📡 sequenceStateStream emitió evento');
-      final sequence = sequenceState?.sequence;
-      if (sequence == null || sequence.isEmpty) {
+      final sequence = sequenceState.sequence;
+      if (sequence.isEmpty) {
         AppLogger.debug('[StrukyAudioHandler] ⚠️ Secuencia vacía o nula');
         return;
       }
       
-      final currentItem = sequenceState!.currentSource;
+      final currentItem = sequenceState.currentSource;
       AppLogger.info('[StrukyAudioHandler] 🎵 Source actual: ${currentItem?.tag?.runtimeType}');
       
       if (currentItem != null && currentItem.tag != null) {
@@ -212,7 +212,7 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
   @override
   Future<void> skipToQueueItem(int index) async {
-    if (index < 0 || index >= (_player.sequence?.length ?? 0)) return;
+    if (index < 0 || index >= (_player.sequence.length ?? 0)) return;
     await _player.seek(Duration.zero, index: index);
   }
 

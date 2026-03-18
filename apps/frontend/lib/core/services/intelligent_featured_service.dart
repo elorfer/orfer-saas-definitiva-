@@ -180,12 +180,17 @@ class IntelligentFeaturedService {
   Future<List<FeaturedSong>> _getStaticFeaturedSongs({int? limit}) async {
     try {
       final staticSongs = await _homeService.getFeaturedSongs(
-        limit: limit ?? _maxStaticFeatured,
+        limit: (limit ?? _maxStaticFeatured) * 2, // Fetch double to have pool for shuffling
         forceRefresh: false,
       );
       
-      debugPrint('📌 [IntelligentFeatured] Canciones estáticas obtenidas: ${staticSongs.length}');
-      return staticSongs;
+      // SHUFFLE to ensure variety when starting app
+      staticSongs.shuffle();
+      
+      final result = staticSongs.take(limit ?? _maxStaticFeatured).toList();
+      
+      debugPrint('📌 [IntelligentFeatured] Canciones estáticas obtenidas: ${result.length}');
+      return result;
     } catch (error) {
       AppLogger.error('[IntelligentFeatured] Error obteniendo canciones estáticas', error);
       return [];
@@ -392,7 +397,7 @@ class IntelligentFeaturedService {
           _cacheService.cacheSeeds(currentSongId, initialResults);
         }
         
-      } catch (error, stackTrace) {
+      } catch (error) {
         debugPrint('❌ [IntelligentFeatured] Error en Fase 1 batch: $error');
         initialResults = [];
       }
@@ -750,7 +755,10 @@ class IntelligentFeaturedService {
     Set<String> excludeIds = const {},
   }) async {
     try {
-      final popularSongs = await _homeService.getPopularSongs(limit: count * 2);
+      final popularSongs = await _homeService.getPopularSongs(limit: count * 4); // Fetch more for variety
+      
+      // SHUFFLE popular songs to ensure different sequence every time
+      popularSongs.shuffle();
       
       final diverseSongs = popularSongs
           .where((song) => !excludeIds.contains(song.id))
@@ -811,6 +819,12 @@ class IntelligentFeaturedService {
       
       useStatic = !useStatic; // Alternar entre estáticas y dinámicas
     }
+
+    // 🎲 SI NO HAY SEMILLA INICIAL (Radio Infinita desde cero), MEZCLAR TODO
+    // Esto asegura que la sugerencia inicial sea 100% diferente cada vez que abre la app
+    if (dynamicRecommendations.isEmpty || staticFeatured.length >= 4) {
+      result.shuffle();
+    }
     
     debugPrint('🎭 [IntelligentFeatured] Combinación final: ${result.length} canciones');
     debugPrint('📌 [IntelligentFeatured] Estáticas usadas: $staticIndex/${staticFeatured.length}');
@@ -837,7 +851,13 @@ class IntelligentFeaturedService {
 
   /// ⚡ GESTIÓN DE CACHE
   String _generateCacheKey(String? userId, String? currentSongId, int limit) {
-    return '${userId ?? 'anon'}-${currentSongId ?? 'none'}-$limit';
+    // 🎲 Si no hay semilla, NO CACHEAR para asegurar un arranque fresco siempre
+    if (currentSongId == null) {
+      return 'NO_CACHE_${DateTime.now().millisecondsSinceEpoch}';
+    }
+    // Para recomendaciones basadas en canción, cache con TTL de 3 mins
+    final timeWindow = DateTime.now().millisecondsSinceEpoch ~/ 60000;
+    return '${userId ?? 'anon'}-$currentSongId-$limit-$timeWindow';
   }
 
   List<FeaturedSong>? _getCachedRecommendations(String key) {

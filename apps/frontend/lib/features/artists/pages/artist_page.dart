@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/scheduler.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/models/artist_model.dart';

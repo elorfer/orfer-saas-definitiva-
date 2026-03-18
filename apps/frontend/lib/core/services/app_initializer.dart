@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/logger.dart';
 import 'auth_service.dart';
 import '../providers/offline_manager_provider.dart';
@@ -54,7 +52,7 @@ class AppInitializer {
       AppLogger.info('[AppInitializer] 📦 Hive inicializado');
     } catch (e) {
       AppLogger.error('[AppInitializer] Error inicializando Hive', e);
-      throw e; // Hive es crítico
+      rethrow; // Hive es crítico
     }
   }
 
@@ -131,7 +129,7 @@ class AppInitializer {
           androidResumeOnClick: true,
           androidNotificationChannelId: 'com.struky.app.channel.audio.v2',
           androidNotificationChannelName: 'Struky Audio',
-          androidNotificationOngoing: true,
+          androidNotificationOngoing: false,
           androidStopForegroundOnPause: true,
           androidNotificationIcon: 'drawable/ic_stat_music_note',  // XML vector drawable (white on transparent)
         ),

@@ -1,5 +1,4 @@
 import 'dart:ui' show ImageFilter;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../utils/platform_utils.dart';
 

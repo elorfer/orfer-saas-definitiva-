@@ -8,6 +8,7 @@ import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/utils/time_ago_formatter.dart';
 
+import 'package:go_router/go_router.dart';
 import '../../../core/widgets/struky_zoom_drawer.dart';
 /// Widget del header scrolleable (avatar, bienvenido, nombre, logo, última actualización)
 /// Extracted for performance isolation and cleaner HomeScreen code.
@@ -133,14 +134,14 @@ class HomeHeader extends ConsumerWidget {
               
               const SizedBox(width: 12), // Space between buttons
 
-              // Logout Button
+              // Invite Coffee Button (Replaced Logout)
               Tooltip(
-                message: 'Cerrar Sesión',
+                message: 'Invitar un Café',
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
-                      ref.read(authStateProvider.notifier).logout();
+                      context.push('/invite-coffee');
                     },
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
@@ -152,11 +153,11 @@ class HomeHeader extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        Icons.logout_rounded,
+                        Icons.coffee_rounded,
                         size: 20,
                         color: NeumorphismTheme.isDark 
-                            ? Colors.white.withOpacity(0.7) 
-                            : Colors.black.withOpacity(0.7),
+                            ? const Color(0xFFFFB300) // Golden coffee icon in dark
+                            : NeumorphismTheme.coffeeMedium,
                       ),
                     ),
                   ),

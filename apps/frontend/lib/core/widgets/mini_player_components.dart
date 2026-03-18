@@ -5,12 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
-import '../theme/neumorphism_theme.dart';
-import '../utils/logger.dart';
 import 'stable_image_widget.dart';
 import '../services/audio_service.dart';
 import 'package:just_audio/just_audio.dart'; // Para PlayerState
-import '../models/song_model.dart'; // Para Song.coverArtUrl
+// Para Song.coverArtUrl
 import 'package:marquee/marquee.dart'; // ⚡ PREMIUM: Efecto de desplazamiento
 
 /// ⚡ OPTIMIZACIÓN: Widget separado para la imagen del álbum

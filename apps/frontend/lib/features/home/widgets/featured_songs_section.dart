@@ -8,7 +8,6 @@ import '../../song_detail/screens/song_detail_screen.dart';
 import 'featured_song_card.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/section_header.dart';
-import 'package:animate_do/animate_do.dart';
 
 class FeaturedSongsSection extends ConsumerWidget {
   const FeaturedSongsSection({super.key});
@@ -39,7 +38,7 @@ class FeaturedSongsSection extends ConsumerWidget {
         SectionHeader(
           title: 'Canciones Destacadas',
           actionLabel: 'Ver todas',
-          onTapMore: () => context.push('/search'),
+          onTapMore: () => context.push('/featured-songs'),
         ),
         
         const SizedBox(height: 8),
@@ -71,8 +70,8 @@ class FeaturedSongsSection extends ConsumerWidget {
           Center(
             child: TextButton(
               onPressed: () {
-                // Navegar a búsqueda para ver todas las canciones destacadas
-                context.push('/search');
+                // Navegar a la pantalla de canciones destacadas para ver todas
+                context.push('/featured-songs');
               },
               child: Text(
                 'Ver ${featuredSongs.length - 4} canciones más',

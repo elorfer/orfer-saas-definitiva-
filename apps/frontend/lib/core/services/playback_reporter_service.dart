@@ -4,7 +4,7 @@ import '../services/audio_service.dart';
 import '../models/song_model.dart';
 import '../utils/logger.dart';
 import '../providers/auth_provider.dart';
-import 'package:dio/dio.dart'; // Asumiendo Dio para HTTP
+// Asumiendo Dio para HTTP
 import 'http_client_service.dart';
 
 /// Servicio que monitorea la reproducción y reporta "plays" y "skips" al backend.

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/unified_audio_provider_fixed.dart';
-import '../models/song_model.dart';
 import '../services/player_navigation_service.dart';
-import '../services/audio_service.dart';
-import '../services/advanced_audio_engine.dart'; // ✅ Importar Motor Profesional
+// ✅ Importar Motor Profesional
 import '../theme/neumorphism_theme.dart';
 import 'mini_player_components.dart';
 

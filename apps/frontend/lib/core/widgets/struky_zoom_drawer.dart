@@ -210,11 +210,17 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                               }
                               
                               if (velocity.abs() > 400) {
-                                if (velocity > 0) _controller.forward();
-                                else _controller.reverse();
+                                if (velocity > 0) {
+                                  _controller.forward();
+                                } else {
+                                  _controller.reverse();
+                                }
                               } else {
-                                if (currentSlide > snapThreshold) _controller.forward();
-                                else _controller.reverse();
+                                if (currentSlide > snapThreshold) {
+                                  _controller.forward();
+                                } else {
+                                  _controller.reverse();
+                                }
                               }
                           },
                           child: const ColoredBox(color: Colors.transparent), 

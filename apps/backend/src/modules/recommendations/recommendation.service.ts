@@ -1110,7 +1110,7 @@ export class RecommendationService {
       this.logger.log(`🔄 [CANDIDATOS] Aumentando límite a ${candidateLimit} debido a detección de loop`);
     }
     let songs = await query
-      .orderBy('song.totalStreams', 'DESC')
+      .orderBy('RANDOM()')
       .limit(candidateLimit)
       .getMany();
 
@@ -1159,7 +1159,7 @@ export class RecommendationService {
       }
 
       const relatedSongs = await relatedQuery
-        .orderBy('song.totalStreams', 'DESC')
+        .orderBy('RANDOM()')
         .limit(15)
         .getMany();
 
@@ -1205,7 +1205,7 @@ export class RecommendationService {
     }
 
     const songs = await query
-      .orderBy('song.totalStreams', 'DESC')
+      .orderBy('RANDOM()')
       .limit(15) // 🚨 FLEXIBILIZAR: Aumentado de 10 a 15 para más opciones
       .getMany();
 
@@ -1596,6 +1596,12 @@ export class RecommendationService {
 
     // Aplicar diversidad: considerar más candidatos para mayor variedad
     const topCandidates = scoredSongs.slice(0, Math.min(8, scoredSongs.length));
+
+    // 🎲 SHUFFLE: Fisher-Yates para que no siempre se evalúen los mismos candidatos en el mismo orden
+    for (let i = topCandidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [topCandidates[i], topCandidates[j]] = [topCandidates[j], topCandidates[i]];
+    }
 
     // ✅ MEJORA #2: DIVERSIDAD FORZADA - Penalizar canciones del mismo artista/género que las recientes
     const last2Artists = recentHistory.slice(-2).map(s => s.artistId);

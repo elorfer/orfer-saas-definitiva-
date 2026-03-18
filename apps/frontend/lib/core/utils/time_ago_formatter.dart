@@ -12,22 +12,22 @@ class TimeAgoFormatter {
       return 'Justo ahora';
     } else if (difference.inMinutes < 60) {
       final minutes = difference.inMinutes;
-      return 'Hace ${minutes} ${minutes == 1 ? 'minuto' : 'minutos'}';
+      return 'Hace $minutes ${minutes == 1 ? 'minuto' : 'minutos'}';
     } else if (difference.inHours < 24) {
       final hours = difference.inHours;
-      return 'Hace ${hours} ${hours == 1 ? 'hora' : 'horas'}';
+      return 'Hace $hours ${hours == 1 ? 'hora' : 'horas'}';
     } else if (difference.inDays < 7) {
       final days = difference.inDays;
-      return 'Hace ${days} ${days == 1 ? 'día' : 'días'}';
+      return 'Hace $days ${days == 1 ? 'día' : 'días'}';
     } else if (difference.inDays < 30) {
       final weeks = (difference.inDays / 7).floor();
-      return 'Hace ${weeks} ${weeks == 1 ? 'semana' : 'semanas'}';
+      return 'Hace $weeks ${weeks == 1 ? 'semana' : 'semanas'}';
     } else if (difference.inDays < 365) {
       final months = (difference.inDays / 30).floor();
-      return 'Hace ${months} ${months == 1 ? 'mes' : 'meses'}';
+      return 'Hace $months ${months == 1 ? 'mes' : 'meses'}';
     } else {
       final years = (difference.inDays / 365).floor();
-      return 'Hace ${years} ${years == 1 ? 'año' : 'años'}';
+      return 'Hace $years ${years == 1 ? 'año' : 'años'}';
     }
   }
   

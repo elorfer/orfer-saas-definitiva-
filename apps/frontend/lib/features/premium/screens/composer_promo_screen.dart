@@ -1,11 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 
 class ComposerPromoScreen extends ConsumerWidget {
   const ComposerPromoScreen({super.key});
+
+  Future<void> _launchWhatsApp(BuildContext context) async {
+    final String phoneNumber = "573009012217";
+    final String message = Uri.encodeComponent("Me gustaría publicar mi música con ustedes");
+    final Uri url = Uri.parse("https://wa.me/$phoneNumber?text=$message");
+
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir WhatsApp')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,71 +42,68 @@ class ComposerPromoScreen extends ConsumerWidget {
           SafeArea(
             child: Column(
               children: [
-                // Header with Back Button
+                // Header with Back Button and Aligned Title
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconButton(
-                      icon: Icon(Icons.arrow_back_ios_new_rounded, color: NeumorphismTheme.coffeeDark),
-                      onPressed: () => context.pop(),
-                    ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_ios_new_rounded, color: NeumorphismTheme.textPrimary),
+                        onPressed: () => context.pop(),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Dale vida a tus letras',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: NeumorphismTheme.textPrimary,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 22,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const Spacer(),
+                      const SizedBox(width: 48), // Balancing back button
+                    ],
                   ),
                 ),
+                
+                const SizedBox(height: 16),
                 
                 Expanded(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.only(
+                      left: 24, 
+                      right: 24, 
+                      top: 24, 
+                      bottom: 100, // Espacio extra para que el mini-reproductor no tape nada
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         const SizedBox(height: 16),
                         
-                        // Logo
+                        // New Image
                         Hero(
                           tag: 'app_logo_hero',
-                          child: Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
+                          child: FractionallySizedBox(
+                            widthFactor: 0.9,
+                            child: ClipRRect(
                               borderRadius: BorderRadius.circular(24),
-                             
-                            ),
-                             child: Image.asset(
-                              'assets/images/logo.webp',
-                              fit: BoxFit.contain,
+                              child: Image.asset(
+                                'assets/images/BOTIFY-MUSIC-_2_-_1_.webp',
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                         ),
                         
                         const SizedBox(height: 48),
                         
-                        // Title
-                        Text(
-                          'Dale vida a tus letras',
-                          style: AppTextStyles.titleLarge.copyWith( // Replaced headlineMedium
-                            color: NeumorphismTheme.coffeeDark,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 28,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
                         // Body Text
                         Container(
                           padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              width: 1,
-                            ),
-                          ),
+                          decoration: NeumorphismTheme.cardDecoration,
                           child: Text(
                             'Sabemos que tienes grandes canciones esperando ser escuchadas.\n\nJunto a nuestros aliados expertos, no solo convertimos tus letras en producciones profesionales, sino que te damos la oportunidad directa de publicarlas en Struky App.',
                             style: AppTextStyles.bodyLarge.copyWith(
@@ -106,29 +120,25 @@ class ComposerPromoScreen extends ConsumerWidget {
                         // CTA Button
                         SizedBox(
                           width: double.infinity,
-                          height: 56,
+                          height: 60,
                           child: ElevatedButton(
-                            onPressed: () {
-                              // TODO: Implement external link or application form
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Contactando... (Integración pendiente)')),
-                              );
-                            },
+                            onPressed: () => _launchWhatsApp(context),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: NeumorphismTheme.coffeeMedium,
-                              foregroundColor: Colors.white,
-                              elevation: 4,
-                              shadowColor: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+                              backgroundColor: NeumorphismTheme.accent,
+                              foregroundColor: NeumorphismTheme.isDark 
+                                  ? const Color(0xFF2D2420) 
+                                  : Colors.white,
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(30),
                               ),
                             ),
                             child: const Text(
                               'Quiero producir y publicar',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.2,
                               ),
                             ),
                           ),
@@ -139,12 +149,12 @@ class ComposerPromoScreen extends ConsumerWidget {
                         // Legal Note
                         Text(
                           'Aplican términos y condiciones.',
-                          style: AppTextStyles.overline.copyWith( // Replaced labelSmall
-                            color: NeumorphismTheme.textSecondary,
-                            fontSize: 12,
+                          style: AppTextStyles.overline.copyWith(
+                            color: NeumorphismTheme.textLight,
                           ),
                           textAlign: TextAlign.center,
                         ),
+
                         
                         const SizedBox(height: 32),
                       ],

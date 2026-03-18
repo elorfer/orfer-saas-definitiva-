@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart'; // Para kDebugMode
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../widgets/auth_text_field.dart';
@@ -83,14 +82,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildLogoSection(double logoSize, double logoIconSize, bool isSmallScreen, bool isMediumScreen) {
     return Column(
       children: [
-        SvgPicture.asset(
-          'assets/images/logo.svg',
-          width: logoSize * 1.2, // Slightly larger since no padding
-          height: logoSize * 1.2,
-          fit: BoxFit.contain,
-          placeholderBuilder: (BuildContext context) => Container(
-              padding: const EdgeInsets.all(30.0),
-              child: const CircularProgressIndicator(),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24.0), // Bordes redondeados
+          child: Image.asset(
+            'assets/images/Logo principal.webp',
+            width: logoSize * 0.7, // Reducido significativamente
+            height: logoSize * 0.7,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              width: logoSize * 0.7,
+              height: logoSize * 0.7,
+              color: Colors.white24,
+              child: const Icon(Icons.music_note, size: 40, color: Colors.white),
+            ),
           ),
         ),
         SizedBox(height: isSmallScreen ? 12 : 16),
@@ -630,11 +634,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                                     ],
                                   ),
-                                  child: SvgPicture.asset(
-                                    'assets/images/logo.svg',
-                                    width: 120,
-                                    height: 120,
-                                    fit: BoxFit.contain,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(24.0),
+                                    child: Image.asset(
+                                      'assets/images/Logo principal.webp',
+                                      width: 120,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 40),

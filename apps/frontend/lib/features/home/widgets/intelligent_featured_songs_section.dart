@@ -125,7 +125,7 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(
+                          SizedBox(
                             width: 14,
                             height: 14,
                             child: CircularProgressIndicator(
@@ -133,7 +133,7 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                               color: Color(0xFF8B7A6A),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             'Actualizando recomendaciones...',
                             style: TextStyle(

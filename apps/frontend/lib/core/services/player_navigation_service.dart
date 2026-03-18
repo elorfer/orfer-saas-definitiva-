@@ -1,72 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../utils/logger.dart';
 
 /// Servicio centralizado para manejar la navegación del reproductor
-/// ✅ MEJOR PRÁCTICA: Separar lógica de navegación de los widgets UI
+/// ✅ SIMPLIFICADO: Ya no usa GoRouter. El SpotifyPlayerSheet maneja las animaciones
+/// directamente como overlay en el widget tree.
 class PlayerNavigationService {
-  // 🔒 LOCK: Prevents double navigation (ghost events / fast taps)
-  static bool _isNavigating = false;
 
-  /// Abrir el reproductor extendido de forma segura
-  /// Maneja toda la lógica de estado y navegación en un solo lugar
-  static Future<void> openFullPlayer({
+  /// Abrir el reproductor extendido de forma segura.
+  /// El SpotifyPlayerSheet escucha `isPlayerExpanded` y anima automáticamente.
+  static void openFullPlayer({
     required BuildContext context,
     required WidgetRef ref,
-  }) async {
-    // 🛡️ RE-ENTRANCY GUARD
-    if (_isNavigating) return;
-    
+  }) {
     try {
-      _isNavigating = true;
       final audioState = ref.read(unifiedAudioProviderFixed);
-      
-      // Verificar condiciones para abrir
       final hasContent = audioState.currentSong != null || audioState.currentAd != null;
-      final isNotExpanded = !audioState.isPlayerExpanded;
-      
-      if (!hasContent || !isNotExpanded) {
-        // AppLogger.debug('[PlayerNavigationService] No se puede abrir reproductor: hasContent=$hasContent, isNotExpanded=$isNotExpanded');
-        _isNavigating = false; // Release lock early
-        return;
-      }
-      
-      // Actualizar estado ANTES de navegar
+      if (!hasContent || audioState.isPlayerExpanded) return;
+
       ref.read(unifiedAudioProviderFixed.notifier).openFullPlayer();
-      
-      // Navegar solo si el contexto sigue montado
-      if (context.mounted) {
-        await context.push('/player');
-      }
     } catch (e, stackTrace) {
       AppLogger.error('[PlayerNavigationService] Error al abrir reproductor: $e', stackTrace);
-    } finally {
-      // 🔓 RELEASE LOCK
-      _isNavigating = false;
     }
   }
-  
-  /// Cerrar el reproductor extendido de forma segura
-  /// Maneja toda la lógica de estado y navegación en un solo lugar
-  static Future<void> closeFullPlayer({
+
+  /// Cerrar el reproductor extendido de forma segura.
+  /// El SpotifyPlayerSheet escucha `isPlayerExpanded` y anima automáticamente.
+  static void closeFullPlayer({
     required BuildContext context,
     required WidgetRef ref,
-  }) async {
+  }) {
     try {
-      // Actualizar estado ANTES de navegar
       ref.read(unifiedAudioProviderFixed.notifier).closeFullPlayer();
-      
-      // Navegar solo si el contexto sigue montado
-      if (context.mounted) {
-        context.pop();
-      }
     } catch (e, stackTrace) {
       AppLogger.error('[PlayerNavigationService] Error al cerrar reproductor: $e', stackTrace);
     }
   }
-  
+
   /// Verificar si se puede abrir el reproductor extendido
   static bool canOpenFullPlayer(WidgetRef ref) {
     try {
@@ -79,4 +50,3 @@ class PlayerNavigationService {
     }
   }
 }
-

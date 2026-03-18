@@ -1,5 +1,4 @@
 
-import 'dart:typed_data';
 
 /// Implementación Mock de File para Web
 class PlatformFile {

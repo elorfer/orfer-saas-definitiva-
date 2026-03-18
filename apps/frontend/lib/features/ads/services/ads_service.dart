@@ -29,16 +29,16 @@ class AdsService {
   }) async {
     // 🛠️ DEBUG MODE: Forzar anuncio de prueba (mock)
     // Esto permite probar la inserción sin depender del backend
-    const bool _forceDebugAd = false;
+    const bool forceDebugAd = false;
     
     // Si es premium, no perder tiempo llamando a la API
-    if (isPremium && !_forceDebugAd) {
+    if (isPremium && !forceDebugAd) {
       AppLogger.debug('[AdsService] Usuario premium, no se solicita anuncio');
       return null;
     }
 
     // 🛠️ DEBUG: Retornar anuncio mock si el flag está activo
-    if (_forceDebugAd) {
+    if (forceDebugAd) {
       AppLogger.warning('[AdsService] 🛠️ MOCK AD MODE ACTIVE: Retornando anuncio de prueba local');
       return AudioAd(
         id: 'debug-ad-123',
@@ -165,7 +165,7 @@ class AdsService {
       }
 
       return null;
-    } catch (e, stackTrace) {
+    } catch (e) {
       // 🚨 ERROR DETAILED LOGGING
       AppLogger.error('[AdsService] ❌ ERROR CRÍTICO al obtener anuncio: $e');
       if (e is DioException) {
@@ -267,7 +267,7 @@ class AdsService {
   /// Obtener todos los anuncios (Admin)
   Future<List<AudioAd>> getAllAds() async {
     try {
-      final response = await _dio.get('$_adminAdsPath');
+      final response = await _dio.get(_adminAdsPath);
       
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data as Map<String, dynamic>;
