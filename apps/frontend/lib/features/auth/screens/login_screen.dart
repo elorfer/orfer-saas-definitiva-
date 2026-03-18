@@ -11,6 +11,7 @@ import '../widgets/social_auth_button.dart';
 import '../widgets/landing_info_section.dart';
 import '../utils/validators.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../../core/exceptions/auth_exception.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -275,10 +276,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           isLoading: isLoading,
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
-              await authNotifier.login(
-                email: _emailController.text.trim(),
-                password: _passwordController.text,
-              );
+              try {
+                await authNotifier.login(
+                  email: _emailController.text.trim(),
+                  password: _passwordController.text,
+                );
+              } catch (e) {
+                // 📧 Si el usuario no verificó su email, redirigir a la pantalla OTP
+                if (e is AuthException && e.code == 'EMAIL_NOT_VERIFIED') {
+                  final emailToVerify = e.email ?? _emailController.text.trim();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('📧 Te enviamos un nuevo código de verificación. Revisa tu correo.'),
+                        backgroundColor: const Color(0xFF8D6E63),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    context.push('/verify-code/${Uri.encodeComponent(emailToVerify)}');
+                  }
+                  return;
+                }
+                // Para otros errores, dejar que el listener del provider lo muestre
+                rethrow;
+              }
             }
           },
         ),

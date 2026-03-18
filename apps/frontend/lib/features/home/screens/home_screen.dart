@@ -280,7 +280,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           child: const FeaturedPlaylistsSection(
                               key: ValueKey('playlists')),
                         ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                        const SliverToBoxAdapter(child: SizedBox(height: 140)), // ✅ Aumentado de 80 a 140 para limpiar el mini-reproductor
                       ],
                     ),
                   ),

@@ -3,11 +3,13 @@ class AuthException implements Exception {
   final String message;
   final String? code;
   final int? statusCode;
+  final String? email; // Para el caso EMAIL_NOT_VERIFIED
 
   const AuthException(
     this.message, {
     this.code,
     this.statusCode,
+    this.email,
   });
 
   @override
@@ -16,6 +18,21 @@ class AuthException implements Exception {
   /// Factory para crear desde DioException
   factory AuthException.fromDioError(dynamic error, {String? context}) {
     if (error.response?.statusCode == 401) {
+      // Detectar el caso especial de EMAIL_NOT_VERIFIED
+      final responseData = error.response?.data;
+      final innerCode = responseData?['code'] ?? responseData?['response']?['code'];
+      final innerEmail = responseData?['email'] ?? responseData?['response']?['email'];
+      final innerMessage = responseData?['message'] ?? responseData?['response']?['message'];
+
+      if (innerCode == 'EMAIL_NOT_VERIFIED') {
+        return AuthException(
+          innerMessage ?? 'Debes verificar tu email. Te enviamos un nuevo código.',
+          code: 'EMAIL_NOT_VERIFIED',
+          statusCode: 401,
+          email: innerEmail,
+        );
+      }
+
       return const AuthException(
         'Credenciales inválidas',
         code: 'INVALID_CREDENTIALS',
@@ -72,10 +89,6 @@ class AuthException implements Exception {
     );
   }
 }
-
-
-
-
 
 
 
