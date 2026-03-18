@@ -365,7 +365,7 @@ export class ResendService {
             <body>
               <div class="container">
                 <div class="header">
-                  <img src="https://res.cloudinary.com/dilq8e3bj/image/upload/v1773827907/logo_struky_vwev8e.png" alt="Struky Logo" height="65" style="display: block; margin: 0 auto 10px auto;" />
+                  <div class="logo">STRUKY</div>
                   <div class="subtitle">Premium Music</div>
                 </div>
                 <div class="content">
