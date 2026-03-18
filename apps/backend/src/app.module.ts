@@ -93,9 +93,9 @@ import { dataSourceOptions } from './database/data-source';
           type: 'postgres',
           entities,
           autoLoadEntities: true,
-          // ✅ PRODUCCIÓN: Solo sincronizar en desarrollo
-          // En producción usar migrations: npm run migration:generate & migration:run
-          synchronize: !isProduction,
+          // ✅ PRODUCCIÓN SEGURA: Solo sincronizar explícitamente en desarrollo
+          // Así, si NODE_ENV está vacío o mal escrito, por defecto es FALSE y no borra datos.
+          synchronize: process.env.NODE_ENV === 'development',
           logging: dbLogging, // Solo errores/warnings en producción
           connectTimeoutMS: 30000,
           extra: {
