@@ -65,8 +65,8 @@ export default function HomePage() {
             <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
                 {/* Animated Background */}
                 <div className="absolute inset-0 z-0">
-                    <div className="absolute top-20 left-10 w-72 h-72 bg-neon-purple/20 rounded-full blur-3xl animate-pulse-slow"></div>
-                    <div className="absolute bottom-20 right-10 w-96 h-96 bg-neon-blue/20 rounded-full blur-3xl animate-pulse-slow animation-delay-1000"></div>
+                    <div className="absolute top-20 left-10 w-72 h-72 bg-coffee-medium/20 rounded-full blur-3xl animate-pulse-slow"></div>
+                    <div className="absolute bottom-20 right-10 w-96 h-96 bg-coffee-light/10 rounded-full blur-3xl animate-pulse-slow animation-delay-1000"></div>
                 </div>
 
                 {/* Content */}
@@ -96,7 +96,7 @@ export default function HomePage() {
 
                     {/* Subtitle */}
                     <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-                        <strong className="text-white">Inteligencia artificial de última generación</strong> supervisada y refinada por <strong className="text-neon-purple">productores musicales profesionales humanos</strong>.
+                        <strong className="text-white">Inteligencia artificial de última generación</strong> supervisada y refinada por <strong className="text-coffee-light">productores musicales profesionales humanos</strong>.
                     </p>
                     <p className="text-lg md:text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
                         Tú pones la letra, nosotros entregamos la canción lista para sonar en plataformas digitales.
@@ -108,12 +108,12 @@ export default function HomePage() {
                         className="btn-primary text-xl group relative overflow-hidden"
                     >
                         <span className="relative z-10">Crear mi canción ahora</span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-neon-purple to-neon-blue opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-coffee-medium to-coffee-dark opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
 
                     {/* Scroll Indicator */}
                     <div className="mt-16 animate-bounce">
-                        <svg className="w-6 h-6 mx-auto text-neon-purple" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-6 h-6 mx-auto text-coffee-medium" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                             <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
                         </svg>
                     </div>
@@ -133,7 +133,7 @@ export default function HomePage() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {/* Example 1 */}
                         <div className="card-dark group">
-                            <div className="aspect-square bg-gradient-to-br from-neon-purple/20 to-neon-blue/20 rounded-lg mb-4 overflow-hidden relative">
+                            <div className="aspect-square bg-gradient-to-br from-coffee-medium/20 to-coffee-light/20 rounded-lg mb-4 overflow-hidden relative">
                                 <Image
                                     src="/examples/cover1.png"
                                     alt="Amor Eterno Cover"
@@ -155,7 +155,7 @@ export default function HomePage() {
 
                         {/* Example 2 */}
                         <div className="card-dark group">
-                            <div className="aspect-square bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 rounded-lg mb-4 overflow-hidden relative">
+                            <div className="aspect-square bg-gradient-to-br from-coffee-light/20 to-coffee-medium/20 rounded-lg mb-4 overflow-hidden relative">
                                 <Image
                                     src="/examples/cover2.png"
                                     alt="Fuego en la Noche Cover"
@@ -177,7 +177,7 @@ export default function HomePage() {
 
                         {/* Example 3 */}
                         <div className="card-dark group">
-                            <div className="aspect-square bg-gradient-to-br from-neon-purple/20 via-purple-500/20 to-neon-blue/20 rounded-lg mb-4 overflow-hidden relative">
+                            <div className="aspect-square bg-gradient-to-br from-coffee-medium/20 via-coffee-light/20 to-coffee-dark/20 rounded-lg mb-4 overflow-hidden relative">
                                 <Image
                                     src="/examples/cover3.png"
                                     alt="Sueños de Libertad Cover"
@@ -222,7 +222,7 @@ export default function HomePage() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {/* Step 1 */}
                         <div className="card-dark text-center group hover:scale-105 transition-transform duration-300">
-                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-neon-purple">
+                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-coffee-medium">
                                 1
                             </div>
                             <h3 className="text-xl font-bold mb-4">Envías tu letra</h3>
@@ -233,7 +233,7 @@ export default function HomePage() {
 
                         {/* Step 2 */}
                         <div className="card-dark text-center group hover:scale-105 transition-transform duration-300">
-                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-neon-blue">
+                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-coffee-dark">
                                 2
                             </div>
                             <h3 className="text-xl font-bold mb-4">Pago seguro</h3>
@@ -244,7 +244,7 @@ export default function HomePage() {
 
                         {/* Step 3 */}
                         <div className="card-dark text-center group hover:scale-105 transition-transform duration-300">
-                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-neon-purple">
+                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-coffee-medium">
                                 3
                             </div>
                             <h3 className="text-xl font-bold mb-4">IA + Humanos</h3>
@@ -255,7 +255,7 @@ export default function HomePage() {
 
                         {/* Step 4 */}
                         <div className="card-dark text-center group hover:scale-105 transition-transform duration-300">
-                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-neon-blue">
+                            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-neon-glow flex items-center justify-center text-2xl font-bold shadow-coffee-dark">
                                 4
                             </div>
                             <h3 className="text-xl font-bold mb-4">Recibe tu canción</h3>
@@ -289,7 +289,7 @@ export default function HomePage() {
                                     onChange={handleInputChange}
                                     required
                                     className="w-full px-4 py-3 bg-dark-bg border border-gray-700 rounded-lg 
-                           focus:outline-none focus:border-neon-purple transition-colors
+                           focus:outline-none focus:border-coffee-medium transition-colors
                            text-white placeholder-gray-500"
                                     placeholder="Ej: Juan Pérez"
                                 />
@@ -308,7 +308,7 @@ export default function HomePage() {
                                     onChange={handleInputChange}
                                     required
                                     className="w-full px-4 py-3 bg-dark-bg border border-gray-700 rounded-lg 
-                           focus:outline-none focus:border-neon-purple transition-colors
+                           focus:outline-none focus:border-coffee-medium transition-colors
                            text-white placeholder-gray-500"
                                     placeholder="tu@email.com"
                                 />
@@ -326,7 +326,7 @@ export default function HomePage() {
                                     onChange={handleInputChange}
                                     required
                                     className="w-full px-4 py-3 bg-dark-bg border border-gray-700 rounded-lg 
-                           focus:outline-none focus:border-neon-purple transition-colors
+                           focus:outline-none focus:border-coffee-medium transition-colors
                            text-white"
                                 >
                                     <option value="Pop">Pop</option>
@@ -350,14 +350,14 @@ export default function HomePage() {
                                     required
                                     rows={10}
                                     className="w-full px-4 py-3 bg-dark-bg border border-gray-700 rounded-lg 
-                           focus:outline-none focus:border-neon-purple transition-colors
+                           focus:outline-none focus:border-coffee-medium transition-colors
                            text-white placeholder-gray-500 resize-none"
                                     placeholder="Pega aquí la letra de tu canción...&#10;&#10;Verso 1:&#10;...&#10;&#10;Coro:&#10;..."
                                 />
                             </div>
 
                             {/*Price Info */}
-                            <div className="bg-dark-bg border border-neon-purple/30 rounded-lg p-6">
+                            <div className="bg-dark-bg border border-coffee-medium/30 rounded-lg p-6">
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-lg">Producción completa:</span>
                                     <span className="text-2xl font-bold text-gradient">$99 USD</span>
@@ -406,17 +406,17 @@ export default function HomePage() {
                             <h4 className="font-semibold mb-4">Legal</h4>
                             <ul className="space-y-2">
                                 <li>
-                                    <Link href="/privacy" className="text-gray-400 hover:text-neon-purple transition-colors">
+                                    <Link href="/privacy" className="text-gray-400 hover:text-coffee-medium transition-colors">
                                         Política de Privacidad
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="/terms" className="text-gray-400 hover:text-neon-purple transition-colors">
+                                    <Link href="/terms" className="text-gray-400 hover:text-coffee-medium transition-colors">
                                         Términos de Servicio
                                     </Link>
                                 </li>
                                 <li>
-                                    <Link href="/refund" className="text-gray-400 hover:text-neon-purple transition-colors">
+                                    <Link href="/refund" className="text-gray-400 hover:text-coffee-medium transition-colors">
                                         Política de Reembolso
                                     </Link>
                                 </li>
@@ -428,7 +428,7 @@ export default function HomePage() {
                             <h4 className="font-semibold mb-4">Contacto</h4>
                             <ul className="space-y-2">
                                 <li>
-                                    <a href="mailto:strukyapp@gmail.com" className="text-gray-400 hover:text-neon-purple transition-colors">
+                                    <a href="mailto:strukyapp@gmail.com" className="text-gray-400 hover:text-coffee-medium transition-colors">
                                         strukyapp@gmail.com
                                     </a>
                                 </li>
@@ -437,7 +437,7 @@ export default function HomePage() {
                                         href="https://wa.me/573009012217"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-gray-400 hover:text-neon-purple transition-colors flex items-center gap-2"
+                                        className="text-gray-400 hover:text-coffee-medium transition-colors flex items-center gap-2"
                                     >
                                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />

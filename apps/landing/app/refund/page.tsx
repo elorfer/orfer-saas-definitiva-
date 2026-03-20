@@ -4,7 +4,7 @@ export default function RefundPage() {
     return (
         <div className="min-h-screen section-padding">
             <div className="max-w-4xl mx-auto">
-                <Link href="/" className="inline-flex items-center text-neon-purple hover:text-neon-blue mb-8 transition-colors">
+                <Link href="/" className="inline-flex items-center text-coffee-medium hover:text-coffee-light mb-8 transition-colors">
                     ← Volver al inicio
                 </Link>
 
@@ -13,10 +13,10 @@ export default function RefundPage() {
                 </h1>
 
                 <div className="card-dark space-y-6 text-gray-300">
-                    <section className="bg-neon-purple/10 border border-neon-purple/30 rounded-lg p-6">
+                    <section className="bg-coffee-medium/10 border border-coffee-medium/30 rounded-lg p-6">
                         <h2 className="text-2xl font-bold text-white mb-4">✅ Política de Reembolso de 14 Días</h2>
                         <p className="text-lg">
-                            En Struky, ofrecemos un período de reembolso de <strong className="text-neon-purple">14 días naturales</strong> desde la fecha de compra.
+                            En Struky, ofrecemos un período de reembolso de <strong className="text-coffee-medium">14 días naturales</strong> desde la fecha de compra.
                             Tu satisfacción es nuestra prioridad.
                         </p>
                     </section>
@@ -40,28 +40,28 @@ export default function RefundPage() {
                         <p className="mb-3">El proceso es simple y rápido:</p>
                         <div className="bg-dark-bg rounded-lg p-6 space-y-3">
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">1</div>
+                                <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center flex-shrink-0 text-coffee-medium font-bold">1</div>
                                 <div>
                                     <strong className="text-white">Envía un correo electrónico</strong>
-                                    <p className="text-sm mt-1">Escribe a: <a href="mailto:strukyapp@gmail.com" className="text-neon-purple hover:text-neon-blue underline">strukyapp@gmail.com</a></p>
+                                    <p className="text-sm mt-1">Escribe a: <a href="mailto:strukyapp@gmail.com" className="text-coffee-medium hover:text-coffee-light underline">strukyapp@gmail.com</a></p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">2</div>
+                                <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center flex-shrink-0 text-coffee-medium font-bold">2</div>
                                 <div>
                                     <strong className="text-white">Incluye la información necesaria</strong>
                                     <p className="text-sm mt-1">Tu nombre, número de pedido (si lo tienes) y el motivo del reembolso</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">3</div>
+                                <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center flex-shrink-0 text-coffee-medium font-bold">3</div>
                                 <div>
                                     <strong className="text-white">Procesamos tu solicitud</strong>
                                     <p className="text-sm mt-1">Revisaremos y responderemos en un plazo de 3-5 días hábiles</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-full bg-neon-purple/20 flex items-center justify-center flex-shrink-0 text-neon-purple font-bold">4</div>
+                                <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center flex-shrink-0 text-coffee-medium font-bold">4</div>
                                 <div>
                                     <strong className="text-white">Recibes tu reembolso</strong>
                                     <p className="text-sm mt-1">El reembolso se realizará al método de pago original utilizado en la compra</p>
@@ -93,28 +93,28 @@ export default function RefundPage() {
                         <p className="mb-4">Además de nuestra política de reembolso, te garantizamos:</p>
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
-                                <div className="text-neon-purple text-2xl mb-2">✓</div>
+                                <div className="text-coffee-medium text-2xl mb-2">✓</div>
                                 <h3 className="font-bold text-white mb-2">Calidad Profesional</h3>
                                 <p className="text-sm">
                                     Producción con IA avanzada supervisada por productores musicales profesionales
                                 </p>
                             </div>
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
-                                <div className="text-neon-purple text-2xl mb-2">✓</div>
+                                <div className="text-coffee-medium text-2xl mb-2">✓</div>
                                 <h3 className="font-bold text-white mb-2">Entrega Rápida</h3>
                                 <p className="text-sm">
                                     Tu canción lista en 24-48 horas o te notificamos de cualquier retraso
                                 </p>
                             </div>
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
-                                <div className="text-neon-purple text-2xl mb-2">✓</div>
+                                <div className="text-coffee-medium text-2xl mb-2">✓</div>
                                 <h3 className="font-bold text-white mb-2">Revisión Incluida</h3>
                                 <p className="text-sm">
                                     Una (1) revisión incluida para ajustes razonables de mezcla, tempo o arreglos
                                 </p>
                             </div>
                             <div className="bg-dark-bg rounded-lg p-4 border border-gray-700">
-                                <div className="text-neon-purple text-2xl mb-2">✓</div>
+                                <div className="text-coffee-medium text-2xl mb-2">✓</div>
                                 <h3 className="font-bold text-white mb-2">Soporte Directo</h3>
                                 <p className="text-sm">
                                     Comunicación directa y personalizada vía email o WhatsApp
@@ -165,7 +165,7 @@ export default function RefundPage() {
                                 <span className="text-2xl">📧</span>
                                 <div>
                                     <div className="text-sm text-gray-400">Email</div>
-                                    <a href="mailto:strukyapp@gmail.com" className="text-neon-purple hover:text-neon-blue underline font-semibold">
+                                    <a href="mailto:strukyapp@gmail.com" className="text-coffee-medium hover:text-coffee-light underline font-semibold">
                                         strukyapp@gmail.com
                                     </a>
                                 </div>
@@ -178,7 +178,7 @@ export default function RefundPage() {
                                         href="https://wa.me/573009012217"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-neon-purple hover:text-neon-blue underline font-semibold"
+                                        className="text-coffee-medium hover:text-coffee-light underline font-semibold"
                                     >
                                         +57 300 901 2217
                                     </a>

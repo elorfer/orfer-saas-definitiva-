@@ -2,12 +2,13 @@
 @import "tailwindcss";
 
 @theme {
-    --color-neon-purple: #a855f7;
-    --color-neon-blue: #3b82f6;
-    --color-dark-bg: #0a0a0f;
-    --color-dark-card: #16161f;
+    --color-coffee-medium: #8D6E63;
+    --color-coffee-dark: #5D4037;
+    --color-coffee-light: #D7CCC8;
+    --color-dark-bg: #0a0a0a;
+    --color-dark-card: #141414;
 
-    --font-family-display: 'Montserrat', sans-serif;
+    --font-family-display: 'Inter', sans-serif;
 }
 
 @layer base {
@@ -23,22 +24,22 @@
 
 @layer components {
     .btn-primary {
-        @apply bg-gradient-to-r from-[#a855f7] to-[#3b82f6] text-white font-bold py-4 px-8 rounded-full transition-all duration-300 hover:scale-105 active:scale-95;
-        box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+        @apply bg-gradient-to-r from-[#8D6E63] to-[#5D4037] text-white font-bold py-4 px-8 rounded-full transition-all duration-300 hover:scale-105 active:scale-95;
+        box-shadow: 0 0 20px rgba(141, 110, 99, 0.4);
     }
 
     .btn-primary:hover {
-        box-shadow: 0 0 30px rgba(168, 85, 247, 0.7);
+        box-shadow: 0 0 30px rgba(141, 110, 99, 0.6);
     }
 
     .btn-secondary {
         @apply bg-transparent border-2 text-white font-bold py-3 px-6 rounded-full transition-all duration-300;
-        border-color: var(--color-neon-purple);
+        border-color: var(--color-coffee-medium);
     }
 
     .btn-secondary:hover {
-        background-color: var(--color-neon-purple);
-        box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+        background-color: var(--color-coffee-medium);
+        box-shadow: 0 0 20px rgba(141, 110, 99, 0.4);
     }
 
     .card-dark {
@@ -51,7 +52,7 @@
     }
 
     .text-gradient {
-        background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #D7CCC8 0%, #8D6E63 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -64,30 +65,30 @@
 
 @layer utilities {
     .glow-text {
-        text-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+        text-shadow: 0 0 20px rgba(215, 204, 200, 0.3);
     }
 
     .neon-border {
         border: 2px solid;
-        border-image: linear-gradient(135deg, #a855f7, #3b82f6) 1;
+        border-image: linear-gradient(135deg, #D7CCC8, #8D6E63) 1;
     }
 
     /* Custom Audio Player Styles */
     .audio-player {
         height: 40px;
         border-radius: 20px;
-        background: rgba(168, 85, 247, 0.1);
-        border: 1px solid rgba(168, 85, 247, 0.3);
+        background: rgba(141, 110, 99, 0.1);
+        border: 1px solid rgba(141, 110, 99, 0.3);
     }
 
     .audio-player::-webkit-media-controls-panel {
-        background: linear-gradient(to right, rgba(168, 85, 247, 0.2), rgba(59, 130, 246, 0.2));
+        background: linear-gradient(to right, rgba(141, 110, 99, 0.2), rgba(215, 204, 200, 0.2));
         border-radius: 20px;
     }
 
     .audio-player::-webkit-media-controls-play-button,
     .audio-player::-webkit-media-controls-pause-button {
-        background-color: #a855f7;
+        background-color: #8D6E63;
         border-radius: 50%;
     }
 
@@ -103,15 +104,15 @@
     }
 
     .bg-neon-glow {
-        background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+        background: linear-gradient(135deg, #D7CCC8 0%, #8D6E63 100%);
     }
 
     .shadow-neon-purple {
-        box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+        box-shadow: 0 0 20px rgba(141, 110, 99, 0.4);
     }
 
     .shadow-neon-blue {
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 20px rgba(215, 204, 200, 0.4);
     }
 
     .animate-pulse-slow {

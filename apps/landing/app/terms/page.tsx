@@ -4,7 +4,7 @@ export default function TermsPage() {
     return (
         <div className="min-h-screen section-padding">
             <div className="max-w-4xl mx-auto">
-                <Link href="/" className="inline-flex items-center text-neon-purple hover:text-neon-blue mb-8 transition-colors">
+                <Link href="/" className="inline-flex items-center text-coffee-medium hover:text-coffee-light mb-8 transition-colors">
                     ← Volver al inicio
                 </Link>
 
