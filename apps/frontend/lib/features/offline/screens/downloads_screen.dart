@@ -48,6 +48,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
             if (context.canPop()) {
               context.pop();
             } else {
+              // Fallback: Ir a home si no hay historial
               context.go('/home');
             }
           },

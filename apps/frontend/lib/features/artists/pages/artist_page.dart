@@ -1707,15 +1707,9 @@ class _SongRowWidget extends ConsumerWidget {
     required this.onPlaySong,
   });
 
-  // ⚡ OPTIMIZACIÓN CRÍTICA: Estilos estáticos para evitar re-computación
-  // Los TextStyle se recomputaban en CADA build de CADA item de la lista
-  // Ahora se calculan una sola vez y se reusan
-  static TextStyle? _cachedSongTitleStyle;
-  static TextStyle? _cachedSongNumberStyle;
-  static TextStyle? _cachedSongNumberStyleDisabled;
-  
-  static TextStyle get _songTitleStyle {
-    return _cachedSongTitleStyle ??= TextStyle(
+  // ⚡ OPTIMIZACIÓN: Estilos reactivos (sin cache estático para evitar problemas de tema)
+  TextStyle get _songTitleStyle {
+    return TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: NeumorphismTheme.textPrimary,
@@ -1723,8 +1717,8 @@ class _SongRowWidget extends ConsumerWidget {
     );
   }
   
-  static TextStyle get _songNumberStyle {
-    return _cachedSongNumberStyle ??= TextStyle(
+  TextStyle get _songNumberStyle {
+    return TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: NeumorphismTheme.textSecondary,
@@ -1732,8 +1726,8 @@ class _SongRowWidget extends ConsumerWidget {
     );
   }
   
-  static TextStyle get _songNumberStyleDisabled {
-    return _cachedSongNumberStyleDisabled ??= TextStyle(
+  TextStyle get _songNumberStyleDisabled {
+    return TextStyle(
       fontSize: 16,
       fontWeight: FontWeight.w600,
       color: NeumorphismTheme.textSecondary.withValues(alpha: 0.5),

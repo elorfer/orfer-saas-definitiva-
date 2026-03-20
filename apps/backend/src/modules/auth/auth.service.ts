@@ -104,49 +104,55 @@ export class AuthService {
     }
 
     if (!user.isVerified) {
-      const MAX_OTP_RESENDS = 5;
-      const emailKey = user.email.toLowerCase();
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.log(`🔧 [DEV] Auto-verificando usuario: ${user.email}`);
+        await this.userRepository.update(user.id, { isVerified: true });
+        user.isVerified = true;
+      } else {
+        const MAX_OTP_RESENDS = 5;
+        const emailKey = user.email.toLowerCase();
 
-      // Obtener el contador actual de reenvíos para este email
-      const currentCount = this.otpResendCounts.get(emailKey) ?? 0;
+        // Obtener el contador actual de reenvíos para este email
+        const currentCount = this.otpResendCounts.get(emailKey) ?? 0;
 
-      if (currentCount >= MAX_OTP_RESENDS) {
-        throw new UnauthorizedException(
-          `Has superado el límite de ${MAX_OTP_RESENDS} códigos de verificación. Contacta a soporte en strukyapp@gmail.com`
+        if (currentCount >= MAX_OTP_RESENDS) {
+          throw new UnauthorizedException(
+            `Has superado el límite de ${MAX_OTP_RESENDS} códigos de verificación. Contacta a soporte en strukyapp@gmail.com`
+          );
+        }
+
+        // Incrementar el contador
+        this.otpResendCounts.set(emailKey, currentCount + 1);
+
+        // Generar un nuevo código OTP de 6 dígitos
+        const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+
+        // Guardar el nuevo código en la base de datos
+        await this.userRepository.update(user.id, {
+          verificationCode: newCode,
+          verificationCodeExpiresAt: expiresAt,
+        });
+
+        // Enviar el nuevo código por correo
+        try {
+          await this.resendService.sendWelcomeVerificationEmail(user.email, newCode);
+          this.logger.log(`📧 OTP reenviado a ${user.email} (intento ${currentCount + 1}/${MAX_OTP_RESENDS})`);
+        } catch (emailError) {
+          this.logger.error('Error enviando OTP en login de usuario no verificado:', emailError);
+        }
+
+        // Retornar respuesta especial con código EMAIL_NOT_VERIFIED
+        throw Object.assign(
+          new UnauthorizedException({
+            statusCode: 401,
+            code: 'EMAIL_NOT_VERIFIED',
+            message: `Debes verificar tu email. Te hemos enviado un nuevo código (intento ${currentCount + 1}/${MAX_OTP_RESENDS}).`,
+            email: user.email,
+          }),
+          { response: { statusCode: 401, code: 'EMAIL_NOT_VERIFIED', message: `Debes verificar tu email. Te hemos enviado un nuevo código (intento ${currentCount + 1}/${MAX_OTP_RESENDS}).`, email: user.email } }
         );
       }
-
-      // Incrementar el contador
-      this.otpResendCounts.set(emailKey, currentCount + 1);
-
-      // Generar un nuevo código OTP de 6 dígitos
-      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
-
-      // Guardar el nuevo código en la base de datos
-      await this.userRepository.update(user.id, {
-        verificationCode: newCode,
-        verificationCodeExpiresAt: expiresAt,
-      });
-
-      // Enviar el nuevo código por correo
-      try {
-        await this.resendService.sendWelcomeVerificationEmail(user.email, newCode);
-        this.logger.log(`📧 OTP reenviado a ${user.email} (intento ${currentCount + 1}/${MAX_OTP_RESENDS})`);
-      } catch (emailError) {
-        this.logger.error('Error enviando OTP en login de usuario no verificado:', emailError);
-      }
-
-      // Retornar respuesta especial con código EMAIL_NOT_VERIFIED
-      throw Object.assign(
-        new UnauthorizedException({
-          statusCode: 401,
-          code: 'EMAIL_NOT_VERIFIED',
-          message: `Debes verificar tu email. Te hemos enviado un nuevo código (intento ${currentCount + 1}/${MAX_OTP_RESENDS}).`,
-          email: user.email,
-        }),
-        { response: { statusCode: 401, code: 'EMAIL_NOT_VERIFIED', message: `Debes verificar tu email. Te hemos enviado un nuevo código (intento ${currentCount + 1}/${MAX_OTP_RESENDS}).`, email: user.email } }
-      );
     }
 
     // Actualizar último login
@@ -200,6 +206,7 @@ export class AuthService {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       role: registerDto.role || UserRole.USER, // Usar rol del DTO si existe, sino USER por defecto
+      isVerified: process.env.NODE_ENV !== 'production', // ✅ Auto-verificar en desarrollo
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -229,23 +236,27 @@ export class AuthService {
       }
     }
 
-    // 📧 ENVIAR CÓDIGO DE VERIFICACIÓN (OTP) CON RESEND
-    try {
-      // Generar código de 6 dígitos
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // Válido por 24 horas
+    // 📧 ENVIAR CÓDIGO DE VERIFICACIÓN (OTP) CON RESEND (Solo si no está verificado)
+    if (!savedUser.isVerified) {
+      try {
+        // Generar código de 6 dígitos
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24); // Válido por 24 horas
 
-      // Guardar en el usuario
-      await this.userRepository.update(savedUser.id, {
-        verificationCode,
-        verificationCodeExpiresAt: expiresAt,
-      });
+        // Guardar en el usuario
+        await this.userRepository.update(savedUser.id, {
+          verificationCode,
+          verificationCodeExpiresAt: expiresAt,
+        });
 
-      await this.resendService.sendWelcomeVerificationEmail(savedUser.email, verificationCode);
-      this.logger.log(`📧 Código OTP enviado para: ${savedUser.email}`);
-    } catch (emailError) {
-      this.logger.error(`❌ Error al enviar código OTP:`, emailError);
+        await this.resendService.sendWelcomeVerificationEmail(savedUser.email, verificationCode);
+        this.logger.log(`📧 Código OTP enviado para: ${savedUser.email}`);
+      } catch (emailError) {
+        this.logger.error(`❌ Error al enviar código OTP:`, emailError);
+      }
+    } else if (process.env.NODE_ENV !== 'production') {
+      this.logger.log(`✨ [DEV] Saltando envío de OTP para ${savedUser.email} (Ya verificado automáticamente)`);
     }
 
     // No se crea perfil de artista - solo se permite registro como usuario

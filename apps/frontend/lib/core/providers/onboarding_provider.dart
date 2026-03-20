@@ -16,27 +16,21 @@ class OnboardingNotifier extends Notifier<bool> {
   
   @override
   bool build() {
-    // ✅ OPTIMIZACIÓN: Inicializar con true para evitar mostrar onboarding mientras se verifica
-    // El estado se actualizará cuando se complete la verificación asíncrona
-    // Si el usuario realmente necesita ver onboarding, se mostrará después de verificar
-    if (!_isInitialized) {
-      _isInitialized = true;
-      
-      // Verificar estado inicial de forma asíncrona
-      Future.microtask(() async {
-        try {
-          await _checkOnboardingStatus();
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint('⚠️ [OnboardingProvider] Error durante inicialización: $e');
-          }
-          state = true;
-        }
-      });
-    }
+    // 🔍 OPTIMIZACIÓN: Solo cargar si el usuario está autenticado
+    // El valor por defecto es true para no bloquear la app innecesariamente,
+    // pero se valida inmediatamente de forma asíncrona.
+    final userId = ref.watch(currentUserProvider.select((u) => u?.id));
     
-    // ✅ OPTIMIZACIÓN: Retornar true por defecto para evitar mostrar onboarding prematuramente
-    // Si el usuario realmente no completó el onboarding, se actualizará a false después de verificar
+    if (userId != null) {
+      if (!_isInitialized) {
+        _isInitialized = true;
+        Future.microtask(() => checkOnboardingStatusForUser(userId));
+      }
+    }
+
+    // Por defecto devolvemos true (completado) para evitar que viejos usuarios
+    // vean el onboarding un segundo mientras carga el ID de usuario.
+    // El router se encargará de redirigir si el valor cambia a false.
     return true;
   }
 
@@ -168,7 +162,11 @@ class OnboardingNotifier extends Notifier<bool> {
       // Eliminar el estado de onboarding para este usuario
       await prefs.remove(key);
       await prefs.setString(_lastUserIdKey, userId);
+      
+      // 🚀 CRÍTICO: Actualizar estado inmediatamente para que el router reaccione
       state = false;
+      
+      debugPrint('🆕 Onboarding reseteado para nuevo usuario: $userId');
     } catch (e) {
       state = false;
     }

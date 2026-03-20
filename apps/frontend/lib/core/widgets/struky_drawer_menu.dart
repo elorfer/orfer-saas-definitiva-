@@ -58,7 +58,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                   children: [
                     InkWell(
                       onTap: () {
-                        context.go('/profile');
+                        context.push('/profile');
                       },
                       borderRadius: BorderRadius.circular(30),
                       child: Container(
@@ -172,7 +172,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     icon: Icons.person_outline_rounded,
                     label: 'Mi Perfil',
                     onTap: () {
-                      context.go('/profile');
+                      context.push('/profile');
                     },
                     textColor: textColorPrimary,
                     iconColor: iconColor,
@@ -205,7 +205,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     icon: Icons.notifications_none_rounded,
                     label: 'Notificaciones',
                     onTap: () {
-                      context.go('/notifications');
+                      context.push('/notifications');
                     },
                     textColor: textColorPrimary,
                     iconColor: iconColor,
@@ -214,7 +214,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     icon: Icons.privacy_tip_outlined,
                     label: 'Privacidad',
                     onTap: () {
-                      context.go('/privacy');
+                      context.push('/privacy');
                     },
                     textColor: textColorPrimary,
                     iconColor: iconColor,
@@ -223,7 +223,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     icon: Icons.download_outlined,
                     label: 'Descargas',
                     onTap: () {
-                      context.go('/downloads');
+                      context.push('/downloads');
                     },
                     textColor: textColorPrimary,
                     iconColor: iconColor,
@@ -236,7 +236,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => context.go('/composer-promo'),
+                        onTap: () => context.push('/composer-promo'),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.symmetric(

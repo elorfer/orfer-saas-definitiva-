@@ -206,7 +206,7 @@ class FeaturedSongsSection extends ConsumerWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF3D2E20),
+              color: NeumorphismTheme.textPrimary,
               decoration: TextDecoration.none,
             ),
           ),
@@ -216,9 +216,9 @@ class FeaturedSongsSection extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Container(
             padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Color(0xFFEEE4DA), // 🚀 Sólido
-              borderRadius: BorderRadius.all(Radius.circular(12)),
+            decoration: BoxDecoration(
+              color: NeumorphismTheme.surface, // 🚀 Sólido
+              borderRadius: const BorderRadius.all(Radius.circular(12)),
             ),
             child: Center(
               child: Column(
@@ -233,7 +233,7 @@ class FeaturedSongsSection extends ConsumerWidget {
                     'No hay canciones destacadas',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Color(0xFF3D2E20),
+                      color: NeumorphismTheme.textPrimary,
                       decoration: TextDecoration.none,
                       fontWeight: FontWeight.w600,
                     ),

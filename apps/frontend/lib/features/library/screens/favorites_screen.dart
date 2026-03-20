@@ -13,6 +13,7 @@ import '../../../core/utils/url_normalizer.dart';
 import '../../../core/utils/intersection_observer.dart';
 import '../../song_detail/screens/song_detail_screen.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/providers/theme_provider.dart';
 
 /// Pantalla de canciones favoritas del usuario
 class FavoritesScreen extends ConsumerStatefulWidget {
@@ -156,6 +157,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
   Widget build(BuildContext context) {
     super.build(context);
 
+    // 🔥 FIX: Watch themeProvider para forzar rebuild cuando cambie el tema
+    ref.watch(themeProvider);
     // Optimización: usar select para escuchar solo cambios en isLoading y favorites
     final isLoading = ref.watch(favoritesProvider.select((state) => state.isLoading));
     final favorites = ref.watch(favoritesProvider.select((state) => state.favorites));
@@ -194,8 +197,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
             if (context.canPop()) {
               context.pop();
             } else {
-              // Si no puede hacer pop, ir a biblioteca (su lugar natural)
-              context.go('/profile'); 
+              // Fallback: Ir a home si no hay historial
+              context.go('/home'); 
             }
           },
         ),

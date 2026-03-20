@@ -146,6 +146,7 @@ flutter:
     - assets/images/feature_composers.png
     - assets/images/composer_service_bg.png
     - assets/images/onboarding/
+    - assets/images/coffes/
   #   - assets/icons/
   #   - assets/animations/
   #   - assets/fonts/

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/models/song_model.dart';
 import '../../../../core/widgets/optimized_image.dart';
 import '../../../../core/theme/neumorphism_theme.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../providers/song_detail_provider.dart';
 
 /// Widget que muestra una lista horizontal de canciones de un artista
@@ -22,6 +23,8 @@ class ArtistSongsHorizontalList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // ✅ OPTIMIZACIÓN: Redibuja cuando cambia el tema
+    ref.watch(themeProvider);
     // ✅ OPTIMIZACIÓN: Usar provider para obtener canciones del artista
     final songsAsync = ref.watch(songsByArtistProvider(artistId));
 

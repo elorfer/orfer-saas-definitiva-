@@ -156,7 +156,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF3E2723), // 🔥 Fondo marrón oscuro
+      backgroundColor: NeumorphismTheme.isDark 
+          ? NeumorphismTheme.background 
+          : const Color(0xFF3E2723), // Mantener el marrón oscuro característico para el onboarding si es light
       body: Stack(
         children: [
           // PageView con las imágenes ocupando toda la pantalla
@@ -220,7 +222,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildPage(OnboardingPageData pageData, int index) {
     return RepaintBoundary(
       child: Container(
-        color: const Color(0xFF3E2723), // 🔥 Fondo marrón oscuro
+        color: NeumorphismTheme.isDark 
+            ? NeumorphismTheme.background 
+            : const Color(0xFF3E2723), // 🔥 Fondo marrón oscuro
         child: Center(
           child: Image.asset(
             pageData.image,

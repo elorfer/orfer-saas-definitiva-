@@ -213,12 +213,23 @@ class AuthNotifier extends Notifier<AuthState> {
         stageName: stageName,
       );
       
-      // 📧 NO autenticar automáticamente. El usuario debe verificar su email primero.
-      // Solo actualizamos isLoading para que la UI sepa que terminó.
-      state = state.copyWith(
-        isLoading: false,
-        error: null,
-      );
+      // 📧 Autenticar automáticamente si el backend ya verificó al usuario (Dev Mode)
+      // O si el backend devolvió un token de acceso directamente.
+      if (authResponse.accessToken.isNotEmpty) {
+         state = state.copyWith(
+          user: authResponse.user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        );
+        debugPrint('🚀 [AuthProvider] Usuario auto-autenticado tras registro (Modo DEV)');
+      } else {
+        // En producción, el usuario suele necesitar verificar su email primero.
+        state = state.copyWith(
+          isLoading: false,
+          error: null,
+        );
+      }
       
       // 🔒 Inicializar OfflineManager para este usuario
       try {

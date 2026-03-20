@@ -1680,21 +1680,10 @@ class _BackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.5), // Más visible con glassmorphism
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, top: 8, bottom: 8),
       child: IconButton(
-        icon: Icon(Icons.arrow_back_rounded, color: NeumorphismTheme.textPrimary, size: 24),
+        icon: Icon(Icons.arrow_back_ios_new_rounded, color: NeumorphismTheme.textPrimary, size: 20),
         onPressed: onPressed,
         // OPTIMIZADO: tooltip para accesibilidad sin costo de rendimiento
         tooltip: 'Volver',
@@ -1781,18 +1770,11 @@ class _PlayPauseButtonLarge extends ConsumerWidget {
         width: 52,
         height: 52,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              NeumorphismTheme.coffeeMedium,
-              NeumorphismTheme.coffeeDark,
-            ],
-          ),
+          color: const Color(0xFF8D6E63), // Fijo a marrón para que no se aclare en modo oscuro
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.4),
+              color: const Color(0xFF8D6E63).withValues(alpha: 0.4),
               blurRadius: 12,
               offset: const Offset(0, 4),
               spreadRadius: 0,

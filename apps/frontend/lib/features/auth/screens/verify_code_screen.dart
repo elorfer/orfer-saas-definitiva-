@@ -23,6 +23,26 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isVerifying = false;
+  bool _isAutoRedirecting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔍 Auto-redirección si el usuario ya está verificado (Modo DEV o verificó en otro lugar)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAutoRedirect();
+    });
+  }
+
+  void _checkAutoRedirect() {
+    final authState = ref.read(authStateProvider);
+    // Si ya está autenticado (lo que implica verificado en este flujo)
+    if (authState.isAuthenticated && !_isAutoRedirecting) {
+      setState(() => _isAutoRedirecting = true);
+      debugPrint('🚀 [VerifyCode] Usuario ya autenticado, redirigiendo a Onboarding...');
+      context.go('/onboarding');
+    }
+  }
 
   @override
   void dispose() {

@@ -705,9 +705,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             );
 
             if (mounted) {
-              // Navegar directamente a la pantalla de verificación
-              // Usamos push en lugar de go para poder volver atrás si el correo estuvo mal escrito
-              context.push('/verify-code/${Uri.encodeComponent(_emailController.text.trim())}');
+              // 📧 Si el usuario ya está autenticado (Modo DEV auto-verify),
+              // ir directamente al onboarding saltando la verificación manual.
+              final isAuthenticated = ref.read(authStateProvider).isAuthenticated;
+              if (isAuthenticated) {
+                context.go('/onboarding');
+              } else {
+                // Navegar a la pantalla de verificación
+                context.push('/verify-code/${Uri.encodeComponent(_emailController.text.trim())}');
+              }
             }
           }
         } : null,

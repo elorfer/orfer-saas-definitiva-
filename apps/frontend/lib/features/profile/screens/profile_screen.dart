@@ -28,7 +28,8 @@ class ProfileScreen extends ConsumerWidget {
             if (context.canPop()) {
               context.pop();
             } else {
-              context.go('/library');
+              // Fallback: Volver a la raíz de la rama actual en lugar de forzar /library
+              context.go('/home');
             }
           },
         ),

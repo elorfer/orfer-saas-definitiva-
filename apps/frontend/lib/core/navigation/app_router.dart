@@ -336,6 +336,84 @@ class GoRouterNotifier extends ChangeNotifier {
                     );
                   },
                 ),
+                // User Profile - accesible desde Home
+                GoRoute(
+                  path: '/profile',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: ProfileScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Favorites - accesible desde Home
+                GoRoute(
+                  path: '/favorites',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const FavoritesScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Downloads (Premium) - accesible desde Home
+                GoRoute(
+                  path: '/downloads',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const DownloadsScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Notifications - accesible desde Home
+                GoRoute(
+                  path: '/notifications',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: NotificationsScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Privacy Policy - accesible desde Home
+                GoRoute(
+                  path: '/privacy',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const PrivacyScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Invite a Coffee - accesible desde Home
+                GoRoute(
+                  path: '/invite-coffee',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const InviteCoffeeScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
               ],
             ),
             // Rama 1: Search
@@ -427,6 +505,84 @@ class GoRouterNotifier extends ChangeNotifier {
                       reverseTransitionDuration: Duration.zero,
                     );
                   },
+                ),
+                // User Profile - accesible desde Search
+                GoRoute(
+                  path: '/profile',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: ProfileScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Favorites - accesible desde Search
+                GoRoute(
+                  path: '/favorites',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const FavoritesScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Downloads (Premium) - accesible desde Search
+                GoRoute(
+                  path: '/downloads',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const DownloadsScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Notifications - accesible desde Search
+                GoRoute(
+                  path: '/notifications',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: NotificationsScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Privacy Policy - accesible desde Search
+                GoRoute(
+                  path: '/privacy',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const PrivacyScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
+                ),
+                // Invite a Coffee - accesible desde Search
+                GoRoute(
+                  path: '/invite-coffee',
+                  pageBuilder: (context, state) =>
+                      createCustomTransitionPage<void>(
+                    key: state.pageKey,
+                    child: const InviteCoffeeScreen(),
+                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
+                    transitionDuration: const Duration(milliseconds: 250),
+                    reverseTransitionDuration:
+                        const Duration(milliseconds: 250),
+                  ),
                 ),
               ],
             ),

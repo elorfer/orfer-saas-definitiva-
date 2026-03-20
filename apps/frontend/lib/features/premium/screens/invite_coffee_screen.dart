@@ -139,40 +139,6 @@ class _InviteCoffeeScreenState extends ConsumerState<InviteCoffeeScreen> {
                   ),
                 ),
                 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: Column(
-                    children: [
-                      // Custom Hero Image - Movido fuera del Expanded para que cargue instantáneamente
-                      SizedBox(
-                        height: 220, // Ajustado para la nueva imagen
-                        width: double.infinity,
-                        child: Image.asset(
-                          'assets/images/coffes/hero_coffee.webp',
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '¡Dales energía para crear!',
-                        style: AppTextStyles.titleMedium.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Invita un café a nuestros compositores y motívalos a seguir escribiendo las canciones que tanto amas.',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontSize: 14,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                
                 Expanded(
                   child: _isLoading 
                     ? const Center(child: CircularProgressIndicator())
@@ -187,6 +153,39 @@ class _InviteCoffeeScreenState extends ConsumerState<InviteCoffeeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Column(
+      children: [
+        // Custom Hero Image - Ahora scrolleable
+        SizedBox(
+          height: 220, // Ajustado para la nueva imagen
+          width: double.infinity,
+          child: Image.asset(
+            'assets/images/coffes/hero_coffee.webp',
+            fit: BoxFit.contain,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '¡Dales energía para crear!',
+          style: AppTextStyles.titleMedium.copyWith(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Invita un café a nuestros compositores y motívalos a seguir escribiendo las canciones que tanto amas.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            fontSize: 14,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 
@@ -231,13 +230,15 @@ class _InviteCoffeeScreenState extends ConsumerState<InviteCoffeeScreen> {
       padding: const EdgeInsets.only(
         left: 24,
         right: 24,
-        top: 0,
+        top: 8,
         bottom: 100, // Espacio extra para que el mini-reproductor no tape el contenido
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 16),
+          _buildHeader(), // <-- Imagen de portada y textos añadidos al scroll
+          
+          const SizedBox(height: 32),
           
           // Lista de productos
           ..._packages.map((package) => Padding(
@@ -264,3 +265,4 @@ class _InviteCoffeeScreenState extends ConsumerState<InviteCoffeeScreen> {
     );
   }
 }
+
