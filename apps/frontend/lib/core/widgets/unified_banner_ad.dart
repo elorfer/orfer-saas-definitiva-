@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:visibility_detector/visibility_detector.dart'; // 🚀 OPTIMIZATION: Carga por visibilidad
+import 'package:shimmer/shimmer.dart'; // 🚀 ADDED: Para efecto profesional
 import '../theme/neumorphism_theme.dart';
 import '../../features/ads/services/admob_service.dart';
 import '../../core/providers/auth_provider.dart';
@@ -10,11 +10,10 @@ import '../utils/logger.dart';
 
 /// 🎨 UNIFIED BANNER AD - Widget premium para anuncios
 /// 
-/// Características PRO:
-/// - Banners Adaptativos: Se ajustan al ancho de pantalla.
-/// - Carga por Visibilidad: Solo carga cuando el usuario lo ve.
-/// - Reintentos Automáticos: Con backoff exponencial.
-/// - Estabilidad de Layout: Reserva espacio para evitar saltos visuales.
+/// Características PRO (v2.0):
+/// - Carga Proactiva: Inicia la carga en initState (sin esperar a visibilidad).
+/// - Shimmer Premium: Efecto de esqueleto animado mientras carga.
+/// - Estabilidad de Layout: Reserva espacio exacto para evitar saltos.
 class UnifiedBannerAd extends ConsumerStatefulWidget {
   final AdSize adSize;
   final bool useAdaptive;
@@ -22,7 +21,7 @@ class UnifiedBannerAd extends ConsumerStatefulWidget {
   const UnifiedBannerAd({
     super.key, 
     this.adSize = AdSize.banner,
-    this.useAdaptive = false, // Deshabilitado por petición del usuario
+    this.useAdaptive = false,
   });
 
   @override
@@ -44,22 +43,45 @@ class _UnifiedBannerAdState extends ConsumerState<UnifiedBannerAd>
   @override
   void initState() {
     super.initState();
+    // 🚀 PROFESIONAL: Iniciar carga inmediatamente
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAd();
+    });
   }
 
   Future<void> _loadAd() async {
     if (!mounted || _isRequesting || _isLoaded) return;
 
-    // 🛡️ SEGURIDAD PREMIUM
+    // 🛡️ SEGURIDAD PREMIUM: No cargar para usuarios premium
     final user = ref.read(authStateProvider).user;
     if (user != null && user.isPremium) return;
 
     setState(() {
-      _isRequesting = true;
       _currentAdSize = widget.adSize;
     });
 
+    // 🚀 NIVEL PRO: Intentar obtener anuncio del Pool (Instantáneo)
+    // Solo si el tamaño solicitado es el estándar (que es el que precargamos)
+    if (widget.adSize == AdSize.banner && !widget.useAdaptive) {
+      final pooledAd = AdMobService.takePreloadedBanner();
+      if (pooledAd != null) {
+        AppLogger.info('[UnifiedBannerAd] ⚡ Usando anuncio instantáneo del Pool');
+        setState(() {
+          _bannerAd = pooledAd;
+          _isLoaded = true;
+          _isRequesting = false;
+        });
+        return;
+      }
+    }
+
+    setState(() => _isRequesting = true);
+
     final adUnitId = AdMobService.bannerAdUnitId;
-    if (adUnitId == null) return;
+    if (adUnitId == null) {
+      setState(() => _isRequesting = false);
+      return;
+    }
 
     // 🚀 OPTIMIZATION: Solo usar adaptativo si se solicita explícitamente
     if (widget.useAdaptive) {
@@ -81,6 +103,7 @@ class _UnifiedBannerAdState extends ConsumerState<UnifiedBannerAd>
             ad.dispose();
             return;
           }
+          AppLogger.info('[UnifiedBannerAd] ✅ Anuncio cargado correctamente');
           setState(() {
             _isLoaded = true;
             _isError = false;
@@ -89,6 +112,7 @@ class _UnifiedBannerAdState extends ConsumerState<UnifiedBannerAd>
           });
         },
         onAdFailedToLoad: (ad, error) {
+          AppLogger.warning('[UnifiedBannerAd] ❌ Falló la carga: ${error.message}');
           ad.dispose();
           if (mounted) {
             setState(() {
@@ -96,6 +120,7 @@ class _UnifiedBannerAdState extends ConsumerState<UnifiedBannerAd>
               _isLoaded = false;
               _isRequesting = false;
             });
+            // Reintento exponencial
             if (_retryCount < 3) {
               _retryCount++;
               Future.delayed(Duration(seconds: _retryCount * 5), () => _loadAd());
@@ -120,69 +145,116 @@ class _UnifiedBannerAdState extends ConsumerState<UnifiedBannerAd>
     final user = ref.watch(authStateProvider).user;
     if (user != null && user.isPremium) return const SizedBox.shrink();
 
-    return VisibilityDetector(
-      key: Key('ad_visibility_${widget.key ?? adUnitId}'),
-      onVisibilityChanged: (info) {
-        if (info.visibleFraction > 0.1 && !_isLoaded && !_isRequesting) {
-          _loadAd();
-        }
-      },
-      child: RepaintBoundary(
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-          padding: const EdgeInsets.all(12),
-          constraints: BoxConstraints(
-            minHeight: _currentAdSize?.height.toDouble() ?? widget.adSize.height.toDouble(),
-          ),
-          decoration: BoxDecoration(
-            color: NeumorphismTheme.surface,
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            boxShadow: NeumorphismTheme.softShadow,
-            border: Border.all(
-              color: NeumorphismTheme.isDark 
-                  ? Colors.white.withValues(alpha: 0.05) 
-                  : Colors.black.withValues(alpha: 0.03),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Text(
-                  'Publicidad Sugerida',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: NeumorphismTheme.textLight.withValues(alpha: 0.7),
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-              
-              if (_isLoaded && _bannerAd != null)
-                ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(12)),
-                  child: SizedBox(
-                    width: _currentAdSize!.width.toDouble(),
-                    height: _currentAdSize!.height.toDouble(),
-                    child: AdWidget(ad: _bannerAd!),
-                  ),
-                )
-              else if (_isError)
-                const SizedBox(
-                  height: 50,
-                  child: Center(child: Icon(Icons.info_outline, size: 20, color: Colors.grey)),
-                )
-              else
-                SizedBox(
-                  height: _currentAdSize?.height.toDouble() ?? widget.adSize.height.toDouble(),
-                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
-            ],
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+        padding: const EdgeInsets.all(10),
+        constraints: BoxConstraints(
+          minHeight: _currentAdSize?.height.toDouble() ?? widget.adSize.height.toDouble() + 40,
+        ),
+        decoration: BoxDecoration(
+          color: NeumorphismTheme.surface,
+          borderRadius: const BorderRadius.all(Radius.circular(24)),
+          boxShadow: NeumorphismTheme.softShadow,
+          border: Border.all(
+            color: NeumorphismTheme.isDark 
+                ? Colors.white.withValues(alpha: 0.05) 
+                : Colors.black.withValues(alpha: 0.03),
+            width: 1,
           ),
         ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.star_outline_rounded, 
+                    size: 12, 
+                    color: NeumorphismTheme.textLight.withValues(alpha: 0.4)
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'CONTENIDO SUGERIDO',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: NeumorphismTheme.textLight.withValues(alpha: 0.5),
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.star_outline_rounded, 
+                    size: 12, 
+                    color: NeumorphismTheme.textLight.withValues(alpha: 0.4)
+                  ),
+                ],
+              ),
+            ),
+            
+            if (_isLoaded && _bannerAd != null)
+              ClipRRect(
+                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                child: SizedBox(
+                  width: _currentAdSize!.width.toDouble(),
+                  height: _currentAdSize!.height.toDouble(),
+                  child: AdWidget(ad: _bannerAd!),
+                ),
+              )
+            else if (_isError)
+              _buildErrorState()
+            else
+              _buildShimmerPlaceholder(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerPlaceholder() {
+    final double width = _currentAdSize?.width.toDouble() ?? widget.adSize.width.toDouble();
+    final double height = _currentAdSize?.height.toDouble() ?? widget.adSize.height.toDouble();
+    
+    return Shimmer.fromColors(
+      baseColor: NeumorphismTheme.isDark 
+          ? Colors.white.withValues(alpha: 0.05) 
+          : Colors.grey[300]!,
+      highlightColor: NeumorphismTheme.isDark 
+          ? Colors.white.withValues(alpha: 0.1) 
+          : Colors.grey[100]!,
+      period: const Duration(milliseconds: 1500),
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 16, color: NeumorphismTheme.textLight.withValues(alpha: 0.3)),
+          const SizedBox(width: 8),
+          Text(
+            'No se pudo cargar la sugerencia',
+            style: TextStyle(fontSize: 10, color: NeumorphismTheme.textLight.withValues(alpha: 0.3)),
+          ),
+        ],
       ),
     );
   }

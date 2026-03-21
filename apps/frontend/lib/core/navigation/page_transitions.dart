@@ -24,20 +24,16 @@ class SpotifyPageTransitions {
     
     // Solo animar al avanzar (cuando animation.value > 0)
     // Usar una curva más rápida para reducir tiempo de transición
-    final fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(
-      CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOut, // Curva rápida
-      ),
-    );
+    const begin = Offset(0.0, 0.05); // Pequeño slide-up para feedback visual
+    const end = Offset.zero;
+    final curveTween = CurveTween(curve: Curves.easeOutCubic);
+    final offsetAnimation = animation.drive(Tween(begin: begin, end: end).chain(curveTween));
 
     // Usar RepaintBoundary para evitar repintados durante la transición
+    // PROFESIONAL: Solo slide de corto recorrido, sin pesadas opacidades
     return RepaintBoundary(
-      child: FadeTransition(
-        opacity: fadeAnimation,
+      child: SlideTransition(
+        position: offsetAnimation,
         child: child,
       ),
     );
@@ -78,17 +74,11 @@ class SpotifyPageTransitions {
     final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
     final offsetAnimation = animation.drive(tween);
 
-    final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: animation, curve: curve),
-    );
-
+    // 🚀 OPTIMIZACIÓN: Eliminado FadeTransition por ser pesado en neumorfismo
     return RepaintBoundary(
       child: SlideTransition(
         position: offsetAnimation,
-        child: FadeTransition(
-          opacity: fadeAnimation,
-          child: child,
-        ),
+        child: child,
       ),
     );
   }
@@ -117,25 +107,19 @@ class SpotifyPageTransitions {
           final t = curvedAnimation.value;
           
           // ✅ MEJORADO: Slide desde abajo con efecto más pronunciado
-          // Usar una curva de easing para que el movimiento sea más natural
           final easedT = Curves.easeOutCubic.transform(t);
           final translateY = (1 - easedT) * MediaQuery.of(context).size.height;
           
           // ✅ MEJORADO: Escala más visible para efecto premium (0.95 a 1.0)
           final scale = 0.95 + (0.05 * easedT);
           
-          // ✅ MEJORADO: Opacity con fade más suave
-          final opacity = Curves.easeOut.transform(t);
-          
+          // 🚀 OPTIMIZACIÓN: Opacity eliminada para máximo rendimiento
           return Transform.translate(
             offset: Offset(0, translateY),
             child: Transform.scale(
               scale: scale,
               alignment: Alignment.bottomCenter,
-              child: Opacity(
-                opacity: opacity,
-                child: child,
-              ),
+              child: child,
             ),
           );
         },

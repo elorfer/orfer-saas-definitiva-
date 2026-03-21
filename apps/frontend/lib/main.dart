@@ -205,7 +205,7 @@ class _VintageMusicAppState extends ConsumerState<VintageMusicApp> {
           theme: neumorphismTheme.theme.copyWith(
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
-                TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+                TargetPlatform.android: ZoomPageTransitionsBuilder(),
                 TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
               },
             ),
@@ -221,7 +221,7 @@ class _VintageMusicAppState extends ConsumerState<VintageMusicApp> {
           darkTheme: neumorphismTheme.theme.copyWith(
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
-                TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+                TargetPlatform.android: ZoomPageTransitionsBuilder(),
                 TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
               },
             ),

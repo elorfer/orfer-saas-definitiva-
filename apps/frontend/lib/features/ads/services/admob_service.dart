@@ -34,6 +34,10 @@ class AdMobService {
     return null;
   }
 
+  /// 🚀 POOL DE ANUNCIOS: Almacena anuncios precargados para visualización instantánea
+  static BannerAd? _preloadedBanner;
+  static bool _isLoadingPreload = false;
+
   /// Retorna el ID de Anuncio Nativo adecuado
   static String? get nativeAdUnitId {
     if (isTestMode) {
@@ -48,18 +52,67 @@ class AdMobService {
     return AdSize.getAnchoredAdaptiveBannerAdSize(orientation, width.toInt());
   }
 
-  /// Inicializa el SDK de AdMob
+  /// Inicializa el SDK de AdMob y lanza la primera precarga
   static Future<void> initialize() async {
     try {
       final status = await MobileAds.instance.initialize();
       AppLogger.info('[AdMobService] SDK Inicializado correctamente');
       
-      // Log de estado de adaptadores (opcional para debug)
+      // Lanzar primera precarga (silenciosa)
+      preloadBanner();
+      
+      // Log de estado de adaptadores
       status.adapterStatuses.forEach((key, value) {
         AppLogger.debug('[AdMobService] Adaptador: $key, Estado: ${value.state}');
       });
     } catch (e) {
       AppLogger.error('[AdMobService] Error crítico al inicializar AdMob: $e');
     }
+  }
+
+  /// ⚡ PRE-CARGA PRO: Descarga un anuncio en background para uso futuro
+  static void preloadBanner() {
+    if (_preloadedBanner != null || _isLoadingPreload) return;
+
+    final adUnitId = bannerAdUnitId;
+    if (adUnitId == null) return;
+
+    _isLoadingPreload = true;
+    
+    _preloadedBanner = BannerAd(
+      adUnitId: adUnitId,
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          AppLogger.info('[AdMobService] ✅ Banner precargado y listo en el pool');
+          _isLoadingPreload = false;
+        },
+        onAdFailedToLoad: (ad, error) {
+          AppLogger.warning('[AdMobService] ❌ Falló precarga: ${error.message}');
+          ad.dispose();
+          _preloadedBanner = null;
+          _isLoadingPreload = false;
+          // Reintentar en 30 segundos si falló
+          Future.delayed(const Duration(seconds: 30), () => preloadBanner());
+        },
+      ),
+    )..load();
+  }
+
+  /// 🎯 CONSUMIR BANNER: Extrae el anuncio del pool si está listo
+  static BannerAd? takePreloadedBanner() {
+    if (_preloadedBanner == null) {
+      preloadBanner(); // Intentar cargar uno para la próxima vez
+      return null;
+    }
+    
+    final ad = _preloadedBanner;
+    _preloadedBanner = null;
+    
+    // Inmediatamente empezar a cargar el siguiente para mantener el pool lleno
+    Future.delayed(const Duration(seconds: 2), () => preloadBanner());
+    
+    return ad;
   }
 }

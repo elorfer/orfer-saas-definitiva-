@@ -153,7 +153,7 @@ class _PremiumActivatedScreenState extends ConsumerState<PremiumActivatedScreen>
   Widget _buildHeadline() {
     return Center(
       child: Text(
-        'Gracias! La barba crece, pero tu apoyo la hace brillar.',
+        '¡Gracias! La barba crece, pero tu apoyo la hace brillar.',
         style: GoogleFonts.inter(
           fontSize: 28,
           fontWeight: FontWeight.w700,
@@ -190,7 +190,7 @@ class _PremiumActivatedScreenState extends ConsumerState<PremiumActivatedScreen>
           alignment: Alignment.center,
           children: [
             Image.asset(
-              'assets/images/IMAJEN DE LAS SUSCRIPCIONES.webp',
+              'assets/images/anciano_premiun.png',
               width: _imageSize,
               height: _imageSize,
               fit: BoxFit.contain,
