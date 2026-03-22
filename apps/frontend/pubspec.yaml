@@ -6,8 +6,8 @@ publish_to: 'none'
 version: 1.0.1+8
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: ">=3.16.0"
+  sdk: '>=3.11.0 <4.0.0'
+  flutter: ">=3.41.0"
 
 dependencies:
   flutter:
@@ -24,8 +24,9 @@ dependencies:
 
   # State Management
   provider: ^6.1.2
-  riverpod: ^3.0.0
-  flutter_riverpod: ^3.0.0
+  riverpod: ^2.5.1
+  flutter_riverpod: ^2.5.1
+  # ... other dependencies ...
 
   # HTTP & API
   http: ^1.2.1

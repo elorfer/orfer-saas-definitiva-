@@ -1,0 +1,310 @@
+﻿Resolving dependencies...
+flutter : Note: 
+matcher is pinned to 
+version 0.12.19 by 
+flutter_test from the 
+flutter SDK.
+En línea: 1 Carácter: 1
++ flutter pub get 2>&1 
+| Out-File -Encoding 
+utf8 
+pub_error_utf8.txt; Ge 
+...
++ ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Note: matcher   
+  i...he flutter SD    
+K.:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+See https://dart.dev/go
+/sdk-version-pinning 
+for details.
+
+Note: test_api is 
+pinned to version 
+0.7.10 by flutter_test 
+from the flutter SDK.
+See https://dart.dev/go
+/sdk-version-pinning 
+for details.
+
+The current Dart SDK 
+version is 3.11.3.
+
+    Because test 
+>=1.16.6 <1.17.10 
+depends on analyzer 
+^1.0.0 and test 
+>=1.17.10 <1.20.0 
+depends on analyzer 
+>=1.0.0 <3.0.0, test 
+>=1.16.6 <1.20.0 
+requires analyzer 
+>=1.0.0 <3.0.0.
+    And because test 
+>=1.20.0 <1.21.2 
+depends on test_api 
+0.4.9, test >=1.16.6 
+<1.21.2 requires 
+analyzer >=1.0.0 
+<3.0.0 or test_api 
+0.4.9.
+(1) So, because test 
+>=1.21.0 <1.21.6 
+depends on analyzer 
+>=2.0.0 <5.0.0 and 
+test >=1.21.6 <1.24.4 
+depends on analyzer 
+>=2.0.0 <6.0.0, test 
+>=1.16.6 <1.24.4 
+requires analyzer 
+>=1.0.0 <6.0.0 or 
+test_api 0.4.9.
+
+    Because no 
+versions of dart_style 
+match >2.3.6 <2.3.7 
+and dart_style >=2.3.7 
+<2.3.8 depends on 
+analyzer ^6.5.0, 
+dart_style >2.3.6 
+<2.3.8 requires 
+analyzer ^6.5.0.
+    And because 
+dart_style ^2.3.8 
+depends on analyzer 
+^6.9.0 and dart_style 
+2.3.6 depends on 
+analyzer ^6.2.0, 
+dart_style ^2.3.6 
+requires analyzer 
+^6.2.0.
+    And because test 
+>=1.16.6 <1.24.4 
+requires analyzer 
+>=1.0.0 <6.0.0 or 
+test_api 0.4.9 (1), if 
+test >=1.16.6 <1.24.4 
+and dart_style ^2.3.6 
+then test_api 0.4.9.
+    And because 
+auto_route_generator 
+9.0.0 depends on 
+dart_style ^2.3.6, if 
+test >=1.16.6 <1.24.4 
+and 
+auto_route_generator 
+9.0.0 then test_api 
+0.4.9.
+    And because no 
+versions of 
+auto_route_generator 
+match >9.0.0 <9.3.0 
+and 
+auto_route_generator 
+>=9.3.0 <10.2.4 
+depends on source_gen 
+^2.0.0, if test 
+>=1.16.6 <1.24.4 and 
+auto_route_generator 
+>=9.0.0 <10.2.4 then 
+test_api 0.4.9 or 
+source_gen ^2.0.0.
+    And because test 
+>=1.29.0 <1.31.0 
+depends on analyzer 
+>=8.0.0 <11.0.0 and 
+test 
+>=1.16.0-nullsafety.10 
+<1.16.1 depends on 
+analyzer >=0.36.0 
+<0.42.0, if 
+auto_route_generator 
+>=9.0.0 <10.2.4 and 
+test 
+>=1.16.0-nullsafety.10 
+<1.16.1-Ôê× or 
+>=1.16.6 <1.24.4-Ôê× 
+or >=1.29.0 
+<1.31.0-Ôê× then 
+test_api 0.4.9 or 
+source_gen ^2.0.0 or 
+analyzer >=0.36.0 
+<0.42.0 or >=8.0.0 
+<11.0.0.
+    And because test 
+>=1.16.0-nullsafety.8 
+<1.16.0-nullsafety.10 
+depends on analyzer 
+>=0.36.0 <0.41.0 and 
+hive_generator 2.0.1 
+depends on source_gen 
+^1.0.0, if 
+auto_route_generator 
+>=9.0.0 <10.2.4 and 
+test 
+>=1.16.0-nullsafety.8 
+<1.16.1-Ôê× or 
+>=1.16.6 <1.24.4-Ôê× 
+or >=1.29.0 
+<1.31.0-Ôê× and 
+hive_generator 2.0.1 
+then test_api 0.4.9 or 
+analyzer >=0.36.0 
+<0.42.0 or >=8.0.0 
+<11.0.0.
+    And because 
+hive_generator 2.0.1 
+depends on analyzer 
+>=4.6.0 <7.0.0 and no 
+versions of 
+hive_generator match 
+>2.0.1 <3.0.0, if 
+auto_route_generator 
+>=9.0.0 <10.2.4 and 
+test 
+>=1.16.0-nullsafety.8 
+<1.16.1-Ôê× or 
+>=1.16.6 <1.24.4-Ôê× 
+or >=1.29.0 
+<1.31.0-Ôê× and 
+hive_generator ^2.0.1 
+then test_api 0.4.9.
+    And because test 
+>=1.31.0 depends on 
+test_api 0.7.11 and 
+every version of 
+flutter_test from sdk 
+depends on test_api 
+0.7.10, one of 
+auto_route_generator 
+>=9.0.0 <10.2.4 or 
+hive_generator ^2.0.1 
+or test 
+>=1.16.0-nullsafety.8 
+<1.16.1-Ôê× or 
+>=1.16.6 <1.24.4-Ôê× 
+or >=1.29.0 or 
+flutter_test from sdk 
+must be false.
+    And because test 
+>=1.16.0-nullsafety.19 
+<1.16.6 depends on 
+test_api 0.2.19 and 
+test >=0.12.0-beta.3 
+<1.16.0-nullsafety.8 
+doesn't support null 
+safety, if 
+auto_route_generator 
+>=9.0.0 <10.2.4 and 
+hive_generator ^2.0.1 
+and flutter_test from 
+sdk and test 
+>=0.12.0-beta.3 
+<1.24.4-Ôê× or 
+>=1.29.0 then test_api 
+0.2.19.
+(2) So, because 
+matcher >=0.12.16+1 
+depends on test_api 
+>=0.5.0 <0.8.0 and 
+test >=1.28.0 <1.30.0 
+depends on matcher 
+>=0.12.16 <0.12.19, 
+one of 
+auto_route_generator 
+>=9.0.0 <10.2.4 or 
+hive_generator ^2.0.1 
+or flutter_test from 
+sdk or matcher 
+>=0.12.19 or test 
+>=0.12.0-beta.3 
+<1.24.4-Ôê× or 
+>=1.28.0 must be false.
+
+    Because riverpod 
+>=3.0.0-dev.12 depends 
+on test ^1.0.0 and 
+test >=1.25.13 <1.28.0 
+depends on matcher 
+>=0.12.16 <0.12.18, 
+riverpod 
+>=3.0.0-dev.12 
+requires matcher 
+>=0.12.16 <0.12.18 or 
+test >=1.0.0 
+<1.25.13-Ôê× or 
+>=1.28.0 <2.0.0.
+    And because test 
+>=1.24.3 <1.25.13 
+depends on matcher 
+>=0.12.16 <0.12.17, 
+riverpod 
+>=3.0.0-dev.12 
+requires matcher 
+>=0.12.16 <0.12.18 or 
+test >=1.0.0 
+<1.24.3-Ôê× or 
+>=1.28.0 <2.0.0.
+    And because one of 
+auto_route_generator 
+>=9.0.0 <10.2.4 or 
+hive_generator ^2.0.1 
+or flutter_test from 
+sdk or matcher 
+>=0.12.19 or test 
+>=0.12.0-beta.3 
+<1.24.4-Ôê× or 
+>=1.28.0 must be false 
+(2), one of 
+auto_route_generator 
+>=9.0.0 <10.2.4 or 
+hive_generator ^2.0.1 
+or flutter_test from 
+sdk or matcher 
+>=0.12.19 or riverpod 
+>=3.0.0-dev.12 must be 
+false.
+    And because every 
+version of 
+flutter_test from sdk 
+depends on matcher 
+0.12.19, one of 
+auto_route_generator 
+>=9.0.0 <10.2.4 or 
+hive_generator ^2.0.1 
+or flutter_test from 
+sdk or riverpod 
+>=3.0.0-dev.12 must be 
+false.
+    And because 
+vintage_music_app 
+depends on both 
+riverpod ^3.0.0 and 
+flutter_test from sdk, 
+auto_route_generator 
+>=9.0.0 <10.2.4 is 
+incompatible with 
+hive_generator ^2.0.1.
+    So, because 
+vintage_music_app 
+depends on both 
+auto_route_generator 
+^9.0.0 and 
+hive_generator ^2.0.1, 
+version solving failed.
+
+The lower bound of 
+"sdk: '>=1.8.0 
+<3.0.0'" must be 
+2.12.0 or higher to 
+enable null safety.
+For details, see https:
+//dart.dev/null-safety
+Failed to update 
+packages.
