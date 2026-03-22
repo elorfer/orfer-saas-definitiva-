@@ -8,8 +8,8 @@ import '../../../core/utils/logger.dart';
 /// Centraliza la configuración de IDs (Test vs Prod) y la inicialización.
 class AdMobService {
   
-  /// 🚀 CONFIGURACIÓN DE PRODUCCIÓN
-  static const bool isTestMode = false; // CAMBIAR A 'false' PARA LANZAR LA APP
+  /// 🚀 MODO DE PRUEBA (Para desarrollo)
+  static const bool isTestMode = true; // ACTIVADO PARA PROBAR ANUNCIO NATIVO
 
   /// IDs de prueba de Google
   static const String _androidBannerTestId = 'ca-app-pub-3940256099942544/6300978111';

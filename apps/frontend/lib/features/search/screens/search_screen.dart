@@ -18,7 +18,8 @@ import '../widgets/song_search_card.dart';
 import '../widgets/playlist_search_card.dart';
 import 'web/web_search_screen.dart'; // 🚀 Web UI
 import '../../../core/responsive/responsive_layout.dart'; // 🚀 Responsive Control
-import '../../../core/widgets/unified_banner_ad.dart'; // 📢 AdMob
+import '../../../core/widgets/unified_banner_ad.dart'; // 📢 AdMob (Mantenido por si acaso)
+import '../../../core/widgets/native_ad_list_tile.dart'; // 🎨 NATIVE AD
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -543,11 +544,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           ),
         ],
 
-        // 📢 ADMOB: Banner entre Artistas y Canciones
+        // 📢 ADMOB: Anuncio Nativo entre Artistas y Canciones
         const SliverToBoxAdapter(
-          child: UnifiedBannerAd(
-            key: ValueKey('search_results_ad'),
-            adSize: AdSize.banner,
+          child: RepaintBoundary(
+            child: NativeAdListTile(
+              key: ValueKey('search_results_native_ad'),
+              adType: NativeAdType.small,
+            ),
           ),
         ),
 
@@ -682,11 +685,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             ),
           ),
           
-          // 📢 ADMOB: Banner en Home de búsqueda
+          // 📢 ADMOB: Anuncio Nativo en Home de búsqueda
           const SliverToBoxAdapter(
-            child: UnifiedBannerAd(
-              key: ValueKey('search_home_ad'),
-              adSize: AdSize.largeBanner,
+            child: RepaintBoundary(
+              child: NativeAdListTile(
+                key: ValueKey('search_home_native_ad'),
+                adType: NativeAdType.small,
+              ),
             ),
           ),
           

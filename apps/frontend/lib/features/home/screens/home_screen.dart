@@ -22,6 +22,7 @@ import '../widgets/home_header.dart'; // Extracted header
 import '../../../core/responsive/responsive_layout.dart';
 import 'web/web_home_screen.dart';
 import '../../../core/widgets/unified_banner_ad.dart';
+import '../../../core/widgets/native_ad_list_tile.dart'; // 🚀 NIVEL DIOS: Anuncio Nativo
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// HomeScreen optimizado con AutomaticKeepAliveClientMixin
@@ -267,11 +268,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               key: ValueKey('featured_songs')),
                         ),
                         
-                        // 📢 ADMOB: Banner integrado entre secciones
+                        // 📢 ADMOB: Anuncio NATIVO integrado entre secciones (Nivel Dios)
                         const SliverToBoxAdapter(
-                          child: UnifiedBannerAd(
-                            key: ValueKey('home_section_ad'),
-                            adSize: AdSize.mediumRectangle,
+                          child: NativeAdListTile(
+                            key: ValueKey('home_section_native_ad'),
                           ),
                         ),
                         
