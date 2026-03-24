@@ -26,7 +26,8 @@
     "setup": "npm install && npm run setup:backend && npm run setup:admin",
     "setup:backend": "cd apps/backend && npm install",
     "setup:admin": "cd apps/admin && npm install",
-    "init-admin": "cd apps/backend && npm run init-admin"
+    "init-admin": "cd apps/backend && npm run init-admin",
+    "check-admin": "cd apps/backend && npm run check-admin"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

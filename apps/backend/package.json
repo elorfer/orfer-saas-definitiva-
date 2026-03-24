@@ -26,7 +26,8 @@
     "migration:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts",
     "update-durations": "ts-node -r tsconfig-paths/register scripts/update-song-durations.ts",
-    "init-admin": "ts-node -r tsconfig-paths/register scripts/init-prod-admin.ts"
+    "init-admin": "ts-node -r tsconfig-paths/register scripts/init-prod-admin.ts",
+    "check-admin": "ts-node -r tsconfig-paths/register scripts/check-admin-status.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
