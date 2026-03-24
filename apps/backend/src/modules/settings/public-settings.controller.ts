@@ -122,22 +122,22 @@ export class PublicSettingsController {
     ]);
 
     // Usar el conteo real si catalog_size no está configurado manualmente (es 0)
-    const catalogSize = catalogSizeFromSettings > 0 ? catalogSizeFromSettings : publishedSongsCount;
+    const catalogSize = Number(catalogSizeFromSettings) > 0 ? Number(catalogSizeFromSettings) : publishedSongsCount;
 
     return {
-      historySize,
-      phase2Count,
-      phase31Count,
-      bufferSize,
-      preloadThreshold,
-      criticalSongs,
+      historySize: Number(historySize),
+      phase2Count: Number(phase2Count),
+      phase31Count: Number(phase31Count),
+      bufferSize: Number(bufferSize),
+      preloadThreshold: Number(preloadThreshold),
+      criticalSongs: Number(criticalSongs),
       catalogSize,
-      smallCatalogThreshold,
+      smallCatalogThreshold: Number(smallCatalogThreshold),
       // ⚡ RENDIMIENTO Y UX
-      controlDebounceMs,
-      preloadCooldownMs,
-      minQueueSize,
-      cyclicBufferThreshold,
+      controlDebounceMs: Number(controlDebounceMs),
+      preloadCooldownMs: Number(preloadCooldownMs),
+      minQueueSize: Number(minQueueSize),
+      cyclicBufferThreshold: Number(cyclicBufferThreshold),
     };
   }
 
@@ -187,12 +187,12 @@ export class PublicSettingsController {
     ]);
 
     return {
-      genreWeight,
-      popularityWeight,
-      artistWeight,
-      noveltyWeight,
-      affinityWeight,
-      total: genreWeight + popularityWeight + artistWeight + noveltyWeight + affinityWeight,
+      genreWeight: Number(genreWeight),
+      popularityWeight: Number(popularityWeight),
+      artistWeight: Number(artistWeight),
+      noveltyWeight: Number(noveltyWeight),
+      affinityWeight: Number(affinityWeight),
+      total: Number(genreWeight) + Number(popularityWeight) + Number(artistWeight) + Number(noveltyWeight) + Number(affinityWeight),
     };
   }
 }
