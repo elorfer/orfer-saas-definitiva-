@@ -166,6 +166,7 @@ export class SettingsService implements OnModuleInit { // Added implements OnMod
     // Auto-parche para agregar la columna textValue en producción (si no existe)
     try {
       await this.settingsRepository.query('ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "textValue" text');
+      await this.settingsRepository.query('ALTER TABLE app_settings ALTER COLUMN "value" DROP NOT NULL');
       this.logger.log('✅ Verificación de estructura app_settings completada');
     } catch (e) {
       this.logger.warn('⚠️ No se pudo verificar la estructura de app_settings (ignorar si es sqlite o entorno de pruebas)', e.message);
