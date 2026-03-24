@@ -1364,11 +1364,11 @@ export class RecommendationService {
     ]);
 
     // Normalizar a decimales (Admin usa 0-100, scoring usa 0.0-1.0)
-    const baseGenreWeight = adminGenreWeight / 100;
-    const basePopularityWeight = adminPopularityWeight / 100;
-    const baseArtistWeight = adminArtistWeight / 100;
-    const baseNoveltyWeight = adminNoveltyWeight / 100;
-    const baseAffinityWeight = adminAffinityWeight / 100;
+    const baseGenreWeight = Number(adminGenreWeight) / 100;
+    const basePopularityWeight = Number(adminPopularityWeight) / 100;
+    const baseArtistWeight = Number(adminArtistWeight) / 100;
+    const baseNoveltyWeight = Number(adminNoveltyWeight) / 100;
+    const baseAffinityWeight = Number(adminAffinityWeight) / 100;
 
     // 🚨 LOOP DETECTION: Ajustar pesos cuando detecta loops
     // Reducir pesos de semilla (género/artista) a la mitad y aumentar diversidad
@@ -2169,7 +2169,7 @@ export class RecommendationService {
     const adminHistorySize = await this.settingsService.getValue(SettingKeys.ALGORITHM_HISTORY_SIZE);
 
     // El límite máximo es lo que configuró el Admin
-    const maxAllowedByAdmin = Math.min(adminHistorySize, requestedExcludes);
+    const maxAllowedByAdmin = Math.min(Number(adminHistorySize), requestedExcludes);
 
     // Si hay muchas canciones (>=50), usar el límite del Admin
     if (totalSongs >= 50) {
