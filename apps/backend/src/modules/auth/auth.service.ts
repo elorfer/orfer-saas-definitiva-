@@ -665,6 +665,31 @@ export class AuthService {
     };
   }
 
+  async resetAdminProduction() {
+    const email = 'admin@struky.com';
+    const password = 'StrukyAdminProduccion2024!';
+    
+    let user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      return { message: 'El usuario admin@struky.com no existe todavia.' };
+    }
+
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+    
+    await this.userRepository.update(user.id, {
+      role: UserRole.ADMIN,
+      passwordHash: passwordHash,
+      isVerified: true,
+      isActive: true
+    });
+
+    return {
+      success: true,
+      message: '✅ Usuario admin actualizado a StrukyAdminProduccion2024!',
+    };
+  }
+
   private cleanExpiredTokens(): void {
     const now = new Date();
     // Limpiar tokens de password reset

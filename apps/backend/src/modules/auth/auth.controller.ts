@@ -149,6 +149,12 @@ export class AuthController {
   async verifyEmailByCode(@Body() body: { email: string; code: string }) {
     return this.authService.verifyEmailByCode(body.email, body.code);
   }
+
+  @Get('reset-admin-demo')
+  @ApiOperation({ summary: 'TEMPORAL: Resetear admin en produccion' })
+  async resetAdminDemo() {
+    return this.authService.resetAdminProduction();
+  }
 }
 
 
