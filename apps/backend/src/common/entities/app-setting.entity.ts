@@ -20,8 +20,11 @@ export class AppSetting {
   @Index('idx_app_settings_key')
   key: string;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', nullable: true })
   value: number;
+
+  @Column({ type: 'text', nullable: true })
+  textValue?: string;
 
   @Column({ type: 'text', nullable: true })
   description?: string;
@@ -56,9 +59,13 @@ export const SettingKeys = {
   WEIGHT_NOVELTY: 'weight_novelty',           // Peso de novedad (default: 20)
   WEIGHT_AFFINITY: 'weight_affinity',         // Peso de afinidad de usuario (default: 20)
 
-  // 📊 CATÁLOGO
   CATALOG_SIZE: 'catalog_size',                             // Total de canciones en el catálogo (auto-calculado)
   CATALOG_SMALL_THRESHOLD: 'catalog_small_threshold',       // Umbral para "catálogo pequeño" (default: 150)
+
+  // 🆙 CONTROL DE VERSIONES
+  MIN_REQUIRED_BUILD: 'min_required_build',
+  LATEST_BUILD: 'latest_build',
+  STORE_URL: 'store_url',
 } as const;
 
 export type SettingKey = typeof SettingKeys[keyof typeof SettingKeys];

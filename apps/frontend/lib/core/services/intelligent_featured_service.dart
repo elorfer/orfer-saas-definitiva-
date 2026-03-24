@@ -352,29 +352,65 @@ class IntelligentFeaturedService {
           useCache: false, // Forzar fresco
         );
         
-        // 🚀 SAFETY NET: Si no hay resultados y tenemos muchas exclusiones (catálogo pequeño)
-        // Reintentar con exclusiones relajadas (solo las últimas 10)
-        if (batchResult.songs.isEmpty && usedIds.length > 20) {
-           debugPrint('⚠️ [IntelligentFeatured] 0 resultados con ${usedIds.length} exclusiones. Posible catálogo pequeño. Reintentando con exclusiones relajadas...');
+        // 🚀 SAFETY NET: Estrategia de Relajación Multinivel
+        if (batchResult.songs.isEmpty) {
+           debugPrint('⚠️ [IntelligentFeatured] 0 resultados en Fase 1. Iniciando Relajación Multinivel...');
            
-           // Relajar exclusiones: mantener solo las últimas 10 + semilla actual
-           final relaxedExclusions = usedIds.toList();
-           if (relaxedExclusions.length > 10) {
-             relaxedExclusions.removeRange(0, relaxedExclusions.length - 10);
+           // NIVEL 1: Reducir exclusiones a la mínima expresión (últimas 5 + actual)
+           final minimalExclusions = usedIds.toList();
+           if (minimalExclusions.length > 5) {
+             minimalExclusions.removeRange(0, minimalExclusions.length - 5);
            }
-           if (!relaxedExclusions.contains(currentSongId)) {
-             relaxedExclusions.add(currentSongId);
+           if (!minimalExclusions.contains(currentSongId)) {
+             minimalExclusions.add(currentSongId);
            }
            
+           debugPrint('🔄 [IntelligentFeatured] Relajación Nivel 1: Exclusiones reducidas a ${minimalExclusions.length}');
            batchResult = await _recommendationService.generatePlaylistBatch(
               seedSongId: currentSongId,
               count: fetchCount,
               user: user,
               genres: null,
-              excludeIds: relaxedExclusions, // Exclusiones relajadas
+              excludeIds: minimalExclusions,
               useCache: false,
            );
-           debugPrint('✅ [IntelligentFeatured] Fallback de catálogo pequeño: ${batchResult.songs.length} canciones recuperadas');
+
+            // ✅ CRÍTICO: Si obtuvimos resultados con relajación, actualizar usedIds
+            // para que el filtro final (allFetched) no los descarte
+            if (batchResult.songs.isNotEmpty) {
+               usedIds = minimalExclusions.toSet();
+               debugPrint('✅ [IntelligentFeatured] Relajación Nivel 1 exitosa. usedIds actualizado para permitir backup.');
+            }
+
+           // NIVEL 2: Catálogo Agotado. Ignorar exclusiones y buscar populares (Filtro Global)
+           if (batchResult.songs.isEmpty) {
+              debugPrint('🚨 [IntelligentFeatured] 0 resultados en Nivel 1. Nivel 2: Ignorando exclusiones por agotamiento de catálogo.');
+              batchResult = await _recommendationService.generatePlaylistBatch(
+                seedSongId: currentSongId,
+                count: fetchCount,
+                user: user,
+                genres: null,
+                excludeIds: [currentSongId], // Solo excluir la actual
+                useCache: false,
+              );
+
+               if (batchResult.songs.isNotEmpty) {
+                 usedIds = {currentSongId}; // Relajar filtro final al máximo
+                 debugPrint('✅ [IntelligentFeatured] Relajación Nivel 2 exitosa. usedIds reseteado a solo semilla.');
+               }
+              
+              // NIVEL 3: Emergencia Total. Cargar canciones populares estáticas (Failsafe)
+              if (batchResult.songs.isEmpty) {
+                 debugPrint('🆘 [IntelligentFeatured] EMERGENCIA: 0 resultados tras relajar todo. Buscando canciones populares globales.');
+                 final popularSongs = await _homeService.getPopularSongs(limit: fetchCount);
+                 if (popularSongs.isNotEmpty) {
+                    batchResult = BatchResult(songs: popularSongs);
+                    usedIds = {}; // En emergencia total, aceptar TODO (incluso duplicados si es necesario para que no muera la música)
+                    debugPrint('✅ [IntelligentFeatured] Recuperación vía popularSongs: ${batchResult.songs.length} canciones. Filtro desactivado.');
+                 }
+              }
+           }
+           debugPrint('✅ [IntelligentFeatured] Fallback completado: ${batchResult.songs.length} canciones recuperadas');
         }
 
         // Separar lo que necesitamos de lo que guardaremos
@@ -442,181 +478,113 @@ class IntelligentFeaturedService {
     }
     
     // 🚨 FASE 2: Continuar en CADENA usando las recomendaciones iniciales como semillas
-    // ⚡ OPTIMIZADO: Llamadas en LOTES PARALELOS para reducir latencia de 60s a ~24s
     if (recommendations.length < count) {
-      // 🚨 SEMILLAS VARIADAS: Extraer TODOS los IDs únicos de las recomendaciones de la Fase 1
-      // CRÍTICO: Usar uniqueSongIds (que incluye TODAS las canciones obtenidas) no solo recommendations
       final seedsFromRecommendations = recommendations.map((r) => r.song.id).toList();
-      
-      // 🚨 CRÍTICO: También incluir las canciones de initialResults que pueden no estar en recommendations
-      // (por ejemplo, si fueron duplicadas pero aún son válidas como semillas)
       final allObtainedIds = <String>{};
       allObtainedIds.addAll(seedsFromRecommendations);
-      
-      // Agregar IDs de todas las respuestas válidas (incluso si fueron duplicadas)
       for (final song in initialResults) {
         allObtainedIds.add(song.id);
       }
-      
-      // Convertir a lista y eliminar duplicados
       final seeds = allObtainedIds.toList();
       
-      // 🚨 VERIFICACIÓN: Si aún no tenemos suficientes semillas, usar la canción original
       if (seeds.isEmpty) {
         debugPrint('⚠️ [IntelligentFeatured] No hay semillas de la Fase 1, usando canción original como fallback');
         seeds.add(currentSongId);
-      } else if (seeds.length < initialCount && seeds.length < 4) {
-        debugPrint('⚠️ [IntelligentFeatured] Solo ${seeds.length} semilla(s) única(s) obtenida(s) de $initialCount llamadas. Posible problema de duplicados en el backend.');
       }
-      
+
       final remainingCount = (limit - recommendations.length).clamp(0, limit);
-      
-      // 🚨 LOG DETALLADO: Mostrar todas las semillas
-      debugPrint('🔗 [IntelligentFeatured] Fase 2 iniciada con ${seeds.length} semilla(s) única(s):');
-      for (int i = 0; i < seeds.length && i < 5; i++) {
-        final seedId = seeds[i];
-        final isOriginal = seedId == currentSongId;
-        debugPrint('   Semilla ${i + 1}: ${seedId.substring(0, 8)}...${isOriginal ? " (ORIGINAL - fallback)" : ""}');
-      }
-      if (seeds.length > 5) {
-        debugPrint('   ... y ${seeds.length - 5} más');
-      }
-      debugPrint('   Faltan $remainingCount canciones para completar el límite de $limit');
-      
-      // 🚀 FASE 2 OPTIMIZADA: Usar endpoint de batch para obtener múltiples recomendaciones
-      // El backend ahora maneja la detección de loops y ajuste dinámico del scoring
-      // El frontend mantiene límites suaves como respaldo de seguridad
       int seedIndex = 0;
       int totalAttempts = 0;
-      int consecutiveFailures = 0; // Contador de fallos consecutivos (respaldo)
-      const int maxConsecutiveFailures = 1; // Cortar en el primer fallo
-      const int absoluteMaxAttempts = 2; // Más bajo aún para máxima velocidad
-      final calculatedMaxAttempts = remainingCount; // pedir lo que falta
-      final maxAttempts = calculatedMaxAttempts > absoluteMaxAttempts ? absoluteMaxAttempts : calculatedMaxAttempts;
-      final Map<String, int> seedAttempts = {}; // Limitar intentos por semilla
+      int consecutiveFailures = 0;
+      const int maxConsecutiveFailures = 1;
+      const int absoluteMaxAttempts = 2;
+      final maxAttempts = remainingCount > absoluteMaxAttempts ? absoluteMaxAttempts : remainingCount;
+      final Map<String, int> seedAttempts = {};
       
       while (recommendations.length < count && totalAttempts < maxAttempts && consecutiveFailures < maxConsecutiveFailures) {
-        // 🚨 CRÍTICO: Seleccionar semilla de forma circular de la lista de semillas
         final seedId = seeds[seedIndex % seeds.length];
-        final seedIndexInList = seedIndex % seeds.length;
-        
-        // Limitar intentos por semilla a 1 (cortar rápido)
-        seedAttempts[seedId] = (seedAttempts[seedId] ?? 0);
-        if (seedAttempts[seedId]! >= 1) {
+        if ((seedAttempts[seedId] ?? 0) >= 1) {
           seedIndex++;
           continue;
         }
         
-        // Calcular cuántas recomendaciones necesitamos (pedir de a 1 para minimizar duplicados)
         final needed = 1;
-        
-        debugPrint('🚀 [IntelligentFeatured] Fase 2: solicitando $needed recomendaciones usando batch endpoint con semilla ${seedId.substring(0, 8)}... (índice $seedIndexInList de ${seeds.length}, intento ${totalAttempts + 1}/$maxAttempts)');
+        debugPrint('🚀 [IntelligentFeatured] Fase 2: solicitando $needed recomendaciones con semilla ${seedId.substring(0, 8)}...');
         
         try {
-          seedAttempts[seedId] = seedAttempts[seedId]! + 1;
-          // 🚀 NUEVO: Usar endpoint de batch en lugar de múltiples llamadas individuales
-          final batchResult = await _recommendationService.generatePlaylistBatch(
-            seedSongId: seedId, // ✅ USAR SEMILLA VARIADA (no currentSongId original)
+          seedAttempts[seedId] = (seedAttempts[seedId] ?? 0) + 1;
+          var batchResult = await _recommendationService.generatePlaylistBatch(
+            seedSongId: seedId,
             count: needed,
             user: user,
-            genres: null, // El backend detectará los géneros automáticamente
+            genres: null,
             excludeIds: usedIds.toList(),
-            useCache: false, // 🚨 DESACTIVAR CACHE para forzar nuevas recomendaciones
+            useCache: false,
           );
 
-          debugPrint('✅ [IntelligentFeatured] Fase 2 batch: ${batchResult.songs.length}/$needed recomendaciones recibidas');
-
-          // Procesar resultados del batch
-          int addedInBatch = 0;
-          int duplicatesInBatch = 0;
-
-          for (final recommendedSong in batchResult.songs) {
-            if (recommendations.length >= count) break;
-            
-            if (!usedIds.contains(recommendedSong.id) && recommendedSong.isValidForPlayback) {
-              final rank = recommendations.length + 1;
-              recommendations.add(FeaturedSong(
-                song: recommendedSong,
-                featuredReason: 'Recomendada por IA • ${_getRecommendationReason(rank - 1)}',
-                rank: rank,
-              ));
-              usedIds.add(recommendedSong.id);
-              addedInBatch++;
-              
-              // 🚨 AGREGAR NUEVA SEMILLA: Cada nueva recomendación se convierte en semilla
-              if (!seeds.contains(recommendedSong.id)) {
-                seeds.add(recommendedSong.id);
-                debugPrint('✅ [IntelligentFeatured] Nueva semilla agregada: ${recommendedSong.title} (${recommendedSong.id.substring(0, 8)}...)');
-              }
-            } else {
-              duplicatesInBatch++;
-              debugPrint('⚠️ [IntelligentFeatured] Recomendación duplicada/inválida ignorada: ${recommendedSong.title} (ID: ${recommendedSong.id.substring(0, 8)}...)');
+          if (batchResult.songs.isEmpty) {
+            debugPrint('⚠️ [IntelligentFeatured] 0 resultados en Fase 2. Intentando Relajación Nivel 1...');
+            final minimalExcludes = usedIds.toList();
+            if (minimalExcludes.length > 5) {
+               minimalExcludes.removeRange(0, minimalExcludes.length - 5);
             }
-          }
-          
-          debugPrint('📊 [IntelligentFeatured] Fase 2 batch procesado: $addedInBatch agregadas, $duplicatesInBatch duplicadas/inválidas');
-          
-          // Si no obtuvimos ninguna recomendación nueva, fallback inmediato y cortar Fase 2
-          if (addedInBatch == 0) {
-            consecutiveFailures++;
-            seedIndex++;
-            debugPrint('⚠️ [IntelligentFeatured] Fase 2: Sin nuevas con esta semilla. Corte inmediato a populares.');
-            final fallbackNeeded = (count - recommendations.length).clamp(2, 4);
-            final fallback = await _getPopularDiverseSongs(
-              count: fallbackNeeded,
-              excludeIds: usedIds,
+            if (!minimalExcludes.contains(seedId)) {
+               minimalExcludes.add(seedId);
+            }
+
+            batchResult = await _recommendationService.generatePlaylistBatch(
+               seedSongId: seedId,
+               count: needed,
+               user: user,
+               genres: null,
+               excludeIds: minimalExcludes,
+               useCache: false,
             );
+          }
+
+          if (batchResult.songs.isEmpty) {
+            consecutiveFailures++;
+            debugPrint('❌ [IntelligentFeatured] Fase 2: 0 recomendaciones recibidas.');
+            
+            // Fallback rápido a populares si falla Fase 2
+            final fallbackNeeded = (count - recommendations.length).clamp(1, 2);
+            final fallback = await _getPopularDiverseSongs(count: fallbackNeeded, excludeIds: usedIds);
             if (fallback.isNotEmpty) {
-              int addedFallback = 0;
               for (final fs in fallback) {
-                if (recommendations.length >= count) break;
-                final song = fs.song;
-                if (usedIds.contains(song.id) || !song.isValidForPlayback) continue;
+                if (recommendations.length < count && !usedIds.contains(fs.song.id)) {
+                  recommendations.add(FeaturedSong(
+                    song: fs.song,
+                    featuredReason: 'Popular • ${fs.song.totalStreams}',
+                    rank: recommendations.length + 1,
+                  ));
+                  usedIds.add(fs.song.id);
+                }
+              }
+            }
+            break; // Cortar el loop si falló y usamos fallback
+          } else {
+            consecutiveFailures = 0;
+            for (final song in batchResult.songs) {
+              if (recommendations.length < count && !usedIds.contains(song.id)) {
                 recommendations.add(FeaturedSong(
                   song: song,
-                  featuredReason: fs.featuredReason ?? 'Trending • ${song.totalStreams} reproducciones',
+                  featuredReason: 'Recomendada por IA • ${_getRecommendationReason(recommendations.length)}',
                   rank: recommendations.length + 1,
                 ));
                 usedIds.add(song.id);
-                addedFallback++;
+                if (!seeds.contains(song.id)) seeds.add(song.id);
               }
-              debugPrint('✅ [IntelligentFeatured] Fallback populares agregó $addedFallback canciones (fallback inmediato).');
-            } else {
-              debugPrint('⚠️ [IntelligentFeatured] Fallback populares no devolvió canciones (fallback inmediato).');
             }
-            break;
-          } else {
-            // Si obtuvimos recomendaciones, resetear contador de fallos
-            consecutiveFailures = 0;
-            seedIndex++;
           }
-          
-          totalAttempts++;
-          
-          // Si ya tenemos suficientes recomendaciones, salir
-            if (recommendations.length >= count) break;
-        } catch (error, stackTrace) {
-          consecutiveFailures++;
-          debugPrint('❌ [IntelligentFeatured] Error en Fase 2 batch (semilla: ${seedId.substring(0, 8)}...): $error');
-          debugPrint('   Stack: ${stackTrace.toString().split('\n').take(3).join('\n')}');
-          // Avanzar a la siguiente semilla en caso de error
+        } catch (error) {
+          debugPrint('❌ [IntelligentFeatured] Error en Fase 2: $error');
           seedIndex++;
           totalAttempts++;
         }
       }
-      
-      if (totalAttempts >= maxAttempts) {
-        debugPrint('⚠️ [IntelligentFeatured] Máximo de intentos alcanzado en Fase 2 ($maxAttempts intentos) - Límite de seguridad del frontend');
-      }
-      
-      if (consecutiveFailures >= maxConsecutiveFailures) {
-        debugPrint('⚠️ [IntelligentFeatured] Fase 2: Demasiados fallos consecutivos ($consecutiveFailures/$maxConsecutiveFailures) - Límite de seguridad del frontend. El backend debería haber manejado esto automáticamente.');
-      }
-      
-      debugPrint('✅ [IntelligentFeatured] Fase 2 completada: ${recommendations.length} recomendaciones totales (${recommendations.length - initialCount} de la Fase 2)');
     }
     
-    debugPrint('✅ [IntelligentFeatured] Total recomendaciones obtenidas: ${recommendations.length} de $count solicitadas (híbrido: $initialCount paralelo + cadena)');
+    debugPrint('✅ [IntelligentFeatured] Total recomendaciones obtenidas: ${recommendations.length} de $count');
     return recommendations;
   }
 

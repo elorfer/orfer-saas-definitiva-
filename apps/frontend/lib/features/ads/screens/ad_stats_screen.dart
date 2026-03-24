@@ -64,7 +64,7 @@ class AdStatsScreen extends ConsumerWidget {
                                 width: 30,
                                 height: 30,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 30),
+                                errorBuilder: (_, _, _) => const Icon(Icons.broken_image, size: 30),
                               ),
                             ),
                           Text(ad.title, style: const TextStyle(fontWeight: FontWeight.bold)),

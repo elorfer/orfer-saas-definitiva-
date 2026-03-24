@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Delete,
+  Post,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -118,15 +119,18 @@ export class SettingsController {
     await this.settingsService.delete(key);
     return { message: 'Configuración eliminada exitosamente' };
   }
+  
+  @Post('test-update')
+  @ApiOperation({ summary: 'Disparar prueba visual de actualización en todas las apps conectadas' })
+  @ApiResponse({ status: 200, description: 'Evento disparado exitosamente' })
+  async triggerUpdateTest() {
+    await this.settingsService.triggerUpdateTest();
+    return { message: 'Evento de prueba enviado a todos los dispositivos' };
+  }
+
+  @Get('code-version')
+  @ApiOperation({ summary: 'Obtener la versión actual del código (pubspec.yaml)' })
+  async getCodeVersion() {
+    return this.settingsService.getCodeVersion();
+  }
 }
-
-
-
-
-
-
-
-
-
-
-

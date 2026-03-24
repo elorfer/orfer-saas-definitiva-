@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -35,9 +35,9 @@ class StrukyDrawerMenu extends ConsumerWidget {
 
     // Colores derivados del tema para consistencia
     final Color textColorPrimary = colorScheme.onSurface;
-    final Color textColorSecondary = colorScheme.onSurface.withOpacity(0.6);
-    final Color dividerColor = colorScheme.onSurface.withOpacity(0.1);
-    final Color iconColor = colorScheme.onSurface.withOpacity(0.7);
+    final Color textColorSecondary = colorScheme.onSurface.withValues(alpha: 0.6);
+    final Color dividerColor = colorScheme.onSurface.withValues(alpha: 0.1);
+    final Color iconColor = colorScheme.onSurface.withValues(alpha: 0.7);
 
     return Material(
       color: Colors.transparent,
@@ -96,7 +96,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                         highlightColor:
                             colorScheme.error.withValues(alpha: 0.2),
                       ),
-                      tooltip: 'Cerrar Sesión',
+                      tooltip: 'Cerrar SesiÃ³n',
                     ),
                   ],
                 ),
@@ -253,7 +253,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  '¿Eres compositor?',
+                                  'Â¿Eres compositor?',
                                   style: TextStyle(
                                       color: textColorPrimary,
                                       fontWeight: FontWeight.w600,
@@ -310,27 +310,27 @@ class StrukyDrawerMenu extends ConsumerWidget {
   }
 
   void _showLogoutConfirmation(BuildContext context, WidgetRef ref) {
-    // Usar diálogo adaptativo para sensación nativa (iOS/Android)
+    // Usar diÃ¡logo adaptativo para sensaciÃ³n nativa (iOS/Android)
     showAdaptiveDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog.adaptive(
-          title: const Text('¿Cerrar Sesión?'),
-          content: const Text('Estás a punto de salir de tu cuenta.'),
+          title: const Text('Â¿Cerrar SesiÃ³n?'),
+          content: const Text('EstÃ¡s a punto de salir de tu cuenta.'),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop(); // Cerrar diálogo
+                Navigator.of(context).pop(); // Cerrar diÃ¡logo
               },
             ),
             TextButton(
               child: const Text(
-                'Cerrar Sesión',
+                'Cerrar SesiÃ³n',
                 style: TextStyle(color: Colors.red), // Destructive action
               ),
               onPressed: () async {
-                Navigator.of(context).pop(); // Cerrar diálogo de confirmación
+                Navigator.of(context).pop(); // Cerrar diÃ¡logo de confirmaciÃ³n
 
                 // Mostrar Loader de espera
                 if (context.mounted) {
@@ -346,7 +346,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                   );
                 }
 
-                // Ejecutar logout (mínimo 1 segundo para que se vea el loader)
+                // Ejecutar logout (mÃ­nimo 1 segundo para que se vea el loader)
                 await Future.wait([
                   ref.read(authStateProvider.notifier).logout(),
                   Future.delayed(const Duration(seconds: 1)),
@@ -370,7 +370,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1B5E20), // Dark green
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+        border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.3)),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
@@ -407,7 +407,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -453,7 +453,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
         Padding(
           padding: EdgeInsets.only(top: 16.0),
           child: Text(
-            'Struky app es una plataforma dedicada a mostrar el catálogo musical de los compositores.',
+            'Struky app es una plataforma dedicada a mostrar el catÃ¡logo musical de los compositores.',
             style: TextStyle(fontSize: 14),
           ),
         ),
@@ -484,7 +484,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurface.withOpacity(0.2),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -517,14 +517,14 @@ class StrukyDrawerMenu extends ConsumerWidget {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF25D366).withOpacity(0.1),
+                      color: const Color(0xFF25D366).withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child:
                         Icon(MdiIcons.whatsapp, color: const Color(0xFF25D366)),
                   ),
                   title: const Text('Contactar por WhatsApp'),
-                  subtitle: const Text('Respuesta rápida (+57 300 901 2217)'),
+                  subtitle: const Text('Respuesta rÃ¡pida (+57 300 901 2217)'),
                   trailing:
                       const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                   onTap: () {
@@ -540,14 +540,14 @@ class StrukyDrawerMenu extends ConsumerWidget {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent.withOpacity(0.1),
+                      color: Colors.blueAccent.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.email_outlined,
                         color: Colors.blueAccent),
                   ),
                   title: const Text('Sugerencias y Problemas'),
-                  subtitle: const Text('Escríbenos a strukyapp@gmail.com'),
+                  subtitle: const Text('EscrÃ­benos a strukyapp@gmail.com'),
                   trailing:
                       const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                   onTap: () {
@@ -556,7 +556,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                   },
                 ),
 
-                // ✅ Padding para que el mini-reproductor no tape las opciones
+                // âœ… Padding para que el mini-reproductor no tape las opciones
                 SizedBox(height: MediaQuery.of(context).padding.bottom + 100),
               ],
             ),
@@ -632,3 +632,4 @@ class _MenuOption extends StatelessWidget {
     );
   }
 }
+

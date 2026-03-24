@@ -1,13 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AppSetting, SettingKeys } from '../../common/entities/app-setting.entity';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Valores por defecto para las configuraciones.
  * Si no existe en la BD, se retorna este valor.
  */
-const DEFAULT_VALUES: Record<string, number> = {
+const DEFAULT_VALUES: Record<string, number | string> = {
   // 📢 ANUNCIOS
   [SettingKeys.AD_FREQUENCY]: 3, // 3 canciones entre cada anuncio
 
@@ -35,32 +37,34 @@ const DEFAULT_VALUES: Record<string, number> = {
   'preload_cooldown_ms': 500,          // Cooldown entre precargas (ms)
   'min_queue_size': 8,                 // Objetivo de canciones en cola
   'cyclic_buffer_threshold': 5,        // Canciones mínimas antes de permitir repeticiones
+
+  // 🆙 CONTROL DE VERSIONES
+  'min_required_build': 8,             // Build mínima obligatoria
+  'latest_build': 8,                   // Última build recomendada
+  'store_url': 'https://play.google.com/store/apps/details?id=com.struky.app', // URL por defecto
 };
 
+import { RealtimeGateway } from '../realtime/realtime.gateway'; // Added import
+
 @Injectable()
-export class SettingsService {
+export class SettingsService implements OnModuleInit { // Added implements OnModuleInit
   private readonly logger = new Logger(SettingsService.name);
 
   constructor(
     @InjectRepository(AppSetting)
     private readonly settingsRepository: Repository<AppSetting>,
+    private readonly realtimeGateway: RealtimeGateway, // Added RealtimeGateway injection
   ) { }
 
   /**
-   * Obtiene el valor de una configuración por su llave.
-   * Si no existe, retorna el valor por defecto.
+   * Obtiene el valor de una configuración.
    */
-  async getValue(key: string): Promise<number> {
-    const setting = await this.settingsRepository.findOne({
-      where: { key },
-    });
-
-    if (setting) {
-      return setting.value;
+  async getValue(key: string): Promise<number | string> {
+    const setting = await this.findByKey(key);
+    if (!setting) {
+      return DEFAULT_VALUES[key] ?? 0;
     }
-
-    // Retornar valor por defecto si existe
-    return DEFAULT_VALUES[key] ?? 0;
+    return setting.textValue ?? setting.value;
   }
 
   /**
@@ -68,19 +72,25 @@ export class SettingsService {
    * @returns Número de canciones entre anuncios
    */
   async getAdFrequency(): Promise<number> {
-    return this.getValue(SettingKeys.AD_FREQUENCY);
+    return this.getValue(SettingKeys.AD_FREQUENCY) as Promise<number>;
   }
 
   /**
    * Actualiza o crea una configuración.
    */
-  async setValue(key: string, value: number, description?: string): Promise<AppSetting> {
+  async setValue(key: string, value: number | string, description?: string): Promise<AppSetting> {
     let setting = await this.settingsRepository.findOne({
       where: { key },
     });
 
     if (setting) {
-      setting.value = value;
+      if (typeof value === 'number') {
+        setting.value = value;
+        setting.textValue = null;
+      } else {
+        setting.textValue = value;
+        setting.value = null;
+      }
       if (description !== undefined) {
         setting.description = description;
       }
@@ -88,13 +98,22 @@ export class SettingsService {
     } else {
       setting = this.settingsRepository.create({
         key,
-        value,
+        value: typeof value === 'number' ? value : null,
+        textValue: typeof value === 'string' ? value : null,
         description: description || `Configuración: ${key}`,
       });
       this.logger.log(`Configuración creada: ${key} = ${value}`);
     }
 
     return this.settingsRepository.save(setting);
+  }
+
+  /**
+   * 🆙 Dispara el evento de prueba de actualización vía WebSockets
+   */
+  async triggerUpdateTest(): Promise<void> {
+    this.logger.log('🚀 Disparando trigger de prueba de actualización');
+    this.realtimeGateway.broadcastUpdateTest();
   }
 
   /**
@@ -143,6 +162,14 @@ export class SettingsService {
    * Inicializa las configuraciones por defecto si no existen.
    * Útil para ejecutar al iniciar la aplicación.
    */
+  async onModuleInit() {
+    await this.initializeDefaults();
+  }
+
+  /**
+   * Inicializa las configuraciones por defecto si no existen.
+   * Útil para ejecutar al iniciar la aplicación.
+   */
   async initializeDefaults(): Promise<void> {
     for (const [key, defaultValue] of Object.entries(DEFAULT_VALUES)) {
       const existing = await this.findByKey(key);
@@ -152,15 +179,38 @@ export class SettingsService {
       }
     }
   }
+
+  /**
+   * Lee la versión y build del archivo pubspec.yaml del frontend.
+   */
+  async getCodeVersion(): Promise<{ version: string; build: number }> {
+    try {
+      // Ajustar la ruta según la estructura del monorepo
+      // Estamos en: apps/backend/src/modules/settings/settings.service.ts
+      // Necesitamos: apps/frontend/pubspec.yaml
+      const pubspecPath = path.resolve(process.cwd(), 'apps/frontend/pubspec.yaml');
+      
+      if (!fs.existsSync(pubspecPath)) {
+        this.logger.warn(`No se encontró pubspec.yaml en: ${pubspecPath}`);
+        return { version: '0.0.0', build: 0 };
+      }
+
+      const content = fs.readFileSync(pubspecPath, 'utf8');
+      const versionMatch = content.match(/^version:\s*([^\s]+)/m);
+      
+      if (versionMatch && versionMatch[1]) {
+        const fullVersion = versionMatch[1]; // ej: 1.0.1+8
+        const [version, buildStr] = fullVersion.split('+');
+        return {
+          version: version,
+          build: parseInt(buildStr) || 0
+        };
+      }
+
+      return { version: '0.0.0', build: 0 };
+    } catch (error) {
+      this.logger.error('Error al leer pubspec.yaml', error);
+      return { version: '0.0.0', build: 0 };
+    }
+  }
 }
-
-
-
-
-
-
-
-
-
-
-

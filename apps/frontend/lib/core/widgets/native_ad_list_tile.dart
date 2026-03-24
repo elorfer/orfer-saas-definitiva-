@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io';
 import '../../features/ads/services/admob_service.dart';
 import '../../core/utils/logger.dart';
 import '../../core/providers/auth_provider.dart';
 import 'package:vintage_music_app/core/providers/theme_provider.dart';
 import 'package:vintage_music_app/core/theme/neumorphism_theme.dart';
-import 'package:vintage_music_app/core/theme/text_styles.dart';
 
 enum NativeAdType {
   large, // Default (square-ish with media)

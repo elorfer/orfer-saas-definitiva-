@@ -126,7 +126,6 @@ class AudioService {
   bool _isSeeking = false;
   Timer? _seekingGuardTimer;
   Duration? _userSeekPosition; // Posición del usuario durante seek
-  static const _seekingGuardDuration = Duration(milliseconds: 500);
   
   // 🔄 TRACK CHANGE DETECTION: Para resetear seekbar
   int? _lastKnownIndex;
@@ -148,7 +147,6 @@ class AudioService {
   static const _persistenceBoxName = 'audio_playback_state';
   Timer? _persistenceDebouncer;
   bool _persistenceBlockedAfterSeek = false; // Bloquear persistencia después de seek
-  static const _persistenceDelayAfterSeek = Duration(seconds: 2); // Delay post-seek
   
   // ═══════════════════════════════════════════════════════════════════════
   // ⚡ SKIP INSTANTÁNEO - Debounce de ráfaga y UI optimista
@@ -837,20 +835,11 @@ class AudioService {
         AppLogger.debug('[AudioService] Error al detener (safe ignore): $e');
       }
       
-      // ⚠️ DEUDA TÉCNICA: ConcatenatingAudioSource está deprecado en just_audio 0.10.5
-      // 
-      // Razón: just_audio 0.10.5 aún requiere ConcatenatingAudioSource para crear colas.
-      // La nueva API (setAudioSources) no está disponible en esta versión.
-      //
-      // Plan de migración:
-      // 1. Actualizar just_audio a versión que soporte setAudioSources (plural)
-      // 2. Migrar loadNewQueue() y appendToQueue() a la nueva API
-      // 3. Verificar que sequenceState.sequence se maneje correctamente
-      //
-      // Estado: Funcional y estable. Las advertencias son informativas.
-      // Prioridad: Baja (se abordará en próxima actualización mayor del paquete)
-      await player.setAudioSource(
-        ConcatenatingAudioSource(children: sources),
+      // ⚡ OPTIMIZACIÓN: Migrado a setAudioSources (nueva API de just_audio 0.10.5+)
+      // El reproductor ahora maneja su propia cola internamente, haciendo obsoleto
+      // a ConcatenatingAudioSource.
+      await player.setAudioSources(
+        sources,
         initialIndex: initialIndex,
       );
       
@@ -887,9 +876,8 @@ class AudioService {
           await player.stop();
           await Future.delayed(const Duration(milliseconds: 500));
           
-          // Reintentar carga
-          await player.setAudioSource(
-            ConcatenatingAudioSource(children: sources),
+          await player.setAudioSources(
+            sources,
             initialIndex: initialIndex,
           );
           
@@ -914,9 +902,8 @@ class AudioService {
           await player.stop();
           await Future.delayed(const Duration(milliseconds: 300));
           
-          // Reintentar carga (usando ConcatenatingAudioSource como se requiere en just_audio 0.10.5)
-          await player.setAudioSource(
-            ConcatenatingAudioSource(children: sources),
+          await player.setAudioSources(
+            sources,
             initialIndex: initialIndex,
           );
           
@@ -1144,18 +1131,11 @@ class AudioService {
   }
 
   /// Agregar más canciones a la cola actual (útil para modo algorithm)
-  /// 
-  /// ⚠️ DEUDA TÉCNICA: Usa ConcatenatingAudioSource.addAll() que está deprecado.
-  /// Ver comentario en loadNewQueue() para detalles de la migración planificada.
   Future<void> appendToQueue(List<AudioSource> sources) async {
     try {
-      final currentSource = player.audioSource;
-      if (currentSource is ConcatenatingAudioSource) {
-        await currentSource.addAll(sources);
-        AppLogger.info('[AudioService] Agregadas ${sources.length} canciones a la cola');
-      } else {
-        AppLogger.warning('[AudioService] No se puede agregar a la cola: el audioSource actual no es ConcatenatingAudioSource');
-      }
+
+      await player.addAudioSources(sources);
+      AppLogger.info('[AudioService] Agregadas ${sources.length} canciones a la cola');
     } catch (e) {
       AppLogger.error('[AudioService] Error al agregar a la cola: $e');
       rethrow;
@@ -1168,27 +1148,22 @@ class AudioService {
   /// Elimina todas las canciones después del índice especificado.
   /// 
   /// [fromIndex]: Índice desde el cual empezar a eliminar (inclusive)
-  Future<void> clearFutureQueue({required int fromIndex}) async {
+Future<void> clearFutureQueue({required int fromIndex}) async {
     try {
-      final currentSource = player.audioSource;
-      if (currentSource is ConcatenatingAudioSource) {
-        final totalLength = currentSource.length;
-        
-        if (fromIndex >= totalLength) {
-          AppLogger.debug('[AudioService] 🎛️ clearFutureQueue: No hay canciones para eliminar (fromIndex=$fromIndex >= length=$totalLength)');
-          return;
-        }
-
-        // Eliminar desde el final hacia fromIndex para evitar problemas de índices
-        final itemsToRemove = totalLength - fromIndex;
-        for (int i = totalLength - 1; i >= fromIndex; i--) {
-          await currentSource.removeAt(i);
-        }
-        
-        AppLogger.info('[AudioService] 🎛️ clearFutureQueue: Eliminadas $itemsToRemove canciones futuras');
-      } else {
-        AppLogger.warning('[AudioService] 🎛️ clearFutureQueue: No hay ConcatenatingAudioSource activo');
+      final totalLength = player.audioSources.length;
+      
+      if (fromIndex >= totalLength) {
+        AppLogger.debug('[AudioService] 🎛️ clearFutureQueue: No hay canciones para eliminar (fromIndex=$fromIndex >= length=$totalLength)');
+        return;
       }
+
+      // Eliminar desde el final hacia fromIndex para evitar problemas de índices
+      final itemsToRemove = totalLength - fromIndex;
+      for (int i = totalLength - 1; i >= fromIndex; i--) {
+        await player.removeAudioSourceAt(i);
+      }
+      
+      AppLogger.info('[AudioService] 🎛️ clearFutureQueue: Eliminadas $itemsToRemove canciones futuras');
     } catch (e) {
       AppLogger.error('[AudioService] 🎛️ Error en clearFutureQueue: $e');
       rethrow;
@@ -1209,10 +1184,8 @@ class AudioService {
   /// Retorna true si la inyección fue exitosa, false si no hay cola activa
   Future<bool> insertSongAtStart(AudioSource source) async {
     try {
-      final currentSource = player.audioSource;
-      
-      // Solo funciona si ya hay un ConcatenatingAudioSource activo
-      if (currentSource is! ConcatenatingAudioSource) {
+      // Solo funciona si hay canciones en la cola
+      if (player.audioSources.isEmpty) {
         AppLogger.info('[AudioService] No hay cola activa para inyección instantánea');
         return false;
       }
@@ -1222,15 +1195,15 @@ class AudioService {
       // 🔄 CRÍTICO: Guardar estado de reproducción ANTES de insertar
       // seek() y seekToPrevious() pueden pausar el reproductor automáticamente
       final wasPlaying = player.playing;
-      final initialQueueLength = player.sequence.length ?? 0;
+      final initialQueueLength = player.sequence.length;
       
       // Insertar la nueva canción en el índice 0
-      await currentSource.insert(0, source);
+      await player.insertAudioSource(0, source);
       
       // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice su sequenceState
       // ⚡ OPTIMIZACIÓN: Usar evento en lugar de delay
       await _waitForCondition(
-        (state) => (player.sequence.length ?? 0) > initialQueueLength,
+        (state) => player.sequence.length > initialQueueLength,
         timeout: const Duration(milliseconds: 100),
         debugLabel: 'Sequence Update',
       );
@@ -1288,17 +1261,15 @@ class AudioService {
   /// Retorna true si la inyección fue exitosa, false si no hay cola activa
   Future<bool> insertSongAtIndex(AudioSource source, int index) async {
     try {
-      final currentSource = player.audioSource;
-      
-      // Solo funciona si ya hay un ConcatenatingAudioSource activo
-      if (currentSource is! ConcatenatingAudioSource) {
+      // Solo funciona si hay canciones en la cola
+      if (player.audioSources.isEmpty) {
         AppLogger.info('[AudioService] No hay cola activa para inyección instantánea en índice $index');
         return false;
       }
 
       // Validar que el índice sea válido
-      if (index < 0 || index > currentSource.length) {
-        AppLogger.warning('[AudioService] Índice $index inválido (cola tiene ${currentSource.length} elementos)');
+      if (index < 0 || index > player.audioSources.length) {
+        AppLogger.warning('[AudioService] Índice $index inválido (cola tiene ${player.audioSources.length} elementos)');
         return false;
       }
 
@@ -1310,7 +1281,7 @@ class AudioService {
       final currentIndex = player.currentIndex ?? 0;
       
       // Insertar la nueva canción/anuncio en el índice especificado
-      await currentSource.insert(index, source);
+      await player.insertAudioSource(index, source);
       
       // 🔄 SINCRONIZACIÓN: Esperar que just_audio actualice su sequenceState después de insertar
       // ⚡ OPTIMIZACIÓN: Delay mínimo (15ms) para reducir latencia mientras permitimos que just_audio actualice
@@ -1356,11 +1327,9 @@ class AudioService {
     try {
       AppLogger.warning('[AudioService] 🛡️ removeQueueItemsAt llamado con ${indices.length} índices: $indices');
       
-      final currentSource = player.audioSource;
-      
-      // Solo funciona si ya hay un ConcatenatingAudioSource activo
-      if (currentSource is! ConcatenatingAudioSource) {
-        AppLogger.warning('[AudioService] 🛡️ ❌ No hay cola activa para eliminación (tipo: ${currentSource.runtimeType})');
+      // Solo funciona si hay canciones en la cola
+      if (player.audioSources.isEmpty) {
+        AppLogger.warning('[AudioService] 🛡️ ❌ No hay cola activa para eliminación');
         return false;
       }
 
@@ -1369,9 +1338,9 @@ class AudioService {
       }
       
       // 🛡️ PROTECCIÓN ADICIONAL: Verificar que los índices sean válidos
-      final validIndices = indices.where((idx) => idx >= 0 && idx < currentSource.length).toList();
+      final validIndices = indices.where((idx) => idx >= 0 && idx < player.audioSources.length).toList();
       if (validIndices.isEmpty) {
-        AppLogger.warning('[AudioService] 🛡️ ❌ Ningún índice es válido para eliminación (cola tiene ${currentSource.length} elementos)');
+        AppLogger.warning('[AudioService] 🛡️ ❌ Ningún índice es válido para eliminación (cola tiene ${player.audioSources.length} elementos)');
         return false;
       }
       
@@ -1395,13 +1364,13 @@ class AudioService {
       for (final index in sortedIndices) {
         try {
           // Verificar que el índice sigue siendo válido
-          if (index < currentSource.length && index >= 0) {
+          if (index < player.audioSources.length && index >= 0) {
             // 🔄 CRÍTICO: Pequeño delay entre cada removeAt
             if (successfullyRemoved > 0) {
               await Future.delayed(const Duration(milliseconds: 20));
             }
             
-            await currentSource.removeAt(index);
+            await player.removeAudioSourceAt(index);
             successfullyRemoved++;
           }
         } catch (e, stackTrace) {
@@ -1448,10 +1417,9 @@ class AudioService {
     return removeQueueItemsAt(duplicateIndices);
   }
 
-  /// Verificar si hay una cola activa (ConcatenatingAudioSource)
   bool get hasActiveQueue {
     try {
-      return player.audioSource is ConcatenatingAudioSource;
+      return player.audioSources.isNotEmpty;
     } catch (e) {
       return false;
     }
@@ -1592,7 +1560,7 @@ final playbackProgressProvider = Provider<double>((ref) {
   return positionAsync.when(
     data: (position) => (position.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0),
     loading: () => 0.0,
-    error: (_, __) => 0.0,
+    error: (_, _) => 0.0,
   );
 });
 
@@ -1607,6 +1575,6 @@ final bufferProgressProvider = Provider<double>((ref) {
   return bufferedAsync.when(
     data: (buffered) => (buffered.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0),
     loading: () => 0.0,
-    error: (_, __) => 0.0,
+    error: (_, _) => 0.0,
   );
 });

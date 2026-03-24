@@ -277,18 +277,23 @@ class SpotifyRecommendationService {
         'count': count.toString(),
       };
       
-      // 🎛️ VIBE SELECTOR: Normalize genres list and only accept genreId when it's a valid UUID
+      // 🎛️ VIBE SELECTOR: Normalize genres list
       final normalizedGenres = normalizeGenres(genres);
       String? resolvedGenreId = genreId;
 
-      // If the provided genreId is not a valid UUID, ignore it (likely a name)
-      if (resolvedGenreId != null && resolvedGenreId.isNotEmpty && !isValidUuid(resolvedGenreId)) {
-        debugPrint('🎛️ [SpotifyRec Batch] Ignoring invalid genreId (not UUID): $resolvedGenreId');
-        resolvedGenreId = null;
+      // If already resolved from metadata or provided, we verify if it's a UUID or name
+      if (resolvedGenreId != null && resolvedGenreId.isNotEmpty) {
+        if (!isValidUuid(resolvedGenreId)) {
+          // If it's a name, add it to normalizedGenres and clear resolvedGenreId
+          if (!normalizedGenres.contains(resolvedGenreId)) {
+            normalizedGenres.add(resolvedGenreId);
+          }
+          resolvedGenreId = null;
+        }
       }
 
-      // Si aún no hay genreId, intentar recuperar metadata de la canción (backend)
-      if ((resolvedGenreId == null || resolvedGenreId.isEmpty) && !_songGenreCache.containsKey(seedSongId)) {
+      // Si aún no hay genreId y no hay nombres de géneros, intentar recuperar metadata de la canción (backend)
+      if (resolvedGenreId == null && normalizedGenres.isEmpty && !_songGenreCache.containsKey(seedSongId)) {
         try {
           debugPrint('🔍 [SpotifyRec Batch] Obteniendo metadata de canción para extraer genreId: $seedSongId');
           final songResp = await _httpClient.dio.get('/public/songs/$seedSongId',
@@ -297,23 +302,41 @@ class SpotifyRecommendationService {
           if (songResp.statusCode == 200 && songResp.data != null) {
             final songData = songResp.data as Map<String, dynamic>;
             final rawCandidate = (songData['genre_id'] as String?) ?? ((songData['genres'] is List && (songData['genres'] as List).isNotEmpty) ? (songData['genres'] as List).first?.toString() : null);
-            final candidate = isValidUuid(rawCandidate) ? rawCandidate : null;
-            _songGenreCache[seedSongId] = candidate;
-            resolvedGenreId = resolvedGenreId ?? candidate;
-            debugPrint('🔍 [SpotifyRec Batch] genreId from metadata (raw): $rawCandidate -> accepted: $candidate');
-            debugPrint('GENRE_DEBUG resolvedGenreId (after metadata fetch): $resolvedGenreId for seed $seedSongId');
+            
+            if (rawCandidate != null && rawCandidate.isNotEmpty) {
+              if (isValidUuid(rawCandidate)) {
+                resolvedGenreId = rawCandidate;
+              } else {
+                if (!normalizedGenres.contains(rawCandidate)) {
+                  normalizedGenres.add(rawCandidate);
+                }
+              }
+              _songGenreCache[seedSongId] = rawCandidate;
+              debugPrint('🔍 [SpotifyRec Batch] genre mapping: $rawCandidate (isUuid: ${isValidUuid(rawCandidate)})');
+            }
           }
         } catch (e) {
           debugPrint('⚠️ [SpotifyRec Batch] Error fetching song metadata for genreId: $e');
           _songGenreCache[seedSongId] = null;
         }
       } else if (_songGenreCache.containsKey(seedSongId)) {
-        resolvedGenreId = resolvedGenreId ?? _songGenreCache[seedSongId];
+        final cached = _songGenreCache[seedSongId];
+        if (cached != null) {
+          if (isValidUuid(cached)) {
+            resolvedGenreId = resolvedGenreId ?? cached;
+          } else {
+            if (!normalizedGenres.contains(cached)) {
+              normalizedGenres.add(cached);
+            }
+          }
+        }
       }
 
       if (resolvedGenreId != null && resolvedGenreId.isNotEmpty) {
         queryParams['genreId'] = resolvedGenreId;
-      } else if (normalizedGenres.isNotEmpty) {
+      }
+      
+      if (normalizedGenres.isNotEmpty) {
         queryParams['genres'] = normalizedGenres.join(',');
       }
       

@@ -441,10 +441,8 @@ class AdvancedAudioEngine {
   // Estado interno
   AudioEngineState _state = const AudioEngineState();
   final _stateController = BehaviorSubject<AudioEngineState>.seeded(const AudioEngineState());
-  
-  // Cola de reproducción (Gapless)
-  ConcatenatingAudioSource? _concatenatingSource;
-  
+  // Cola de reproducción (Gapless manejado nativamente en just_audio 0.10.5+)
+  // _concatenatingSource ha sido deprecado. Usaremos _player.audioSources
   // Precarga inteligente
   bool _isPreloading = false;
   final Set<String> _preloadedSongIds = {};
@@ -685,16 +683,9 @@ class AdvancedAudioEngine {
       // Crear fuentes de audio
       final sources = validSongs.map(_songToAudioSource).toList();
 
-      // Crear ConcatenatingAudioSource para Gapless Playback
-      _concatenatingSource = ConcatenatingAudioSource(
-        useLazyPreparation: true, // Preparación lazy para eficiencia
-        shuffleOrder: DefaultShuffleOrder(),
-        children: sources,
-      );
-
-      // Cargar en el player
-      await _player.setAudioSource(
-        _concatenatingSource!,
+      // Cargar en el player directamente (el player hace Gapless y usa cola propia interna)
+      await _player.setAudioSources(
+        sources,
         initialIndex: startIndex.clamp(0, validSongs.length - 1),
       );
 
@@ -874,14 +865,14 @@ class AdvancedAudioEngine {
 
   /// Agregar canciones al final de la cola
   Future<void> appendToQueue(List<Song> songs) async {
-    if (songs.isEmpty || _concatenatingSource == null) return;
+    if (songs.isEmpty || _player.audioSources.isEmpty) return;
 
     try {
       final validSongs = songs.where((s) => s.isValidForPlayback).toList();
       if (validSongs.isEmpty) return;
 
       final sources = validSongs.map(_songToAudioSource).toList();
-      await _concatenatingSource!.addAll(sources);
+      await _player.addAudioSources(sources);
 
       final newQueue = [..._state.queue, ...validSongs];
       _updateState(_state.copyWith(queue: newQueue));
@@ -894,11 +885,11 @@ class AdvancedAudioEngine {
 
   /// Insertar canción en posición específica
   Future<void> insertInQueue(Song song, int index) async {
-    if (!song.isValidForPlayback || _concatenatingSource == null) return;
+    if (!song.isValidForPlayback || _player.audioSources.isEmpty) return;
 
     try {
       final clampedIndex = index.clamp(0, _state.queue.length);
-      await _concatenatingSource!.insert(clampedIndex, _songToAudioSource(song));
+      await _player.insertAudioSource(clampedIndex, _songToAudioSource(song));
 
       final newQueue = List<Song>.from(_state.queue)..insert(clampedIndex, song);
       
@@ -929,11 +920,11 @@ class AdvancedAudioEngine {
 
   /// Eliminar canción de la cola
   Future<void> removeFromQueue(int index) async {
-    if (index < 0 || index >= _state.queue.length || _concatenatingSource == null) return;
+    if (index < 0 || index >= _state.queue.length || _player.audioSources.isEmpty) return;
     if (index == _state.currentIndex) return; // No eliminar la actual
 
     try {
-      await _concatenatingSource!.removeAt(index);
+      await _player.removeAudioSourceAt(index);
 
       final newQueue = List<Song>.from(_state.queue)..removeAt(index);
       
@@ -954,7 +945,6 @@ class AdvancedAudioEngine {
   Future<void> clearQueue() async {
     try {
       await _player.stop();
-      _concatenatingSource = null;
       _preloadedSongIds.clear();
 
       _updateState(const AudioEngineState());
@@ -1305,7 +1295,7 @@ final smoothPositionSyncProvider = Provider<Duration>((ref) {
   return stateAsync.when(
     data: (position) => position,
     loading: () => engine.state.position,
-    error: (_, __) => engine.state.position,
+    error: (_, _) => engine.state.position,
   );
 });
 
@@ -1320,7 +1310,7 @@ final dynamicPaletteProvider = Provider<DynamicPalette>((ref) {
   return stateAsync.when(
     data: (state) => state.palette ?? DynamicPalette.defaultPalette,
     loading: () => DynamicPalette.defaultPalette,
-    error: (_, __) => DynamicPalette.defaultPalette,
+    error: (_, _) => DynamicPalette.defaultPalette,
   );
 });
 
@@ -1330,7 +1320,7 @@ final audioIsPlayingProvider = Provider<bool>((ref) {
   return stateAsync.when(
     data: (state) => state.isPlaying,
     loading: () => false,
-    error: (_, __) => false,
+    error: (_, _) => false,
   );
 });
 
@@ -1340,7 +1330,7 @@ final currentSongProvider = Provider<Song?>((ref) {
   return stateAsync.when(
     data: (state) => state.currentSong,
     loading: () => null,
-    error: (_, __) => null,
+    error: (_, _) => null,
   );
 });
 

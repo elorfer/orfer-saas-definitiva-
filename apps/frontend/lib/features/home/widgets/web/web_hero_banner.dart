@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/neumorphism_theme.dart';
 import '../../../../core/theme/text_styles.dart';
@@ -8,12 +8,12 @@ class WebHeroBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Aquí podríamos tomar datos reales del provider, por ahora haremos un diseño visual impactante
-    // que invite a descubrir música.
+    // AquÃ­ podrÃ­amos tomar datos reales del provider, por ahora haremos un diseÃ±o visual impactante
+    // que invite a descubrir mÃºsica.
     
     return Container(
       width: double.infinity,
-      height: 380, // ✅ Aumentado para evitar overflow
+      height: 380, // âœ… Aumentado para evitar overflow
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         image: const DecorationImage(
@@ -23,7 +23,7 @@ class WebHeroBanner extends ConsumerWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 40,
             offset: const Offset(0, 10),
             spreadRadius: -5,
@@ -40,13 +40,13 @@ class WebHeroBanner extends ConsumerWidget {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  Colors.black.withOpacity(0.7),
+                  Colors.black.withValues(alpha: 0.7),
                   Colors.transparent,
                 ],
               ),
             ),
           ),
-          // Fondo Decorativo (Círculos abstractos)
+          // Fondo Decorativo (CÃ­rculos abstractos)
           Positioned(
             right: -50,
             top: -50,
@@ -55,7 +55,7 @@ class WebHeroBanner extends ConsumerWidget {
               height: 400,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
               ),
             ),
           ),
@@ -75,11 +75,11 @@ class WebHeroBanner extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '🌟 NUEVO EN STRUKY',
+                          'ðŸŒŸ NUEVO EN STRUKY',
                           style: AppTextStyles.caption.copyWith(
                             color: Colors.white,
                             letterSpacing: 1.2,
@@ -89,7 +89,7 @@ class WebHeroBanner extends ConsumerWidget {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Descubre la Mejor\nMúsica Vintage',
+                        'Descubre la Mejor\nMÃºsica Vintage',
                         style: AppTextStyles.titleLarge.copyWith(
                           color: Colors.white,
                           fontSize: 42,
@@ -101,7 +101,7 @@ class WebHeroBanner extends ConsumerWidget {
                       Text(
                         'Explora millones de canciones, artistas legendarios y playlists curadas para ti.',
                         style: AppTextStyles.bodyLarge.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 16,
                         ),
                       ),
@@ -116,7 +116,7 @@ class WebHeroBanner extends ConsumerWidget {
                           ),
                           const SizedBox(width: 16),
                           _HeroButton(
-                            text: 'Más Información',
+                            text: 'MÃ¡s InformaciÃ³n',
                             icon: Icons.info_outline_rounded,
                             isPrimary: false,
                             onTap: () {},
@@ -128,7 +128,7 @@ class WebHeroBanner extends ConsumerWidget {
                 ),
                 
                 // Espacio o Imagen (Derecha) - Por ahora espacio para balance
-                // Aquí iría una imagen grande recortada del artista destacado
+                // AquÃ­ irÃ­a una imagen grande recortada del artista destacado
                 const Expanded(flex: 2, child: SizedBox()),
               ],
             ),
@@ -162,12 +162,12 @@ class _HeroButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
-            color: isPrimary ? Colors.white : Colors.white.withOpacity(0.1),
+            color: isPrimary ? Colors.white : Colors.white.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
-            border: isPrimary ? null : Border.all(color: Colors.white.withOpacity(0.3)),
+            border: isPrimary ? null : Border.all(color: Colors.white.withValues(alpha: 0.3)),
             boxShadow: isPrimary ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               )
@@ -197,3 +197,4 @@ class _HeroButton extends StatelessWidget {
     );
   }
 }
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../../../../core/models/song_model.dart';
 import '../../../../../../core/widgets/optimized_image.dart';
 import '../../../../../../core/theme/neumorphism_theme.dart';
@@ -70,7 +70,7 @@ class _WebSongCardState extends State<WebSongCard> {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.4),
+                                color: Colors.black.withValues(alpha: 0.4),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -119,3 +119,4 @@ class _WebSongCardState extends State<WebSongCard> {
     );
   }
 }
+

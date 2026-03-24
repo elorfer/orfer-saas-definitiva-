@@ -57,7 +57,6 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
 
   Box<String>? _box;
   PlatformDirectory? _baseDir;
-  final _secureStorage = const FlutterSecureStorage();
   bool _isInitialized = false;
 
   @override

@@ -13,7 +13,8 @@ import {
     AdjustmentsHorizontalIcon,
     ShieldExclamationIcon,
     XMarkIcon,
-    LockClosedIcon
+    LockClosedIcon,
+    EyeIcon
 } from '@heroicons/react/24/outline';
 import { apiClient } from '@/lib/api';
 import { toast } from 'react-hot-toast';
@@ -46,6 +47,10 @@ interface AlgorithmSettings {
     preload_cooldown_ms: number;
     min_queue_size: number;
     cyclic_buffer_threshold: number;
+    // 🆙 CONTROL DE VERSIONES
+    min_required_build: number;
+    latest_build: number;
+    store_url: string;
 }
 
 const DEFAULT_SETTINGS: AlgorithmSettings = {
@@ -69,6 +74,10 @@ const DEFAULT_SETTINGS: AlgorithmSettings = {
     preload_cooldown_ms: 500,
     min_queue_size: 8,
     cyclic_buffer_threshold: 5,
+    // 🆙 CONTROL DE VERSIONES
+    min_required_build: 8,
+    latest_build: 8,
+    store_url: 'https://play.google.com/store/apps/details?id=com.struky.app',
 };
 
 const SETTING_DESCRIPTIONS: Record<string, { label: string; description: string; min: number; max: number; color: string }> = {
@@ -193,6 +202,21 @@ const SETTING_DESCRIPTIONS: Record<string, { label: string; description: string;
         max: 20,
         color: 'gray',
     },
+    // 🆙 CONTROL DE VERSIONES
+    min_required_build: {
+        label: 'Build Mínima Requerida',
+        description: 'Usuarios con build menor a esta serán bloqueados hasta actualizar.',
+        min: 1,
+        max: 999,
+        color: 'red',
+    },
+    latest_build: {
+        label: 'Última Build Disponible',
+        description: 'Versión más reciente en la tienda. Muestra aviso opcional.',
+        min: 1,
+        max: 999,
+        color: 'blue',
+    },
 };
 
 // 🎯 PRESETS RECOMENDADOS según tamaño del catálogo
@@ -307,11 +331,29 @@ export default function SettingsPage() {
     const [resetPassword, setResetPassword] = useState('');
     const [isResetting, setIsResetting] = useState(false);
     const [resetError, setResetError] = useState<string | null>(null);
+    
+    // 🆙 Estados para versión del código
+    const [codeVersion, setCodeVersion] = useState<{ version: string; build: number } | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    // 🆙 Estados para vista previa de actualización
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewMandatory, setPreviewMandatory] = useState(true);
 
     useEffect(() => {
         fetchSettings();
         fetchCatalogSize();
+        fetchCodeVersion();
     }, []);
+
+    const fetchCodeVersion = async () => {
+        try {
+            const response = await apiClient.getCodeVersion();
+            setCodeVersion(response.data);
+        } catch (err) {
+            console.error('Error fetching code version:', err);
+        }
+    };
 
     const fetchSettings = async () => {
         try {
@@ -322,7 +364,12 @@ export default function SettingsPage() {
 
             data.forEach((setting) => {
                 if (setting.key in DEFAULT_SETTINGS) {
-                    settingsMap[setting.key as keyof AlgorithmSettings] = setting.value;
+                    // Check if it's a string value (store_url)
+                    if (setting.key === 'store_url') {
+                        (settingsMap as any)[setting.key] = (setting as any).textValue || (DEFAULT_SETTINGS as any)[setting.key];
+                    } else {
+                        (settingsMap as any)[setting.key] = setting.value;
+                    }
                 }
             });
 
@@ -344,13 +391,13 @@ export default function SettingsPage() {
         }
     };
 
-    const updateSetting = async (key: string, value: number) => {
+    const updateSetting = async (key: string, value: number | string) => {
         try {
             setSaving(key);
             setError(null);
 
             const meta = SETTING_DESCRIPTIONS[key];
-            if (meta) {
+            if (meta && typeof value === 'number') {
                 value = Math.max(meta.min, Math.min(meta.max, value));
             }
 
@@ -388,7 +435,7 @@ export default function SettingsPage() {
                     const meta = SETTING_DESCRIPTIONS[key];
                     await apiClient.updateSetting(
                         key,
-                        value as number,
+                        value as any,
                         meta?.description || `Configuración: ${key}`
                     );
                 }
@@ -770,6 +817,213 @@ export default function SettingsPage() {
                     </p>
                 </div>
             </div>
+
+            {/* 🆙 CONTROL DE VERSIONES (REDISEÑADO) */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                        <ShieldExclamationIcon className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Control de Versiones</h2>
+                        <p className="text-sm text-gray-500">Gestiona la disponibilidad y obligatoriedad de actualizaciones</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Bloque 1: Versiones actuales */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-medium text-gray-700">Versiones del App</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Build Mínima</label>
+                                <input
+                                    type="number"
+                                    value={settings.min_required_build}
+                                    onChange={(e) => updateSetting('min_required_build', parseInt(e.target.value))}
+                                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-500 mb-1">Última Build</label>
+                                <input
+                                    type="number"
+                                    value={settings.latest_build}
+                                    onChange={(e) => updateSetting('latest_build', parseInt(e.target.value))}
+                                    className="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                            Versión en el código (pubspec): <strong>{codeVersion ? `v${codeVersion.version}+${codeVersion.build}` : 'Cargando...'}</strong>
+                        </p>
+                        {codeVersion && codeVersion.build !== settings.min_required_build && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        setIsSyncing(true);
+                                        await updateSetting('min_required_build', codeVersion.build);
+                                        await updateSetting('latest_build', codeVersion.build);
+                                        toast.success(`✅ Versión sincronizada a Build ${codeVersion.build}`);
+                                    } catch (error) {
+                                        toast.error('❌ Error al sincronizar versión');
+                                    } finally {
+                                        setIsSyncing(false);
+                                    }
+                                }}
+                                disabled={isSyncing}
+                                className="w-full flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-bold py-1 px-3 rounded-lg transition-colors border border-amber-200"
+                            >
+                                <ArrowPathIcon className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                                Sincronizar con Código
+                            </button>
+                        )}
+                        <div className="pt-2">
+                            <button
+                                onClick={() => {
+                                    setPreviewMandatory(true);
+                                    setShowPreview(true);
+                                }}
+                                className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded-lg transition-colors border border-gray-200"
+                            >
+                                <EyeIcon className="h-4 w-4" />
+                                Ver Vista Previa
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await apiClient.triggerUpdateTest();
+                                        toast.success('🚀 ¡Prueba enviada a todos los dispositivos!');
+                                    } catch (error) {
+                                        toast.error('❌ Error al enviar la prueba');
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded-lg transition-colors shadow-sm uppercase tracking-tighter"
+                            >
+                                <ArrowPathIcon className="h-4 w-4" />
+                                Probar en mi App
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Bloque 2: Acción Rápida */}
+                    <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex flex-col justify-between">
+                        <div>
+                            <h3 className="text-sm font-bold text-red-800 flex items-center gap-2">
+                                <ExclamationCircleIcon className="h-4 w-4" />
+                                ACCIÓN CRÍTICA
+                            </h3>
+                            <p className="text-xs text-red-700 mt-1">
+                                Bloquea el acceso a todas las versiones anteriores inmediatamente.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                const nextBuild = settings.latest_build + 1;
+                                updateSetting('min_required_build', nextBuild);
+                                updateSetting('latest_build', nextBuild);
+                                toast.success('¡Actualización forzada activada!');
+                            }}
+                            className="mt-4 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-lg shadow-sm transition-colors uppercase tracking-wider"
+                        >
+                            Forzar Actualización Ahora
+                        </button>
+                    </div>
+
+                    {/* Bloque 3: URL de la Tienda */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-medium text-gray-700">Enlace de Descarga</h3>
+                        <div>
+                            <label className="block text-xs text-gray-500 mb-1">URL Play Store / App Store</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={settings.store_url}
+                                    onChange={(e) => setSettings(prev => ({ ...prev, store_url: e.target.value }))}
+                                    onBlur={(e) => updateSetting('store_url', e.target.value)}
+                                    placeholder="https://play.google.com/..."
+                                    className="flex-1 bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                                />
+                                <a 
+                                    href={settings.store_url} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 transition-colors"
+                                    title="Probar enlace"
+                                >
+                                    <ArrowPathIcon className="h-5 w-5" />
+                                </a>
+                            </div>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                            <p className="text-[10px] text-blue-700 leading-tight">
+                                <strong>💡 Tip:</strong> Este es el enlace que se abrirá al pulsar "Actualizar Ahora" en el app.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* 🆙 MODAL DE VISTA PREVIA (MIMIC DEL APP) */}
+            {showPreview && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative w-full max-w-[380px] h-[650px] bg-[#0A0A0A] rounded-[3rem] border-[8px] border-gray-800 shadow-2xl overflow-hidden flex flex-col"
+                    >
+                        {/* Botón Cerrar */}
+                        <button 
+                            onClick={() => setShowPreview(false)}
+                            className="absolute top-6 right-6 z-10 p-2 bg-white/10 rounded-full hover:bg-white/20 text-white transition-colors"
+                        >
+                            <XMarkIcon className="h-5 w-5" />
+                        </button>
+
+                        <div className="flex-1 flex flex-col items-center justify-center px-8 relative overflow-hidden">
+                            {/* Decoración difuminada (mimic Flutter positioned) */}
+                            <div className="absolute -top-20 -right-20 w-60 h-60 bg-[#D4AF37]/10 rounded-full blur-3xl pointer-events-none" />
+
+                            {/* Icono */}
+                            <motion.div 
+                                initial={{ y: -20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                className="w-24 h-24 rounded-full border-2 border-[#D4AF37]/30 flex items-center justify-center bg-[#D4AF37]/5 shadow-[0_0_50px_rgba(212,175,55,0.2)] mb-8"
+                            >
+                                <ArrowPathIcon className="h-12 w-12 text-[#D4AF37]" />
+                            </motion.div>
+
+                            {/* Textos */}
+                            <h2 className="text-2xl font-bold text-white text-center tracking-widest leading-tight mb-4">
+                                {previewMandatory ? 'ACTUALIZACIÓN\nOBLIGATORIA' : 'NUEVA VERSIÓN\nDISPONIBLE'}
+                            </h2>
+                            <p className="text-sm text-gray-400 text-center leading-relaxed">
+                                {previewMandatory 
+                                    ? 'Para seguir disfrutando de la mejor música y las nuevas funciones de Struky, es necesario que actualices la aplicación a la última versión.'
+                                    : 'Hemos lanzado una nueva versión con mejoras de rendimiento y nuevas funciones que te encantarán.'}
+                            </p>
+
+                            {/* Botón */}
+                            <div className="w-full mt-12 space-y-4">
+                                <button className="w-full bg-[#D4AF37] text-black font-bold py-4 rounded-xl shadow-lg shadow-[#D4AF37]/20 uppercase tracking-tighter hover:bg-[#c4a132] transition-colors">
+                                    Actualizar Ahora
+                                </button>
+                                
+                                {!previewMandatory && (
+                                    <button className="w-full text-gray-500 font-medium py-2 rounded-xl text-sm uppercase tracking-widest">
+                                        Más tarde
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Versión */}
+                            <div className="absolute bottom-10 text-[10px] text-gray-600 tracking-widest uppercase">
+                                Struky v1.1.0 (Demo Admin)
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {/* Scoring Weights */}
             <div>

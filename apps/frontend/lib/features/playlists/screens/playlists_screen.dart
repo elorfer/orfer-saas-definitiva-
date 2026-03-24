@@ -79,7 +79,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
           }
         },
         loading: () {},
-        error: (_, __) {
+        error: (_, _) {
           setState(() {
             _hasMore = false;
           });

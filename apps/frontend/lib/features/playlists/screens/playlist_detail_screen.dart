@@ -1596,7 +1596,7 @@ class _MiniEqualizerState extends State<MiniEqualizer>
           return Expanded(
             child: AnimatedBuilder(
               animation: _c,
-              builder: (_, __) {
+              builder: (_, _) {
                 final t = (_c.value + phase) % 1;
                 final h = lerpDouble(
                   widget.size * 0.25,

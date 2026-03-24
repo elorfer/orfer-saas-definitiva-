@@ -32,7 +32,7 @@ class DiscoveryService {
       final queryParams = <String, dynamic>{
         'currentSongId': currentSongId,
         'count': count.toString(),
-        if (genreId != null) 'genreId': genreId,
+        'genreId': ?genreId,
         if (genres.isNotEmpty) 'genres': genres.join(','),
         if (excludeIds.isNotEmpty) 'excludeIds': excludeIds.join(','),
       };

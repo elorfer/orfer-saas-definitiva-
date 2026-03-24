@@ -1,4 +1,4 @@
-
+﻿
 import 'package:flutter/material.dart';
 import '../theme/neumorphism_theme.dart';
 import '../theme/text_styles.dart';
@@ -22,7 +22,7 @@ class WebSidebar extends StatelessWidget {
         color: NeumorphismTheme.isDark ? const Color(0xFF1E1B19) : const Color(0xFFF5F2F0), 
         border: Border(
           right: BorderSide(
-            color: NeumorphismTheme.isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+            color: NeumorphismTheme.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
             width: 1,
           ),
         ),
@@ -59,10 +59,10 @@ class WebSidebar extends StatelessWidget {
           const Spacer(),
           
           // Opciones de cuenta al final
-          Divider(color: NeumorphismTheme.textSecondary.withOpacity(0.1)),
+          Divider(color: NeumorphismTheme.textSecondary.withValues(alpha: 0.1)),
           const SizedBox(height: 20),
           _buildSimpleItem(context, Icons.person_outline, 'Mi Cuenta', () {}),
-          _buildSimpleItem(context, Icons.settings_outlined, 'Configuración', () {}),
+          _buildSimpleItem(context, Icons.settings_outlined, 'ConfiguraciÃ³n', () {}),
         ],
       ),
     );
@@ -80,7 +80,7 @@ class WebSidebar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: isActive ? BoxDecoration(
-              color: NeumorphismTheme.accent.withOpacity(0.15),
+              color: NeumorphismTheme.accent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ) : null,
             child: Row(
@@ -141,3 +141,4 @@ class WebSidebar extends StatelessWidget {
     );
   }
 }
+

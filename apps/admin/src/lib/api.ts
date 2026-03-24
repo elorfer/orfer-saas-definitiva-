@@ -460,8 +460,11 @@ export const apiClient = {
 
   getSetting: (key: string) => api.get(`/settings/${key}`),
 
-  updateSetting: (key: string, value: number, description?: string) =>
+  updateSetting: (key: string, value: number | string, description?: string) =>
     api.put(`/settings/${key}`, { value, description }),
+
+  triggerUpdateTest: () => api.post('/settings/test-update'),
+  getCodeVersion: () => api.get('/settings/code-version'),
 };
 
 export default api;

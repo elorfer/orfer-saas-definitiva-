@@ -62,10 +62,6 @@ class RevenueCatService {
     defaultValue: '', // Para iOS cuando lo necesites
   );
   
-  /// Identificador del offering de suscripción premium
-  /// (configurado en el dashboard de RevenueCat)
-  static const String _premiumOfferingId = 'premium_monthly';
-  
   /// Identificador del entitlement (permiso) de premium
   static const String _premiumEntitlementId = 'Struky Premium';
   
@@ -435,7 +431,8 @@ class RevenueCatService {
       _logger.i('💳 Iniciando compra de: ${package.identifier}');
       
       // En SDK 8.x, purchasePackage retorna CustomerInfo directamente
-      final customerInfo = await Purchases.purchasePackage(package);
+      final result = await Purchases.purchasePackage(package);
+      final customerInfo = result.customerInfo;
       
       _customerInfo = customerInfo;
       _notifyPremiumStatus();

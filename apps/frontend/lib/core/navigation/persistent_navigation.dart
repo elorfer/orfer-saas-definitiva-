@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart'; // StatefulNavigationShell + context.push
@@ -10,12 +10,12 @@ import '../providers/unified_audio_provider_fixed.dart';
 import '../widgets/spotify_player_sheet.dart';
 import '../theme/neumorphism_theme.dart';
 import '../responsive/responsive_layout.dart';
-import '../widgets/web_sidebar.dart'; // 🚀 Sidebar para Web
+import '../widgets/web_sidebar.dart'; // ðŸš€ Sidebar para Web
 
-/// 🔥 SISTEMA PROFESIONAL DE NAVEGACIÓN CON PERSISTENCIA
+/// ðŸ”¥ SISTEMA PROFESIONAL DE NAVEGACIÃ“N CON PERSISTENCIA
 /// 
 /// Refactorizado para usar StatefulShellRoute.indexedStack de GoRouter.
-/// Cada rama mantiene su propio stack de navegación independiente,
+/// Cada rama mantiene su propio stack de navegaciÃ³n independiente,
 /// asegurando que el estado y scroll se mantengan intactos.
 
 class PersistentNavigation extends ConsumerStatefulWidget {
@@ -36,7 +36,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
   @override
   bool get wantKeepAlive => true;
 
-  // Cachear valores para evitar recálculos
+  // Cachear valores para evitar recÃ¡lculos
   double? _cachedBottomPadding;
   double? _cachedNavBarHeight;
 
@@ -55,10 +55,10 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
   Widget build(BuildContext context) {
     super.build(context);
     
-    // Obtener índice actual del navigationShell (ya viene de GoRouter)
+    // Obtener Ã­ndice actual del navigationShell (ya viene de GoRouter)
     final currentIndex = widget.navigationShell.currentIndex;
     
-    // 🚀 Refresh UI on Theme Change
+    // ðŸš€ Refresh UI on Theme Change
     ref.watch(themeProvider);
     // Invalidate cached styles to force refresh
     _cachedSelectedStyle = null;
@@ -66,7 +66,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
 
     final isDesktop = ResponsiveLayout.isDesktop(context);
 
-    // 🔥 LISTENER DE CAMBIO A PREMIUM (Nuevo: Post-Flash Bug Fix)
+    // ðŸ”¥ LISTENER DE CAMBIO A PREMIUM (Nuevo: Post-Flash Bug Fix)
     // Detectar cuando el usuario pasa de Free -> Premium y redirigir
     ref.listen<User?>(currentUserProvider, (previous, next) {
         if (previous != null && next != null) {
@@ -75,7 +75,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             final isPremium = next.subscriptionStatus == SubscriptionStatus.premium || 
                               next.subscriptionStatus == SubscriptionStatus.vip;
 
-            // Si NO era premium y AHORA SÍ es premium -> Navegar a celebración
+            // Si NO era premium y AHORA SÃ es premium -> Navegar a celebraciÃ³n
             if (!wasPremium && isPremium) {
                 // Usar microtask para evitar conflictos de build
                 Future.microtask(() {
@@ -87,7 +87,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
         }
     });
     
-    // ⏳ LISTENER DE ESPERA DE CANCIONES: Mostrar SnackBar cuando no hay canciones disponibles
+    // â³ LISTENER DE ESPERA DE CANCIONES: Mostrar SnackBar cuando no hay canciones disponibles
     ref.listen(
       unifiedAudioProviderFixed.select((state) => state.isWaitingForMoreSongs),
       (previous, current) {
@@ -106,7 +106,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text('Cargando más canciones...'),
+                  Text('Cargando mÃ¡s canciones...'),
                 ],
               ),
               backgroundColor: NeumorphismTheme.coffeeMedium,
@@ -133,7 +133,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
       backgroundColor: NeumorphismTheme.background,
       resizeToAvoidBottomInset: false,
       body: isDesktop 
-      // 🖥️ DISEÑO ESCRITORIO: Row con Sidebar Lateral
+      // ðŸ–¥ï¸ DISEÃ‘O ESCRITORIO: Row con Sidebar Lateral
       ? Row(
           children: [
             WebSidebar(
@@ -144,7 +144,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             VerticalDivider(
               width: 1, 
               thickness: 1, 
-              color: NeumorphismTheme.isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05)
+              color: NeumorphismTheme.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)
             ),
             // Contenido Principal
             Expanded(
@@ -152,14 +152,14 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
                 children: [
                   widget.navigationShell,
                   
-                  // 🎵 SPOTIFY-STYLE DRAG-TO-EXPAND PLAYER SHEET (Desktop)
+                  // ðŸŽµ SPOTIFY-STYLE DRAG-TO-EXPAND PLAYER SHEET (Desktop)
                   const SpotifyPlayerSheet(),
                 ],
               ),
             ),
           ],
         )
-      // 📱 DISEÑO MÓVIL: Stack Original
+      // ðŸ“± DISEÃ‘O MÃ“VIL: Stack Original
       : Stack(
           children: [
             // Contenido con padding inferior para navbar
@@ -180,7 +180,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
               ),
             ),
             
-            // 🎵 SPOTIFY-STYLE DRAG-TO-EXPAND PLAYER SHEET
+            // ðŸŽµ SPOTIFY-STYLE DRAG-TO-EXPAND PLAYER SHEET
             const SpotifyPlayerSheet(),
           ],
         ),
@@ -280,7 +280,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
                   isSelected ? activeIcon : icon,
                   size: 30,
                   color: isSelected
-                      // ✅ FIX: Dynamic colors for active state
+                      // âœ… FIX: Dynamic colors for active state
                       ? (NeumorphismTheme.isDark ? const Color(0xFFD7CCC8) : NeumorphismTheme.coffeeDark)
                       : NeumorphismTheme.textSecondary,
                 ),
@@ -301,31 +301,31 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
   }
 
   void _navigateToTab(int index) {
-    // 🔥 UX PRO: Haptic feedback al cambiar de tab
-    // Da una sensación táctil de respuesta inmediata
+    // ðŸ”¥ UX PRO: Haptic feedback al cambiar de tab
+    // Da una sensaciÃ³n tÃ¡ctil de respuesta inmediata
     HapticFeedback.lightImpact();
 
-    // Lógica de "Doble Toque":
-    // Si el usuario toca el tab en el que YA está...
+    // LÃ³gica de "Doble Toque":
+    // Si el usuario toca el tab en el que YA estÃ¡...
     if (widget.navigationShell.currentIndex == index) {
       // ...reseteamos el stack de esa rama a su ruta inicial.
-      // Esto permite "volver al inicio" rápidamente si te perdiste navegando.
+      // Esto permite "volver al inicio" rÃ¡pidamente si te perdiste navegando.
       widget.navigationShell.goBranch(
         index,
-        initialLocation: true, // 🚀 FORCE RESET
+        initialLocation: true, // ðŸš€ FORCE RESET
       );
     } else {
       // Si es un tab diferente, cambiamos de rama normalmente.
       // El estado del stack anterior se preserva en memoria.
       widget.navigationShell.goBranch(
         index,
-        // No forzamos initialLocation aquí para mantener la persistencia
-        // del historial cuando vuelvas a este tab más tarde.
+        // No forzamos initialLocation aquÃ­ para mantener la persistencia
+        // del historial cuando vuelvas a este tab mÃ¡s tarde.
       );
     }
   }
   
-  // ⚡ OPTIMIZACIÓN: Cachear estilos de texto para evitar recrear GoogleFonts en cada build
+  // âš¡ OPTIMIZACIÃ“N: Cachear estilos de texto para evitar recrear GoogleFonts en cada build
   static TextStyle? _cachedSelectedStyle;
   static TextStyle? _cachedUnselectedStyle;
   
@@ -334,7 +334,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
       _cachedSelectedStyle ??= GoogleFonts.inter(
         fontSize: 11,
         fontWeight: FontWeight.w700,
-        // ✅ FIX: Dynamic colors for active label
+        // âœ… FIX: Dynamic colors for active label
         color: NeumorphismTheme.isDark ? const Color(0xFFD7CCC8) : NeumorphismTheme.coffeeDark,
         height: 1.1,
       );
@@ -350,4 +350,5 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
     }
   }
 }
+
 

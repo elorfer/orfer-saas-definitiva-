@@ -18,9 +18,8 @@ import '../widgets/song_search_card.dart';
 import '../widgets/playlist_search_card.dart';
 import 'web/web_search_screen.dart'; // 🚀 Web UI
 import '../../../core/responsive/responsive_layout.dart'; // 🚀 Responsive Control
-import '../../../core/widgets/unified_banner_ad.dart'; // 📢 AdMob (Mantenido por si acaso)
+// 📢 AdMob (Mantenido por si acaso)
 import '../../../core/widgets/native_ad_list_tile.dart'; // 🎨 NATIVE AD
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -678,8 +677,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: 3,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (_, __) => _buildTrendingArtistCardSkeleton(),
+                  separatorBuilder: (_, _) => const SizedBox(width: 16),
+                  itemBuilder: (_, _) => _buildTrendingArtistCardSkeleton(),
                 ),
               ),
             ),
@@ -718,8 +717,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                   itemCount: 3,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, __) => _buildGenreCardSkeleton(),
+                  separatorBuilder: (_, _) => const SizedBox(width: 12),
+                  itemBuilder: (_, _) => _buildGenreCardSkeleton(),
                 ),
               ),
             ),
@@ -746,7 +745,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: 3,
-                itemBuilder: (_, __) => _buildTopChartItemSkeleton(),
+                itemBuilder: (_, _) => _buildTopChartItemSkeleton(),
               ),
             ),
           ),
@@ -778,7 +777,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             padding: const EdgeInsets.symmetric(horizontal: 16),
             cacheExtent: 150, // ✅ Reducido de 200 a 150
             itemCount: artists.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12), // ⚡ REDUCIDO: spacing 16->12
+            separatorBuilder: (_, _) => const SizedBox(width: 12), // ⚡ REDUCIDO: spacing 16->12
             itemBuilder: (_, index) {
               final artist = artists[index];
               return RepaintBoundary(
@@ -800,7 +799,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               cacheExtent: 150,
               itemCount: cachedArtists.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12), // ⚡ REDUCIDO
+              separatorBuilder: (_, _) => const SizedBox(width: 12), // ⚡ REDUCIDO
               itemBuilder: (_, index) {
                 final artist = cachedArtists[index];
                 return RepaintBoundary(
@@ -818,12 +817,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 3,
-            separatorBuilder: (_, __) => const SizedBox(width: 12), // ⚡ REDUCIDO
-            itemBuilder: (_, __) => _buildTrendingArtistCardSkeleton(),
+            separatorBuilder: (_, _) => const SizedBox(width: 12), // ⚡ REDUCIDO
+            itemBuilder: (_, _) => _buildTrendingArtistCardSkeleton(),
           ),
         );
       },
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -957,12 +956,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             itemCount: 3,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, __) => _buildGenreCardSkeleton(),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, _) => _buildGenreCardSkeleton(),
           ),
         );
       },
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -1015,10 +1014,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: 3,
-          itemBuilder: (_, __) => _buildTopChartItemSkeleton(),
+          itemBuilder: (_, _) => _buildTopChartItemSkeleton(),
         );
       },
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -1219,8 +1218,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: 4,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, __) => _buildGenreCardSkeleton(),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (_, _) => _buildGenreCardSkeleton(),
             ),
           ),
         ),
@@ -1465,7 +1464,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
         cacheExtent: 200, // ⚡ Cache reducido para mejor rendimiento
         itemCount: genres.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (_, index) {
           final genre = genres[index];
           // ⚡ OPTIMIZADO: Normalizar URL solo si es necesario

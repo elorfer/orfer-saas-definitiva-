@@ -5,9 +5,13 @@ import { Song } from '../../common/entities/song.entity';
 import { SettingsService } from './settings.service';
 import { SettingsController } from './settings.controller';
 import { PublicSettingsController } from './public-settings.controller';
+import { RealtimeModule } from '../realtime/realtime.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AppSetting, Song])],
+  imports: [
+    TypeOrmModule.forFeature([AppSetting, Song]),
+    RealtimeModule,
+  ],
   controllers: [SettingsController, PublicSettingsController],
   providers: [SettingsService],
   exports: [SettingsService],

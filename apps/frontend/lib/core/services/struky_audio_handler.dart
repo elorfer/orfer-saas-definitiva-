@@ -219,14 +219,9 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   /// Cargar una lista de reproducción
   /// Aquí actualizamos la cola de `audio_service` para la notificación
   Future<void> setQueue(List<AudioSource> sources, List<MediaItem> mediaItems, int initialIndex) async {
-    // 1. Definir cola en just_audio
-    // NOTA: Usamos ConcatenatingAudioSource ya que sources es List<AudioSource>
-    final playlist = ConcatenatingAudioSource(children: sources);
-    
-    // 2. Cargar en player
-    // Manejo de errores try-catch debería estar en nivel superior, pero aquí aseguramos
+    // 1. Cargar en player usando el método nativo (just_audio 0.10.5+)
     try {
-      await _player.setAudioSource(playlist, initialIndex: initialIndex);
+      await _player.setAudioSources(sources, initialIndex: initialIndex);
     } catch (e) {
       AppLogger.error('Error cargando audio source en handler: $e');
       rethrow;

@@ -31,7 +31,7 @@ class PaletteIndicator extends ConsumerWidget {
     return paletteColor.when(
       data: (color) => child, // Aquí se podría aplicar el color al Shimmer
       loading: () => child,
-      error: (_, __) => child,
+      error: (_, _) => child,
     );
   }
 }

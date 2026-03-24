@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
@@ -12,7 +12,7 @@ class LandingInfoSection extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: NeumorphismTheme.background, // Usar tema central (Marrón Oscuro)
+      color: NeumorphismTheme.background, // Usar tema central (MarrÃ³n Oscuro)
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
       child: Column(
         children: [
@@ -31,7 +31,7 @@ class LandingInfoSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Descubre la música que ha estado oculta por mucho tiempo.',
+                  'Descubre la mÃºsica que ha estado oculta por mucho tiempo.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.headlineMedium.copyWith(
                     color: Colors.white,
@@ -64,7 +64,7 @@ class LandingInfoSection extends StatelessWidget {
               _FeatureCard(
                 imagePath: 'assets/images/feature_hidden_music.png',
                 title: 'Joyas Ocultas',
-                description: 'Accede a un catálogo exclusivo de música inédita que no encontrarás en ningún otro lugar.',
+                description: 'Accede a un catÃ¡logo exclusivo de mÃºsica inÃ©dita que no encontrarÃ¡s en ningÃºn otro lugar.',
               ),
               _FeatureCard(
                 imagePath: 'assets/images/feature_composers.png',
@@ -74,7 +74,7 @@ class LandingInfoSection extends StatelessWidget {
               _FeatureCard(
                 imagePath: 'assets/images/feature_algorithm.png',
                 title: 'IA Musical 2026',
-                description: 'Nuestro avanzado algoritmo entiende tus gustos y te presenta tu próxima canción favorita.',
+                description: 'Nuestro avanzado algoritmo entiende tus gustos y te presenta tu prÃ³xima canciÃ³n favorita.',
               ),
             ],
           ),
@@ -88,7 +88,7 @@ class LandingInfoSection extends StatelessWidget {
 
           // Footer minimalista
            Text(
-            '© 2026 Struky Music. Todos los derechos reservados.',
+            'Â© 2026 Struky Music. Todos los derechos reservados.',
             style: TextStyle(color: Colors.grey[700], fontSize: 13),
           ),
         ],
@@ -108,9 +108,9 @@ class _ComposerServiceSection extends StatelessWidget {
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 1100),
       decoration: BoxDecoration(
-        color: NeumorphismTheme.surface, // Café Tostado Oscuro
+        color: NeumorphismTheme.surface, // CafÃ© Tostado Oscuro
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       clipBehavior: Clip.antiAlias,
       child: isDesktop 
@@ -162,9 +162,9 @@ class _ComposerServiceSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFD7CCC8).withOpacity(0.1),
+              color: const Color(0xFFD7CCC8).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(50),
-              border: Border.all(color: const Color(0xFFD7CCC8).withOpacity(0.3)),
+              border: Border.all(color: const Color(0xFFD7CCC8).withValues(alpha: 0.3)),
             ),
             child: const Text(
               'PARA COMPOSITORES',
@@ -178,7 +178,7 @@ class _ComposerServiceSection extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            '¿Eres Compositor?',
+            'Â¿Eres Compositor?',
             style: AppTextStyles.displayLarge.copyWith(
               color: Colors.white,
               fontSize: 42,
@@ -189,14 +189,14 @@ class _ComposerServiceSection extends StatelessWidget {
           Text(
             'Si escribes canciones y tu presupuesto no te alcanza, brindamos un servicio especial para ti.',
             style: AppTextStyles.bodyLarge.copyWith(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 18,
               height: 1.5,
             ),
           ),
           const SizedBox(height: 16),
            Text(
-            'Crearemos la canción escrita por ti con producción profesional y la publicaremos directamente en nuestra app.',
+            'Crearemos la canciÃ³n escrita por ti con producciÃ³n profesional y la publicaremos directamente en nuestra app.',
             style: AppTextStyles.bodyLarge.copyWith(
               color: Colors.grey[400],
               fontSize: 16,
@@ -218,7 +218,7 @@ class _ComposerServiceSection extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: const [
                  Text(
-                  'Más Información',
+                  'MÃ¡s InformaciÃ³n',
                   style: TextStyle(
                     fontSize: 16, 
                     fontWeight: FontWeight.bold,
@@ -257,7 +257,7 @@ class _FeatureCardState extends State<_FeatureCard> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Adaptar ancho para móviles pequeños para evitar overflow
+    // Adaptar ancho para mÃ³viles pequeÃ±os para evitar overflow
     final cardWidth = screenWidth < 380 ? screenWidth - 48 : 320.0;
 
     return MouseRegion(
@@ -271,13 +271,13 @@ class _FeatureCardState extends State<_FeatureCard> {
           color: NeumorphismTheme.surface,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: _isHovering ? const Color(0xFFD7CCC8) : Colors.white.withOpacity(0.05),
+            color: _isHovering ? const Color(0xFFD7CCC8) : Colors.white.withValues(alpha: 0.05),
             width: 1,
           ),
           boxShadow: _isHovering
               ? [
                   BoxShadow(
-                    color: const Color(0xFFD7CCC8).withOpacity(0.15),
+                    color: const Color(0xFFD7CCC8).withValues(alpha: 0.15),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   )
@@ -306,7 +306,7 @@ class _FeatureCardState extends State<_FeatureCard> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          NeumorphismTheme.surface.withOpacity(0.8),
+                          NeumorphismTheme.surface.withValues(alpha: 0.8),
                           NeumorphismTheme.surface,
                         ],
                         stops: const [0.0, 0.7, 1.0],
@@ -350,3 +350,4 @@ class _FeatureCardState extends State<_FeatureCard> {
     );
   }
 }
+

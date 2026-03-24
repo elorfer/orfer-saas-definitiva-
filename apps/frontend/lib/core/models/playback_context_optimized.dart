@@ -400,7 +400,7 @@ class PlaybackContextOptimized {
     if (_shuffleHistory.length >= songIds.length) {
       if (repeat) {
         _shuffleHistory.clear();
-        return _shuffleGenerator!.getRandomIndex(songIds.length, [currentIndex]);
+        return _shuffleGenerator.getRandomIndex(songIds.length, [currentIndex]);
       } else {
         return null;
       }
@@ -408,7 +408,7 @@ class PlaybackContextOptimized {
     
     // Obtener siguiente canción excluyendo historial + actual
     final excludedIndices = [..._shuffleHistory.items, currentIndex];
-    return _shuffleGenerator!.getRandomIndex(songIds.length, excludedIndices);
+    return _shuffleGenerator.getRandomIndex(songIds.length, excludedIndices);
   }
 
   /// Obtener índice anterior (optimizado)

@@ -1,0 +1,241 @@
+﻿Analyzing frontend...                                           
+
+warning - The '!' will have no effect because the receiver can't be null - lib\core\models\playback_context.dart:309:35 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\core\models\playback_context_optimized.dart:403:33 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\core\models\playback_context_optimized.dart:411:29 - unnecessary_non_null_assertion
+warning - The annotation 'JsonKey.new' can only be used on fields or getters - lib\core\models\user_model.dart:57:6 - invalid_annotation_target
+   info - Unnecessary use of multiple underscores - lib\core\navigation\app_router.dart:91:11 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\core\navigation\app_router.dart:887:25 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\navigation\persistent_navigation.dart:147:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\navigation\persistent_navigation.dart:147:94 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\ad_insertion_manager.dart:41:29 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\ad_insertion_manager.dart:114:29 - deprecated_member_use
+  error - Undefined name 'mounted' - lib\core\providers\favorites_provider.dart:76:11 - undefined_identifier
+  error - Undefined name 'mounted' - lib\core\providers\favorites_provider.dart:102:12 - undefined_identifier
+  error - Undefined name 'mounted' - lib\core\providers\favorites_provider.dart:123:12 - undefined_identifier
+  error - Undefined name 'mounted' - lib\core\providers\favorites_provider.dart:200:40 - undefined_identifier
+warning - The value of the local variable 'homeMessage' isn't used - lib\core\providers\home_provider.dart:248:20 - unused_local_variable
+warning - The value of the local variable 'localRecents' isn't used - lib\core\providers\library_coordinator.dart:302:13 - unused_local_variable
+warning - The declaration '_saveRecentlyPlayedToLocal' isn't referenced - lib\core\providers\library_coordinator.dart:444:16 - unused_element
+warning - The value of the field '_secureStorage' isn't used - lib\core\providers\offline_manager_provider.dart:60:9 - unused_field
+   info - 'encryptedSharedPreferences' is deprecated and shouldn't be used. EncryptedSharedPreferences is deprecated and will be removed in v11. The Jetpack Security library is deprecated by Google. Your data will be automatically migrated to custom ciphers on first access. Remove this parameter - it will be ignored - lib\core\providers\offline_manager_provider.dart:176:11 - deprecated_member_use
+warning - The declaration '_checkOnboardingStatus' isn't referenced - lib\core\providers\onboarding_provider.dart:38:16 - unused_element
+   info - Unnecessary use of multiple underscores - lib\core\providers\palette_provider.dart:34:18 - unnecessary_underscores
+warning - The value of the field '_isProcessingPlayFromCard' isn't used - lib\core\providers\playback_notifier.dart:130:8 - unused_field
+warning - The value of the field '_lastSeekTime' isn't used - lib\core\providers\playback_notifier.dart:134:13 - unused_field
+warning - The value of the field '_isAdRequestInFlight' isn't used - lib\core\providers\playback_notifier.dart:173:8 - unused_field
+warning - The value of the local variable 'offlineManager' isn't used - lib\core\providers\playback_notifier.dart:313:11 - unused_local_variable
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\playback_notifier.dart:361:26 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\playback_notifier.dart:590:33 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\providers\playback_notifier.dart:606:35 - deprecated_member_use
+warning - The value of the local variable 'seqCurrentSongId' isn't used - lib\core\providers\playback_notifier.dart:1493:17 - unused_local_variable
+warning - The declaration '_prefetchInitialAlgorithmBuffer' isn't referenced - lib\core\providers\playback_notifier.dart:2519:16 - unused_element
+warning - The value of the local variable 'freshSequenceState' isn't used - lib\core\providers\playback_notifier.dart:4472:17 - unused_local_variable
+warning - The value of the local variable 'freshCurrentIndex' isn't used - lib\core\providers\playback_notifier.dart:4473:17 - unused_local_variable
+warning - Dead code - lib\core\providers\playback_notifier.dart:4610:47 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\core\providers\playback_notifier.dart:4610:50 - dead_null_aware_expression
+warning - Dead code - lib\core\providers\playback_notifier.dart:4810:65 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\core\providers\playback_notifier.dart:4810:68 - dead_null_aware_expression
+warning - The value of the local variable 'isPremium' isn't used - lib\core\providers\playback_notifier.dart:5882:11 - unused_local_variable
+warning - Dead code - lib\core\providers\playback_notifier.dart:5888:59 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\core\providers\playback_notifier.dart:5888:62 - dead_null_aware_expression
+warning - The declaration '_logAdDiagnostics' isn't referenced - lib\core\providers\playback_notifier.dart:5984:8 - unused_element
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\advanced_audio_engine.dart:446:3 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\advanced_audio_engine.dart:689:30 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\core\services\advanced_audio_engine.dart:1308:16 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\core\services\advanced_audio_engine.dart:1323:16 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\core\services\advanced_audio_engine.dart:1333:16 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\core\services\advanced_audio_engine.dart:1343:16 - unnecessary_underscores
+warning - The operand can't be 'null', so the condition is always 'false' - lib\core\services\app_initializer.dart:138:92 - unnecessary_null_comparison
+warning - The value of the field '_seekingGuardDuration' isn't used - lib\core\services\audio_service.dart:129:16 - unused_field
+warning - The value of the field '_persistenceDelayAfterSeek' isn't used - lib\core\services\audio_service.dart:151:16 - unused_field
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:853:9 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:892:13 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:919:13 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1153:28 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1174:28 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1215:29 - deprecated_member_use
+warning - Dead code - lib\core\services\audio_service.dart:1225:57 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\core\services\audio_service.dart:1225:60 - dead_null_aware_expression
+warning - The left operand can't be null, so the right operand is never executed - lib\core\services\audio_service.dart:1233:47 - dead_null_aware_expression
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1294:29 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1362:29 - deprecated_member_use
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\audio_service.dart:1454:36 - deprecated_member_use
+warning - 'LockCachingAudioSource' is experimental and could be removed or changed at any time - lib\core\services\audio_service.dart:1471:16 - experimental_member_use
+   info - Unnecessary use of multiple underscores - lib\core\services\audio_service.dart:1595:16 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\core\services\audio_service.dart:1610:16 - unnecessary_underscores
+   info - 'encryptedSharedPreferences' is deprecated and shouldn't be used. EncryptedSharedPreferences is deprecated and will be removed in v11. The Jetpack Security library is deprecated by Google. Your data will be automatically migrated to custom ciphers on first access. Remove this parameter - it will be ignored - lib\core\services\auth_service.dart:26:7 - deprecated_member_use
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\core\services\discovery_service.dart:35:9 - use_null_aware_elements
+  error - The named parameter 'hitCacheOnErrorExcept' isn't defined - lib\core\services\http_cache_service.dart:51:9 - undefined_named_parameter
+   info - 'encryptedSharedPreferences' is deprecated and shouldn't be used. EncryptedSharedPreferences is deprecated and will be removed in v11. The Jetpack Security library is deprecated by Google. Your data will be automatically migrated to custom ciphers on first access. Remove this parameter - it will be ignored - lib\core\services\http_client_service.dart:22:7 - deprecated_member_use
+warning - The value of the field '_lastReportTime' isn't used - lib\core\services\playback_reporter_service.dart:26:13 - unused_field
+warning - The value of the field '_premiumOfferingId' isn't used - lib\core\services\revenuecat_service.dart:67:23 - unused_field
+   info - 'purchasePackage' is deprecated and shouldn't be used. Use purchase(PurchaseParams) - lib\core\services\revenuecat_service.dart:438:44 - deprecated_member_use
+  error - A value of type 'PurchaseResult' can't be assigned to a variable of type 'CustomerInfo?' - lib\core\services\revenuecat_service.dart:440:23 - invalid_assignment
+  error - The class 'GoogleSignIn' doesn't have an unnamed constructor - lib\core\services\social_auth_service.dart:9:38 - new_with_undefined_constructor_default
+  error - The method 'signIn' isn't defined for the type 'GoogleSignIn' - lib\core\services\social_auth_service.dart:23:67 - undefined_method
+   info - Uses 'await' on an instance of 'GoogleSignInAuthentication', which is not a subtype of 'Future' - lib\core\services\social_auth_service.dart:31:53 - await_only_futures
+  error - The getter 'accessToken' isn't defined for the type 'GoogleSignInAuthentication' - lib\core\services\social_auth_service.dart:35:35 - undefined_getter
+   info - Don't invoke 'print' in production code - lib\core\services\social_auth_service.dart:42:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\services\social_auth_service.dart:77:7 - avoid_print
+warning - Dead code - lib\core\services\struky_audio_handler.dart:215:56 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\core\services\struky_audio_handler.dart:215:59 - dead_null_aware_expression
+   info - 'ConcatenatingAudioSource' is deprecated and shouldn't be used. Use AudioPlayer.setAudioSources instead - lib\core\services\struky_audio_handler.dart:224:22 - deprecated_member_use
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:31:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:33:7 - avoid_print
+warning - A value of type 'Null' can't be returned by the 'onError' handler because it must be assignable to 'FutureOr<FileInfo>' - lib\core\services\struky_image_cache_manager.dart:48:58 - invalid_return_type_for_catch_error
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:58:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:60:7 - avoid_print
+warning - Unused import: 'dart:io' - lib\core\widgets\native_ad_list_tile.dart:4:8 - unused_import
+warning - Unused import: 'package:vintage_music_app/core/theme/text_styles.dart' - lib\core\widgets\native_ad_list_tile.dart:10:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\core\widgets\native_ad_list_tile.dart:61:24 - deprecated_member_use
+warning - The value of the field '_titleStyle' isn't used - lib\core\widgets\professional_audio_player.dart:323:26 - unused_field
+warning - The value of the field '_artistStyle' isn't used - lib\core\widgets\professional_audio_player.dart:329:26 - unused_field
+warning - The value of the field '_adTitleStyle' isn't used - lib\core\widgets\professional_audio_player.dart:336:26 - unused_field
+warning - The value of the field '_advertiserStyle' isn't used - lib\core\widgets\professional_audio_player.dart:342:26 - unused_field
+warning - The value of the local variable 'isPlayingAd' isn't used - lib\core\widgets\professional_audio_player.dart:1015:11 - unused_local_variable
+warning - The declaration '_AdArtworkBackground' isn't referenced - lib\core\widgets\professional_audio_player.dart:1177:7 - unused_element
+warning - The value of the field '_miniPlayerBottomMargin' isn't used - lib\core\widgets\spotify_player_sheet.dart:31:23 - unused_field
+warning - The value of the local variable 'hasDownloads' isn't used - lib\core\widgets\struky_drawer_menu.dart:29:11 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:38:60 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:39:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:40:51 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\core\widgets\struky_drawer_menu.dart:199:23 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:373:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:410:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:487:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:520:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_drawer_menu.dart:543:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\struky_zoom_drawer.dart:110:44 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\core\widgets\vibe_selector_widget.dart:28:20 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\web_constrained_wrapper.dart:77:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\web_constrained_wrapper.dart:84:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\web_sidebar.dart:25:59 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\web_sidebar.dart:25:92 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\web_sidebar.dart:62:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\core\widgets\web_sidebar.dart:83:46 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\ads\screens\ad_stats_screen.dart:67:51 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\ads\screens\ad_stats_screen.dart:67:55 - unnecessary_underscores
+warning - Dead code - lib\features\ads\services\ads_service.dart:41:23 - dead_code
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\ads\services\ads_service.dart:210:11 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\ads\services\ads_service.dart:211:11 - use_null_aware_elements
+   info - Use the null-aware marker '?' rather than a null check via an 'if' - lib\features\ads\services\ads_service.dart:212:11 - use_null_aware_elements
+warning - Dead code - lib\features\ads\services\ads_service.dart:259:7 - dead_code
+   info - Unnecessary use of multiple underscores - lib\features\artists\pages\artist_page.dart:1949:30 - unnecessary_underscores
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\screens\login_screen.dart:289:42 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\screens\login_screen.dart:296:21 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:420:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:603:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:620:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:633:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:647:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:649:76 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:652:61 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:682:57 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:709:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\login_screen.dart:723:55 - deprecated_member_use
+   info - The private field _registrationSuccess could be 'final' - lib\features\auth\screens\register_screen.dart:36:8 - prefer_final_fields
+warning - The value of the field '_registrationSuccess' isn't used - lib\features\auth\screens\register_screen.dart:36:8 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:205:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:222:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:235:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:249:49 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:251:68 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:254:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\register_screen.dart:281:49 - deprecated_member_use
+   info - Empty catch block - lib\features\auth\screens\register_screen.dart:764:35 - empty_catches
+   info - Empty catch block - lib\features\auth\screens\register_screen.dart:780:35 - empty_catches
+warning - Unused import: '../../../core/theme/neumorphism_theme.dart' - lib\features\auth\screens\verify_code_screen.dart:5:8 - unused_import
+   info - 'RawKeyEvent' is deprecated and shouldn't be used. Use KeyEvent instead. This feature was deprecated after v3.18.0-2.0.pre - lib\features\auth\screens\verify_code_screen.dart:69:31 - deprecated_member_use
+   info - 'RawKeyDownEvent' is deprecated and shouldn't be used. Use KeyDownEvent instead. This feature was deprecated after v3.18.0-2.0.pre - lib\features\auth\screens\verify_code_screen.dart:70:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\verify_code_screen.dart:166:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\verify_code_screen.dart:203:56 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\screens\verify_code_screen.dart:222:33 - deprecated_member_use
+   info - 'RawKeyboardListener' is deprecated and shouldn't be used. Use KeyboardListener instead. This feature was deprecated after v3.18.0-2.0.pre - lib\features\auth\screens\verify_code_screen.dart:228:14 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\widgets\landing_info_section.dart:113:48 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\widgets\landing_info_section.dart:165:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\widgets\landing_info_section.dart:167:65 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\widgets\landing_info_section.dart:192:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\widgets\landing_info_section.dart:274:73 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\widgets\landing_info_section.dart:280:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\widgets\landing_info_section.dart:309:52 - deprecated_member_use
+warning - Unused import: '../../../core/widgets/unified_banner_ad.dart' - lib\features\home\screens\home_screen.dart:24:8 - unused_import
+warning - Unused import: 'package:google_mobile_ads/google_mobile_ads.dart' - lib\features\home\screens\home_screen.dart:26:8 - unused_import
+warning - The value of the local variable 'statusBarHeight' isn't used - lib\features\home\screens\home_screen.dart:146:11 - unused_local_variable
+warning - Dead code - lib\features\home\widgets\home_header.dart:81:41 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\home\widgets\home_header.dart:81:44 - dead_null_aware_expression
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\home_header.dart:119:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\home_header.dart:120:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\home_header.dart:127:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\home_header.dart:128:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\home_header.dart:151:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\home_header.dart:152:44 - deprecated_member_use
+warning - The value of the local variable 'cardDecoration' isn't used - lib\features\home\widgets\intelligent_featured_songs_section.dart:427:11 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\cards\web_song_card.dart:73:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:26:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:43:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:58:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:78:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:104:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:165:60 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:167:71 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\widgets\web\web_hero_banner.dart:170:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\library\screens\web\web_library_screen.dart:215:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\library\screens\web\web_library_screen.dart:221:43 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\library\screens\web\web_library_screen.dart:235:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\library\screens\web\web_library_screen.dart:305:51 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\library\screens\web\web_library_screen.dart:319:64 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\offline\screens\downloads_screen.dart:264:35 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\offline\screens\downloads_screen.dart:271:56 - use_build_context_synchronously
+   info - Unnecessary use of multiple underscores - lib\features\player\screens\professional_player_screen.dart:655:18 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\playlists\screens\playlist_detail_screen.dart:1599:28 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\playlists\screens\playlists_screen.dart:82:20 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\premium\widgets\premium_upsell_dialog.dart:28:48 - deprecated_member_use
+warning - The value of the local variable 'theme' isn't used - lib\features\profile\screens\profile_screen.dart:17:11 - unused_local_variable
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\features\profile\screens\profile_screen.dart:195:17 - deprecated_member_use
+warning - Unused import: '../../../core/widgets/unified_banner_ad.dart' - lib\features\search\screens\search_screen.dart:21:8 - unused_import
+warning - Unused import: 'package:google_mobile_ads/google_mobile_ads.dart' - lib\features\search\screens\search_screen.dart:23:8 - unused_import
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:681:41 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:682:36 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:721:41 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:722:36 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:749:34 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:781:35 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:803:37 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:821:35 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:822:30 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:826:18 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:960:35 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:961:30 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:965:18 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:1018:28 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:1021:18 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:1222:37 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:1223:32 - unnecessary_underscores
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\search_screen.dart:1468:31 - unnecessary_underscores
+warning - The value of the field '_selectedFilter' isn't used - lib\features\search\screens\web\web_search_screen.dart:34:11 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\search\screens\web\web_search_screen.dart:108:65 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\search\screens\web\web_search_screen.dart:190:18 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\search\screens\web\web_search_screen.dart:366:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\search\screens\web\web_search_screen.dart:366:88 - deprecated_member_use
+warning - The declaration '_MenuButton' isn't referenced - lib\features\song_detail\screens\song_detail_screen.dart:1706:7 - unused_element
+
+flutter : 219 issues 
+found. (ran in 73.2s)
+En línea: 1 Carácter: 1
++ flutter analyze 
+--no-pub 2>&1 | 
+Out-File -Encoding 
+UTF8 analysis_utf8 ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (219 issues fo   
+ und. (ran in 73.2s    
+):String) [], Remo    
+teException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 

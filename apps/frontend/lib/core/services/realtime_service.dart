@@ -13,12 +13,19 @@ class RealtimeService {
   bool _isConnected = false;
   Timer? _reconnectTimer;
   StreamController<Map<String, dynamic>>? _premiumStatusController;
+  StreamController<Map<String, dynamic>>? _updateTestController;
   final HttpClientService _httpClient = HttpClientService();
 
   // Stream para escuchar cambios de estado premium
   Stream<Map<String, dynamic>> get premiumStatusStream {
     _premiumStatusController ??= StreamController<Map<String, dynamic>>.broadcast();
     return _premiumStatusController!.stream;
+  }
+
+  // Stream para escuchar eventos de prueba de actualización
+  Stream<Map<String, dynamic>> get updateTestStream {
+    _updateTestController ??= StreamController<Map<String, dynamic>>.broadcast();
+    return _updateTestController!.stream;
   }
 
   RealtimeService._();
@@ -30,21 +37,8 @@ class RealtimeService {
 
   /// Obtener la URL del servidor WebSocket desde la URL base de la API
   String _getWebSocketUrl() {
-    // Extraer la URL base sin /api/v1
-    final apiUrl = AppConfig.baseUrl;
-    final uri = Uri.parse(apiUrl);
-    
-    // Construir URL del WebSocket (Socket.io usa el mismo host/puerto)
-    // El namespace /realtime se agregará en la conexión
-    
-    // ✅ FIX: No incluir puerto si es el estándar (80/443) para evitar problemas con socket_io_client
-    // que a veces transforma :80 en :0 erróneamente.
-    final isStandardPort = (uri.scheme == 'http' && uri.port == 80) || 
-                          (uri.scheme == 'https' && uri.port == 443);
-                          
-    final wsUrl = isStandardPort 
-        ? '${uri.scheme}://${uri.host}' 
-        : '${uri.scheme}://${uri.host}:${uri.port}';
+    // Usar la baseUrl de AppConfig y quitar el sufijo /api/v1
+    final wsUrl = AppConfig.baseUrl.replaceAll('/api/v1', '');
     
     if (kDebugMode) {
       debugPrint('🔌 WebSocket URL base: $wsUrl');
@@ -167,6 +161,19 @@ class RealtimeService {
         }
       });
 
+      // 🆙 Escuchar evento de prueba de actualización
+      _socket!.on('showUpdateTest', (data) {
+        if (kDebugMode) {
+          debugPrint('🆙 Evento showUpdateTest recibido: $data');
+        }
+        try {
+          final eventData = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+          _updateTestController?.add(eventData);
+        } catch (e) {
+          debugPrint('❌ Error procesando evento showUpdateTest: $e');
+        }
+      });
+
       // Conectar
       _socket!.connect();
     } catch (e) {
@@ -233,6 +240,8 @@ class RealtimeService {
     disconnect();
     _premiumStatusController?.close();
     _premiumStatusController = null;
+    _updateTestController?.close();
+    _updateTestController = null;
     _cancelReconnectTimer();
   }
 }

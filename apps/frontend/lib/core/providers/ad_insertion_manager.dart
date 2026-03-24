@@ -33,18 +33,15 @@ class AdInsertionManager {
       );
       
       // 2. Insertar en la cola
-      final currentSource = player.audioSource;
-      // ignore: deprecated_member_use
-      // ConcatenatingAudioSource está deprecado pero la nueva API setAudioSources
-      // no está disponible en la versión actual de just_audio. Se migrará cuando
-      // se actualice el paquete a una versión que soporte la nueva API.
-      if (currentSource is! ConcatenatingAudioSource) {
-        AppLogger.warning('[AdInsertionManager] ⚠️ No hay cola activa (currentSource is ${currentSource.runtimeType}). Intentando inserción directa no soportada.');
+      // El AudioPlayer de just_audio 0.10.5+ maneja internamente la cola
+      // y expone métodos directos para manipularla.
+      if (player.audioSources.isEmpty) {
+        AppLogger.warning('[AdInsertionManager] ⚠️ No hay cola activa. Intentando inserción directa no soportada.');
         return false;
       }
       
       // 🔍 LOG: Estado de la cola ANTES de insertar
-      AppLogger.info('[AdInsertionManager] 🔍 Estado pre-inserción: Length=${currentSource.length}, Index=${player.currentIndex}, Target=$targetIndex');
+      AppLogger.info('[AdInsertionManager] 🔍 Estado pre-inserción: Length=${player.audioSources.length}, Index=${player.currentIndex}, Target=$targetIndex');
       
       // ✅ OPTIMIZACIÓN: Insertar anuncio SIN interrumpir la canción actual
       // El anuncio se insertará después de la canción actual, sin hacer seek al inicio
@@ -66,9 +63,9 @@ class AdInsertionManager {
       
       // ✅ OPTIMIZACIÓN: Insertar anuncio directamente sin interrumpir la canción actual
       // El anuncio se insertará en la posición correcta y luego haremos seek cuando sea necesario
-      AppLogger.info('[AdInsertionManager] 🛠️ Intentando insertar en ConcatenatingAudioSource (Length: ${currentSource.length})...');
-      await currentSource.insert(targetIndex, adSource);
-      AppLogger.info('[AdInsertionManager] ✅ Anuncio insertado en índice $targetIndex sin interrumpir reproducción actual (Nueva longitud: ${currentSource.length})');
+      AppLogger.info('[AdInsertionManager] 🛠️ Intentando insertar en cola interna (Length: ${player.audioSources.length})...');
+      await player.insertAudioSource(targetIndex, adSource);
+      AppLogger.info('[AdInsertionManager] ✅ Anuncio insertado en índice $targetIndex sin interrumpir reproducción actual (Nueva longitud: ${player.audioSources.length})');
         
         // #region agent log
         AppLogger.debugLog('ad_insertion_manager.dart:61', 'AFTER insert', {'currentIndex': player.currentIndex, 'playing': player.playing}, 'A');
@@ -106,12 +103,8 @@ class AdInsertionManager {
   Future<bool> removeAdAt(int index) async {
     try {
       final player = audioService.player;
-      final currentSource = player.audioSource;
-      // ignore: deprecated_member_use
-      // ConcatenatingAudioSource está deprecado pero la nueva API setAudioSources
-      // no está disponible en la versión actual de just_audio. Se migrará cuando
-      // se actualice el paquete a una versión que soporte la nueva API.
-      if (currentSource is! ConcatenatingAudioSource) {
+      // El AudioPlayer de just_audio 0.10.5+ maneja internamente la cola.
+      if (player.audioSources.isEmpty) {
         AppLogger.warning('[AdInsertionManager] No hay cola activa para eliminar anuncio');
         return false;
       }
@@ -128,7 +121,7 @@ class AdInsertionManager {
         return false;
       }
       
-      await currentSource.removeAt(index);
+      await player.removeAudioSourceAt(index);
       AppLogger.info('[AdInsertionManager] ✅ Anuncio eliminado del índice $index');
       return true;
     } catch (e, stackTrace) {

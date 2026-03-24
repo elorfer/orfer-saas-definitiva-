@@ -299,7 +299,7 @@ class LibraryCoordinator extends Notifier<LibraryState> {
   Future<void> _loadLocalData() async {
     try {
       // 1. Cargar desde Hive (Cache persistente del coordinador)
-      final localRecents = await _loadRecentlyPlayedFromLocal();
+      await _loadRecentlyPlayedFromLocal();
       final localFavorites = await _loadFavoritesFromLocal();
       final localFollowed = await _loadFollowedArtistsFromLocal();
       
@@ -437,21 +437,6 @@ class LibraryCoordinator extends Notifier<LibraryState> {
     } catch (e) {
       AppLogger.error('[LibraryCoordinator] Error loading followed artists: $e');
       return [];
-    }
-  }
-
-  /// Guardar recently played en Hive
-  Future<void> _saveRecentlyPlayedToLocal(List<Song> songs) async {
-    try {
-      final box = _recentlyPlayedBox;
-      if (box == null) return;
-
-      await box.clear();
-      for (int i = 0; i < songs.length; i++) {
-        await box.put('song_$i', jsonEncode(songs[i].toJson()));
-      }
-    } catch (e) {
-      AppLogger.error('[LibraryCoordinator] Error saving recently played: $e');
     }
   }
 

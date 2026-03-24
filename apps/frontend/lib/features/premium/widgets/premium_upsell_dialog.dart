@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import 'package:go_router/go_router.dart';
 
@@ -25,7 +25,7 @@ class PremiumUpsellDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: NeumorphismTheme.accent.withOpacity(0.1),
+                color: NeumorphismTheme.accent.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -36,7 +36,7 @@ class PremiumUpsellDialog extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             
-            // Título
+            // TÃ­tulo
             Text(
               'Desbloquea el Modo Offline',
               style: TextStyle(
@@ -48,9 +48,9 @@ class PremiumUpsellDialog extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             
-            // Descripción
+            // DescripciÃ³n
             Text(
-              'Escucha tu música favorita sin conexión a internet. Descárgala y llévala contigo a todas partes.',
+              'Escucha tu mÃºsica favorita sin conexiÃ³n a internet. DescÃ¡rgala y llÃ©vala contigo a todas partes.',
               style: TextStyle(
                  fontSize: 14,
                  color: NeumorphismTheme.textSecondary,
@@ -69,13 +69,13 @@ class PremiumUpsellDialog extends StatelessWidget {
             
             const SizedBox(height: 32),
             
-            // Botón CTA
+            // BotÃ³n CTA
             SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
                 onPressed: () {
-                  // Cerrar el diálogo primero
+                  // Cerrar el diÃ¡logo primero
                   Navigator.of(context).pop();
                   // Navegar a la pantalla de Premium
                   // Asegurar import de go_router
@@ -133,3 +133,4 @@ class PremiumUpsellDialog extends StatelessWidget {
     );
   }
 }
+

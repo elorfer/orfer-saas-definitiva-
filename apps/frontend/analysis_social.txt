@@ -1,0 +1,25 @@
+﻿flutter : You provided 
+the path 'c:\appdefinit
+iva\apps\frontend\lib\c
+ore\services\social_aut
+h_service.txt', 
+however it does not 
+exist on disk
+En línea: 1 Carácter: 1
++ flutter analyze lib/c
+ore/services/social_aut
+h_service.txt 2>&1 | 
+Out- ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (You provided    
+ th...t exist on di    
+sk:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 

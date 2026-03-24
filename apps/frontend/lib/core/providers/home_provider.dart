@@ -245,8 +245,6 @@ class HomeNotifier extends Notifier<HomeState> {
       _saveToCacheThrottled(state);
 
       // Fase 3: Mensaje del home y resto de datos en background
-      HomeMessage? homeMessage;
-      
       // No bloqueamos para el mensaje, pero lo pedimos pronto
       _homeService.getHomeMessage(forceRefresh: forceRefresh).then((value) {
         state = state.copyWith(homeMessage: value);

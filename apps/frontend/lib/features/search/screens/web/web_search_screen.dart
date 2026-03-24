@@ -1,4 +1,4 @@
-
+﻿
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,11 +10,11 @@ import '../../../../core/providers/search_provider.dart';
 import '../../../../core/services/search_service.dart';
 import '../../../../core/models/genre_model.dart';
 import '../../../../core/models/artist_model.dart';
-import '../../widgets/artist_search_card.dart'; // ✅ Ruta corregida
-import '../../widgets/song_search_card.dart'; // ✅ Ruta corregida
-import '../../widgets/playlist_search_card.dart'; // ✅ Ruta corregida
+import '../../widgets/artist_search_card.dart'; // âœ… Ruta corregida
+import '../../widgets/song_search_card.dart'; // âœ… Ruta corregida
+import '../../widgets/playlist_search_card.dart'; // âœ… Ruta corregida
 
-// Import de widgets web específicos si los hay
+// Import de widgets web especÃ­ficos si los hay
 
 class WebSearchScreen extends ConsumerStatefulWidget {
   const WebSearchScreen({super.key});
@@ -45,7 +45,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
     
     if (currentText == currentQuery) return;
     
-    // Lógica simple de filtro
+    // LÃ³gica simple de filtro
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       if (currentText.isEmpty || currentText.trim().length >= 2) {
@@ -97,7 +97,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
           
           const SliverToBoxAdapter(child: SizedBox(height: 30)),
 
-          // BARRA DE BÚSQUEDA (Estilo Web - Más ancha y centrada o a la izquierda)
+          // BARRA DE BÃšSQUEDA (Estilo Web - MÃ¡s ancha y centrada o a la izquierda)
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 60),
             sliver: SliverToBoxAdapter(
@@ -105,7 +105,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
                 width: double.infinity,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: NeumorphismTheme.isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                  color: NeumorphismTheme.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
                   borderRadius: BorderRadius.circular(30),
                   border: Border.all(
                     color: _searchFocusNode.hasFocus 
@@ -125,7 +125,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
                         focusNode: _searchFocusNode,
                         style: AppTextStyles.bodyLarge.copyWith(fontSize: 18),
                         decoration: InputDecoration(
-                          hintText: '¿Qué quieres escuchar hoy?',
+                          hintText: 'Â¿QuÃ© quieres escuchar hoy?',
                           hintStyle: AppTextStyles.bodyLarge.copyWith(color: NeumorphismTheme.textLight),
                           border: InputBorder.none,
                           isCollapsed: true,
@@ -149,7 +149,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
 
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
 
-          // CONTENIDO PRINCIPAL: Resultados o Categorías
+          // CONTENIDO PRINCIPAL: Resultados o CategorÃ­as
           if (query.isEmpty)
              _buildCategoriesGrid()
           else 
@@ -161,9 +161,9 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
     );
   }
 
-  // 1. ESTADO INICIAL: GRID DE GÉNEROS (Estilo Spotify Web)
+  // 1. ESTADO INICIAL: GRID DE GÃ‰NEROS (Estilo Spotify Web)
   Widget _buildCategoriesGrid() {
-    final genresAsync = ref.watch(allGenresProvider); // ✅ Provider correcto: allGenresProvider
+    final genresAsync = ref.watch(allGenresProvider); // âœ… Provider correcto: allGenresProvider
     
     return genresAsync.when(
       data: (genres) {
@@ -187,11 +187,11 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
         );
       },
       loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
-      error: (_, __) => const SliverToBoxAdapter(child: SizedBox()),
+      error: (_, _) => const SliverToBoxAdapter(child: SizedBox()),
     );
   }
 
-  // 2. ESTADO BÚSQUEDA: RESULTADOS
+  // 2. ESTADO BÃšSQUEDA: RESULTADOS
   Widget _buildSearchResults(bool isLoading, String? error, bool isEmpty, SearchResults? results) {
      if (isLoading) {
        return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
@@ -202,7 +202,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
          child: Center(
            child: Padding(
              padding: const EdgeInsets.only(top: 50),
-             child: Text('No encontramos nada 😔', style: AppTextStyles.titleMedium),
+             child: Text('No encontramos nada ðŸ˜”', style: AppTextStyles.titleMedium),
            ),
          ),
        );
@@ -291,7 +291,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
   }
 }
 
-// WIDGET EXTERNO 1: TARJETA DE GÉNERO WEB
+// WIDGET EXTERNO 1: TARJETA DE GÃ‰NERO WEB
 class _WebGenreCard extends StatelessWidget {
   final Genre genre;
   const _WebGenreCard({required this.genre});
@@ -363,7 +363,7 @@ class _TopResultCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: NeumorphismTheme.isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.03),
+        color: NeumorphismTheme.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -375,7 +375,7 @@ class _TopResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            artist.displayName, // ✅ Corregido a displayName
+            artist.displayName, // âœ… Corregido a displayName
             style: AppTextStyles.titleLarge.copyWith(fontSize: 32),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -397,3 +397,4 @@ class _TopResultCard extends StatelessWidget {
     );
   }
 }
+

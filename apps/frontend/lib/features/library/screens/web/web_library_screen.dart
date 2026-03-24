@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/providers/library_coordinator.dart';
@@ -35,7 +35,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
           // Espaciador superior
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
 
-          // HEADER: Título y Stats Rápidos
+          // HEADER: TÃ­tulo y Stats RÃ¡pidos
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             sliver: SliverToBoxAdapter(
@@ -66,7 +66,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 30)),
 
-          // GRID DE CATEGORÍAS (Highlights)
+          // GRID DE CATEGORÃAS (Highlights)
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             sliver: SliverGrid(
@@ -111,7 +111,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
 
           const SliverToBoxAdapter(child: SizedBox(height: 50)),
 
-          // SECCIÓN: Actividad Reciente
+          // SECCIÃ“N: Actividad Reciente
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             sliver: SliverToBoxAdapter(
@@ -145,7 +145,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
           if (recentlyPlayed.isEmpty)
              const SliverToBoxAdapter(
                child: Center(
-                 child: Text('Aún no has escuchado nada.'),
+                 child: Text('AÃºn no has escuchado nada.'),
                ),
              )
           else
@@ -163,7 +163,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
                     final song = recentlyPlayed[index];
                     return _WebRecentSongCard(song: song);
                   },
-                  childCount: recentlyPlayed.take(12).length, // Mostrar más para web
+                  childCount: recentlyPlayed.take(12).length, // Mostrar mÃ¡s para web
                 ),
               ),
             ),
@@ -212,13 +212,13 @@ class _WebLibraryCardState extends State<_WebLibraryCard> {
             color: NeumorphismTheme.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isHovered ? widget.color.withOpacity(0.5) : Colors.transparent,
+              color: isHovered ? widget.color.withValues(alpha: 0.5) : Colors.transparent,
               width: 2,
             ),
             boxShadow: isHovered
                 ? [
                     BoxShadow(
-                      color: widget.color.withOpacity(0.2),
+                      color: widget.color.withValues(alpha: 0.2),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     )
@@ -232,7 +232,7 @@ class _WebLibraryCardState extends State<_WebLibraryCard> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: widget.color.withOpacity(0.1),
+                  color: widget.color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(widget.icon, color: widget.color, size: 28),
@@ -302,7 +302,7 @@ class _WebRecentSongCardState extends State<_WebRecentSongCard> {
                     boxShadow: isHovered
                         ? [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             )
@@ -316,14 +316,14 @@ class _WebRecentSongCardState extends State<_WebRecentSongCard> {
                           fit: BoxFit.cover,
                         )
                       : Container(
-                          color: NeumorphismTheme.coffeeMedium.withOpacity(0.1),
+                          color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.1),
                           child: Icon(Icons.music_note, color: NeumorphismTheme.textSecondary, size: 40),
                         ),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                widget.song.title ?? 'Sin Título',
+                widget.song.title ?? 'Sin TÃ­tulo',
                 style: AppTextStyles.titleMedium.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -346,3 +346,4 @@ class _WebRecentSongCardState extends State<_WebRecentSongCard> {
     );
   }
 }
+

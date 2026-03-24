@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -10,35 +10,35 @@ import '../../../core/utils/time_ago_formatter.dart';
 
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/struky_zoom_drawer.dart';
-/// Widget del header scrolleable (avatar, bienvenido, nombre, logo, última actualización)
+/// Widget del header scrolleable (avatar, bienvenido, nombre, logo, Ãºltima actualizaciÃ³n)
 /// Extracted for performance isolation and cleaner HomeScreen code.
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 🚀 Refresh UI on Theme Change
+    // ðŸš€ Refresh UI on Theme Change
     ref.watch(themeProvider);
 
-    // ⚡ OPTIMIZACIÓN: Usar select para escuchar solo los valores necesarios
+    // âš¡ OPTIMIZACIÃ“N: Usar select para escuchar solo los valores necesarios
     // Solo observar firstName, no isLoading (evita rebuilds innecesarios)
     final userFirstName = ref.watch(currentUserProvider.select((u) => u?.firstName));
     
-    // 🔥 NUEVO: Obtener timestamp de última actualización
+    // ðŸ”¥ NUEVO: Obtener timestamp de Ãºltima actualizaciÃ³n
     final lastUpdateTime = ref.watch(homeStateProvider.select((state) => state.lastUpdateTime));
     
-    // ⚡ OPTIMIZACIÓN: Remover watch de isLoading - solo se usa para skeleton inicial
+    // âš¡ OPTIMIZACIÃ“N: Remover watch de isLoading - solo se usa para skeleton inicial
     final isLoading = userFirstName == null;
     
-    // OPTIMIZACIÓN: RepaintBoundary para aislar el header y evitar rebuilds innecesarios
+    // OPTIMIZACIÃ“N: RepaintBoundary para aislar el header y evitar rebuilds innecesarios
     return RepaintBoundary(
       child: SizedBox(
-        height: 74, // ✅ Altura aumentada para timestamp (era 64)
+        height: 74, // âœ… Altura aumentada para timestamp (era 64)
         child: isLoading
             ? _buildHeaderSkeleton()
             : Row(
                 children: [
-                  // ⚡ Avatar clickeable para abrir drawer (GestureDetector para 0 lag)
+                  // âš¡ Avatar clickeable para abrir drawer (GestureDetector para 0 lag)
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.lightImpact();
@@ -83,7 +83,7 @@ class HomeHeader extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        // 🔥 NUEVO: Mostrar timestamp de última actualización
+                        // ðŸ”¥ NUEVO: Mostrar timestamp de Ãºltima actualizaciÃ³n
                         if (lastUpdateTime != null) ...[
                           const SizedBox(height: 2),
                           Text(
@@ -116,16 +116,16 @@ class HomeHeader extends ConsumerWidget {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: NeumorphismTheme.isDark 
-                            ? Colors.white.withOpacity(0.05) 
-                            : Colors.black.withOpacity(0.05),
+                            ? Colors.white.withValues(alpha: 0.05) 
+                            : Colors.black.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         NeumorphismTheme.isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                         size: 20,
                         color: NeumorphismTheme.isDark 
-                            ? Colors.white.withOpacity(0.7) 
-                            : Colors.black.withOpacity(0.7),
+                            ? Colors.white.withValues(alpha: 0.7) 
+                            : Colors.black.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -136,7 +136,7 @@ class HomeHeader extends ConsumerWidget {
 
               // Invite Coffee Button (Replaced Logout)
               Tooltip(
-                message: 'Invitar un Café',
+                message: 'Invitar un CafÃ©',
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -148,8 +148,8 @@ class HomeHeader extends ConsumerWidget {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: NeumorphismTheme.isDark 
-                            ? Colors.white.withOpacity(0.05) 
-                            : Colors.black.withOpacity(0.05),
+                            ? Colors.white.withValues(alpha: 0.05) 
+                            : Colors.black.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -215,3 +215,4 @@ class HomeHeader extends ConsumerWidget {
     return firstName[0].toUpperCase();
   }
 }
+

@@ -1,4 +1,5 @@
 import '../../features/privacy/privacy_screen.dart';
+import '../../features/common/screens/update_required_screen.dart';
 import '../../features/offline/screens/downloads_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/notifications/screens/notifications_screen.dart';
@@ -36,6 +37,8 @@ import '../../features/song_detail/screens/song_detail_screen.dart';
 import '../../core/models/song_model.dart';
 import '../providers/auth_provider.dart';
 import '../services/app_initializer.dart';
+import '../services/realtime_service.dart';
+import '../utils/logger.dart';
 import 'persistent_navigation.dart';
 import 'page_transitions.dart'
     show
@@ -43,10 +46,33 @@ import 'page_transitions.dart'
         createCustomTransitionPage,
         createNoTransitionPage;
 
+final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+final realtimeUpdateProvider = Provider<void>((ref) {
+  // Escuchar eventos de prueba de actualización
+  final subscription = RealtimeService.instance.updateTestStream.listen((event) {
+    AppLogger.info('[RealtimeUpdateProvider] 🆙 Trigger de actualización real-time recibido!');
+    try {
+      final context = rootNavigatorKey.currentContext;
+      if (context != null) {
+        GoRouter.of(context).push('/update-required', extra: {
+          'isMandatory': event['isMandatory'] ?? true,
+          'updateUrl': null, // Es solo un test visual
+        });
+      }
+    } catch (e) {
+      AppLogger.error('[RealtimeUpdateProvider] Error al navegar a pantalla de actualización', e);
+    }
+  });
+
+  ref.onDispose(() => subscription.cancel());
+});
+
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = GoRouterNotifier(ref);
 
   final router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: notifier.initialLocation,
     refreshListenable: notifier,
     routes: notifier.routes,
@@ -88,7 +114,7 @@ class GoRouterNotifier extends ChangeNotifier {
     // ✅ FIX: Escuchar cambios en el onboarding para actualizar el router
     _onboardingSubscription = ref.listen<bool>(
       onboardingProvider,
-      (_, __) {
+      (_, _) {
         // Cuando cambia el estado del onboarding, notificar al router
         notifyListeners();
       },
@@ -132,6 +158,23 @@ class GoRouterNotifier extends ChangeNotifier {
             key: state.pageKey,
             child: const SplashScreen(),
           ),
+        ),
+        // Update Required - Bloqueo de versión
+        GoRoute(
+          path: '/update-required',
+          pageBuilder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            final isMandatory = extra?['isMandatory'] as bool? ?? true;
+            final updateUrl = extra?['updateUrl'] as String?;
+            return createCustomTransitionPage<void>(
+              key: state.pageKey,
+              child: UpdateRequiredScreen(
+                isMandatory: isMandatory,
+                updateUrl: updateUrl,
+              ),
+              transitionsBuilder: SpotifyPageTransitions.slideTransition,
+            );
+          },
         ),
         // Onboarding - transición suave
         GoRoute(
@@ -884,7 +927,7 @@ class GoRouterNotifier extends ChangeNotifier {
         // Redirect raíz - DEBE estar al final para no interceptar otras rutas
         GoRoute(
           path: '/',
-          redirect: (_, __) => '/home',
+          redirect: (_, _) => '/home',
         ),
         // ADMIN ROUTES
         GoRoute(

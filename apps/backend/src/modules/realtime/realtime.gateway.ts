@@ -178,5 +178,16 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   isUserConnected(userId: string): boolean {
     return this.userSockets.has(userId) && this.userSockets.get(userId)!.size > 0;
   }
+
+  /**
+   * 🆙 Emitir evento de prueba de actualización a todos los usuarios conectados
+   */
+  broadcastUpdateTest(): void {
+    this.logger.log('📢 Emitiendo evento de prueba de actualización a TODOS los usuarios');
+    this.server.emit('showUpdateTest', {
+      timestamp: new Date().toISOString(),
+      isMandatory: true,
+    });
+  }
 }
 

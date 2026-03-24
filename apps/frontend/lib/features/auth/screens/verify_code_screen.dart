@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../widgets/auth_button.dart';
@@ -28,7 +27,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   @override
   void initState() {
     super.initState();
-    // 🔍 Auto-redirección si el usuario ya está verificado (Modo DEV o verificó en otro lugar)
+    // ðŸ” Auto-redirecciÃ³n si el usuario ya estÃ¡ verificado (Modo DEV o verificÃ³ en otro lugar)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAutoRedirect();
     });
@@ -36,10 +35,10 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
 
   void _checkAutoRedirect() {
     final authState = ref.read(authStateProvider);
-    // Si ya está autenticado (lo que implica verificado en este flujo)
+    // Si ya estÃ¡ autenticado (lo que implica verificado en este flujo)
     if (authState.isAuthenticated && !_isAutoRedirecting) {
       setState(() => _isAutoRedirecting = true);
-      debugPrint('🚀 [VerifyCode] Usuario ya autenticado, redirigiendo a Onboarding...');
+      debugPrint('ðŸš€ [VerifyCode] Usuario ya autenticado, redirigiendo a Onboarding...');
       context.go('/onboarding');
     }
   }
@@ -60,7 +59,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       _focusNodes[index + 1].requestFocus();
     }
     
-    // Si se llena el último campo, intentar verificar automáticamente
+    // Si se llena el Ãºltimo campo, intentar verificar automÃ¡ticamente
     if (index == 5 && value.isNotEmpty) {
       _verifyCode();
     }
@@ -88,14 +87,14 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       );
       
       if (mounted) {
-        // Feedback de éxito rápido y transición limpia
+        // Feedback de Ã©xito rÃ¡pido y transiciÃ³n limpia
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Text('¡Email Verificado! Empezando...'),
+                Text('Â¡Email Verificado! Empezando...'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -104,7 +103,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
           ),
         );
 
-        // Delay mínimo para permitir que el snackbar se vea un poco antes de la transición slide
+        // Delay mÃ­nimo para permitir que el snackbar se vea un poco antes de la transiciÃ³n slide
         await Future.delayed(const Duration(milliseconds: 1000));
         
         if (mounted) {
@@ -131,7 +130,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF3E2723), // Marrón Struky
+      backgroundColor: const Color(0xFF3E2723), // MarrÃ³n Struky
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -162,8 +161,8 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Hemos enviado un código de 6 dígitos a:',
-                style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 16),
+                'Hemos enviado un cÃ³digo de 6 dÃ­gitos a:',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 4),
@@ -174,7 +173,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               ),
               const SizedBox(height: 48),
               
-              // Campos del código OTP
+              // Campos del cÃ³digo OTP
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) => _buildCodeField(index)),
@@ -183,7 +182,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               const SizedBox(height: 48),
               
               AuthButton(
-                text: 'VERIFICAR CÓDIGO',
+                text: 'VERIFICAR CÃ“DIGO',
                 isLoading: _isVerifying,
                 onPressed: _verifyCode,
                 backgroundColor: const Color(0xFF8D6E63),
@@ -193,14 +192,14 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               
               TextButton(
                 onPressed: _isVerifying ? null : () {
-                  // TODO: Implementar reenvío de código si el usuario lo pide
+                  // TODO: Implementar reenvÃ­o de cÃ³digo si el usuario lo pide
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reenviando código...'))
+                    const SnackBar(content: Text('Reenviando cÃ³digo...'))
                   );
                 },
                 child: Text(
-                  '¿No recibiste el código? Reenviar',
-                  style: TextStyle(color: Colors.white.withOpacity(0.8), decoration: TextDecoration.underline),
+                  'Â¿No recibiste el cÃ³digo? Reenviar',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), decoration: TextDecoration.underline),
                 ),
               ),
             ],
@@ -219,7 +218,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -248,3 +247,4 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     );
   }
 }
+

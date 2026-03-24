@@ -207,9 +207,9 @@ class AdsService {
           'durationPlayed': durationSeconds,
           'wasCompleted': wasCompleted,
           'wasSkipped': wasSkipped,
-          if (genre != null) 'genre': genre,
-          if (artist != null) 'artist': artist,
-          if (playlistId != null) 'playlistId': playlistId,
+          'genre': ?genre,
+          'artist': ?artist,
+          'playlistId': ?playlistId,
         },
       );
       AppLogger.debug('[AdsService] Reproducción registrada: adId=$adId, duration=${durationSeconds}s, completed=$wasCompleted, skipped=$wasSkipped');

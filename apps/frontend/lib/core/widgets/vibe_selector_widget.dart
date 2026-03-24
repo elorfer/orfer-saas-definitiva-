@@ -25,7 +25,7 @@ class VibeSelectorWidget extends ConsumerWidget {
       child: genresAsync.when(
         data: (genres) => _buildChipRow(context, ref, genres, selectedVibe),
         loading: () => _buildLoadingRow(),
-        error: (_, __) => _buildChipRow(context, ref, [], selectedVibe), // Solo mostrar Mix
+        error: (_, _) => _buildChipRow(context, ref, [], selectedVibe), // Solo mostrar Mix
       ),
     );
   }

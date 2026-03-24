@@ -23,7 +23,6 @@ class PlaybackReporterService {
   Duration _accumulatedDuration = Duration.zero;
   Duration _lastPosition = Duration.zero;
   bool _playRegistered = false;
-  DateTime? _lastReportTime;
   
   // Timer para reporte periódico (heartbeat)
   Timer? _heartbeatTimer;
@@ -77,7 +76,6 @@ class PlaybackReporterService {
            AppLogger.info('[PlaybackReporter] 🔄 Replay detectado (Reset de métricas). Drop: ${drop.inSeconds}s');
            _accumulatedDuration = Duration.zero; // Reset acumulado
            _playRegistered = false; // Permitir registrar un nuevo 'play'
-           _lastReportTime = null;
         }
       }
       
@@ -248,7 +246,6 @@ class PlaybackReporterService {
     _lastPosition = Duration.zero;
     _playRegistered = false;
     _isReporting = false; // Reset flag por seguridad
-    _lastReportTime = null;
     // No reseteamos _lastManualSkipSignal aquí, su expiración se maneja por tiempo (diff)
   }
 

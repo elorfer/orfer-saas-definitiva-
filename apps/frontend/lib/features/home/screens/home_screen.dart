@@ -21,9 +21,7 @@ import '../widgets/home_message_banner.dart';
 import '../widgets/home_header.dart'; // Extracted header
 import '../../../core/responsive/responsive_layout.dart';
 import 'web/web_home_screen.dart';
-import '../../../core/widgets/unified_banner_ad.dart';
 import '../../../core/widgets/native_ad_list_tile.dart'; // 🚀 NIVEL DIOS: Anuncio Nativo
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 /// HomeScreen optimizado con AutomaticKeepAliveClientMixin
 /// Evita reconstrucciones innecesarias al cambiar de pestañas

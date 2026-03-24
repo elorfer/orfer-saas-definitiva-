@@ -34,27 +34,6 @@ class OnboardingNotifier extends Notifier<bool> {
     return true;
   }
 
-  /// Verificar si el onboarding ya fue completado para el usuario actual
-  Future<void> _checkOnboardingStatus() async {
-    try {
-      final authState = ref.read(authStateProvider);
-      if (authState.isAuthenticated && authState.user != null) {
-        // ✅ OPTIMIZACIÓN: Verificar inmediatamente para evitar mostrar onboarding prematuramente
-        await checkOnboardingStatusForUser(authState.user!.id);
-      } else {
-        // Si no hay usuario autenticado, no mostrar onboarding
-        state = true; // Marcar como completado para no mostrar onboarding sin usuario
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('⚠️ [OnboardingProvider] Error en _checkOnboardingStatus: $e');
-      }
-      // ✅ OPTIMIZACIÓN: Si hay error, asumir que está completado para evitar mostrar onboarding
-      // Es mejor errar del lado de no mostrar onboarding que mostrarlo innecesariamente
-      state = true;
-    }
-  }
-
   /// Verificar si el onboarding ya fue completado para un usuario específico
   Future<void> checkOnboardingStatusForUser(String userId) async {
     try {

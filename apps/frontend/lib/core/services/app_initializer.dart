@@ -7,6 +7,8 @@ import '../providers/offline_manager_provider.dart';
 import '../providers/playback_notifier.dart';
 import 'package:audio_service/audio_service.dart';
 import 'struky_audio_handler.dart';
+import 'realtime_service.dart';
+import '../navigation/app_router.dart';
 
 /// Servicio centralizado para la inicialización paralela de la app.
 /// Objetivo: "Instant Play" - Reducir el tiempo de arranque al mínimo.
@@ -160,6 +162,10 @@ class AppInitializer {
       Future.microtask(() {
          // Disparar prefetch de "Instant Play"
          ref.read(playbackNotifierProvider.notifier).prefetch(user);
+         
+         // 🆙 Activar el listener de actualizaciones en tiempo real
+         // Se usa read() para que el provider se cree y empiece a escuchar el stream
+         ref.read(realtimeUpdateProvider);
       });
     }
   }

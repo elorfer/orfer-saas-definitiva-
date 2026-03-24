@@ -48,7 +48,7 @@ class HttpCacheService {
       _cacheOptions = CacheOptions(
         store: _cacheStore! as CacheStore,
         policy: CachePolicy.request, // Usar caché cuando esté disponible
-        hitCacheOnErrorExcept: [401, 403], // Usar caché en errores excepto auth
+        // Parámetro eliminado en v4: hitCacheOnErrorExcept: [401, 403], // Usar caché en errores excepto auth
         maxStale: const Duration(days: 7), // Caché válido por 7 días
         priority: CachePriority.normal,
         cipher: null, // Sin cifrado por ahora

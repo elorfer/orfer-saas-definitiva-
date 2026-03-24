@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/onboarding_provider.dart';
+import '../../../core/services/version_service.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -39,6 +40,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     });
     
     try {
+      // 🆙 VALIDACIÓN DE VERSIÓN (CRÍTICO)
+      final versionResult = await VersionService().checkVersion();
+      if (mounted && versionResult['mustUpdate'] == true) {
+        context.go('/update-required', extra: {
+          'isMandatory': true,
+          'updateUrl': versionResult['storeUrl'],
+        });
+        return; // Detener flujo de navegación normal
+      }
+
       // Esperar a que auth y onboarding estén inicializados
       final authState = ref.read(authStateProvider);
       if (!authState.isInitialized) {

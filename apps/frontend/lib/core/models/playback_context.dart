@@ -306,7 +306,7 @@ class PlaybackContext {
     
     // Crear generador de números aleatorios con semilla consistente
     final random = _shuffleSeed != null 
-        ? math.Random(_shuffleSeed! + _shuffleHistory.length)
+        ? math.Random(_shuffleSeed + _shuffleHistory.length)
         : math.Random();
     
     // Si hemos reproducido todas las canciones, reiniciar si repeat está activado

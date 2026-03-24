@@ -5,7 +5,9 @@ import '../utils/logger.dart';
 class AppConfig {
   // Configuración de la aplicación
   static const String appName = 'struky';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.1.0';
+  static const int buildNumber = 8; // Sincronizado con pubspec.yaml
+  static const String updateUrl = 'https://struky.com/download'; // URL de descarga
 
   // URLs de configuración (usar `--dart-define` para `API_BASE_URL`)
 
@@ -24,7 +26,7 @@ class AppConfig {
   // Cambia esto a `true` si usas el Emulador de Android.
   // Cambia esto a `false` si usas un Móvil Real (con adb reverse).
   // Nota: Esto controlará la IP tanto en 'flutter run' como en 'flutter run --profile'
-  static const bool useAndroidEmulator = false;
+  static const bool useAndroidEmulator = true;
 
   static String get _localBaseUrl {
     try {
