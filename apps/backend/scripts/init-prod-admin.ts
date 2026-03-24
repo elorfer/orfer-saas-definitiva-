@@ -13,8 +13,8 @@ async function bootstrap() {
   const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
 
   const email = 'admin@struky.com';
-  const password = 'admin123';
-  const username = 'admin_prod';
+  const password = 'StrukyAdminProduccion2024!';
+  const username = 'admin_produccion';
 
   console.log(`🔍 Verificando si el usuario ${email} ya existe...`);
   
