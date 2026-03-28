@@ -132,7 +132,7 @@ class AppInitializer {
           androidNotificationChannelId: 'com.struky.app.channel.audio.v2',
           androidNotificationChannelName: 'Struky Audio',
           androidNotificationOngoing: false,
-          androidStopForegroundOnPause: true,
+          androidStopForegroundOnPause: false, // 🚀 FIX: Mantener servicio en foreground al pausar para evitar cierres inesperados
           androidNotificationIcon: 'drawable/ic_stat_music_note',  // XML vector drawable (white on transparent)
         ),
       );

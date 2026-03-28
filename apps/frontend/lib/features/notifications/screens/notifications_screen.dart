@@ -1,18 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
-class NotificationsScreen extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/theme_provider.dart';
+
+class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 🚀 Refresh UI on Theme Change
+    ref.watch(themeProvider);
+
     return Scaffold(
       backgroundColor: NeumorphismTheme.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: NeumorphismTheme.textPrimary, size: 20),
           onPressed: () {

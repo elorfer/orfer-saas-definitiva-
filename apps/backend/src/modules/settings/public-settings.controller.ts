@@ -86,6 +86,10 @@ export class PublicSettingsController {
     preloadCooldownMs: number;
     minQueueSize: number;
     cyclicBufferThreshold: number;
+    // 🆙 CONTROL DE VERSIONES
+    min_required_build: number;
+    latest_build: number;
+    store_url: string;
   }> {
     // 🎯 CONTEO DINÁMICO: Contar canciones publicadas en paralelo con otras configs
     const [
@@ -121,6 +125,17 @@ export class PublicSettingsController {
       this.settingsService.getValue('cyclic_buffer_threshold'),
     ]);
 
+    // 🆙 CONTROL DE VERSIONES (separado para manejar tipos string/number)
+    const [
+      minRequiredBuild,
+      latestBuild,
+      storeUrl,
+    ] = await Promise.all([
+      this.settingsService.getValue('min_required_build'),
+      this.settingsService.getValue('latest_build'),
+      this.settingsService.getValue('store_url'),
+    ]);
+
     // Usar el conteo real si catalog_size no está configurado manualmente (es 0)
     const catalogSize = Number(catalogSizeFromSettings) > 0 ? Number(catalogSizeFromSettings) : publishedSongsCount;
 
@@ -138,6 +153,10 @@ export class PublicSettingsController {
       preloadCooldownMs: Number(preloadCooldownMs),
       minQueueSize: Number(minQueueSize),
       cyclicBufferThreshold: Number(cyclicBufferThreshold),
+      // 🆙 CONTROL DE VERSIONES
+      min_required_build: Number(minRequiredBuild),
+      latest_build: Number(latestBuild),
+      store_url: String(storeUrl),
     };
   }
 

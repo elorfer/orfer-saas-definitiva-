@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/services/player_navigation_service.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../../../core/widgets/professional_audio_player.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
@@ -35,6 +36,7 @@ class _FullPlayerScreenState extends ConsumerState<FullPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     // ✅ OPTIMIZACIÓN: Escuchar tanto canción como anuncio
     final playbackState = ref.watch(unifiedAudioProviderFixed);
     final currentSong = playbackState.lastConfirmedSong ?? playbackState.currentSong;

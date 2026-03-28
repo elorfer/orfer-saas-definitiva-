@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/follow_provider.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../../../core/widgets/follow_button.dart';
 import '../../../core/widgets/optimized_image.dart';
 import '../../../core/theme/neumorphism_theme.dart';
@@ -36,6 +38,7 @@ class _FollowedArtistsScreenState extends ConsumerState<FollowedArtistsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     final followState = ref.watch(followProvider);
 
     return Scaffold(
@@ -43,6 +46,9 @@ class _FollowedArtistsScreenState extends ConsumerState<FollowedArtistsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
           onPressed: () => context.pop(),

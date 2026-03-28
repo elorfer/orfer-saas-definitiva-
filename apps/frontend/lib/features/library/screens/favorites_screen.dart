@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/favorites_provider.dart';
@@ -185,6 +186,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen>
         key: const ValueKey('favorites_screen_scaffold'),
         backgroundColor: NeumorphismTheme.background,
         appBar: AppBar(
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(

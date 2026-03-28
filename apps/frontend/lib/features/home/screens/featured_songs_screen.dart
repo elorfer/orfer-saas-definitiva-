@@ -1,5 +1,6 @@
 import 'dart:async'; // ✅ Para Timer
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
@@ -150,6 +151,9 @@ class _FeaturedSongsScreenState extends ConsumerState<FeaturedSongsScreen>
       child: Scaffold(
         backgroundColor: NeumorphismTheme.background,
         appBar: AppBar(
+          systemOverlayStyle: NeumorphismTheme.isDark 
+              ? SystemUiOverlayStyle.light 
+              : SystemUiOverlayStyle.dark,
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(

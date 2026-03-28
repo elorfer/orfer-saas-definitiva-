@@ -172,7 +172,6 @@ class OfflineManagerNotifier extends Notifier<OfflineState> {
       // 1. Inicializar Secure Storage y Clave (Configuración Robusta)
       const secureStorage = FlutterSecureStorage(
         aOptions: AndroidOptions(
-          encryptedSharedPreferences: false,
           sharedPreferencesName: 'vintage_offline_key_store', 
           resetOnError: true,
         ),

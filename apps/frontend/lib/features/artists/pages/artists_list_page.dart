@@ -1,18 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../models/artist.dart';
-import '../services/artists_api.dart';
-import '../widgets/artist_card.dart';
+import 'package:flutter/material.dart'; // ✅ Added back
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart'; // ✅ Added back
+import '../models/artist.dart'; // ✅ Added back
+import '../services/artists_api.dart'; // ✅ Added back
+import '../widgets/artist_card.dart'; // ✅ Added back
+import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/providers/theme_provider.dart';
 
-class ArtistsListPage extends StatefulWidget {
+class ArtistsListPage extends ConsumerStatefulWidget {
   final ArtistsApi api;
   const ArtistsListPage({super.key, required this.api});
 
   @override
-  State<ArtistsListPage> createState() => _ArtistsListPageState();
+  ConsumerState<ArtistsListPage> createState() => _ArtistsListPageState();
 }
 
-class _ArtistsListPageState extends State<ArtistsListPage> {
+class _ArtistsListPageState extends ConsumerState<ArtistsListPage> {
   List<ArtistLite> _items = [];
   bool _loading = false;
 
@@ -34,8 +38,25 @@ class _ArtistsListPageState extends State<ArtistsListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 🚀 Refresh UI on Theme Change
+    ref.watch(themeProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Artistas')),
+      backgroundColor: NeumorphismTheme.background,
+      appBar: AppBar(
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
+        backgroundColor: NeumorphismTheme.background,
+        elevation: 0,
+        title: Text(
+          'Artistas',
+          style: TextStyle(
+            color: NeumorphismTheme.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

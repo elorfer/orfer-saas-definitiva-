@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +22,9 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded,
               color: NeumorphismTheme.textPrimary, size: 20),
@@ -192,7 +196,7 @@ class ProfileScreen extends ConsumerWidget {
                 onChanged: (val) {
                   ref.read(themeProvider.notifier).toggleTheme();
                 },
-                activeColor: NeumorphismTheme.coffeeMedium,
+                activeThumbColor: NeumorphismTheme.coffeeMedium,
               ),
               onTap: () => ref.read(themeProvider.notifier).toggleTheme(),
             ),

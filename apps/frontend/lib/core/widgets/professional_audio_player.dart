@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../providers/playback_state.dart';
+import '../providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../models/song_model.dart';
 import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
@@ -396,6 +397,7 @@ class _StaticPlayerUIState extends ConsumerState<_StaticPlayerUI> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     // ✅ ANTI-FLICKER: Usar valores cacheados
     final currentSong = widget.song ?? _lastSongId;
     final currentAd = widget.ad;

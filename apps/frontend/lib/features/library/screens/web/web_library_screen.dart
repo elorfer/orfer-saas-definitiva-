@@ -1,8 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/providers/library_coordinator.dart';
 import '../../../../core/providers/offline_manager_provider.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/theme/neumorphism_theme.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/widgets/optimized_image.dart';
@@ -19,6 +20,9 @@ class WebLibraryScreen extends ConsumerStatefulWidget {
 class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
   @override
   Widget build(BuildContext context) {
+    // 🔥 Watch themeProvider to force rebuild on theme changes
+    ref.watch(themeProvider);
+
     // Providers
     final stats = ref.watch(libraryStatsProvider);
     final recentlyPlayed = ref.watch(libraryRecentlyPlayedProvider);

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/song_model.dart';
 import '../../../core/providers/library_coordinator.dart';
 import '../../../core/providers/offline_manager_provider.dart'; // ✅ Importar OfflineManager
+import '../../../core/providers/theme_provider.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/fast_scroll_physics.dart';
 import '../../../core/utils/url_normalizer.dart';
@@ -48,7 +49,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       return const WebLibraryScreen();
     }
 
-    // 🔥 Usar providers derivados para evitar rebuilds innecesarios
+    // 🔥 Watch themeProvider to force rebuild on theme changes
+    ref.watch(themeProvider);
+    // debugPrint('🎨 [LibraryScreen] Rebuilding due to theme change. isDark: ${NeumorphismTheme.isDark}');
     final stats = ref.watch(libraryStatsProvider);
     final recentlyPlayed = ref.watch(libraryRecentlyPlayedProvider);
     final isLoading = ref.watch(libraryIsLoadingProvider);
@@ -127,7 +130,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen>
       expandedHeight: 120,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle.dark,
+      systemOverlayStyle: NeumorphismTheme.isDark 
+          ? SystemUiOverlayStyle.light 
+          : SystemUiOverlayStyle.dark,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(

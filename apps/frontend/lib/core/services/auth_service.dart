@@ -23,7 +23,6 @@ class AuthService {
   final HttpClientService _httpClient = HttpClientService();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: false,
       sharedPreferencesName: 'vintage_auth_store', // ✅ FIX: Usar archivo dedicado para evitar conflictos
       resetOnError: true, 
     ),

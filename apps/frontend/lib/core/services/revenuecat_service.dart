@@ -430,7 +430,9 @@ class RevenueCatService {
     try {
       _logger.i('💳 Iniciando compra de: ${package.identifier}');
       
-      // En SDK 8.x, purchasePackage retorna CustomerInfo directamente
+      // Nota: En SDK 9.x+ se recomienda usar 'purchase(PurchaseParams(...))'
+      // pero para evitar errores de construcción en esta versión específica del SDK,
+      // revertimos al método probado que el analizador sugiere actualizar.
       final result = await Purchases.purchasePackage(package);
       final customerInfo = result.customerInfo;
       

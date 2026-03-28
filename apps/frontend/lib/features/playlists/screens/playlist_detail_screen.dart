@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -611,6 +612,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen>
               expandedHeight: 300,
               pinned: true,
               backgroundColor: NeumorphismTheme.isDark ? NeumorphismTheme.background : NeumorphismTheme.coffeeDark, // ✅ Fondo adaptativo: Background en Dark, Brown en Light
+              systemOverlayStyle: NeumorphismTheme.isDark 
+                  ? SystemUiOverlayStyle.light 
+                  : SystemUiOverlayStyle.dark,
               leading: IconButton(
                 icon: Icon(
                   Icons.arrow_back, 

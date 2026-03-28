@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 
@@ -224,6 +225,7 @@ class NeumorphismTheme {
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
+        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: GoogleFonts.inter(
           fontSize: 17,
           fontWeight: FontWeight.w600,

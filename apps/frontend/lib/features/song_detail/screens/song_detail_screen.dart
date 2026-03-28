@@ -8,6 +8,7 @@ import '../../../core/models/song_model.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
 import '../../../core/providers/secondary_screens_scroll_provider.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../widgets/artist_songs_list.dart';
 import '../providers/song_detail_provider.dart';
 import '../../../core/utils/url_normalizer.dart';
@@ -949,6 +950,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
   
   @override
   Widget build(BuildContext context) {
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     super.build(context); // Requerido para AutomaticKeepAliveClientMixin
     
     // CRÍTICO: Si tenemos cache válido, mostrar contenido inmediatamente sin verificaciones

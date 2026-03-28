@@ -1,0 +1,122 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 67.0.0 (98.0.0 available)
+  _flutterfire_internals 1.3.67 (1.3.68 available)
+  analyzer 6.4.1 (12.0.0 available)
+  async 2.13.0 (2.13.1 available)
+  auto_route 9.3.0+1 (11.1.0 available)
+  auto_route_generator 9.0.0 (10.5.0 available)
+  build 2.4.1 (4.0.5 available)
+  build_config 1.1.2 (1.3.0 available)
+  build_resolvers 2.4.2 (3.0.4 available)
+  build_runner 2.4.13 (2.13.1 available)
+  build_runner_core 7.3.2 (9.3.2 available)
+  built_value 8.12.4 (8.12.5 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  dart_style 2.3.6 (3.1.8 available)
+  firebase_auth 6.2.0 (6.3.0 available)
+  firebase_auth_platform_interface 8.1.7 (8.1.8 available)
+  firebase_auth_web 6.1.3 (6.1.4 available)
+  firebase_core 4.5.0 (4.6.0 available)
+  firebase_core_platform_interface 6.0.2 (6.0.3 available)
+  firebase_core_web 3.5.0 (3.5.1 available)
+  flutter_plugin_android_lifecycle 2.0.33 (2.0.34 available)
+  flutter_riverpod 2.6.1 (3.3.1 available)
+  google_sign_in_android 7.2.9 (7.2.10 available)
+  image_picker_android 0.8.13+14 (0.8.13+15 available)
+  jni 0.14.2 (0.15.2 available)
+  json_annotation 4.9.0 (4.11.0 available)
+  json_serializable 6.8.0 (6.13.1 available)
+  meta 1.17.0 (1.18.2 available)
+  mockito 5.4.4 (5.6.4 available)
+  palette_generator 0.3.3+7 (discontinued)
+  path_provider_android 2.2.22 (2.2.23 available)
+  pointycastle 3.9.1 (4.0.0 available)
+  protobuf 3.1.0 (6.0.0 available)
+  purchases_flutter 9.15.0 (9.15.1 available)
+  retrofit_generator 8.2.1 (10.2.3 available)
+  riverpod 2.6.1 (3.2.1 available)
+  sentry 9.15.0 (9.16.0 available)
+  sentry_flutter 9.15.0 (9.16.0 available)
+  shared_preferences 2.5.4 (2.5.5 available)
+  shared_preferences_android 2.4.21 (2.4.23 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  source_gen 1.5.0 (4.2.2 available)
+  source_helper 1.3.5 (1.3.11 available)
+  syncfusion_flutter_charts 33.1.44 (33.1.45 available)
+  syncfusion_flutter_core 33.1.44 (33.1.45 available)
+  test_api 0.7.10 (0.7.11 available)
+  url_launcher_android 6.3.28 (6.3.29 available)
+  vector_math 2.2.0 (2.3.0 available)
+  webview_flutter_android 4.10.13 (4.10.15 available)
+  webview_flutter_platform_interface 2.14.0 (2.15.1 available)
+  webview_flutter_wkwebview 3.24.1 (3.24.2 available)
+  win32 5.15.0 (6.0.0 available)
+  win32_registry 2.1.0 (3.0.2 available)
+Got dependencies!
+1 package is discontinued.
+53 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing frontend...                                           
+
+warning - The annotation 'JsonKey.new' can only be used on fields or getters - lib\core\models\user_model.dart:57:6 - invalid_annotation_target
+   info - Don't use 'BuildContext's across async gaps - lib\core\navigation\app_router.dart:58:21 - use_build_context_synchronously
+warning - Unused import: 'realtime_service.dart' - lib\core\services\app_initializer.dart:10:8 - unused_import
+warning - The operand can't be 'null', so the condition is always 'false' - lib\core\services\app_initializer.dart:140:92 - unnecessary_null_comparison
+warning - 'LockCachingAudioSource' is experimental and could be removed or changed at any time - lib\core\services\audio_service.dart:1439:16 - experimental_member_use
+  error - The class 'PurchaseParams' doesn't have an unnamed constructor - lib\core\services\revenuecat_service.dart:434:53 - new_with_undefined_constructor_default
+  error - A value of type 'PurchaseResult' can't be assigned to a variable of type 'CustomerInfo?' - lib\core\services\revenuecat_service.dart:436:23 - invalid_assignment
+   info - Don't invoke 'print' in production code - lib\core\services\social_auth_service.dart:46:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\services\social_auth_service.dart:112:7 - avoid_print
+warning - Dead code - lib\core\services\struky_audio_handler.dart:215:56 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\core\services\struky_audio_handler.dart:215:59 - dead_null_aware_expression
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:31:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:33:7 - avoid_print
+warning - A value of type 'Null' can't be returned by the 'onError' handler because it must be assignable to 'FutureOr<FileInfo>' - lib\core\services\struky_image_cache_manager.dart:48:58 - invalid_return_type_for_catch_error
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:58:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\services\struky_image_cache_manager.dart:60:7 - avoid_print
+warning - Unused import: 'package:flutter/material.dart' - lib\core\services\version_service.dart:1:8 - unused_import
+warning - The value of the field '_titleStyle' isn't used - lib\core\widgets\professional_audio_player.dart:323:26 - unused_field
+warning - The value of the field '_artistStyle' isn't used - lib\core\widgets\professional_audio_player.dart:329:26 - unused_field
+warning - The value of the field '_adTitleStyle' isn't used - lib\core\widgets\professional_audio_player.dart:336:26 - unused_field
+warning - The value of the field '_advertiserStyle' isn't used - lib\core\widgets\professional_audio_player.dart:342:26 - unused_field
+warning - The value of the local variable 'isPlayingAd' isn't used - lib\core\widgets\professional_audio_player.dart:1015:11 - unused_local_variable
+warning - The declaration '_AdArtworkBackground' isn't referenced - lib\core\widgets\professional_audio_player.dart:1177:7 - unused_element
+warning - The value of the field '_miniPlayerBottomMargin' isn't used - lib\core\widgets\spotify_player_sheet.dart:31:23 - unused_field
+warning - The value of the local variable 'hasDownloads' isn't used - lib\core\widgets\struky_drawer_menu.dart:29:11 - unused_local_variable
+warning - Dead code - lib\features\ads\services\ads_service.dart:41:23 - dead_code
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\screens\login_screen.dart:289:42 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\auth\screens\login_screen.dart:296:21 - use_build_context_synchronously
+warning - The value of the field '_registrationSuccess' isn't used - lib\features\auth\screens\register_screen.dart:36:14 - unused_field
+   info - Empty catch block - lib\features\auth\screens\register_screen.dart:764:35 - empty_catches
+   info - Empty catch block - lib\features\auth\screens\register_screen.dart:780:35 - empty_catches
+warning - The value of the local variable 'statusBarHeight' isn't used - lib\features\home\screens\home_screen.dart:144:11 - unused_local_variable
+warning - Dead code - lib\features\home\widgets\home_header.dart:81:41 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\home\widgets\home_header.dart:81:44 - dead_null_aware_expression
+warning - The value of the local variable 'cardDecoration' isn't used - lib\features\home\widgets\intelligent_featured_songs_section.dart:427:11 - unused_local_variable
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\offline\screens\downloads_screen.dart:264:35 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\offline\screens\downloads_screen.dart:271:56 - use_build_context_synchronously
+warning - The value of the local variable 'theme' isn't used - lib\features\profile\screens\profile_screen.dart:17:11 - unused_local_variable
+warning - The value of the field '_selectedFilter' isn't used - lib\features\search\screens\web\web_search_screen.dart:34:11 - unused_field
+warning - The declaration '_MenuButton' isn't referenced - lib\features\song_detail\screens\song_detail_screen.dart:1706:7 - unused_element
+
+flutter : 40 issues 
+found. (ran in 70.7s)
+En línea: 1 Carácter: 1
++ flutter analyze > fin
+al_analysis_output.txt 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (40 issues fou   
+ nd. (ran in 70.7s)    
+:String) [], Remot    
+eException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 

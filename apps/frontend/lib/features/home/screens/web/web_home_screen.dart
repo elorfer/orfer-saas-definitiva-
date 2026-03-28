@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/theme/neumorphism_theme.dart';
 import '../../widgets/home_header.dart';
 // import '../../widgets/featured_artists_section.dart'; // Replaced by Web version
@@ -18,6 +19,9 @@ class WebHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🔥 Watch themeProvider to force rebuild on theme changes
+    ref.watch(themeProvider);
+    
     // 🚀 AHORA EL SIDEBAR LO GESTIONA PersistentNavigation (Layout Padre)
     // Aquí solo nos preocupamos del contenido central.
     

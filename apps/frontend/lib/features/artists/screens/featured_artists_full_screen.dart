@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../../home/widgets/featured_artist_card.dart';
 import '../../../core/providers/home_provider.dart';
 
@@ -10,6 +12,7 @@ class FeaturedArtistsFullScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     final featuredArtists = ref.watch(featuredArtistsProvider);
     return Scaffold(
       appBar: AppBar(
@@ -23,6 +26,9 @@ class FeaturedArtistsFullScreen extends ConsumerWidget {
         backgroundColor: NeumorphismTheme.background,
         foregroundColor: NeumorphismTheme.textPrimary,
         elevation: 0,
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
         scrolledUnderElevation: 0, // ✅ Fix: No cambiar color al scrollear
         surfaceTintColor: Colors.transparent, // ✅ Fix: Sin tinte de superficie
       ),

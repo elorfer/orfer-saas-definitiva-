@@ -193,13 +193,29 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
   // ═══════════════════════════════════════════════════════════════════════
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    AppLogger.debug('[StrukyAudioHandler] ▶️ play() llamado');
+    await _player.play();
+  }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() async {
+    AppLogger.debug('[StrukyAudioHandler] ⏸️ pause() llamado');
+    await _player.pause();
+  }
 
   @override
-  Future<void> stop() => _player.stop();
+  Future<void> stop() async {
+    AppLogger.info('[StrukyAudioHandler] 🛑 stop() llamado - Finalizando servicio');
+    await _player.stop();
+    await super.stop(); // 🚀 CRÍTICO: Informar a audio_service que debe detener el foreground service
+  }
+
+  @override
+  Future<void> onNotificationDeleted() async {
+    AppLogger.info('[StrukyAudioHandler] 🗑️ Notificación eliminada por el usuario');
+    await stop();
+  }
 
   @override
   Future<void> seek(Duration position) => _player.seek(position);

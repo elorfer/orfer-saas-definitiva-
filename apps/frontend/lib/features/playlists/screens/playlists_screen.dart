@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import 'package:go_router/go_router.dart';
 // OPTIMIZACIÓN: GoogleFonts removido, usando estilos constantes
 import '../../../core/providers/playlist_provider.dart';
@@ -99,6 +101,7 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
     super.build(context); // ✅ Requerido por AutomaticKeepAliveClientMixin
     
     // ✅ OPTIMIZACIÓN: Cargar solo la primera página inicialmente
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     // Las páginas adicionales se cargan mediante _loadMore() y se combinan localmente
     final firstPageAsync = ref.watch(
       playlistsProvider((page: 1, limit: _pageSize)),
@@ -129,6 +132,9 @@ class _PlaylistsScreenState extends ConsumerState<PlaylistsScreen>
         backgroundColor: NeumorphismTheme.background,
         appBar: AppBar(
           elevation: 0,
+          systemOverlayStyle: NeumorphismTheme.isDark 
+              ? SystemUiOverlayStyle.light 
+              : SystemUiOverlayStyle.dark,
           backgroundColor: NeumorphismTheme.background,
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),

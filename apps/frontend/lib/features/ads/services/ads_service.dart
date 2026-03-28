@@ -207,9 +207,9 @@ class AdsService {
           'durationPlayed': durationSeconds,
           'wasCompleted': wasCompleted,
           'wasSkipped': wasSkipped,
-          'genre': ?genre,
-          'artist': ?artist,
-          'playlistId': ?playlistId,
+          'genre': genre,
+          'artist': artist,
+          'playlistId': playlistId,
         },
       );
       AppLogger.debug('[AdsService] Reproducción registrada: adId=$adId, duration=${durationSeconds}s, completed=$wasCompleted, skipped=$wasSkipped');
@@ -256,8 +256,7 @@ class AdsService {
       AppLogger.error('[AdsService] ❌ Error al obtener frecuencia: $e');
       return 3; // Valor por defecto en caso de error
     }
-      return 3; // Valor por defecto en caso de error
-    }
+  }
 
   // ===========================================================================
   // 🔐 ADMIN METHODS (Require Auth)

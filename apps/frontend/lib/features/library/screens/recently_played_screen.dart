@@ -1,8 +1,10 @@
 import 'dart:async'; // ✅ Para Timer
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart'; // ✅ Para ScrollDirection
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../../../core/providers/play_history_provider.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/models/song_model.dart';
@@ -129,6 +131,7 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
     
     // Observar cambios en el historial para mantener cache/precarga
     final history = ref.watch(playHistoryProvider);
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     final recentSongs = List<Song>.from(history.reversed).take(50).toList();
 
     // Escuchar cambios en el historial aquí (permitido en build) y mantener cache/precarga
@@ -162,6 +165,9 @@ class _RecentlyPlayedScreenState extends ConsumerState<RecentlyPlayedScreen>
         key: const ValueKey('recently_played_screen_scaffold'),
         backgroundColor: NeumorphismTheme.surface,
         appBar: AppBar(
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
         backgroundColor: NeumorphismTheme.background,
         elevation: 0,
         leading: IconButton(

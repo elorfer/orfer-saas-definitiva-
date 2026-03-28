@@ -19,7 +19,6 @@ class HttpClientService {
   Dio? _dio;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
-      encryptedSharedPreferences: false, // ✅ FIX: Alinear con AuthService
       sharedPreferencesName: 'vintage_auth_store', // ✅ FIX: Usar el mismo archivo que AuthService
       resetOnError: true,
     ),

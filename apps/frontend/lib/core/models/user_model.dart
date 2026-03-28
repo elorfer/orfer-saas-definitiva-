@@ -36,6 +36,7 @@ class User {
   final String? avatarUrl;
   final UserRole role;
   final SubscriptionStatus subscriptionStatus;
+  @JsonKey(name: 'is_premium')
   final bool? isPremiumField; // Campo del backend
   final DateTime? premiumExpiresAt; // Fecha de expiración from backend
   final bool? isVerified;
@@ -54,7 +55,7 @@ class User {
     this.avatarUrl,
     required this.role,
     required this.subscriptionStatus,
-    @JsonKey(name: 'is_premium') this.isPremiumField,
+    this.isPremiumField,
     this.premiumExpiresAt,
     this.isVerified,
     this.isActive,

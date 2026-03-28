@@ -5157,7 +5157,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         
         // ✅ ATOMIC SYNC: Actualizar estado inmediatamente
         // Esto previene la desincronización (25 vs 31) en saltos con anuncios
-        final updatedQueue = List<Song>.from(state.currentQueue);
         // Nota: No necesitamos filtrar 'updatedQueue' manualmente porque indicesToRemove
         // se refiere a índices absolutos en AudioService que incluyen anuncios.
         // Pero PlaybackNotifier.state.currentQueue SOLO tiene canciones.

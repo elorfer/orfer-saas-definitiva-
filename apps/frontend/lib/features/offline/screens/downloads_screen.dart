@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/offline_manager_provider.dart';
+import '../../../core/providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../../../core/providers/playback_notifier.dart'; // ✅ Importar PlaybackNotifier
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/widgets/optimized_image.dart';
@@ -23,6 +25,7 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(themeProvider); // 🚀 Forzar rebuild cuando el tema cambia
     // Verificar estado Premium
     final user = ref.watch(authStateProvider.select((state) => state.user));
     final isPremium = user != null &&
@@ -42,6 +45,9 @@ class _DownloadsScreenState extends ConsumerState<DownloadsScreen> {
         ),
         backgroundColor: NeumorphismTheme.background,
         elevation: 0,
+        systemOverlayStyle: NeumorphismTheme.isDark 
+            ? SystemUiOverlayStyle.light 
+            : SystemUiOverlayStyle.dark,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: NeumorphismTheme.textPrimary),
           onPressed: () {

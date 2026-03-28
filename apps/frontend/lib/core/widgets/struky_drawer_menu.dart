@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -196,7 +196,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                       onChanged: (val) {
                         ref.read(themeProvider.notifier).toggleTheme();
                       },
-                      activeColor: colorScheme.primary,
+                      activeThumbColor: colorScheme.primary,
                       activeTrackColor:
                           colorScheme.primary.withValues(alpha: 0.3),
                     ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -65,8 +65,8 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     }
   }
 
-  void _onKeyPress(int index, RawKeyEvent event) {
-    if (event is RawKeyDownEvent && 
+  void _onKeyPress(int index, KeyEvent event) {
+    if (event is KeyDownEvent && 
         event.logicalKey == LogicalKeyboardKey.backspace && 
         _controllers[index].text.isEmpty && 
         index > 0) {
@@ -224,9 +224,9 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
           ),
         ],
       ),
-      child: RawKeyboardListener(
+      child: KeyboardListener(
         focusNode: FocusNode(), // Nodo dummy para atrapar el backspace
-        onKey: (event) => _onKeyPress(index, event),
+        onKeyEvent: (event) => _onKeyPress(index, event),
         child: TextField(
           controller: _controllers[index],
           focusNode: _focusNodes[index],
