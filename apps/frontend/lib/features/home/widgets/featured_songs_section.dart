@@ -44,25 +44,30 @@ class FeaturedSongsSection extends ConsumerWidget {
         const SizedBox(height: 8),
         
         // Lista vertical de canciones optimizada (máximo 4)
-        // Lista vertical de canciones optimizada (máximo 4)
-        // Usar spread operator direactamente sobre el iterable
-        ...Iterable.generate(featuredSongs.length.clamp(0, 4), (index) {
-          final featuredSong = featuredSongs[index];
-          return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24), 
-              child: RepaintBoundary(
-                key: ValueKey('song_${featuredSong.song.id}'), 
-                child: FeaturedSongCard(
-                  key: ValueKey('song_card_${featuredSong.song.id}'), 
-                  featuredSong: featuredSong,
-                  precacheAudio: index < 2, 
-                  onTap: () {
-                    _onSongTap(context, featuredSong.song);
-                  },
-                ),
-              ),
-            );
-        }),
+        RepaintBoundary(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...Iterable.generate(featuredSongs.length.clamp(0, 4), (index) {
+                final featuredSong = featuredSongs[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24), 
+                  child: RepaintBoundary(
+                    key: ValueKey('song_${featuredSong.song.id}'), 
+                    child: FeaturedSongCard(
+                      key: ValueKey('song_card_${featuredSong.song.id}'), 
+                      featuredSong: featuredSong,
+                      precacheAudio: index < 2, 
+                      onTap: () {
+                        _onSongTap(context, featuredSong.song);
+                      },
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
         
         // Botón para ver más canciones
         if (featuredSongs.length > 4) ...[

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -10,7 +10,7 @@ import '../../../core/utils/time_ago_formatter.dart';
 
 import 'package:go_router/go_router.dart';
 import '../../../core/widgets/struky_zoom_drawer.dart';
-/// Widget del header scrolleable (avatar, bienvenido, nombre, logo, Ãºltima actualizaciÃ³n)
+/// Widget del header scrolleable (avatar, bienvenido, nombre, logo, última actualización)
 /// Extracted for performance isolation and cleaner HomeScreen code.
 class HomeHeader extends ConsumerWidget {
   const HomeHeader({super.key});
@@ -24,7 +24,7 @@ class HomeHeader extends ConsumerWidget {
     // Solo observar firstName, no isLoading (evita rebuilds innecesarios)
     final userFirstName = ref.watch(currentUserProvider.select((u) => u?.firstName));
     
-    // ðŸ”¥ NUEVO: Obtener timestamp de Ãºltima actualizaciÃ³n
+    // ðŸ”¥ NUEVO: Obtener timestamp de última actualización
     final lastUpdateTime = ref.watch(homeStateProvider.select((state) => state.lastUpdateTime));
     
     // âš¡ OPTIMIZACIÃ“N: Remover watch de isLoading - solo se usa para skeleton inicial
@@ -83,7 +83,7 @@ class HomeHeader extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        // ðŸ”¥ NUEVO: Mostrar timestamp de Ãºltima actualizaciÃ³n
+                        // ðŸ”¥ NUEVO: Mostrar timestamp de última actualización
                         if (lastUpdateTime != null) ...[
                           const SizedBox(height: 2),
                           Text(
@@ -136,7 +136,7 @@ class HomeHeader extends ConsumerWidget {
 
               // Invite Coffee Button (Replaced Logout)
               Tooltip(
-                message: 'Invitar un CafÃ©',
+                message: 'Invitar un Café',
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/unified_audio_provider_fixed.dart';
+import '../providers/theme_provider.dart'; // 🚀 Importar para reactividad de colores
 import '../theme/neumorphism_theme.dart';
 import '../utils/logger.dart';
 import 'stable_image_widget.dart';
@@ -24,34 +25,37 @@ class _MiniPlayerAlbumImage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return RepaintBoundary(
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: NeumorphismTheme.coffeeMedium,
-        ),
-        child: ClipOval(
-          child: coverArtUrl != null && coverArtUrl!.isNotEmpty
-              ? StableImageWidget(
-                  key: ValueKey('mini_${songId ?? 'unknown'}'),
-                  imageUrl: coverArtUrl!,
-                  width: 40,
-                  height: 40,
-                  fit: BoxFit.cover,
-                  errorWidget: const Icon(
-                    Icons.music_note,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                )
-              : const Icon(
+    // 🎨 FIX: Observar el tema
+    ref.watch(themeProvider);
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeInOut,
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: NeumorphismTheme.coffeeMedium,
+      ),
+      child: ClipOval(
+        child: coverArtUrl != null && coverArtUrl!.isNotEmpty
+            ? StableImageWidget(
+                key: ValueKey('mini_${songId ?? 'unknown'}'),
+                imageUrl: coverArtUrl!,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                errorWidget: const Icon(
                   Icons.music_note,
                   color: Colors.white,
                   size: 20,
                 ),
-        ),
+              )
+            : const Icon(
+                Icons.music_note,
+                color: Colors.white,
+                size: 20,
+              ),
       ),
     );
   }
@@ -61,7 +65,7 @@ class _MiniPlayerAlbumImage extends ConsumerWidget {
 
 /// ⚡ OPTIMIZACIÓN: Widget separado para la información de la canción
 /// Solo se reconstruye si cambia el título o artista
-class _MiniPlayerSongInfo extends StatelessWidget {
+class _MiniPlayerSongInfo extends ConsumerWidget {
   final String title;
   final String artist;
   
@@ -69,6 +73,8 @@ class _MiniPlayerSongInfo extends StatelessWidget {
     required this.title,
     required this.artist,
   });
+
+  // ... (buildScrollingText method remains the same)
 
   Widget _buildScrollingText(String text, TextStyle style) {
     // ⚡ LÓGICA MIXTA: "Oro Puro" de UX
@@ -105,35 +111,36 @@ class _MiniPlayerSongInfo extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Título con lógica inteligente
-          _buildScrollingText(
-            title,
-            GoogleFonts.inter(
-              color: NeumorphismTheme.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 🎨 FIX: Observar el tema
+    ref.watch(themeProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Título con lógica inteligente
+        _buildScrollingText(
+          title,
+          GoogleFonts.inter(
+            color: NeumorphismTheme.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 2), // Un poco más de aire
-          
-          // Artista (generalmente más corto, pero aplicamos la misma lógica por consistencia)
-          _buildScrollingText(
-             artist,
-             GoogleFonts.inter(
-              color: NeumorphismTheme.textSecondary,
-              fontSize: 11,
-              fontWeight: FontWeight.w400,
-            ),
+        ),
+        const SizedBox(height: 2), // Un poco más de aire
+        
+        // Artista (generalmente más corto, pero aplicamos la misma lógica por consistencia)
+        _buildScrollingText(
+           artist,
+           GoogleFonts.inter(
+            color: NeumorphismTheme.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w400,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -145,6 +152,9 @@ class _MiniPlayerPlayButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🎨 FIX: Observar el tema
+    ref.watch(themeProvider);
+
     // ✅ MIRROR PATTERN: Acceso directo al servicio de audio (Single Instance)
     final audioService = ref.watch(audioServiceProvider);
 
@@ -161,42 +171,36 @@ class _MiniPlayerPlayButton extends ConsumerWidget {
         // pero aquí confirmamos visualmente).
         final showPause = playing && processingState != ProcessingState.completed;
 
-        return RepaintBoundary(
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: NeumorphismTheme.isDark ? NeumorphismTheme.accent : NeumorphismTheme.coffeeMedium,
-              shape: BoxShape.circle,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () async {
-                  // 🔥 UX PRO: Feedback táctil al pausar/reproducir
-                  HapticFeedback.lightImpact();
-
-                  // ✅ ACCIÓN DIRECTA: Sin intermediarios
-                  try {
-                    if (playing) {
-                      await audioService.player.pause();
-                    } else {
-                      // Usar togglePlayPause del notifier si se quiere la lógica "smart" (replay on completion)
-                      // O llamar directamente a audioService.player.play() si confiamos en el fix de playback_notifier
-                      // Recomendación: Usar el notifier porque tiene la lógica de "Replay on Completion" y validación de anuncios
-                      await ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
-                    }
-                  } catch (e) {
-                    AppLogger.error('[MiniPlayerPlayButton] Error toggle: $e');
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeInOut,
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: NeumorphismTheme.isDark ? NeumorphismTheme.accent : NeumorphismTheme.coffeeMedium,
+            shape: BoxShape.circle,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () async {
+                HapticFeedback.lightImpact();
+                try {
+                  if (playing) {
+                    await audioService.player.pause();
+                  } else {
+                    await ref.read(unifiedAudioProviderFixed.notifier).togglePlayPause();
                   }
-                },
-                borderRadius: const BorderRadius.all(Radius.circular(18)),
-                child: Center(
-                  child: Icon(
-                    showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    color: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white,
-                    size: 18,
-                  ),
+                } catch (e) {
+                  AppLogger.error('[MiniPlayerPlayButton] Error toggle: $e');
+                }
+              },
+              borderRadius: const BorderRadius.all(Radius.circular(18)),
+              child: Center(
+                child: Icon(
+                  showPause ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: NeumorphismTheme.isDark ? NeumorphismTheme.coffeeDark : Colors.white,
+                  size: 18,
                 ),
               ),
             ),
@@ -227,6 +231,9 @@ class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> 
   
   @override
   Widget build(BuildContext context) {
+    // 🎨 FIX: Observar el tema
+    ref.watch(themeProvider);
+
     final currentSong = ref.watch(realCurrentSongProvider);
     final currentSongId = currentSong?.id;
     final isPlayingAd = ref.watch(

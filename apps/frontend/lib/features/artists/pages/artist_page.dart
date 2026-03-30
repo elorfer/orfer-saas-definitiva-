@@ -786,16 +786,17 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
           child: SafeArea(
             top: false, // ✅ Contenido detrás del status bar
             bottom: false,
-            child: RefreshIndicator(
-              onRefresh: _handleRefresh,
-              color: Colors.white,
-              backgroundColor: NeumorphismTheme.coffeeMedium,
-              child: CustomScrollView(
-                key: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
-              controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
-              // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
-              // Mantiene solo ~5 items fuera de vista (400px / ~80px por item)
-              cacheExtent: 400, // Reducido de 1000 a 400 para mejor rendimiento
+            child: SelectionArea(
+              child: RefreshIndicator(
+                onRefresh: _handleRefresh,
+                color: Colors.white,
+                backgroundColor: NeumorphismTheme.coffeeMedium,
+                child: CustomScrollView(
+                  key: PageStorageKey<String>('artist_page_scroll_${widget.artist.id}'),
+                controller: _scrollController, // 🔥 OPTIMIZACIÓN: Controller para precache dinámico
+                // 🔥 OPTIMIZADO: cacheExtent reducido para mejor rendimiento con grandes listas
+                // Mantiene solo ~5 items fuera de vista (400px / ~80px por item)
+                cacheExtent: 400, // Reducido de 1000 a 400 para mejor rendimiento
               physics: const BouncingScrollPhysics(
                 parent: AlwaysScrollableScrollPhysics(),
               ), // ✅ Scroll estilo iPhone (igual que Home)
@@ -902,6 +903,7 @@ class _ArtistPageState extends ConsumerState<ArtistPage>
         ],
           ), // Cierra CustomScrollView
             ), // Cierra RefreshIndicator
+            ), // Cierra SelectionArea
           ), // Cierra SafeArea
         ), // Cierra Container
       ),

@@ -91,19 +91,17 @@ class SearchService {
 
       final data = response.data as Map<String, dynamic>;
 
-      // Normalizar y parsear resultados
-      final artistsData = (data['artists'] as List<dynamic>?)
-              ?.map((item) => DataNormalizer.normalizeArtist(item as Map<String, dynamic>))
-              .toList() ??
-          [];
-      final songsData = (data['songs'] as List<dynamic>?)
-              ?.map((item) => DataNormalizer.normalizeSong(item as Map<String, dynamic>))
-              .toList() ??
-          [];
-      final playlistsData = (data['playlists'] as List<dynamic>?)
-              ?.map((item) => DataNormalizer.normalizePlaylist(item as Map<String, dynamic>))
-              .toList() ??
-          [];
+      // 🚀 OPTIMIZACIÓN: Normalizar colecciones en Isolate secundario
+      // Esto libera el UI Thread de procesar mapas de JSON grandes
+      final resultsLists = await Future.wait([
+        DataNormalizer.normalizeArtistsAsync(data['artists'] as List<dynamic>? ?? []),
+        DataNormalizer.normalizeSongsAsync(data['songs'] as List<dynamic>? ?? []),
+        DataNormalizer.normalizePlaylistsAsync(data['playlists'] as List<dynamic>? ?? []),
+      ]);
+
+      final artistsData = resultsLists[0];
+      final songsData = resultsLists[1];
+      final playlistsData = resultsLists[2];
 
       // Buscar géneros por nombre (endpoint dedicado)
       List<Genre> genres = [];
@@ -421,9 +419,8 @@ class SearchService {
         artistsList = [];
       }
 
-      final artistsData = artistsList
-          .map((item) => DataNormalizer.normalizeArtist(item as Map<String, dynamic>))
-          .toList();
+      // 🚀 OPTIMIZACIÓN: Normalizar artistas en Isolate secundario
+      final artistsData = await DataNormalizer.normalizeArtistsAsync(artistsList);
 
       return artistsData.map((json) => Artist.fromJson(json)).toList();
     } on DioException catch (e) {
@@ -465,11 +462,8 @@ class SearchService {
         songsList = [];
       }
 
-      // ⚡ OPTIMIZACIÓN: Procesar datos de forma más eficiente
-      final songsData = songsList
-          .whereType<Map<String, dynamic>>() // Filtrar items inválidos
-          .map((item) => DataNormalizer.normalizeSong(item))
-          .toList();
+      // ⚡ OPTIMIZACIÓN: Normalizar canciones en Isolate secundario
+      final songsData = await DataNormalizer.normalizeSongsAsync(songsList);
 
       return await Song.parseList(songsData);
     } on DioException catch (e) {
@@ -505,12 +499,9 @@ class SearchService {
       }
 
       final data = response.data as Map<String, dynamic>;
-      // ⚡ OPTIMIZACIÓN: Procesar datos de forma más eficiente
-      final genresData = (data['genres'] as List<dynamic>?)
-              ?.whereType<Map<String, dynamic>>() // Filtrar items inválidos
-              .map((item) => DataNormalizer.normalizeGenre(item))
-              .toList() ??
-          [];
+      
+      // ⚡ OPTIMIZACIÓN: Normalizar géneros en Isolate secundario
+      final genresData = await DataNormalizer.normalizeGenresAsync(data['genres'] as List<dynamic>? ?? []);
 
       return genresData.map((json) => Genre.fromJson(json)).toList();
     } on DioException catch (e) {

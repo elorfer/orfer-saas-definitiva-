@@ -24,12 +24,16 @@ class SectionHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            title,
-            style: AppTextStyles.sectionTitle.copyWith(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.5, // 🚀 PREMIUM: Tight tracking
+          Expanded(
+            child: Text(
+              title,
+              style: AppTextStyles.sectionTitle.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5, // 🚀 PREMIUM: Tight tracking
+              ),
+              overflow: TextOverflow.ellipsis, // 🚀 FIX: Prevent overflow
+              maxLines: 1,
             ),
           ),
           if (onTapMore != null)

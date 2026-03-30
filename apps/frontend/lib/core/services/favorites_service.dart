@@ -57,6 +57,11 @@ class FavoritesService {
         return response.statusCode == 201;
       }
 
+      // Si es 401, no está autenticado
+      if (response.statusCode == 401) {
+        throw Exception('Debes iniciar sesión para agregar favoritos');
+      }
+
       // Si llegamos aquí, el status no es 2xx
       throw Exception(
         'Respuesta inesperada del servidor: status=${response.statusCode}, data=${response.data}'
@@ -125,6 +130,12 @@ class FavoritesService {
         }
       }
 
+      // Si es 401, el usuario no está autenticado. Retornar lista vacía de forma pacífica.
+      if (response.statusCode == 401) {
+        AppLogger.debug('[FavoritesService] Usuario no autenticado (401) al obtener favoritos, retornando lista vacía');
+        return [];
+      }
+
       // Si llegamos aquí, el status no es 2xx
       throw Exception(
         'Respuesta inesperada del servidor: status=${response.statusCode}, data=${response.data}'
@@ -147,9 +158,10 @@ class FavoritesService {
         return [];
       }
       
-      // Si es 401, no está autenticado
+      // Si es 401, el usuario no está autenticado. Retornar lista vacía de forma pacífica.
       if (statusCode == 401) {
-        throw Exception('Debes iniciar sesión para ver tus favoritos');
+        AppLogger.debug('[FavoritesService] Usuario no autenticado (401 en DioException), retornando lista vacía');
+        return [];
       }
       
       ErrorHandler.handleDioError(e, context: 'FavoritesService.getMyFavorites');

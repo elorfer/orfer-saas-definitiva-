@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // Para kIsWeb
 import 'package:flutter_svg/flutter_svg.dart'; // Para Logo
@@ -35,7 +35,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _acceptTerms = false;
   final bool _registrationSuccess = false;
   
-  // Estados para validaciÃ³n en tiempo real
+  // Estados para validación en tiempo real
   bool? _usernameAvailable;
   bool? _emailAvailable;
   Timer? _usernameCheckTimer;
@@ -60,7 +60,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _checkUsernameAvailability(String username) {
     _usernameCheckTimer?.cancel();
     
-    // Limpiar estado si el campo estÃ¡ vacÃ­o
+    // Limpiar estado si el campo está vacío
     if (username.isEmpty) {
       setState(() {
         _usernameAvailable = null;
@@ -69,10 +69,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
     
-    // Verificar desde la primera letra, pero solo si tiene al menos 1 carÃ¡cter
-    // Validar formato bÃ¡sico (solo letras, nÃºmeros y guiones bajos)
+    // Verificar desde la primera letra, pero solo si tiene al menos 1 carácter
+    // Validar formato básico (solo letras, números y guiones bajos)
     if (!RegExp(r'^[a-zA-Z0-9_]*$').hasMatch(username)) {
-      // Si tiene caracteres invÃ¡lidos, no verificar disponibilidad
+      // Si tiene caracteres inválidos, no verificar disponibilidad
       setState(() {
         _usernameAvailable = null;
         _isCheckingUsername = false;
@@ -80,16 +80,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       return;
     }
     
-    // Si tiene al menos 1 carÃ¡cter vÃ¡lido, verificar disponibilidad
+    // Si tiene al menos 1 carácter válido, verificar disponibilidad
     setState(() {
       _isCheckingUsername = true;
       _usernameAvailable = null; // Limpiar resultado anterior mientras verifica
     });
     
     _usernameCheckTimer = Timer(const Duration(milliseconds: 800), () async {
-      // Verificar que el valor no haya cambiado mientras esperÃ¡bamos
+      // Verificar que el valor no haya cambiado mientras esperábamos
       if (_usernameController.text != username) {
-        return; // El usuario siguiÃ³ escribiendo, cancelar esta verificaciÃ³n
+        return; // El usuario siguió escribiendo, cancelar esta verificación
       }
       
       final authNotifier = ref.read(authStateProvider.notifier);
@@ -100,7 +100,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             _usernameAvailable = available;
             _isCheckingUsername = false;
           });
-          // Forzar validaciÃ³n del campo
+          // Forzar validación del campo
           _formKey.currentState?.validate();
         }
       } catch (e) {
@@ -139,7 +139,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             _emailAvailable = available;
             _isCheckingEmail = false;
           });
-          // Forzar validaciÃ³n del campo
+          // Forzar validación del campo
           _formKey.currentState?.validate();
         }
       } catch (e) {
@@ -276,7 +276,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Descubre, comparte y vive la mÃºsica.',
+                          'Descubre, comparte y vive la música.',
                           style: AppTextStyles.headlineMedium.copyWith(
                             color: Colors.white.withValues(alpha: 0.9),
                             fontWeight: FontWeight.w300,
@@ -352,7 +352,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF3E2723), // MarrÃ³n oscuro
+          color: Color(0xFF3E2723), // Marrón oscuro
         ),
         child: SafeArea(
           child: LayoutBuilder(
@@ -373,7 +373,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     const SizedBox(height: 20),
                     
-                    // Header con botÃ³n de regreso
+                    // Header con botón de regreso
                     FadeInDown(
                       duration: const Duration(milliseconds: 300),
                       child: Column(
@@ -385,12 +385,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 icon: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2), // TraslÃºcido
+                                    color: Colors.white.withValues(alpha: 0.2), // Traslúcido
                                     borderRadius: const BorderRadius.all(Radius.circular(12)),
                                   ),
                                   child: const Icon(
                                     Icons.arrow_back,
-                                    color: Colors.white, // Blanco para resaltar sobre cafÃ© 
+                                    color: Colors.white, // Blanco para resaltar sobre café 
                                     size: 20,
                                   ),
                                 ),
@@ -498,7 +498,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // Campo de email
       AuthTextField(
         controller: _emailController,
-        label: 'Correo electrÃ³nico',
+        label: 'Correo electrónico',
         hint: 'tu@email.com',
         keyboardType: TextInputType.emailAddress,
         prefixIcon: Icons.email_outlined,
@@ -533,7 +533,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           final emailError = AuthValidators.email(value);
           if (emailError != null) return emailError;
           if (_emailAvailable == false) {
-            return 'Este email ya estÃ¡ registrado';
+            return 'Este email ya está registrado';
           }
           return null;
         },
@@ -583,7 +583,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             return basicValidation;
           }
           if (value != null && _usernameAvailable != null && _usernameAvailable == false) {
-            return 'Este nombre de usuario no estÃ¡ disponible';
+            return 'Este nombre de usuario no está disponible';
           }
           return null;
         },
@@ -595,11 +595,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       const SizedBox(height: 20),
 
-      // Campo de contraseÃ±a
+      // Campo de contraseña
       AuthTextField(
         controller: _passwordController,
-        label: 'ContraseÃ±a',
-        hint: 'MÃ­nimo 6 caracteres',
+        label: 'Contraseña',
+        hint: 'Mínimo 6 caracteres',
         obscureText: _obscurePassword,
         prefixIcon: Icons.lock_outline,
         suffixIcon: IconButton(
@@ -621,11 +621,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       const SizedBox(height: 20),
 
-      // Campo de confirmar contraseÃ±a
+      // Campo de confirmar contraseña
       AuthTextField(
         controller: _confirmPasswordController,
-        label: 'Confirmar contraseÃ±a',
-        hint: 'Repite tu contraseÃ±a',
+        label: 'Confirmar contraseña',
+        hint: 'Repite tu contraseña',
         obscureText: _obscureConfirmPassword,
         prefixIcon: Icons.lock_outline,
         suffixIcon: IconButton(
@@ -647,7 +647,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       const SizedBox(height: 20),
 
-      // Checkbox de tÃ©rminos y condiciones
+      // Checkbox de términos y condiciones
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -669,12 +669,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     const TextSpan(text: 'Acepto los '),
                     TextSpan(
-                      text: 'TÃ©rminos y Condiciones',
+                      text: 'Términos y Condiciones',
                       style: AppTextStyles.authTextSecondary,
                     ),
                     const TextSpan(text: ' y la '),
                     TextSpan(
-                      text: 'PolÃ­tica de Privacidad',
+                      text: 'Política de Privacidad',
                       style: AppTextStyles.authTextSecondary,
                     ),
                   ],
@@ -687,7 +687,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       const SizedBox(height: 24),
 
-      // BotÃ³n de registro
+      // Botón de registro
       AuthButton(
         backgroundColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium
         text: 'Crear Cuenta',
@@ -705,13 +705,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             );
 
             if (mounted) {
-              // ðŸ“§ Si el usuario ya estÃ¡ autenticado (Modo DEV auto-verify),
-              // ir directamente al onboarding saltando la verificaciÃ³n manual.
+              // ðŸ“§ Si el usuario ya está autenticado (Modo DEV auto-verify),
+              // ir directamente al onboarding saltando la verificación manual.
               final isAuthenticated = ref.read(authStateProvider).isAuthenticated;
               if (isAuthenticated) {
                 context.go('/onboarding');
               } else {
-                // Navegar a la pantalla de verificaciÃ³n
+                // Navegar a la pantalla de verificación
                 context.push('/verify-code/${Uri.encodeComponent(_emailController.text.trim())}');
               }
             }
@@ -733,7 +733,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'O regÃ­strate con',
+              'O regístrate con',
               style: AppTextStyles.authText,
             ),
           ),
@@ -748,7 +748,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       const SizedBox(height: 24),
 
-      // Botones de autenticaciÃ³n social
+      // Botones de autenticación social
       Row(
         children: [
           Flexible(
@@ -795,7 +795,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Â¿Ya tienes cuenta? ',
+            '¿Ya tienes cuenta? ',
             style: AppTextStyles.authText,
           ),
           TextButton(
@@ -806,7 +806,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
-              'Inicia sesiÃ³n',
+              'Inicia sesión',
               style: AppTextStyles.authLink.copyWith(
                 color: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium
               ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/neumorphism_theme.dart';
 import '../../../../core/theme/text_styles.dart';
@@ -8,8 +8,8 @@ class WebHeroBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // AquÃ­ podrÃ­amos tomar datos reales del provider, por ahora haremos un diseÃ±o visual impactante
-    // que invite a descubrir mÃºsica.
+    // Aquí podríamos tomar datos reales del provider, por ahora haremos un diseño visual impactante
+    // que invite a descubrir música.
     
     return Container(
       width: double.infinity,
@@ -46,7 +46,7 @@ class WebHeroBanner extends ConsumerWidget {
               ),
             ),
           ),
-          // Fondo Decorativo (CÃ­rculos abstractos)
+          // Fondo Decorativo (Círculos abstractos)
           Positioned(
             right: -50,
             top: -50,
@@ -89,7 +89,7 @@ class WebHeroBanner extends ConsumerWidget {
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Descubre la Mejor\nMÃºsica Vintage',
+                        'Descubre la Mejor\nMúsica Vintage',
                         style: AppTextStyles.titleLarge.copyWith(
                           color: Colors.white,
                           fontSize: 42,
@@ -116,7 +116,7 @@ class WebHeroBanner extends ConsumerWidget {
                           ),
                           const SizedBox(width: 16),
                           _HeroButton(
-                            text: 'MÃ¡s InformaciÃ³n',
+                            text: 'Más Información',
                             icon: Icons.info_outline_rounded,
                             isPrimary: false,
                             onTap: () {},
@@ -128,7 +128,7 @@ class WebHeroBanner extends ConsumerWidget {
                 ),
                 
                 // Espacio o Imagen (Derecha) - Por ahora espacio para balance
-                // AquÃ­ irÃ­a una imagen grande recortada del artista destacado
+                // Aquí iría una imagen grande recortada del artista destacado
                 const Expanded(flex: 2, child: SizedBox()),
               ],
             ),

@@ -1,4 +1,4 @@
-﻿import 'dart:ui' show ImageFilter;
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../utils/platform_utils.dart';
 
@@ -21,7 +21,7 @@ class WebConstrainedWrapper extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Si la pantalla es lo suficientemente pequeÃ±a (mÃ³vil), no forzar wrapper
+        // Si la pantalla es lo suficientemente pequeña (móvil), no forzar wrapper
         if (constraints.maxWidth < 600) {
           return child;
         }
@@ -63,8 +63,8 @@ class WebConstrainedWrapper extends StatelessWidget {
             Center(
               child: Container(
                 constraints: const BoxConstraints(
-                  maxWidth: 480, // Ancho tÃ­pico de mÃ³vil grande
-                  maxHeight: 900, // Altura mÃ¡xima
+                  maxWidth: 480, // Ancho típico de móvil grande
+                  maxHeight: 900, // Altura máxima
                 ),
                 // Margen vertical para que no toque bordes en pantallas altas
                 margin: const EdgeInsets.symmetric(vertical: 20),

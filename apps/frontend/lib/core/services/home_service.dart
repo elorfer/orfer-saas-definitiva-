@@ -118,14 +118,12 @@ class HomeService {
           return const [];
         }
 
-        // Validar y parsear usando ResponseParser
-        final validData = ResponseParser.validateList(data);
-        final result = ResponseParser.parseList<FeaturedArtist>(
-          data: validData,
-          parser: (item) {
-            // Usar DataNormalizer para normalizar el artista
-            final normalized = DataNormalizer.normalizeArtist(item);
+        // 🚀 OPTIMIZACIÓN: Normalizar artistas en Isolate secundario
+        final normalizedData = await DataNormalizer.normalizeArtistsAsync(data);
 
+        final result = ResponseParser.parseList<FeaturedArtist>(
+          data: normalizedData,
+          parser: (normalized) {
             // Imagen preferida - buscar en múltiples lugares
             final rawImage = normalized['profile_photo_url'] as String? ??
                 normalized['cover_photo_url'] as String?;
@@ -139,11 +137,10 @@ class HomeService {
                 (artist.profilePhotoUrl != null ? UrlNormalizer.normalizeImageUrl(artist.profilePhotoUrl) : null) ??
                 (artist.coverPhotoUrl != null ? UrlNormalizer.normalizeImageUrl(artist.coverPhotoUrl) : null);
             
-            
             return FeaturedArtist(
               artist: artist,
               featuredReason: 'Destacado',
-              rank: validData.indexOf(item) + 1,
+              rank: normalizedData.indexOf(normalized) + 1,
               imageUrl: finalImageUrl,
             );
           },
@@ -214,26 +211,11 @@ class HomeService {
             return [];
           }
 
-          // Validar y parsear usando ResponseParser y DataNormalizer
-          final validData = ResponseParser.validateList(data);
+          // 🚀 OPTIMIZACIÓN: Normalizar canciones en Isolate secundario
+          final normalizedList = await DataNormalizer.normalizeSongsAsync(data);
           
-          // Primero normalizar todas las entradas en memoria (rápido)
-          final normalizedList = <Map<String, dynamic>>[];
-          for (int i = 0; i < validData.length; i++) {
-            final songData = Map<String, dynamic>.from(validData[i]);
-
-            if (songData['fileUrl'] != null && songData['file_url'] == null) {
-              songData['file_url'] = songData['fileUrl'];
-            }
-
-            final normalizedSong = DataNormalizer.normalizeSong(songData);
-
-            if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') &&
-                songData['fileUrl'] != null) {
-              normalizedSong['file_url'] = songData['fileUrl'];
-              normalizedSong['fileUrl'] = songData['fileUrl'];
-            }
-
+          // Post-procesamiento necesario para URLs (esto es rápido)
+          for (final normalizedSong in normalizedList) {
             final rawCoverUrl = normalizedSong['cover_art_url'] as String?;
             final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
             if (normalizedCoverUrl != null) {
@@ -246,8 +228,6 @@ class HomeService {
               normalizedSong['file_url'] = normalizedFileUrl;
               normalizedSong['fileUrl'] = normalizedFileUrl;
             }
-
-            normalizedList.add(normalizedSong);
           }
 
           // Parsear las canciones. Si es solo una (caso Adrenalina), saltar compute para ahorrar overhead.
@@ -409,9 +389,8 @@ class HomeService {
           return [];
         }
         
-        final normalizedList = validData
-            .map((json) => DataNormalizer.normalizeSong(Map<String, dynamic>.from(json as Map)))
-            .toList();
+        // 🚀 OPTIMIZACIÓN: Normalizar canciones en Isolate secundario
+        final normalizedList = await DataNormalizer.normalizeSongsAsync(validData);
 
         try {
           return await Song.parseList(normalizedList);
@@ -458,11 +437,13 @@ class HomeService {
           return [];
         }
         
+        // 🚀 OPTIMIZACIÓN: Normalizar artistas en Isolate secundario
+        final normalizedData = await DataNormalizer.normalizeArtistsAsync(validData);
+
         return ResponseParser.parseList<Artist>(
-          data: validData,
+          data: normalizedData,
           parser: (json) {
-            final normalized = DataNormalizer.normalizeArtist(json);
-            return Artist.fromJson(normalized);
+            return Artist.fromJson(json);
           },
           logErrors: false,
         );

@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart'; // 🚀 Importar GoRouter para navegación
 import '../../../core/providers/theme_provider.dart';
+import '../../song_detail/screens/song_detail_screen.dart'; // 🚀 Importar para navegación de canciones
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/providers/search_provider.dart';
@@ -549,6 +551,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             child: NativeAdListTile(
               key: ValueKey('search_results_native_ad'),
               adType: NativeAdType.small,
+              placement: 'search',
             ),
           ),
         ),
@@ -661,9 +664,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             child: RepaintBoundary(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Text(
-                  'Tendencias en búsquedas',
-                  style: AppTextStyles.searchSectionTitle,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tendencias en búsquedas',
+                      style: AppTextStyles.searchSectionTitle,
+                    ),
+                    TextButton(
+                      onPressed: () => context.push('/search/trending-artists'),
+                      child: Text(
+                        'Ver todo',
+                        style: TextStyle(
+                          color: NeumorphismTheme.accentDark,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -690,6 +709,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
               child: NativeAdListTile(
                 key: ValueKey('search_home_native_ad'),
                 adType: NativeAdType.small,
+                placement: 'search',
               ),
             ),
           ),
@@ -730,9 +750,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             child: RepaintBoundary(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Text(
-                  'Las más escuchadas',
-                  style: AppTextStyles.searchSectionTitle,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Las más escuchadas',
+                      style: AppTextStyles.searchSectionTitle,
+                    ),
+                    TextButton(
+                      onPressed: () => context.push('/search/top-songs'),
+                      child: Text(
+                        'Ver todo',
+                        style: TextStyle(
+                          color: NeumorphismTheme.accentDark,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -835,7 +871,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     return RepaintBoundary(
       child: GestureDetector(
         onTap: () {
-          // Nota: Navegación al perfil del artista pendiente de implementar
+          // ✅ Navegar al perfil del artista
+          context.push('/artist/${artist.id}', extra: artist);
         },
         child: SizedBox(
           width: 100, // ⚡ REDUCIDO: de 140 a 100
@@ -1030,7 +1067,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
     return RepaintBoundary(
       child: GestureDetector(
         onTap: () {
-          // Nota: Reproducción de canción pendiente de implementar
+          // ✅ Usar servicio centralizado para navegación
+          SongDetailScreen.navigateToSong(context, song);
         },
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),

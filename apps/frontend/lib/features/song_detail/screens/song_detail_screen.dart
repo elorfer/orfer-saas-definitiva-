@@ -1005,24 +1005,63 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
             slivers: [
               // Contenido principal
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
+                child: SelectionArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(height: MediaQuery.of(context).padding.top + 32),
-                      // ✅ Botón de retroceso scrolleable (parte del contenido)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: RepaintBoundary(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 24),
-                            child: _BackButton(
-                              onPressed: () => context.pop(),
+                            // ✅ Header con botón de retroceso y título CENTRADO
+                            SizedBox(
+                              height: 48,
+                              child: Stack(
+                                children: [
+                                  // Botón alineado a la izquierda
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: RepaintBoundary(
+                                      child: _BackButton(
+                                        onPressed: () => context.pop(),
+                                      ),
+                                    ),
+                                  ),
+                                  // Título centrado
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 48),
+                                      child: RepaintBoundary(
+                                        child: (!hasCacheData && song.title == null)
+                                            ? Container(
+                                                width: 120,
+                                                height: 20,
+                                                decoration: BoxDecoration(
+                                                  color: NeumorphismTheme.accentLight.withValues(alpha: 0.3),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                              )
+                                            : Text(
+                                                song.title ?? 'Sin título',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: NeumorphismTheme.textPrimary,
+                                                  letterSpacing: -0.5,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
+                            
+                            const SizedBox(height: 32),
+                            
+                            const SizedBox(height: 24),
                             
                             // Portada centrada - Diseño compacto
                             RepaintBoundary(
@@ -1031,37 +1070,19 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                               ),
                             ),
                             
-                            const SizedBox(height: 40), // ✅ Espacio aumentado después de la portada para bajar el título
-                            
-                            // Título de la canción con botones al lado - Diseño compacto
+                            const SizedBox(height: 24),
+
+                            // Acciones y Metadata abajo de la portada
                             RepaintBoundary(
                               child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start, // Alineación al inicio para alinear título con corazón
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                              // Título de la canción (grande y bold) o skeleton
-                              Expanded(
-                                child: (!hasCacheData && song.title == null)
-                                    ? _buildTitleSkeleton()
-                                    : Padding(
-                                      padding: const EdgeInsets.only(top: 10), // Bajar el título 10 píxeles
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            song.title ?? 'Sin título',
-                                            style: TextStyle(
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.bold,
-                                              color: NeumorphismTheme.textPrimary,
-                                              letterSpacing: -0.5,
-                                              height: 0.75,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        const SizedBox(height: 4), // Espacio para bajar "Sencillo"
-                                        // "Sencillo" y género en la misma línea, separados por un punto
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // "Sencillo" y género
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
                                           crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -1073,7 +1094,6 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                                 fontSize: 13,
                                                 color: NeumorphismTheme.textLight,
                                                 fontWeight: FontWeight.w400,
-                                                height: 1.0,
                                               ),
                                             ),
                                             if (song.genres != null && song.genres!.isNotEmpty) ...[
@@ -1082,8 +1102,6 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                                 style: TextStyle(
                                                   fontSize: 13,
                                                   color: NeumorphismTheme.textLight,
-                                                  fontWeight: FontWeight.w400,
-                                                  height: 1.0,
                                                 ),
                                               ),
                                               Text(
@@ -1091,86 +1109,67 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                                 style: TextStyle(
                                                   fontSize: 13,
                                                   color: NeumorphismTheme.textLight,
-                                                  fontWeight: FontWeight.w400,
-                                                  height: 1.0,
                                                 ),
                                               ),
                                             ],
                                           ],
                                         ),
-                                        // Contador de streams - Justo abajo de "Sencillo"
+                                        const SizedBox(height: 4),
+                                        // Contador de streams
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                                          textBaseline: TextBaseline.alphabetic,
                                           children: [
                                             Icon(
                                               Icons.play_arrow_rounded,
-                                              size: 12,
+                                              size: 14,
                                               color: NeumorphismTheme.textSecondary.withValues(alpha: 0.7),
                                             ),
-                                            const SizedBox(width: 3),
+                                            const SizedBox(width: 4),
                                             Text(
                                               NumberFormatter.format(song.totalStreams),
                                               style: TextStyle(
                                                 fontSize: 12,
                                                 color: NeumorphismTheme.textSecondary,
                                                 fontWeight: FontWeight.w500,
-                                                height: 1.0,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ],
-                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  // Iconos: Corazón, Menú y Botón de Play - Compacto
+                                  // Botones de acción
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start, // Alineación al inicio para alinear con título
                                     children: [
-                                      // Icono de corazón
-                                      Transform.translate(
-                                        offset: const Offset(0, -4), // Subir más el botón
-                                        child: FavoriteButton(
-                                          songId: song.id,
-                                          song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
-                                          iconColor: NeumorphismTheme.textPrimary,
-                                          iconSize: 28, // Aumentado de 22 a 28
-                                        ),
+                                      FavoriteButton(
+                                        songId: song.id,
+                                        song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
+                                        iconColor: NeumorphismTheme.textPrimary,
+                                        iconSize: 28,
                                       ),
                                       const SizedBox(width: 4),
-                                      // Icono de tres rayitas (menú)
-                                      Transform.translate(
-                                        offset: const Offset(0, -4), // Subir más el botón
-                                        child: IconButton(
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          icon: Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
-                                          onPressed: () {
-                                            // Menú de opciones - funcionalidad pendiente
-                                          },
-                                        ),
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
+                                        onPressed: () {
+                                          // Menú de opciones
+                                        },
                                       ),
                                       const SizedBox(width: 6),
-                                      // ✅ Botón de Play/Pause con lógica inteligente (igual que artist_page)
-                                      // Siempre mostrar el botón real, sin skeleton
-                                      Transform.translate(
-                                        offset: const Offset(0, -4), // Subir más el botón
-                                        child: _PlayPauseButtonLarge(
-                                          song: song,
-                                          onTap: () => _onPlaySong(song),
-                                        ),
+                                      _PlayPauseButtonLarge(
+                                        song: song,
+                                        onTap: () => _onPlaySong(song),
                                       ),
                                     ],
                                   ),
                                 ],
                               ),
                             ),
-                            // CRÍTICO: Espacio consistente entre título y artista (siempre presente)
-                            const SizedBox(height: 16), // Espacio entre título y artista
+                            
+                            const SizedBox(height: 16),
                             RepaintBoundary(
                               // Artista con avatar redondo y tipo - Alineado con el título
                               child: (!hasCacheData && artist == null)
@@ -1229,14 +1228,18 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        GestureDetector(
-                                          onTap: _navigateToArtist,
-                                          child: Text(
-                                            'Más de ${artist.displayName}',
-                                            style: TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                              color: NeumorphismTheme.coffeeMedium,
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: _navigateToArtist,
+                                            child: Text(
+                                              'Más de ${artist.displayName}',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                                color: NeumorphismTheme.coffeeMedium,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                         ),
@@ -1270,6 +1273,7 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                           ],
                         ),
                       ),
+                    ),
               ), // Cierra SliverToBoxAdapter
             ], // Cierra slivers
           ), // Cierra CustomScrollView
@@ -1311,24 +1315,55 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
             cacheExtent: 400, // ✅ Optimizado: cache de scroll para mejor rendimiento
             slivers: [
               SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Column(
+                child: SelectionArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SizedBox(height: MediaQuery.of(context).padding.top + 32),
-                            // ✅ Botón de retroceso scrolleable (parte del contenido)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: RepaintBoundary(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 24),
-                                  child: _BackButton(
-                                    onPressed: () => context.pop(),
+                            // ✅ Header con botón de retroceso y título CENTRADO
+                            SizedBox(
+                              height: 48,
+                              child: Stack(
+                                children: [
+                                  // Botón alineado a la izquierda
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: RepaintBoundary(
+                                      child: _BackButton(
+                                        onPressed: () => context.pop(),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  // Título centrado
+                                  Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 48),
+                                      child: RepaintBoundary(
+                                        child: Text(
+                                          song.title ?? 'Sin título',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            color: NeumorphismTheme.textPrimary,
+                                            letterSpacing: -0.5,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                            
+                            const SizedBox(height: 32),
+                        
+                        const SizedBox(height: 24),
+
                       RepaintBoundary(
                         child: Center(
                           child: Container(
@@ -1387,32 +1422,20 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                           ),
                         ),
                       ),
-                        const SizedBox(height: 40), // ✅ Espacio aumentado después de la portada para bajar el título
+                      
+                      const SizedBox(height: 24),
+
+                        // Acciones y Metadata abajo de la portada
                         RepaintBoundary(
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start, // Alineación al inicio para alinear título con corazón
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 10), // Bajar el título 10 píxeles
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        song.title ?? 'Sin título',
-                                        style: TextStyle(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.bold,
-                                          color: NeumorphismTheme.textPrimary,
-                                          letterSpacing: -0.5,
-                                          height: 0.75,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    const SizedBox(height: 4), // Espacio para bajar "Sencillo"
-                                    // "Sencillo" y género en la misma línea, separados por un punto
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // "Sencillo" y género
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -1424,7 +1447,6 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                             fontSize: 13,
                                             color: NeumorphismTheme.textLight,
                                             fontWeight: FontWeight.w400,
-                                            height: 1.0,
                                           ),
                                         ),
                                         if (song.genres != null && song.genres!.isNotEmpty) ...[
@@ -1433,8 +1455,6 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: NeumorphismTheme.textLight,
-                                              fontWeight: FontWeight.w400,
-                                              height: 1.0,
                                             ),
                                           ),
                                           Text(
@@ -1442,141 +1462,119 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: NeumorphismTheme.textLight,
-                                              fontWeight: FontWeight.w400,
-                                              height: 1.0,
                                             ),
                                           ),
                                         ],
                                       ],
                                     ),
-                                    // Contador de streams - Justo abajo de "Sencillo"
+                                    const SizedBox(height: 4),
+                                    // Contador de streams
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                                      textBaseline: TextBaseline.alphabetic,
                                       children: [
                                         Icon(
                                           Icons.play_arrow_rounded,
-                                          size: 12,
+                                          size: 14,
                                           color: NeumorphismTheme.textSecondary.withValues(alpha: 0.7),
                                         ),
-                                        const SizedBox(width: 3),
+                                        const SizedBox(width: 4),
                                         Text(
                                           NumberFormatter.format(song.totalStreams),
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: NeumorphismTheme.textSecondary,
                                             fontWeight: FontWeight.w500,
-                                            height: 1.0,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ],
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
+                              // Botones de acción
                               Row(
                                 mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.start, // Alineación al inicio para alinear con título
                                 children: [
                                   // Botón Descargar (Offline)
-                                  Transform.translate(
-                                    offset: const Offset(0, -4),
-                                    child: Consumer(
-                                      builder: (context, ref, _) {
-                                        final offlineState = ref.watch(offlineManagerProvider);
-                                        final isDownloaded = offlineState.downloadedSongs.containsKey(song.id);
-                                        final isDownloading = offlineState.downloadingIds.contains(song.id);
-                                        final progress = offlineState.downloadProgress[song.id] ?? 0.0;
+                                  Consumer(
+                                    builder: (context, ref, _) {
+                                      final offlineState = ref.watch(offlineManagerProvider);
+                                      final isDownloaded = offlineState.downloadedSongs.containsKey(song.id);
+                                      final isDownloading = offlineState.downloadingIds.contains(song.id);
+                                      final progress = offlineState.downloadProgress[song.id] ?? 0.0;
 
-                                        if (isDownloading) {
-                                           return Container(
-                                             margin: const EdgeInsets.symmetric(horizontal: 8),
-                                             width: 24,
-                                             height: 24,
-                                              child: CircularProgressIndicator(
-                                                value: progress,
-                                                strokeWidth: 2,
-                                                color: NeumorphismTheme.coffeeMedium,
-                                              ),
-                                           );
-                                        }
+                                      if (isDownloading) {
+                                         return Container(
+                                           margin: const EdgeInsets.symmetric(horizontal: 8),
+                                           width: 24,
+                                           height: 24,
+                                            child: CircularProgressIndicator(
+                                              value: progress,
+                                              strokeWidth: 2,
+                                              color: NeumorphismTheme.coffeeMedium,
+                                            ),
+                                         );
+                                      }
 
-                                        return IconButton(
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                          icon: Icon(
-                                            isDownloaded ? Icons.download_done_rounded : Icons.download_rounded,
-                                            color: isDownloaded ? Colors.green : NeumorphismTheme.textPrimary,
-                                            size: 28,
-                                          ),
-                                          onPressed: () {
-                                            final user = ref.read(currentUserProvider);
-                                            final isPremium = user != null && 
-                                                (user.subscriptionStatus == SubscriptionStatus.premium || 
-                                                 user.subscriptionStatus == SubscriptionStatus.vip);
+                                      return IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: Icon(
+                                          isDownloaded ? Icons.download_done_rounded : Icons.download_rounded,
+                                          color: isDownloaded ? Colors.green : NeumorphismTheme.textPrimary,
+                                          size: 28,
+                                        ),
+                                        onPressed: () {
+                                          final user = ref.read(currentUserProvider);
+                                          final isPremium = user != null && 
+                                              (user.subscriptionStatus == SubscriptionStatus.premium || 
+                                               user.subscriptionStatus == SubscriptionStatus.vip);
 
-                                            if (!isPremium) {
-                                              // ⚡ OPTIMIZACIÓN: Navegación DIRECTA y fluida a la rama Premium
-                                              context.go('/premium?showPackages=true');
-                                              return;
-                                            }
+                                          if (!isPremium) {
+                                            context.go('/premium?showPackages=true');
+                                            return;
+                                          }
 
-                                            // Lógica de descarga
-                                            final offlineNotifier = ref.read(offlineManagerProvider.notifier);
-                                            if (isDownloaded) {
-                                              offlineNotifier.removeDownload(song.id);
-                                            } else {
-                                              // Asegurar coverUrl válido
-                                              final songToDownload = song.copyWith(
-                                                coverArtUrl: UrlNormalizer.normalizeImageUrl(song.coverArtUrl),
-                                              );
-                                              offlineNotifier.downloadSong(songToDownload);
-                                            }
-                                          },
-                                        );
-                                      },
-                                    ),
+                                          final offlineNotifier = ref.read(offlineManagerProvider.notifier);
+                                          if (isDownloaded) {
+                                            offlineNotifier.removeDownload(song.id);
+                                          } else {
+                                            final songToDownload = song.copyWith(
+                                              coverArtUrl: UrlNormalizer.normalizeImageUrl(song.coverArtUrl),
+                                            );
+                                            offlineNotifier.downloadSong(songToDownload);
+                                          }
+                                        },
+                                      );
+                                    },
                                   ),
                                   const SizedBox(width: 12),
-                                  // Botón de Favorito - Animado
-                                  Transform.translate(
-                                    offset: const Offset(0, -4), // Subir más el botón
-                                    child: FavoriteButton(
-                                      songId: song.id,
-                                      song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
-                                      iconColor: NeumorphismTheme.textPrimary,
-                                      iconSize: 28, // Aumentado de 22 a 28
-                                    ),
+                                  FavoriteButton(
+                                    songId: song.id,
+                                    song: song, // ✅ CRÍTICO: Pasar objeto completo para actualizar lista inmediatamente
+                                    iconColor: NeumorphismTheme.textPrimary,
+                                    iconSize: 28,
                                   ),
                                   const SizedBox(width: 4),
-                                  Transform.translate(
-                                    offset: const Offset(0, -4), // Subir más el botón
-                                    child: IconButton(
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      icon: Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
-                                      onPressed: () {},
-                                    ),
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(Icons.more_vert_rounded, color: NeumorphismTheme.textPrimary, size: 22),
+                                    onPressed: () {},
                                   ),
                                   const SizedBox(width: 6),
-                                  // ✅ Botón de Play/Pause con lógica inteligente (igual que artist_page)
-                                  Transform.translate(
-                                    offset: const Offset(0, -4), // Subir más el botón
-                                    child: _PlayPauseButtonLarge(
-                                      song: song,
-                                      onTap: () => _onPlaySong(song),
-                                    ),
+                                  _PlayPauseButtonLarge(
+                                    song: song,
+                                    onTap: () => _onPlaySong(song),
                                   ),
                                 ],
                               ),
                             ],
                           ),
                         ),
-                        // CRÍTICO: Espacio consistente entre título y artista (siempre presente)
-                        const SizedBox(height: 16), // Espacio entre título y artista
+                        
+                        const SizedBox(height: 16),
                         RepaintBoundary(
                           child: Row(
                             children: [
@@ -1619,14 +1617,18 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  GestureDetector(
-                                    onTap: _navigateToArtist,
-                                    child: Text(
-                                      'Más de ${artist.displayName}',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: NeumorphismTheme.coffeeMedium,
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: _navigateToArtist,
+                                      child: Text(
+                                        'Más de ${artist.displayName}',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: NeumorphismTheme.coffeeMedium,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ),
@@ -1659,7 +1661,8 @@ class _SongDetailScreenState extends ConsumerState<SongDetailScreen>
                       ],
                     ),
                   ),
-                ), // Cierra SliverToBoxAdapter
+                ),
+              ), // Cierra SliverToBoxAdapter
             ], // Cierra slivers
           ), // Cierra CustomScrollView
         ), // Cierra SafeArea

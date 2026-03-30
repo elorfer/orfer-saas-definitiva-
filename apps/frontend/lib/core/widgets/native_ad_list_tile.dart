@@ -17,10 +17,12 @@ enum NativeAdType {
 /// Utiliza la NativeAdFactory registrada en el lado nativo ("listTile").
 class NativeAdListTile extends ConsumerStatefulWidget {
   final NativeAdType adType;
+  final String placement;
 
   const NativeAdListTile({
     super.key,
     this.adType = NativeAdType.large, // Por defecto es grande (con imagen)
+    this.placement = 'home', // 'home' o 'search'
   });
 
   @override
@@ -44,7 +46,7 @@ class _NativeAdListTileState extends ConsumerState<NativeAdListTile> {
     final user = ref.read(authStateProvider).user;
     if (user != null && user.isPremium) return;
 
-    final adUnitId = AdMobService.nativeAdUnitId;
+    final adUnitId = AdMobService.nativeAdUnitId(placement: widget.placement);
     if (adUnitId == null) return;
 
     // 🎨 DYNAMIC THEME COLORS

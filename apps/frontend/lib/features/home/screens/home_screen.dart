@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/services/version_service.dart';
+import '../../common/widgets/update_optional_sheet.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/home_provider.dart';
 import '../../../core/providers/theme_provider.dart'; // 🚀 Added for theme reactivity
@@ -101,7 +104,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             }
           });
         });
+
+        // 🆙 VERIFICACIÓN DE VERSIÓN DIFERIDA (0.5s)
+        _checkVersionWithDelay();
       });
+    }
+  }
+
+  /// Verifica si hay actualizaciones 1.0s después de cargar el Home
+  /// Enfoque HÍBRIDO: 
+  /// - Si es MANDATORIA: Redirige a pantalla completa (Splash debería haberlo bloqueado, pero esto es fail-safe).
+  /// - Si es OPCIONAL: Muestra un Bottom Sheet Premium sin bloquear la app.
+  static bool _hasShownUpdateSheet = false;
+
+  Future<void> _checkVersionWithDelay() async {
+    // 1. Esperar 1 segundo para no saturar al usuario nada más entrar
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (!mounted || _hasShownUpdateSheet) return;
+
+    try {
+      final versionResult = await VersionService().checkVersion();
+      
+      if (!mounted) return;
+
+      // A. CASO MANDATORIO: Bloqueo total (Fail-safe si el Splash falló)
+      if (versionResult['mustUpdate'] == true) {
+        context.go('/update-required', extra: {
+          'isMandatory': true,
+          'updateUrl': versionResult['storeUrl'],
+        });
+        return;
+      }
+
+      // B. CASO OPCIONAL: Bottom Sheet de diseño Premium
+      if (versionResult['shouldUpdate'] == true) {
+        _hasShownUpdateSheet = true; // No volver a mostrar esta sesión
+        
+        if (mounted) {
+          showModalBottomSheet(
+            context: context,
+            useRootNavigator: true, // EXTREMO: Asegurar que salga por encima de TODO (incluyendo MiniPlayer)
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            barrierColor: Colors.black.withValues(alpha: 0.5),
+            builder: (context) => UpdateOptionalBottomSheet(
+              updateUrl: versionResult['storeUrl'],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error en verificación de versión híbrida: $e');
     }
   }
 
@@ -214,71 +267,82 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       physics: const BouncingScrollPhysics(
                         parent: AlwaysScrollableScrollPhysics(),
                       ),
-                      cacheExtent:
-                          500, // 🚀 BALANCED: Pre-renderiza lo necesario sin sobrecargar la GPU
+                      cacheExtent: 500,
                       slivers: <Widget>[
-                        const SliverPadding(
-                          padding: EdgeInsets.only(
-                            top: 24.0, // ✅ Aumentado para más aire
-                            left: 24.0,
-                            right: 24.0,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: HomeHeader(
-                                key: ValueKey(
-                                    'home_header')), // 🚀 Using extracted widget
-                          ),
-                        ),
-                        const SliverToBoxAdapter(
-                            child: SizedBox(
-                                height:
-                                    24)), // ✅ Aumentado de 8 a 24 para bajar "Novedades"
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                          sliver: SliverToBoxAdapter(
-                            child: Consumer(
-                              builder: (context, ref, _) {
-                                final homeMessage = ref.watch(
-                                  homeMessageProvider.select((msg) =>
-                                      msg != null && msg.isActive ? msg : null),
-                                );
-                                if (homeMessage == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                // 🚀 OPTIMIZACIÓN: HomeMessageBanner no necesita RepaintBoundary (contenido estático)
-                                return HomeMessageBanner(
-                                  message: homeMessage.message,
-                                  updatedAt: homeMessage.updatedAt,
-                                );
-                              },
+                        // 🚀 GRUPO 1: Header y Mensajes
+                        SliverMainAxisGroup(
+                          slivers: [
+                            const SliverPadding(
+                              padding: EdgeInsets.only(
+                                top: 24.0,
+                                left: 24.0,
+                                right: 24.0,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: HomeHeader(key: ValueKey('home_header')),
+                              ),
                             ),
-                          ),
+                            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                              sliver: SliverToBoxAdapter(
+                                child: Consumer(
+                                  builder: (context, ref, _) {
+                                    final homeMessage = ref.watch(
+                                      homeMessageProvider.select((msg) =>
+                                          msg != null && msg.isActive ? msg : null),
+                                    );
+                                    if (homeMessage == null) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return HomeMessageBanner(
+                                      message: homeMessage.message,
+                                      updatedAt: homeMessage.updatedAt,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+
                         const SliverToBoxAdapter(child: SizedBox(height: 6)),
-                        SliverToBoxAdapter(
-                          // 🚀 OPTIMIZACIÓN: Secciones ya gestionan su propio repintado si es complejo
-                          child: const FeaturedArtistsSection(
-                              key: ValueKey('artists')),
+
+                        // 🚀 GRUPO 2: Artistas Destacados
+                        SliverMainAxisGroup(
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: const FeaturedArtistsSection(key: ValueKey('artists')),
+                            ),
+                          ],
                         ),
+
                         const SliverToBoxAdapter(child: SizedBox(height: 32)),
-                        SliverToBoxAdapter(
-                          child: const FeaturedSongsSection(
-                              key: ValueKey('featured_songs')),
+
+                        // 🚀 GRUPO 3: Novedades y Publicidad
+                        SliverMainAxisGroup(
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: const FeaturedSongsSection(key: ValueKey('featured_songs')),
+                            ),
+                            // 📢 ADMOB: Anuncio NATIVO integrado (Nivel Dios)
+                            const SliverToBoxAdapter(
+                              child: NativeAdListTile(key: ValueKey('home_section_native_ad')),
+                            ),
+                          ],
                         ),
-                        
-                        // 📢 ADMOB: Anuncio NATIVO integrado entre secciones (Nivel Dios)
-                        const SliverToBoxAdapter(
-                          child: NativeAdListTile(
-                            key: ValueKey('home_section_native_ad'),
-                          ),
-                        ),
-                        
+
                         const SliverToBoxAdapter(child: SizedBox(height: 48)),
-                        SliverToBoxAdapter(
-                          child: const FeaturedPlaylistsSection(
-                              key: ValueKey('playlists')),
+
+                        // 🚀 GRUPO 4: Listas de Reproducción y Pie
+                        SliverMainAxisGroup(
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: const FeaturedPlaylistsSection(key: ValueKey('playlists')),
+                            ),
+                            const SliverToBoxAdapter(child: SizedBox(height: 140)),
+                          ],
                         ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 140)), // ✅ Aumentado de 80 a 140 para limpiar el mini-reproductor
                       ],
                     ),
                   ),

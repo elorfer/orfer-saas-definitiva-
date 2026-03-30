@@ -101,20 +101,24 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
             final displayCount = featuredSongs.length < 3 ? featuredSongs.length : 3;
             final isRefreshing = ref.watch(intelligentFeaturedLoadingProvider);
             
-            return Column(
-              children: [
-                Column(
-                  children: List.generate(displayCount, (idx) {
-                    final featuredSong = featuredSongs[idx];
-                    return IntelligentFeaturedSongCard(
-                      key: ValueKey('intelligent_song_${featuredSong.song.id}'),
-                      featuredSong: featuredSong,
-                      onTap: () {
-                        _onSongTap(context, ref, featuredSong.song);
-                      },
-                    );
-                  }),
-                ),
+            return RepaintBoundary(
+              child: Column(
+                children: [
+                  Column(
+                    children: List.generate(displayCount, (idx) {
+                      final featuredSong = featuredSongs[idx];
+                      return RepaintBoundary(
+                        key: ValueKey('intelligent_song_boundary_${featuredSong.song.id}'),
+                        child: IntelligentFeaturedSongCard(
+                          key: ValueKey('intelligent_song_${featuredSong.song.id}'),
+                          featuredSong: featuredSong,
+                          onTap: () {
+                            _onSongTap(context, ref, featuredSong.song);
+                          },
+                        ),
+                      );
+                    }),
+                  ),
                 
                 // Indicador de carga si está actualizando
                 if (isRefreshing && featuredSongs.isNotEmpty) ...[

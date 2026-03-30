@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/unified_audio_provider_fixed.dart';
 import '../services/player_navigation_service.dart';
-// ✅ Importar Motor Profesional
+import '../providers/theme_provider.dart'; // 🚀 Importar themeProvider
 import '../theme/neumorphism_theme.dart';
 import 'mini_player_components.dart';
 
@@ -22,9 +22,10 @@ class FinalMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🎨 FIX: Observar el tema para reactividad instantánea claro/oscuro
+    ref.watch(themeProvider);
+
     // ✅ ÚNICA FUENTE DE VERDAD: Usar el provider unificado que prioriza el estado del Notifier
-    // Esto garantiza que el MiniPlayer aparezca INMEDIATAMENTE al dar Play (UI Optimista)
-    // sin esperar a que el stream de audio emita el primer evento.
     final currentSong = ref.watch(realCurrentSongProvider);
     
     // ✅ FIX PARPADEO: Solo observar isPlayingAd, no todo el estado
@@ -96,28 +97,14 @@ class FinalMiniPlayer extends ConsumerWidget {
                   ref: ref,
                 );
               },
-              child: Container(
-                height: 72, // Altura ajustada para incluir la barra de progreso
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 100), // ⚡ FIX: Instantáneo (antes 300ms)
+                curve: Curves.easeInOut,
+                height: 72, // Altura ajustada
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: NeumorphismTheme.background, // ⚡ Color original del tema
-                    borderRadius: const BorderRadius.all(Radius.circular(32)), // Bordes redondeados
-                    border: Border.all(
-                      color: NeumorphismTheme.background, // Borde del mismo color para solidez
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      // Sombra exterior suavizada para menor overdraw
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.16),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                        spreadRadius: 0.5,
-                      ),
-                    ],
-                  ),
-                  child: Column(
+                // 🎨 FIX: Eliminado el margen y la decoración (fondo, bordes, sombras) 
+                // para que se funda perfectamente con el fondo proveído por SpotifyPlayerSheet
+                child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // ⚡ OPTIMIZACIÓN: Contenido principal usando widgets separados

@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'url_normalizer.dart';
 
 /// Utilidad centralizada para normalizar datos entre camelCase y snake_case
@@ -7,6 +8,49 @@ import 'url_normalizer.dart';
 /// que vienen del backend (camelCase) y los formatos esperados por los modelos
 /// del frontend (snake_case o camelCase según el modelo).
 class DataNormalizer {
+  // 🚀 MODERN FLUTTER: Procesamiento en Background
+  // Para listas largas, movemos el procesamiento fuera del hilo de la UI
+  
+  /// Normalizar una lista de canciones en un Isolate secundario
+  static Future<List<Map<String, dynamic>>> normalizeSongsAsync(List<dynamic> data) {
+    return Isolate.run(() {
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map((item) => normalizeSong(item))
+          .toList();
+    });
+  }
+
+  /// Normalizar una lista de artistas en un Isolate secundario
+  static Future<List<Map<String, dynamic>>> normalizeArtistsAsync(List<dynamic> data) {
+    return Isolate.run(() {
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map((item) => normalizeArtist(item))
+          .toList();
+    });
+  }
+
+  /// Normalizar una lista de playlists en un Isolate secundario
+  static Future<List<Map<String, dynamic>>> normalizePlaylistsAsync(List<dynamic> data) {
+    return Isolate.run(() {
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map((item) => normalizePlaylist(item))
+          .toList();
+    });
+  }
+
+  /// Normalizar una lista de géneros en un Isolate secundario
+  static Future<List<Map<String, dynamic>>> normalizeGenresAsync(List<dynamic> data) {
+    return Isolate.run(() {
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map((item) => normalizeGenre(item))
+          .toList();
+    });
+  }
+
   // Constantes para valores por defecto
   static const String _defaultSongTitle = 'Sin título';
   static const String _defaultUserRole = 'user';

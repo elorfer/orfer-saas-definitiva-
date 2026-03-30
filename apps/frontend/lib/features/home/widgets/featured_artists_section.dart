@@ -61,31 +61,33 @@ class _FeaturedArtistsSectionState extends ConsumerState<FeaturedArtistsSection>
         ),
         const SizedBox(height: 12),
         // Listado horizontal de artistas (Estilo "Stories")
-        SizedBox(
-          height: 140, // Altura suficiente para avatar + nombre
-          child: ListView.builder(
-            key: const PageStorageKey('featured_artists_list'), // ✅ Store Scroll Position
-            scrollDirection: Axis.horizontal,
-            itemExtent: 114.0, // ✅ ULTRA-OPTIMIZED: Fixed width (90 img + 8 pad + 16 margin)
-            itemCount: featuredArtists.length,
-            padding: const EdgeInsets.symmetric(horizontal: 24), // Padding alineado con header
-            physics: const BouncingScrollPhysics(),
-              itemBuilder: (context, index) {
-                final artist = featuredArtists[index];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 16), // Espacio entre items
-                  child: RepaintBoundary(
-                    key: ValueKey('artist_boundary_${artist.artist.id}'),
-                    child: FeaturedArtistCard(
-                      key: ValueKey('artist_card_${artist.artist.id}'),
-                      featuredArtist: artist,
-                      onTap: () => GoRouter.of(context).push('/artist/${artist.artist.id}'),
+        RepaintBoundary(
+          child: SizedBox(
+            height: 140, // Altura suficiente para avatar + nombre
+            child: ListView.builder(
+              key: const PageStorageKey('featured_artists_list'), // ✅ Store Scroll Position
+              scrollDirection: Axis.horizontal,
+              itemExtent: 114.0, // ✅ ULTRA-OPTIMIZED: Fixed width (90 img + 8 pad + 16 margin)
+              itemCount: featuredArtists.length,
+              padding: const EdgeInsets.symmetric(horizontal: 24), // Padding alineado con header
+              physics: const BouncingScrollPhysics(),
+                itemBuilder: (context, index) {
+                  final artist = featuredArtists[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 16), // Espacio entre items
+                    child: RepaintBoundary(
+                      key: ValueKey('artist_boundary_${artist.artist.id}'),
+                      child: FeaturedArtistCard(
+                        key: ValueKey('artist_card_${artist.artist.id}'),
+                        featuredArtist: artist,
+                        onTap: () => GoRouter.of(context).push('/artist/${artist.artist.id}'),
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
+        ),
 
       ],
     );

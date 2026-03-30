@@ -1,8 +1,8 @@
-import '../../features/privacy/privacy_screen.dart';
+import '../../features/privacy/privacy_screen.dart' deferred as privacy;
 import '../../features/common/screens/update_required_screen.dart';
-import '../../features/offline/screens/downloads_screen.dart';
-import '../../features/profile/screens/profile_screen.dart';
-import '../../features/notifications/screens/notifications_screen.dart';
+import '../../features/offline/screens/downloads_screen.dart' deferred as downloads;
+import '../../features/profile/screens/profile_screen.dart' deferred as profile;
+import '../../features/notifications/screens/notifications_screen.dart' deferred as notifications;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +12,7 @@ import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/auth/screens/verify_code_screen.dart';
-import '../../features/ads/screens/ad_stats_screen.dart';
+import '../../features/ads/screens/ad_stats_screen.dart' deferred as ad_stats;
 import '../../features/splash/splash_screen.dart';
 import '../../features/playlists/screens/playlists_screen.dart';
 import '../../features/playlists/screens/playlist_detail_screen.dart';
@@ -23,15 +23,16 @@ import '../../features/library/screens/library_screen_v2.dart';
 import '../../features/library/screens/favorites_screen.dart';
 import '../../features/library/screens/recently_played_screen.dart';
 import '../../features/library/screens/followed_artists_screen.dart';
-import '../../features/premium/screens/premium_activated_screen.dart';
-import '../../features/premium/screens/premium_router_screen.dart';
-import '../../features/premium/screens/composer_promo_screen.dart';
-import '../../features/premium/screens/invite_coffee_screen.dart';
-import '../../features/onboarding/screens/onboarding_screen.dart';
+import '../../features/premium/screens/premium_activated_screen.dart' deferred as premium_activated;
+import '../../features/premium/screens/premium_router_screen.dart' deferred as premium_router;
+import '../../features/premium/screens/composer_promo_screen.dart' deferred as composer_promo;
+import '../../features/premium/screens/invite_coffee_screen.dart' deferred as invite_coffee;
+import '../../features/onboarding/screens/onboarding_screen.dart' deferred as onboarding;
+import '../../core/widgets/deferred_widget.dart';
 import '../../core/providers/onboarding_provider.dart';
 import '../../features/artists/pages/artist_page.dart';
 import '../../features/artists/models/artist.dart';
-import '../../features/artists/screens/featured_artists_full_screen.dart';
+import '../../features/artists/screens/featured_artists_full_screen.dart' deferred as featured_artists;
 import '../../features/player/screens/full_player_screen.dart';
 import '../../features/song_detail/screens/song_detail_screen.dart';
 import '../../core/models/song_model.dart';
@@ -159,64 +160,56 @@ class GoRouterNotifier extends ChangeNotifier {
             child: const SplashScreen(),
           ),
         ),
-        // Update Required - Bloqueo de versión
+        // Update Required - Bloqueo de versión (Usar rootNavigator para que no salga el MiniPlayer)
         GoRoute(
           path: '/update-required',
+          parentNavigatorKey: rootNavigatorKey,
           pageBuilder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
             final isMandatory = extra?['isMandatory'] as bool? ?? true;
             final updateUrl = extra?['updateUrl'] as String?;
-            return createCustomTransitionPage<void>(
+            return MaterialPage<void>(
               key: state.pageKey,
               child: UpdateRequiredScreen(
                 isMandatory: isMandatory,
                 updateUrl: updateUrl,
               ),
-              transitionsBuilder: SpotifyPageTransitions.slideTransition,
             );
           },
         ),
         // Onboarding - transición suave
         GoRoute(
           path: '/onboarding',
-          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+          pageBuilder: (context, state) => MaterialPage<void>(
             key: state.pageKey,
-            child: const OnboardingScreen(),
-            transitionsBuilder: SpotifyPageTransitions.slideTransition,
-            transitionDuration: const Duration(milliseconds: 300),
+            child: DeferredWidget(
+              loader: onboarding.loadLibrary,
+              builder: () => onboarding.OnboardingScreen(),
+            ),
           ),
         ),
         // Login - transición optimizada sin parpadeo
         GoRoute(
           path: '/login',
-          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+          pageBuilder: (context, state) => MaterialPage<void>(
             key: state.pageKey,
             child: const LoginScreen(),
-            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-            transitionDuration: const Duration(milliseconds: 200),
-            reverseTransitionDuration: const Duration(milliseconds: 150),
           ),
         ),
         // Register - transición optimizada sin parpadeo
         GoRoute(
           path: '/register',
-          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+          pageBuilder: (context, state) => MaterialPage<void>(
             key: state.pageKey,
             child: const RegisterScreen(),
-            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-            transitionDuration: const Duration(milliseconds: 200),
-            reverseTransitionDuration: const Duration(milliseconds: 150),
           ),
         ),
         // Forgot Password - transición optimizada sin parpadeo
         GoRoute(
           path: '/forgot-password',
-          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+          pageBuilder: (context, state) => MaterialPage<void>(
             key: state.pageKey,
             child: const ForgotPasswordScreen(),
-            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-            transitionDuration: const Duration(milliseconds: 200),
-            reverseTransitionDuration: const Duration(milliseconds: 150),
           ),
         ),
         // Reset Password - transición optimizada sin parpadeo
@@ -224,12 +217,9 @@ class GoRouterNotifier extends ChangeNotifier {
           path: '/reset-password/:token',
           pageBuilder: (context, state) {
             final token = state.pathParameters['token'] ?? '';
-            return createCustomTransitionPage<void>(
+            return MaterialPage<void>(
               key: state.pageKey,
               child: ResetPasswordScreen(token: token),
-              transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-              transitionDuration: const Duration(milliseconds: 200),
-              reverseTransitionDuration: const Duration(milliseconds: 150),
             );
           },
         ),
@@ -238,12 +228,9 @@ class GoRouterNotifier extends ChangeNotifier {
           path: '/verify-code/:email',
           pageBuilder: (context, state) {
             final email = state.pathParameters['email'] ?? '';
-            return createCustomTransitionPage<void>(
+            return MaterialPage<void>(
               key: state.pageKey,
               child: VerifyCodeScreen(email: email),
-              transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-              transitionDuration: const Duration(milliseconds: 200),
-              reverseTransitionDuration: const Duration(milliseconds: 150),
             );
           },
         ),
@@ -256,6 +243,7 @@ class GoRouterNotifier extends ChangeNotifier {
             if (path == '/splash' ||
                 path == '/login' ||
                 path == '/register' ||
+                path == '/update-required' ||
                 path.startsWith('/forgot-password') ||
                 path.startsWith('/reset-password')) {
               return navigationShell;
@@ -281,24 +269,21 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/compositores',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: FeaturedArtistsFullScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration: const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: featured_artists.loadLibrary,
+                      builder: () => featured_artists.FeaturedArtistsFullScreen(),
+                    ),
                   ),
                 ),
                 // Featured Songs - subruta de Home
                 GoRoute(
                   path: '/featured-songs',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
                     child: const FeaturedSongsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration: const Duration(milliseconds: 250),
                   ),
                 ),
                 // Song Detail - accesible desde Home
@@ -323,14 +308,9 @@ class GoRouterNotifier extends ChangeNotifier {
                       );
                     }
 
-                    return createCustomTransitionPage<void>(
-                      key: state
-                          .pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
+                    return MaterialPage<void>(
+                      key: state.pageKey,
                       child: SongDetailScreen(song: song),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -339,13 +319,9 @@ class GoRouterNotifier extends ChangeNotifier {
                   path: '/playlist/:id',
                   pageBuilder: (context, state) {
                     final playlistId = state.pathParameters['id'] ?? '';
-                    return createCustomTransitionPage<void>(
+                    return MaterialPage<void>(
                       key: state.pageKey,
                       child: PlaylistDetailScreen(playlistId: playlistId),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -368,14 +344,9 @@ class GoRouterNotifier extends ChangeNotifier {
                         featured: false,
                       );
                     }
-                    return createCustomTransitionPage<void>(
-                      key: state
-                          .pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
+                    return MaterialPage<void>(
+                      key: state.pageKey,
                       child: ArtistPage(artist: artistLite),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -383,78 +354,69 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/profile',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: ProfileScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: profile.loadLibrary,
+                      builder: () => profile.ProfileScreen(),
+                    ),
                   ),
                 ),
                 // Favorites - accesible desde Home
                 GoRoute(
                   path: '/favorites',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
                     child: const FavoritesScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
                   ),
                 ),
                 // Downloads (Premium) - accesible desde Home
                 GoRoute(
                   path: '/downloads',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const DownloadsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: downloads.loadLibrary,
+                      builder: () => downloads.DownloadsScreen(),
+                    ),
                   ),
                 ),
                 // Notifications - accesible desde Home
                 GoRoute(
                   path: '/notifications',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: NotificationsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: notifications.loadLibrary,
+                      builder: () => notifications.NotificationsScreen(),
+                    ),
                   ),
                 ),
                 // Privacy Policy - accesible desde Home
                 GoRoute(
                   path: '/privacy',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const PrivacyScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: privacy.loadLibrary,
+                      builder: () => privacy.PrivacyScreen(),
+                    ),
                   ),
                 ),
                 // Invite a Coffee - accesible desde Home
                 GoRoute(
                   path: '/invite-coffee',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const InviteCoffeeScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: invite_coffee.loadLibrary,
+                      builder: () => invite_coffee.InviteCoffeeScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -470,6 +432,28 @@ class GoRouterNotifier extends ChangeNotifier {
                     key: state.pageKey,
                     child: const SearchScreen(),
                   ),
+                  routes: [
+                    // 📊 Tendencias en búsquedas (Full Screen) - Accesible desde Search
+                    GoRoute(
+                      path: 'trending-artists',
+                      pageBuilder: (context, state) => MaterialPage<void>(
+                        key: state.pageKey,
+                        child: DeferredWidget(
+                          loader: featured_artists.loadLibrary,
+                          builder: () =>
+                              featured_artists.FeaturedArtistsFullScreen(),
+                        ),
+                      ),
+                    ),
+                    // 📊 Las más escuchadas (Full Screen) - Accesible desde Search
+                    GoRoute(
+                      path: 'top-songs',
+                      pageBuilder: (context, state) => MaterialPage<void>(
+                        key: state.pageKey,
+                        child: const FeaturedSongsScreen(),
+                      ),
+                    ),
+                  ],
                 ),
                 // Song Detail - accesible desde Search
                 GoRoute(
@@ -493,14 +477,9 @@ class GoRouterNotifier extends ChangeNotifier {
                       );
                     }
 
-                    return createCustomTransitionPage<void>(
-                      key: state
-                          .pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
+                    return MaterialPage<void>(
+                      key: state.pageKey,
                       child: SongDetailScreen(song: song),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -509,17 +488,13 @@ class GoRouterNotifier extends ChangeNotifier {
                   path: '/playlist/:id',
                   pageBuilder: (context, state) {
                     final playlistId = state.pathParameters['id'] ?? '';
-                    return createCustomTransitionPage<void>(
+                    return MaterialPage<void>(
                       key: state.pageKey,
                       child: PlaylistDetailScreen(playlistId: playlistId),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
-                // Artist Detail - accesible desde Search (muy común)
+                // Artist Detail - accesible desde Search
                 GoRoute(
                   path: '/artist/:id',
                   pageBuilder: (context, state) {
@@ -538,14 +513,9 @@ class GoRouterNotifier extends ChangeNotifier {
                         featured: false,
                       );
                     }
-                    return createCustomTransitionPage<void>(
-                      key: state
-                          .pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
+                    return MaterialPage<void>(
+                      key: state.pageKey,
                       child: ArtistPage(artist: artistLite),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -553,78 +523,69 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/profile',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: ProfileScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: profile.loadLibrary,
+                      builder: () => profile.ProfileScreen(),
+                    ),
                   ),
                 ),
                 // Favorites - accesible desde Search
                 GoRoute(
                   path: '/favorites',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
                     child: const FavoritesScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
                   ),
                 ),
                 // Downloads (Premium) - accesible desde Search
                 GoRoute(
                   path: '/downloads',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const DownloadsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: downloads.loadLibrary,
+                      builder: () => downloads.DownloadsScreen(),
+                    ),
                   ),
                 ),
                 // Notifications - accesible desde Search
                 GoRoute(
                   path: '/notifications',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: NotificationsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: notifications.loadLibrary,
+                      builder: () => notifications.NotificationsScreen(),
+                    ),
                   ),
                 ),
                 // Privacy Policy - accesible desde Search
                 GoRoute(
                   path: '/privacy',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const PrivacyScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: privacy.loadLibrary,
+                      builder: () => privacy.PrivacyScreen(),
+                    ),
                   ),
                 ),
                 // Invite a Coffee - accesible desde Search
                 GoRoute(
                   path: '/invite-coffee',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const InviteCoffeeScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: invite_coffee.loadLibrary,
+                      builder: () => invite_coffee.InviteCoffeeScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -645,52 +606,48 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/profile',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: ProfileScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: profile.loadLibrary,
+                      builder: () => profile.ProfileScreen(),
+                    ),
                   ),
                 ),
                 // Notifications
                 GoRoute(
                   path: '/notifications',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: NotificationsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: notifications.loadLibrary,
+                      builder: () => notifications.NotificationsScreen(),
+                    ),
                   ),
                 ),
                 // Privacy Policy
                 GoRoute(
                   path: '/privacy',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const PrivacyScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: privacy.loadLibrary,
+                      builder: () => privacy.PrivacyScreen(),
+                    ),
                   ),
                 ),
                 // Downloads (Premium)
                 GoRoute(
                   path: '/downloads',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const DownloadsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: downloads.loadLibrary,
+                      builder: () => downloads.DownloadsScreen(),
+                    ),
                   ),
                 ),
                 // Downloads Song Detail
@@ -715,16 +672,12 @@ class GoRouterNotifier extends ChangeNotifier {
                       );
                     }
 
-                    return createCustomTransitionPage<void>(
+                    return MaterialPage<void>(
                       key: state.pageKey,
                       child: SongDetailScreen(
                         song: song,
                       ),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.slideTransition,
-                      transitionDuration: const Duration(milliseconds: 250),
-                      reverseTransitionDuration:
-                          const Duration(milliseconds: 250),
+
                     );
                   },
                 ),
@@ -732,52 +685,36 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/playlists',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
                     child: const PlaylistsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
                   ),
                 ),
                 // Favorites - subruta de Library
                 GoRoute(
                   path: '/favorites',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
                     child: const FavoritesScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
                   ),
                 ),
                 // Recently Played - subruta de Library
                 GoRoute(
                   path: '/recently-played',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
                     child: const RecentlyPlayedScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
                   ),
                 ),
                 // Followed Artists - subruta de Library
                 GoRoute(
                   path: '/followed-artists',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
                     child: const FollowedArtistsScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
                   ),
                 ),
                 // Song Detail - accesible desde Library
@@ -802,14 +739,9 @@ class GoRouterNotifier extends ChangeNotifier {
                       );
                     }
 
-                    return createCustomTransitionPage<void>(
-                      key: state
-                          .pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
+                    return MaterialPage<void>(
+                      key: state.pageKey,
                       child: SongDetailScreen(song: song),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -818,13 +750,9 @@ class GoRouterNotifier extends ChangeNotifier {
                   path: '/playlist/:id',
                   pageBuilder: (context, state) {
                     final playlistId = state.pathParameters['id'] ?? '';
-                    return createCustomTransitionPage<void>(
+                    return MaterialPage<void>(
                       key: state.pageKey,
                       child: PlaylistDetailScreen(playlistId: playlistId),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -847,14 +775,9 @@ class GoRouterNotifier extends ChangeNotifier {
                         featured: false,
                       );
                     }
-                    return createCustomTransitionPage<void>(
-                      key: state
-                          .pageKey, // ✅ Usar pageKey único de go_router para evitar claves duplicadas
+                    return MaterialPage<void>(
+                      key: state.pageKey,
                       child: ArtistPage(artist: artistLite),
-                      transitionsBuilder:
-                          SpotifyPageTransitions.songDetailTransition,
-                      transitionDuration: const Duration(milliseconds: 200),
-                      reverseTransitionDuration: Duration.zero,
                     );
                   },
                 ),
@@ -862,13 +785,12 @@ class GoRouterNotifier extends ChangeNotifier {
                 GoRoute(
                   path: '/invite-coffee',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const InviteCoffeeScreen(),
-                    transitionsBuilder: SpotifyPageTransitions.slideTransition,
-                    transitionDuration: const Duration(milliseconds: 250),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 250),
+                    child: DeferredWidget(
+                      loader: invite_coffee.loadLibrary,
+                      builder: () => invite_coffee.InviteCoffeeScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -883,21 +805,23 @@ class GoRouterNotifier extends ChangeNotifier {
                   name: 'premium',
                   pageBuilder: (context, state) => createNoTransitionPage<void>(
                     key: state.pageKey,
-                    child: const PremiumRouterScreen(),
+                    child: DeferredWidget(
+                      loader: premium_router.loadLibrary,
+                      builder: () => premium_router.PremiumRouterScreen(),
+                    ),
                   ),
                 ),
                 // Composer Promo - Accessible from Premium branch or potentially others if needed
                 GoRoute(
                   path: '/composer-promo',
                   pageBuilder: (context, state) =>
-                      createCustomTransitionPage<void>(
+                      MaterialPage<void>(
                     key: state.pageKey,
-                    child: const ComposerPromoScreen(),
-                    transitionsBuilder:
-                        SpotifyPageTransitions.songDetailTransition,
-                    transitionDuration: const Duration(milliseconds: 200),
-                    reverseTransitionDuration:
-                        const Duration(milliseconds: 150),
+                    child: DeferredWidget(
+                      loader: composer_promo.loadLibrary,
+                      builder: () => composer_promo.ComposerPromoScreen(),
+                    ),
+
                   ),
                 ),
               ],
@@ -907,12 +831,12 @@ class GoRouterNotifier extends ChangeNotifier {
         // Premium Activated Screen - se muestra cuando se activa premium
         GoRoute(
           path: '/premium/activated',
-          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+          pageBuilder: (context, state) => MaterialPage<void>(
             key: state.pageKey,
-            child: const PremiumActivatedScreen(),
-            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-            transitionDuration: const Duration(milliseconds: 300),
-            reverseTransitionDuration: const Duration(milliseconds: 200),
+            child: DeferredWidget(
+              loader: premium_activated.loadLibrary,
+              builder: () => premium_activated.PremiumActivatedScreen(),
+            ),
           ),
         ),
         // Full Player - FUERA del ShellRoute para que no muestre el mini player
@@ -932,12 +856,12 @@ class GoRouterNotifier extends ChangeNotifier {
         // ADMIN ROUTES
         GoRoute(
           path: '/admin/ads-stats',
-          pageBuilder: (context, state) => createCustomTransitionPage<void>(
+          pageBuilder: (context, state) => MaterialPage<void>(
             key: state.pageKey,
-            child: const AdStatsScreen(),
-            transitionsBuilder: SpotifyPageTransitions.songDetailTransition,
-            transitionDuration: const Duration(milliseconds: 200),
-            reverseTransitionDuration: const Duration(milliseconds: 150),
+            child: DeferredWidget(
+              loader: ad_stats.loadLibrary,
+              builder: () => ad_stats.AdStatsScreen(),
+            ),
           ),
         ),
       ];

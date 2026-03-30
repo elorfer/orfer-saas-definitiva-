@@ -1,4 +1,4 @@
-﻿
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +14,7 @@ import '../../widgets/artist_search_card.dart'; // âœ… Ruta corregida
 import '../../widgets/song_search_card.dart'; // âœ… Ruta corregida
 import '../../widgets/playlist_search_card.dart'; // âœ… Ruta corregida
 
-// Import de widgets web especÃ­ficos si los hay
+// Import de widgets web específicos si los hay
 
 class WebSearchScreen extends ConsumerStatefulWidget {
   const WebSearchScreen({super.key});
@@ -45,7 +45,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
     
     if (currentText == currentQuery) return;
     
-    // LÃ³gica simple de filtro
+    // Lógica simple de filtro
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       if (currentText.isEmpty || currentText.trim().length >= 2) {
@@ -97,7 +97,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
           
           const SliverToBoxAdapter(child: SizedBox(height: 30)),
 
-          // BARRA DE BÃšSQUEDA (Estilo Web - MÃ¡s ancha y centrada o a la izquierda)
+          // BARRA DE BÃšSQUEDA (Estilo Web - Más ancha y centrada o a la izquierda)
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 60),
             sliver: SliverToBoxAdapter(
@@ -125,7 +125,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
                         focusNode: _searchFocusNode,
                         style: AppTextStyles.bodyLarge.copyWith(fontSize: 18),
                         decoration: InputDecoration(
-                          hintText: 'Â¿QuÃ© quieres escuchar hoy?',
+                          hintText: '¿Qué quieres escuchar hoy?',
                           hintStyle: AppTextStyles.bodyLarge.copyWith(color: NeumorphismTheme.textLight),
                           border: InputBorder.none,
                           isCollapsed: true,
@@ -149,7 +149,7 @@ class _WebSearchScreenState extends ConsumerState<WebSearchScreen>
 
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
 
-          // CONTENIDO PRINCIPAL: Resultados o CategorÃ­as
+          // CONTENIDO PRINCIPAL: Resultados o Categorías
           if (query.isEmpty)
              _buildCategoriesGrid()
           else 

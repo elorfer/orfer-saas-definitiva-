@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:animate_do/animate_do.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
 
 class UpdateRequiredScreen extends StatelessWidget {
@@ -24,184 +24,175 @@ class UpdateRequiredScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
       body: Stack(
         children: [
-          // Fondo con degradado elegante
+          // 🎨 Fondo con el gradiente oficial de la App
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF1A1A1A),
-                  Color(0xFF0A0A0A),
-                  Color(0xFF000000),
-                ],
-              ),
-            ),
-          ),
-          
-          // Elementos decorativos vintage (Círculos difuminados)
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
-              ),
+            decoration: BoxDecoration(
+              gradient: NeumorphismTheme.backgroundGradient,
             ),
           ),
 
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Icono / Ilustración Premium
-                  FadeInDown(
-                    duration: const Duration(seconds: 1),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFD4AF37).withValues(alpha: 0.3),
-                          width: 2,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 40),
+                  
+                  // 🖼️ Ilustración Hero (Más ligera)
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: NeumorphismTheme.accent.withValues(alpha: 0.1),
+                          blurRadius: 20,
+                          spreadRadius: 2,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFD4AF37).withValues(alpha: 0.2),
-                            blurRadius: 30,
-                            spreadRadius: 5,
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(1000),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: NeumorphismTheme.accent.withValues(alpha: 0.2),
+                            width: 2,
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.system_update_alt_rounded,
-                        size: 80,
-                        color: Color(0xFFD4AF37),
+                        ),
+                          child: CircleAvatar(
+                            radius: 140, // De 110 a 140 (Mucho más impacto)
+                            backgroundColor: NeumorphismTheme.surface,
+                            backgroundImage: const AssetImage('assets/images/VIAJEVEJITO.webp'),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 60),
 
-                  // Título
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 300),
-                    child: Text(
-                      isMandatory ? 'ACTUALIZACIÓN\nOBLIGATORIA' : 'NUEVA VERSIÓN\nDISPONIBLE',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.playfairDisplay(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 2,
-                      ),
+                  // 📜 Título Vintage
+                  Text(
+                    isMandatory ? 'CÁPSULA DEL TIEMPO\nACTUALIZADA' : 'NUEVA SINTONÍA\nDISPONIBLE',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.playfairDisplay(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      color: NeumorphismTheme.textPrimary,
+                      letterSpacing: 1.5,
+                      height: 1.1,
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Descripción
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 500),
+                  // 🖋️ Descripción Elegante
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
                       isMandatory 
-                        ? 'Para seguir disfrutando de la mejor música y las nuevas funciones de Struky, es necesario que actualices la aplicación a la última versión.'
-                        : 'Hemos lanzado una nueva versión con mejoras de rendimiento y nuevas funciones que te encantarán.',
+                        ? 'Para seguir el viaje por los clásicos y nuevas joyas musicales en Struky, es necesario sintonizar la última versión.'
+                        : 'Hemos refinado la experiencia con mejoras que harán cada nota sonar más pura.',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: Colors.white70,
-                        height: 1.5,
+                        color: NeumorphismTheme.textSecondary,
+                        fontSize: 18,
+                        height: 1.7,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 60), // Más espacio antes de botones
 
-                  // Botón Principal (Actualizar)
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 700),
+                  // ☕ Botón Premium Neumórfico
+                  Container(
+                    width: double.infinity,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: NeumorphismTheme.accent.withValues(alpha: 0.2),
+                          offset: const Offset(0, 4),
+                          blurRadius: 15,
+                        ),
+                      ],
+                    ),
                     child: ElevatedButton(
                       onPressed: _launchUpdateUrl,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD4AF37),
-                        foregroundColor: Colors.black,
-                        minimumSize: const Size(double.infinity, 56),
-                        shape: RoundedRectanglePlatform.borderRadius12,
-                        elevation: 10,
-                        shadowColor: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+                        backgroundColor: NeumorphismTheme.accent,
+                        foregroundColor: Colors.black87,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
-                      child: const Text(
-                        'ACTUALIZAR AHORA',
-                        style: TextStyle(
+                      child: Text(
+                        'SINTONIZAR AHORA',
+                        style: GoogleFonts.inter(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
                         ),
                       ),
                     ),
                   ),
 
+                  const SizedBox(height: 16),
+
                   if (!isMandatory) ...[
-                    const SizedBox(height: 20),
-                    // Botón Secundario (Más tarde)
-                    FadeInUp(
-                      delay: const Duration(milliseconds: 900),
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white60,
-                        ),
-                        child: const Text(
-                          'MÁS TARDE',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: 1,
-                          ),
+                    // Botón Secundario
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: Text(
+                        'MÁS TARDE',
+                        style: GoogleFonts.inter(
+                          color: NeumorphismTheme.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1,
                         ),
                       ),
                     ),
                   ],
+
+                  const SizedBox(height: 32),
+                  
+                  // Versión actual
+                  Text(
+                    'Struky v1.1.0 • Edición Coleccionista',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: NeumorphismTheme.textLight.withValues(alpha: 0.5),
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  
+                  // Espacio rígido extra masivo abajo para que el Mini Reproductor jamás tape el botón de Más tarde
+                  const SizedBox(height: 180),
                 ],
               ),
             ),
           ),
-          
-          // Versión actual en pequeño al fondo
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: FadeIn(
-              delay: const Duration(seconds: 1),
-              child: const Text(
-                'Struky v1.1.0',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white24,
-                  fontSize: 12,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          ),
+        );
+      },
+    ),
+  ),
         ],
       ),
     );
   }
-}
-
-// Helper para bordes si no existe
-class RoundedRectanglePlatform {
-  static final borderRadius12 = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-  );
 }

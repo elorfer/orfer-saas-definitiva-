@@ -127,6 +127,38 @@ class SpotifyPageTransitions {
       ),
     );
   }
+
+  /// 🚀 NUEVA: Transición de Zoom (Material 3 Style)
+  /// Proporciona un efecto de expansión desde el centro hacia el usuario
+  static Widget zoomTransition(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // Animación de entrada suave
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    // Fade sutil
+    final opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(curvedAnimation);
+    
+    // Zoom/Escala pronunciada (de 0.85 a 1.0)
+    final scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(curvedAnimation);
+
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: opacityAnimation,
+        child: ScaleTransition(
+          scale: scaleAnimation,
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 /// Helper para crear CustomTransitionPage optimizado
@@ -135,8 +167,8 @@ CustomTransitionPage<T> createCustomTransitionPage<T>({
   LocalKey? key,
   required Widget child,
   required Widget Function(BuildContext, Animation<double>, Animation<double>, Widget) transitionsBuilder,
-  Duration transitionDuration = const Duration(milliseconds: 200),
-  Duration reverseTransitionDuration = const Duration(milliseconds: 150),
+  Duration transitionDuration = const Duration(milliseconds: 300),
+  Duration reverseTransitionDuration = const Duration(milliseconds: 250),
 }) {
   // NOTE: Avoid forcing manual page keys here to prevent duplicate key
   // reservations across multiple navigators. GoRouter provides stable

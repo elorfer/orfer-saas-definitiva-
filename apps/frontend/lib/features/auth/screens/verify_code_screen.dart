@@ -27,7 +27,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   @override
   void initState() {
     super.initState();
-    // ðŸ” Auto-redirecciÃ³n si el usuario ya estÃ¡ verificado (Modo DEV o verificÃ³ en otro lugar)
+    // ðŸ” Auto-redirección si el usuario ya está verificado (Modo DEV o verificó en otro lugar)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAutoRedirect();
     });
@@ -35,7 +35,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
 
   void _checkAutoRedirect() {
     final authState = ref.read(authStateProvider);
-    // Si ya estÃ¡ autenticado (lo que implica verificado en este flujo)
+    // Si ya está autenticado (lo que implica verificado en este flujo)
     if (authState.isAuthenticated && !_isAutoRedirecting) {
       setState(() => _isAutoRedirecting = true);
       debugPrint('ðŸš€ [VerifyCode] Usuario ya autenticado, redirigiendo a Onboarding...');
@@ -59,7 +59,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       _focusNodes[index + 1].requestFocus();
     }
     
-    // Si se llena el Ãºltimo campo, intentar verificar automÃ¡ticamente
+    // Si se llena el último campo, intentar verificar automáticamente
     if (index == 5 && value.isNotEmpty) {
       _verifyCode();
     }
@@ -87,14 +87,14 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
       );
       
       if (mounted) {
-        // Feedback de Ã©xito rÃ¡pido y transiciÃ³n limpia
+        // Feedback de éxito rápido y transición limpia
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Text('Â¡Email Verificado! Empezando...'),
+                Text('¡Email Verificado! Empezando...'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -103,7 +103,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
           ),
         );
 
-        // Delay mÃ­nimo para permitir que el snackbar se vea un poco antes de la transiciÃ³n slide
+        // Delay mínimo para permitir que el snackbar se vea un poco antes de la transición slide
         await Future.delayed(const Duration(milliseconds: 1000));
         
         if (mounted) {
@@ -130,7 +130,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF3E2723), // MarrÃ³n Struky
+      backgroundColor: const Color(0xFF3E2723), // Marrón Struky
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -161,7 +161,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Hemos enviado un cÃ³digo de 6 dÃ­gitos a:',
+                'Hemos enviado un código de 6 dígitos a:',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 16),
                 textAlign: TextAlign.center,
               ),
@@ -173,7 +173,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               ),
               const SizedBox(height: 48),
               
-              // Campos del cÃ³digo OTP
+              // Campos del código OTP
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) => _buildCodeField(index)),
@@ -192,13 +192,13 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
               
               TextButton(
                 onPressed: _isVerifying ? null : () {
-                  // TODO: Implementar reenvÃ­o de cÃ³digo si el usuario lo pide
+                  // TODO: Implementar reenvío de código si el usuario lo pide
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reenviando cÃ³digo...'))
+                    const SnackBar(content: Text('Reenviando código...'))
                   );
                 },
                 child: Text(
-                  'Â¿No recibiste el cÃ³digo? Reenviar',
+                  '¿No recibiste el código? Reenviar',
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.8), decoration: TextDecoration.underline),
                 ),
               ),

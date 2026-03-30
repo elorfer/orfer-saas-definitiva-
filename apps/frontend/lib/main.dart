@@ -199,7 +199,19 @@ class _VintageMusicAppState extends ConsumerState<VintageMusicApp> {
             if (ErrorWidget.builder != _errorWidgetBuilder) {
               ErrorWidget.builder = _errorWidgetBuilder;
             }
-            return child ?? const SizedBox.shrink();
+
+            // 🚀 MODERNIZACIÓN: Usar TextScaler para limitar el escalado excesivo (Flutter 3.16+)
+            // Esto evita que la UI se rompa en dispositivos con fuentes gigantescas de accesibilidad
+            final MediaQueryData data = MediaQuery.of(context);
+            return MediaQuery(
+              data: data.copyWith(
+                textScaler: data.textScaler.clamp(
+                  minScaleFactor: 1.0,
+                  maxScaleFactor: 1.25, // Máximo 125% para mantener diseño premium
+                ),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
           },
           // Tema Claro (Default)
           theme: neumorphismTheme.theme.copyWith(

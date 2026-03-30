@@ -96,7 +96,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                         highlightColor:
                             colorScheme.error.withValues(alpha: 0.2),
                       ),
-                      tooltip: 'Cerrar SesiÃ³n',
+                      tooltip: 'Cerrar Sesión',
                     ),
                   ],
                 ),
@@ -253,7 +253,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
-                                  'Â¿Eres compositor?',
+                                  '¿Eres compositor?',
                                   style: TextStyle(
                                       color: textColorPrimary,
                                       fontWeight: FontWeight.w600,
@@ -310,27 +310,27 @@ class StrukyDrawerMenu extends ConsumerWidget {
   }
 
   void _showLogoutConfirmation(BuildContext context, WidgetRef ref) {
-    // Usar diÃ¡logo adaptativo para sensaciÃ³n nativa (iOS/Android)
+    // Usar diálogo adaptativo para sensación nativa (iOS/Android)
     showAdaptiveDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog.adaptive(
-          title: const Text('Â¿Cerrar SesiÃ³n?'),
-          content: const Text('EstÃ¡s a punto de salir de tu cuenta.'),
+          title: const Text('¿Cerrar Sesión?'),
+          content: const Text('Estás a punto de salir de tu cuenta.'),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancelar'),
               onPressed: () {
-                Navigator.of(context).pop(); // Cerrar diÃ¡logo
+                Navigator.of(context).pop(); // Cerrar diálogo
               },
             ),
             TextButton(
               child: const Text(
-                'Cerrar SesiÃ³n',
+                'Cerrar Sesión',
                 style: TextStyle(color: Colors.red), // Destructive action
               ),
               onPressed: () async {
-                Navigator.of(context).pop(); // Cerrar diÃ¡logo de confirmaciÃ³n
+                Navigator.of(context).pop(); // Cerrar diálogo de confirmación
 
                 // Mostrar Loader de espera
                 if (context.mounted) {
@@ -346,7 +346,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                   );
                 }
 
-                // Ejecutar logout (mÃ­nimo 1 segundo para que se vea el loader)
+                // Ejecutar logout (mínimo 1 segundo para que se vea el loader)
                 await Future.wait([
                   ref.read(authStateProvider.notifier).logout(),
                   Future.delayed(const Duration(seconds: 1)),
@@ -453,7 +453,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
         Padding(
           padding: EdgeInsets.only(top: 16.0),
           child: Text(
-            'Struky app es una plataforma dedicada a mostrar el catÃ¡logo musical de los compositores.',
+            'Struky app es una plataforma dedicada a mostrar el catálogo musical de los compositores.',
             style: TextStyle(fontSize: 14),
           ),
         ),
@@ -524,7 +524,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                         Icon(MdiIcons.whatsapp, color: const Color(0xFF25D366)),
                   ),
                   title: const Text('Contactar por WhatsApp'),
-                  subtitle: const Text('Respuesta rÃ¡pida (+57 300 901 2217)'),
+                  subtitle: const Text('Respuesta rápida (+57 300 901 2217)'),
                   trailing:
                       const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                   onTap: () {
@@ -547,7 +547,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                         color: Colors.blueAccent),
                   ),
                   title: const Text('Sugerencias y Problemas'),
-                  subtitle: const Text('EscrÃ­benos a strukyapp@gmail.com'),
+                  subtitle: const Text('Escríbenos a strukyapp@gmail.com'),
                   trailing:
                       const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                   onTap: () {

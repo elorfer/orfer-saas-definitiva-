@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart'; // StatefulNavigationShell + context.push
@@ -15,7 +15,7 @@ import '../widgets/web_sidebar.dart'; // ðŸš€ Sidebar para Web
 /// ðŸ”¥ SISTEMA PROFESIONAL DE NAVEGACIÃ“N CON PERSISTENCIA
 /// 
 /// Refactorizado para usar StatefulShellRoute.indexedStack de GoRouter.
-/// Cada rama mantiene su propio stack de navegaciÃ³n independiente,
+/// Cada rama mantiene su propio stack de navegación independiente,
 /// asegurando que el estado y scroll se mantengan intactos.
 
 class PersistentNavigation extends ConsumerStatefulWidget {
@@ -36,7 +36,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
   @override
   bool get wantKeepAlive => true;
 
-  // Cachear valores para evitar recÃ¡lculos
+  // Cachear valores para evitar recálculos
   double? _cachedBottomPadding;
   double? _cachedNavBarHeight;
 
@@ -55,7 +55,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
   Widget build(BuildContext context) {
     super.build(context);
     
-    // Obtener Ã­ndice actual del navigationShell (ya viene de GoRouter)
+    // Obtener índice actual del navigationShell (ya viene de GoRouter)
     final currentIndex = widget.navigationShell.currentIndex;
     
     // ðŸš€ Refresh UI on Theme Change
@@ -75,7 +75,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
             final isPremium = next.subscriptionStatus == SubscriptionStatus.premium || 
                               next.subscriptionStatus == SubscriptionStatus.vip;
 
-            // Si NO era premium y AHORA SÃ es premium -> Navegar a celebraciÃ³n
+            // Si NO era premium y AHORA SÃ es premium -> Navegar a celebración
             if (!wasPremium && isPremium) {
                 // Usar microtask para evitar conflictos de build
                 Future.microtask(() {
@@ -106,7 +106,7 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text('Cargando mÃ¡s canciones...'),
+                  Text('Cargando más canciones...'),
                 ],
               ),
               backgroundColor: NeumorphismTheme.coffeeMedium,
@@ -302,14 +302,14 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
 
   void _navigateToTab(int index) {
     // ðŸ”¥ UX PRO: Haptic feedback al cambiar de tab
-    // Da una sensaciÃ³n tÃ¡ctil de respuesta inmediata
+    // Da una sensación táctil de respuesta inmediata
     HapticFeedback.lightImpact();
 
-    // LÃ³gica de "Doble Toque":
-    // Si el usuario toca el tab en el que YA estÃ¡...
+    // Lógica de "Doble Toque":
+    // Si el usuario toca el tab en el que YA está...
     if (widget.navigationShell.currentIndex == index) {
       // ...reseteamos el stack de esa rama a su ruta inicial.
-      // Esto permite "volver al inicio" rÃ¡pidamente si te perdiste navegando.
+      // Esto permite "volver al inicio" rápidamente si te perdiste navegando.
       widget.navigationShell.goBranch(
         index,
         initialLocation: true, // ðŸš€ FORCE RESET
@@ -319,8 +319,8 @@ class _PersistentNavigationState extends ConsumerState<PersistentNavigation>
       // El estado del stack anterior se preserva en memoria.
       widget.navigationShell.goBranch(
         index,
-        // No forzamos initialLocation aquÃ­ para mantener la persistencia
-        // del historial cuando vuelvas a este tab mÃ¡s tarde.
+        // No forzamos initialLocation aquí para mantener la persistencia
+        // del historial cuando vuelvas a este tab más tarde.
       );
     }
   }

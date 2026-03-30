@@ -131,8 +131,8 @@ class AppInitializer {
           androidResumeOnClick: true,
           androidNotificationChannelId: 'com.struky.app.channel.audio.v2',
           androidNotificationChannelName: 'Struky Audio',
-          androidNotificationOngoing: false,
-          androidStopForegroundOnPause: false, // 🚀 FIX: Mantener servicio en foreground al pausar para evitar cierres inesperados
+          androidNotificationOngoing: false, // 🚀 FIX FINAL: Al ponerlo en false, forzamos a Android a disparar "onNotificationDeleted" al deslizar y borrar el servicio en vez de solo "ocultarlo".
+          androidStopForegroundOnPause: true, // 🚀 Cuando está PAUSADO, SÍ se puede deslizar para cerrar
           androidNotificationIcon: 'drawable/ic_stat_music_note',  // XML vector drawable (white on transparent)
         ),
       );

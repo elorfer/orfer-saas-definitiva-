@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../core/theme/text_styles.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 
@@ -12,7 +12,7 @@ class LandingInfoSection extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      color: NeumorphismTheme.background, // Usar tema central (MarrÃ³n Oscuro)
+      color: NeumorphismTheme.background, // Usar tema central (Marrón Oscuro)
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
       child: Column(
         children: [
@@ -31,7 +31,7 @@ class LandingInfoSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Descubre la mÃºsica que ha estado oculta por mucho tiempo.',
+                  'Descubre la música que ha estado oculta por mucho tiempo.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.headlineMedium.copyWith(
                     color: Colors.white,
@@ -64,7 +64,7 @@ class LandingInfoSection extends StatelessWidget {
               _FeatureCard(
                 imagePath: 'assets/images/feature_hidden_music.png',
                 title: 'Joyas Ocultas',
-                description: 'Accede a un catÃ¡logo exclusivo de mÃºsica inÃ©dita que no encontrarÃ¡s en ningÃºn otro lugar.',
+                description: 'Accede a un catálogo exclusivo de música inédita que no encontrarás en ningún otro lugar.',
               ),
               _FeatureCard(
                 imagePath: 'assets/images/feature_composers.png',
@@ -74,7 +74,7 @@ class LandingInfoSection extends StatelessWidget {
               _FeatureCard(
                 imagePath: 'assets/images/feature_algorithm.png',
                 title: 'IA Musical 2026',
-                description: 'Nuestro avanzado algoritmo entiende tus gustos y te presenta tu prÃ³xima canciÃ³n favorita.',
+                description: 'Nuestro avanzado algoritmo entiende tus gustos y te presenta tu próxima canción favorita.',
               ),
             ],
           ),
@@ -108,7 +108,7 @@ class _ComposerServiceSection extends StatelessWidget {
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 1100),
       decoration: BoxDecoration(
-        color: NeumorphismTheme.surface, // CafÃ© Tostado Oscuro
+        color: NeumorphismTheme.surface, // Café Tostado Oscuro
         borderRadius: BorderRadius.circular(32),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -178,7 +178,7 @@ class _ComposerServiceSection extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'Â¿Eres Compositor?',
+            '¿Eres Compositor?',
             style: AppTextStyles.displayLarge.copyWith(
               color: Colors.white,
               fontSize: 42,
@@ -196,7 +196,7 @@ class _ComposerServiceSection extends StatelessWidget {
           ),
           const SizedBox(height: 16),
            Text(
-            'Crearemos la canciÃ³n escrita por ti con producciÃ³n profesional y la publicaremos directamente en nuestra app.',
+            'Crearemos la canción escrita por ti con producción profesional y la publicaremos directamente en nuestra app.',
             style: AppTextStyles.bodyLarge.copyWith(
               color: Colors.grey[400],
               fontSize: 16,
@@ -218,7 +218,7 @@ class _ComposerServiceSection extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: const [
                  Text(
-                  'MÃ¡s InformaciÃ³n',
+                  'Más Información',
                   style: TextStyle(
                     fontSize: 16, 
                     fontWeight: FontWeight.bold,
@@ -257,7 +257,7 @@ class _FeatureCardState extends State<_FeatureCard> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Adaptar ancho para mÃ³viles pequeÃ±os para evitar overflow
+    // Adaptar ancho para móviles pequeños para evitar overflow
     final cardWidth = screenWidth < 380 ? screenWidth - 48 : 320.0;
 
     return MouseRegion(

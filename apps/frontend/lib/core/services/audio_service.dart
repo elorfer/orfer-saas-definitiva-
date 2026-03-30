@@ -30,6 +30,11 @@ class AudioService {
   /// Verificar si el audio handler está listo
   bool get isReady => isAudioHandlerReady;
   
+  /// 🚀 SEÑAL DE STOP INTENCIONAL desde la notificación/task removal
+  /// Los listeners deben reaccionar a esto para limpiar estado ANTES de que el player pase a idle
+  Stream<void>? get sessionStoppedStream =>
+      isAudioHandlerReady ? globalAudioHandler.sessionStoppedStream : null;
+  
   /// Instancia única del reproductor gestionada por StrukyAudioHandler (Background Enabled)
   /// Accedemos al player interno para mantener compatibilidad con la lógica existente,
   /// mientras el Handler se encarga de la integración con Android/iOS.

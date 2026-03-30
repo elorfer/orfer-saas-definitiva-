@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class StrukyZoomDrawer extends StatefulWidget {
   final Widget menuScreen;
@@ -16,10 +16,10 @@ class StrukyZoomDrawer extends StatefulWidget {
 
 class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  // Spotify Style: MÃ¡s slider, menos 3D para rendimiento mÃ¡ximo
-  final double maxSlide = 280.0; // Un poco mÃ¡s ancho para dejar ver mÃ¡s menÃº
+  // Spotify Style: Más slider, menos 3D para rendimiento máximo
+  final double maxSlide = 280.0; // Un poco más ancho para dejar ver más menú
   
-  // Trackear direcciÃ³n del arrastre para umbrales asimÃ©tricos
+  // Trackear dirección del arrastre para umbrales asimétricos
   bool _isOpeningDirection = true;
   
   @override
@@ -27,7 +27,7 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250), // âš¡ OPTIMIZACIÃ“N: 250ms para sensaciÃ³n instantÃ¡nea
+      duration: const Duration(milliseconds: 250), // âš¡ OPTIMIZACIÃ“N: 250ms para sensación instantánea
     );
   }
   
@@ -52,7 +52,7 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
     // ðŸ”¥ OPTIMIZACIÃ“N "ZERO LAG" + "DIRECT TOUCH" + "EDGE SWIPE":
     // 1. Edge Swipe: Abrir desde el borde izquierdo (eliminamos Bypass).
     // 2. Drag 1:1: Control total del movimiento.
-    // 3. Curve: easeOutQuart para respuesta rÃ¡pida inicial y frenado suave.
+    // 3. Curve: easeOutQuart para respuesta rápida inicial y frenado suave.
     
     final animation = CurvedAnimation(
       parent: _controller, 
@@ -74,7 +74,7 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
           color: Theme.of(context).scaffoldBackgroundColor, 
           child: Stack(
             children: [
-              // A. El MenÃº (Solo visible si hay apertura para ahorrar GPU)
+              // A. El Menú (Solo visible si hay apertura para ahorrar GPU)
               if (_controller.value > 0)
                 Positioned.fill(
                   child: RepaintBoundary( 
@@ -90,7 +90,7 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                   ),
                 ),
 
-              // B. La App Principal (MÃ³vil)
+              // B. La App Principal (Móvil)
               Transform.translate(
                 offset: Offset(slide, 0),
                 child: Stack( // Stack wrapper para Sombra + Contenido + Gestos
@@ -121,9 +121,9 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                       child: cachedMainScreen, 
                     ),
                     
-                    // B3. DETECTOR PANTALLA COMPLETA (Solo cuando estÃ¡ ABIERTO o MOVIÃ‰NDOSE)
+                    // B3. DETECTOR PANTALLA COMPLETA (Solo cuando está ABIERTO o MOVIÃ‰NDOSE)
                     // Permite cerrar tocando o arrastrando desde cualquier lado.
-                     // B3. DETECTOR PANTALLA COMPLETA (Solo cuando estÃ¡ ABIERTO o MOVIÃ‰NDOSE)
+                     // B3. DETECTOR PANTALLA COMPLETA (Solo cuando está ABIERTO o MOVIÃ‰NDOSE)
                     // Permite cerrar tocando o arrastrando desde cualquier lado.
                     if (_controller.value > 0)
                       Positioned.fill(
@@ -132,28 +132,28 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                            behavior: HitTestBehavior.translucent, // Deja pasar toques visuales, captura drags
                            onHorizontalDragUpdate: (details) {
                               // Drag reverso (Cerrar) O Forward
-                              // Actualizar direcciÃ³n para la fÃ­sica al soltar
+                              // Actualizar dirección para la física al soltar
                               if (details.primaryDelta! != 0) {
                                 _isOpeningDirection = details.primaryDelta! > 0;
                               }
                               _controller.value += details.primaryDelta! / maxSlide;
                            },
                             onHorizontalDragEnd: (details) {
-                              // ðŸ”¥ ACTUALIZACIÃ“N: FÃ­sica AsimÃ©trica
+                              // ðŸ”¥ ACTUALIZACIÃ“N: Física Asimétrica
                               // 1. Velocidad (Fling): Prioridad absoluta.
-                              // 2. PosiciÃ³n:
-                              //    - Si estaba ABRIENDO: Umbral = Mitad del Drawer (MÃ¡s fÃ¡cil de abrir)
-                              //    - Si estaba CERRANDO: Umbral = Mitad de la Pantalla (MÃ¡s fÃ¡cil de cerrar/devolver)
+                              // 2. Posición:
+                              //    - Si estaba ABRIENDO: Umbral = Mitad del Drawer (Más fácil de abrir)
+                              //    - Si estaba CERRANDO: Umbral = Mitad de la Pantalla (Más fácil de cerrar/devolver)
                               
                               final double velocity = details.velocity.pixelsPerSecond.dx;
                               final double currentSlide = maxSlide * _controller.value;
                               final double screenWidth = MediaQuery.of(context).size.width;
                               
-                              // Definir el umbral segÃºn la intenciÃ³n (direcciÃ³n)
+                              // Definir el umbral según la intención (dirección)
                               double snapThreshold;
                               if (_isOpeningDirection) {
                                 // âœ… FIX: Umbral reducido al 30% para que sea MÃS FÃCIL abrir
-                                // Antes 50% requerÃ­a arrastrar mucho. Ahora con un pequeÃ±o arrastre ya se abre.
+                                // Antes 50% requería arrastrar mucho. Ahora con un pequeño arrastre ya se abre.
                                 snapThreshold = maxSlide * 0.3;
                               } else {
                                 // "Para CERRAR se toma LA MITAD DE LA PANTALLA"
@@ -161,14 +161,14 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                               }
 
                               if (velocity.abs() > 400) {
-                                // FLING: Movimiento rÃ¡pido manda
+                                // FLING: Movimiento rápido manda
                                 if (velocity > 0) {
                                   _controller.forward();
                                 } else {
                                   _controller.reverse();
                                 }
                               } else {
-                                // DRAG STOP: DecisiÃ³n por umbral asimÃ©trico
+                                // DRAG STOP: Decisión por umbral asimétrico
                                 if (currentSlide > snapThreshold) {
                                   _controller.forward();
                                 } else {
@@ -197,14 +197,14 @@ class StrukyZoomDrawerState extends State<StrukyZoomDrawer> with SingleTickerPro
                              }
                           },
                           onHorizontalDragEnd: (details) {
-                              // Logica duplicada para consistencia (Mismo comportamiento asimÃ©trico)
+                              // Logica duplicada para consistencia (Mismo comportamiento asimétrico)
                               final double velocity = details.velocity.pixelsPerSecond.dx;
                               final double currentSlide = maxSlide * _controller.value;
                               final double screenWidth = MediaQuery.of(context).size.width;
                               
                               double snapThreshold;
                               if (_isOpeningDirection) {
-                                snapThreshold = maxSlide * 0.3; // âœ… 30% para abrir fÃ¡cil
+                                snapThreshold = maxSlide * 0.3; // âœ… 30% para abrir fácil
                               } else {
                                 snapThreshold = (screenWidth * 0.5).clamp(50.0, maxSlide - 10.0);
                               }

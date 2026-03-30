@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import '../utils/logger.dart';
@@ -51,6 +52,12 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     ),
   );
 
+  /// 🚀 SEÑAL DE STOP INTENCIONAL
+  /// Se dispara ANTES de detener el player para que los listeners (playback_notifier)
+  /// puedan limpiar su estado y evitar que el guard anti-corrupción reinicie la música.
+  final _sessionStoppedController = StreamController<void>.broadcast();
+  Stream<void> get sessionStoppedStream => _sessionStoppedController.stream;
+
   /// Getter público para acceder al player directamente cuando sea necesario
   /// (Necesario para mantener compatibilidad con la lógica compleja de streams existente en AudioService)
   AudioPlayer get player => _player;
@@ -85,7 +92,6 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
           MediaControl.skipToPrevious,
           if (isPlaying) MediaControl.pause else MediaControl.play,
           MediaControl.skipToNext,
-          MediaControl.stop,
         ],
         systemActions: const {
           MediaAction.seek,
@@ -204,17 +210,79 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
     await _player.pause();
   }
 
+  /// Flag para evitar doble-dispose del player
+  bool _playerDisposed = false;
+
+  /// 🛡️ Helper interno: Detener player de forma segura
+  Future<void> _safeStopPlayer() async {
+    if (_playerDisposed) return;
+    try {
+      if (_player.playing) {
+        await _player.pause(); // Pausa inmediata (más rápido que stop)
+      }
+      await _player.stop();
+    } catch (e) {
+      AppLogger.error('[StrukyAudioHandler] Error al detener player: $e');
+    }
+  }
+
+  /// 🛡️ Helper interno: Emitir estado idle al sistema
+  void _emitIdleState() {
+    try {
+      playbackState.add(playbackState.value.copyWith(
+        processingState: AudioProcessingState.idle,
+        playing: false,
+        controls: [],
+      ));
+    } catch (e) {
+      AppLogger.error('[StrukyAudioHandler] Error emitiendo estado idle: $e');
+    }
+  }
+
   @override
   Future<void> stop() async {
     AppLogger.info('[StrukyAudioHandler] 🛑 stop() llamado - Finalizando servicio');
-    await _player.stop();
+    // 🚀 SEÑAL PRIMERO: Notificar a listeners ANTES de detener el player
+    _sessionStoppedController.add(null);
+    await _safeStopPlayer();
+    _emitIdleState();
     await super.stop(); // 🚀 CRÍTICO: Informar a audio_service que debe detener el foreground service
   }
 
   @override
   Future<void> onNotificationDeleted() async {
     AppLogger.info('[StrukyAudioHandler] 🗑️ Notificación eliminada por el usuario');
-    await stop();
+    // 🚀 SEÑAL PRIMERO: Notificar a listeners ANTES de detener el player
+    _sessionStoppedController.add(null);
+    // NO llamamos dispose() aquí porque super.stop() necesita el player vivo
+    // para limpiar los listeners internos de audio_service
+    await _safeStopPlayer();
+    _emitIdleState();
+    await super.stop(); // Esto mata el foreground service
+  }
+
+  /// 🚀 CRÍTICO: Llamado por Android cuando el usuario desliza la app de recientes
+  /// Sin esto, el servicio de audio sigue corriendo en background indefinidamente
+  @override
+  Future<void> onTaskRemoved() async {
+    AppLogger.info('[StrukyAudioHandler] 🗑️ App removida de recientes - Deteniendo servicio');
+    // 🚀 SEÑAL PRIMERO: Notificar a listeners ANTES de detener
+    _sessionStoppedController.add(null);
+    await _safeStopPlayer();
+    _emitIdleState();
+    
+    // En onTaskRemoved sí podemos dispose() porque la app ya se fue
+    if (!_playerDisposed) {
+      try {
+        await _player.dispose();
+        _playerDisposed = true;
+      } catch (e) {
+        AppLogger.error('[StrukyAudioHandler] Error en dispose de onTaskRemoved: $e');
+      }
+    }
+    
+    await super.stop();
+    await super.onTaskRemoved();
   }
 
   @override

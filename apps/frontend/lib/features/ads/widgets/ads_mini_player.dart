@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/providers/unified_audio_provider_fixed.dart';
+import '../../../core/providers/theme_provider.dart'; // 🎨 FIX: Importar themeProvider para reactividad
 import '../../../core/services/player_navigation_service.dart';
 import '../../../core/theme/neumorphism_theme.dart';
 import '../../../core/theme/text_styles.dart';
@@ -45,6 +46,9 @@ class _AdProgressBarState extends ConsumerState<_AdProgressBar>
   
   @override
   Widget build(BuildContext context) {
+    // 🎨 FIX: Observar el tema
+    ref.watch(themeProvider);
+
     // ⚡ OPTIMIZACIÓN: Solo escuchar los valores necesarios
     final currentPosition = ref.watch(
       unifiedAudioProviderFixed.select((state) => state.currentPosition),
@@ -153,6 +157,9 @@ class _AdSkipOrCounter extends ConsumerWidget {
   
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🎨 FIX: Observar el tema
+    ref.watch(themeProvider);
+
     // ⚡ OPTIMIZACIÓN: Solo escuchar valores necesarios para el contador
     final currentPosition = ref.watch(
       unifiedAudioProviderFixed.select((state) => state.currentPosition),
@@ -182,7 +189,9 @@ class _AdSkipOrCounter extends ConsumerWidget {
     final minutes = remaining.inMinutes;
     final seconds = remaining.inSeconds % 60;
     
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: NeumorphismTheme.coffeeMedium.withValues(alpha: 0.3),
@@ -212,9 +221,12 @@ class AdsMiniPlayer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🎨 FIX: Observar el tema para reactividad instantánea
+    ref.watch(themeProvider);
+
     // ⚡ OPTIMIZACIÓN: Solo escuchar los campos necesarios
     final ad = ref.watch(
-      unifiedAudioProviderFixed.select((state) => state.currentAd),
+        unifiedAudioProviderFixed.select((state) => state.currentAd),
     );
     final isPlayingAd = ref.watch(
       unifiedAudioProviderFixed.select((state) => state.isPlayingAd),
@@ -229,26 +241,13 @@ class AdsMiniPlayer extends ConsumerWidget {
       onTap: onTap ?? () {
         PlayerNavigationService.openFullPlayer(context: context, ref: ref);
       },
-      child: Container(
-        height: 72, // ✅ FIX: Altura exacta igual a FinalMiniPlayer (Floating)
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // ✅ FIX: Margen idéntico
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 100), // ⚡ FIX: Instantáneo (antes 300ms)
+        curve: Curves.easeInOut,
+        height: 72, // ✅ FIX: Altura exacta
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // ✅ FIX: Padding idéntico
-        decoration: BoxDecoration(
-          color: NeumorphismTheme.background,
-          borderRadius: const BorderRadius.all(Radius.circular(32)), // ✅ FIX: Radio idéntico
-          border: Border.all(
-            color: NeumorphismTheme.background,
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.16),
-              blurRadius: 10,
-              offset: const Offset(0, 4), // ✅ FIX: Sombra idéntica
-              spreadRadius: 0.5,
-            ),
-          ],
-        ),
+        // 🎨 FIX: Eliminado el margen y la decoración (fondo, bordes, sombras)
+        // para que se funda perfectamente con el fondo de SpotifyPlayerSheet
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -344,7 +343,9 @@ class AdsMiniPlayer extends ConsumerWidget {
         return RepaintBoundary(
           child: Hero(
             tag: 'ad_cover_${ad.id}', 
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 100), // ⚡ FIX: Instantáneo (antes 300ms)
+              curve: Curves.easeInOut,
               width: 40, // ✅ 40px (Match FinalMiniPlayer)
               height: 40,
               decoration: BoxDecoration(
@@ -373,7 +374,9 @@ class AdsMiniPlayer extends ConsumerWidget {
 
   /// Placeholder cuando no hay carátula
   Widget _buildPlaceholder() {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 100), // ⚡ FIX: Instantáneo (antes 300ms)
+      curve: Curves.easeInOut,
       width: 40, // ✅ 40px
       height: 40,
       decoration: BoxDecoration(

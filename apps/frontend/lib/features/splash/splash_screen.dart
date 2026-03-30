@@ -40,7 +40,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     });
     
     try {
-      // 🆙 VALIDACIÓN DE VERSIÓN (CRÍTICO)
+      // 🆙 VALIDACIÓN DE VERSIÓN MANDATORIA (PROFESIONAL)
+      // Si la versión es vieja e incompatible (ej: 8 < 9), bloqueamos de inmediato.
       final versionResult = await VersionService().checkVersion();
       if (mounted && versionResult['mustUpdate'] == true) {
         context.go('/update-required', extra: {
@@ -49,7 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         });
         return; // Detener flujo de navegación normal
       }
-
+      
       // Esperar a que auth y onboarding estén inicializados
       final authState = ref.read(authStateProvider);
       if (!authState.isInitialized) {

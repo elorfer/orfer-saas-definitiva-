@@ -39,7 +39,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
           // Espaciador superior
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
 
-          // HEADER: TÃ­tulo y Stats RÃ¡pidos
+          // HEADER: Título y Stats Rápidos
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             sliver: SliverToBoxAdapter(
@@ -149,7 +149,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
           if (recentlyPlayed.isEmpty)
              const SliverToBoxAdapter(
                child: Center(
-                 child: Text('AÃºn no has escuchado nada.'),
+                 child: Text('Aún no has escuchado nada.'),
                ),
              )
           else
@@ -167,7 +167,7 @@ class _WebLibraryScreenState extends ConsumerState<WebLibraryScreen> {
                     final song = recentlyPlayed[index];
                     return _WebRecentSongCard(song: song);
                   },
-                  childCount: recentlyPlayed.take(12).length, // Mostrar mÃ¡s para web
+                  childCount: recentlyPlayed.take(12).length, // Mostrar más para web
                 ),
               ),
             ),
@@ -327,7 +327,7 @@ class _WebRecentSongCardState extends State<_WebRecentSongCard> {
               ),
               const SizedBox(height: 16),
               Text(
-                widget.song.title ?? 'Sin TÃ­tulo',
+                widget.song.title ?? 'Sin Título',
                 style: AppTextStyles.titleMedium.copyWith(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

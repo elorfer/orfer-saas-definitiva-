@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // Para kDebugMode
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/neumorphism_theme.dart';
@@ -33,7 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void initState() {
     super.initState();
     // OPTIMIZACIÃ“N: Precargar imagen del logo para evitar lag al mostrarla
-    // SVG se carga eficientemente, precache eliminado para la versiÃ³n vectorial
+    // SVG se carga eficientemente, precache eliminado para la versión vectorial
   }
 
   @override
@@ -44,7 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final mediaQuery = MediaQuery.of(context);
     final newKeyboardHeight = mediaQuery.viewInsets.bottom;
     
-    // Solo actualizar si realmente cambiÃ³ (evitar rebuilds innecesarios)
+    // Solo actualizar si realmente cambió (evitar rebuilds innecesarios)
     if ((_keyboardHeight - newKeyboardHeight).abs() > 1.0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -53,9 +53,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _keyboardHeight = newKeyboardHeight;
         });
         
-        // Scroll automÃ¡tico solo cuando aparece el teclado (no cuando se oculta)
+        // Scroll automático solo cuando aparece el teclado (no cuando se oculta)
         if (newKeyboardHeight > 0 && _scrollController.hasClients) {
-          // Usar un delay mÃ­nimo para que el layout se estabilice primero
+          // Usar un delay mínimo para que el layout se estabilice primero
           Future.delayed(const Duration(milliseconds: 100), () {
             if (mounted && _scrollController.hasClients) {
               _scrollController.animateTo(
@@ -78,8 +78,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  // MÃ©todo auxiliar para construir la secciÃ³n del logo
-  // OPTIMIZACIÃ“N: MÃ©todo separado para evitar rebuilds cuando el teclado aparece
+  // Método auxiliar para construir la sección del logo
+  // OPTIMIZACIÃ“N: Método separado para evitar rebuilds cuando el teclado aparece
   Widget _buildLogoSection(double logoSize, double logoIconSize, bool isSmallScreen, bool isMediumScreen) {
     return Column(
       children: [
@@ -109,7 +109,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         SizedBox(height: isSmallScreen ? 6 : 10),
         Text(
-          'Inicia sesiÃ³n en tu cuenta',
+          'Inicia sesión en tu cuenta',
           style: AppTextStyles.authSubtitle.copyWith(
             color: const Color(0xE6FFFFFF), // Colors.white.withValues(alpha: 0.9) precalculado
             fontSize: isSmallScreen ? 15 : (isMediumScreen ? 16 : 17),
@@ -120,7 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  // MÃ©todo auxiliar para construir el contenido del formulario
+  // Método auxiliar para construir el contenido del formulario
   Widget _buildFormContent(bool isLoading, dynamic authNotifier, bool isSmallScreen, bool isMediumScreen) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -129,7 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         AuthTextField(
           focusedBorderColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
           controller: _emailController,
-          label: 'Correo electrÃ³nico o nombre de usuario',
+          label: 'Correo electrónico o nombre de usuario',
           hint: 'tu@email.com o @tu_usuario',
           keyboardType: TextInputType.text,
           prefixIcon: Icons.email_outlined,
@@ -147,12 +147,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           },
         ),
         SizedBox(height: isSmallScreen ? 16 : 20),
-        // Campo de contraseÃ±a
+        // Campo de contraseña
         AuthTextField(
           focusedBorderColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
           controller: _passwordController,
-          label: 'ContraseÃ±a',
-          hint: 'Tu contraseÃ±a',
+          label: 'Contraseña',
+          hint: 'Tu contraseña',
           obscureText: _obscurePassword,
           prefixIcon: Icons.lock_outline,
           suffixIcon: IconButton(
@@ -169,7 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           validator: AuthValidators.password,
         ),
         SizedBox(height: isSmallScreen ? 12 : 16),
-        // Recordar y olvidar contraseÃ±a
+        // Recordar y olvidar contraseña
         LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxWidth < 300 || isSmallScreen) {
@@ -208,7 +208,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: Text(
-                        'Â¿Olvidaste tu contraseÃ±a?',
+                        '¿Olvidaste tu contraseña?',
                         style: AppTextStyles.authTextSecondary.copyWith(
                           fontSize: isSmallScreen ? 12 : null,
                         ),
@@ -255,7 +255,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: Text(
-                      'Â¿Olvidaste tu contraseÃ±a?',
+                      '¿Olvidaste tu contraseña?',
                       style: AppTextStyles.authTextSecondary.copyWith(
                         fontSize: isSmallScreen ? 11 : null,
                       ),
@@ -269,10 +269,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           },
         ),
         SizedBox(height: isSmallScreen ? 20 : 24),
-        // BotÃ³n de login
+        // Botón de login
         AuthButton(
           backgroundColor: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
-          text: 'Iniciar SesiÃ³n',
+          text: 'Iniciar Sesión',
           isLoading: isLoading,
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
@@ -282,13 +282,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   password: _passwordController.text,
                 );
               } catch (e) {
-                // ðŸ“§ Si el usuario no verificÃ³ su email, redirigir a la pantalla OTP
+                // ðŸ“§ Si el usuario no verificó su email, redirigir a la pantalla OTP
                 if (e is AuthException && e.code == 'EMAIL_NOT_VERIFIED') {
                   final emailToVerify = e.email ?? _emailController.text.trim();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Text('ðŸ“§ Te enviamos un nuevo cÃ³digo de verificaciÃ³n. Revisa tu correo.'),
+                        content: const Text('ðŸ“§ Te enviamos un nuevo código de verificación. Revisa tu correo.'),
                         backgroundColor: const Color(0xFF8D6E63),
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -316,7 +316,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 8 : 16),
               child: Text(
-                'O continÃºa con',
+                'O continúa con',
                 style: AppTextStyles.authText.copyWith(
                   fontSize: isSmallScreen ? 12 : null,
                 ),
@@ -331,7 +331,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
         SizedBox(height: isSmallScreen ? 20 : 24),
-        // Botones de autenticaciÃ³n social
+        // Botones de autenticación social
         isSmallScreen
             ? Column(
                 children: [
@@ -384,7 +384,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           children: [
             Flexible(
               child: Text(
-                'Â¿No tienes cuenta? ',
+                '¿No tienes cuenta? ',
                 style: AppTextStyles.authText.copyWith(
                   fontSize: isSmallScreen ? 13 : null,
                 ),
@@ -401,7 +401,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Text(
-                'RegÃ­strate',
+                'Regístrate',
                 style: AppTextStyles.authLink.copyWith(
                   color: const Color(0xFF8D6E63), // NeumorphismTheme.coffeeMedium (Light Mode)
                   fontSize: isSmallScreen ? 13 : null,
@@ -410,7 +410,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ],
         ),
-        // BotÃ³n de Acceso RÃ¡pido (Solo Debug)
+        // Botón de Acceso Rápido (Solo Debug)
         if (kDebugMode)
           Padding(
             padding: const EdgeInsets.only(top: 24),
@@ -436,13 +436,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // OPTIMIZACIÃ“N: Cachear MediaQuery para evitar mÃºltiples llamadas
+    // OPTIMIZACIÃ“N: Cachear MediaQuery para evitar múltiples llamadas
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
     final isMaxSmallScreen = screenWidth < 450;
     
     // Detectar si debemos usar el layout Web (Split Screen)
-    // Usamos kIsWeb y un ancho mÃ­nimo para tablet/desktop
+    // Usamos kIsWeb y un ancho mínimo para tablet/desktop
     final useWebLayout = kIsWeb && screenWidth > 900;
 
     // OPTIMIZACIÃ“N: usar select para escuchar solo isLoading y evitar rebuilds innecesarios
@@ -490,7 +490,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final horizontalPadding = isThinkingSmall ? 16.0 : (isMediumScreen ? 20.0 : 24.0);
     final formPadding = isThinkingSmall ? 16.0 : (isMediumScreen ? 20.0 : 24.0);
     final topSpacing = isThinkingSmall ? 10.0 : (isMediumScreen ? 16.0 : 20.0);
-    // Logo con tamaÃ±o aumentado y prominente
+    // Logo con tamaño aumentado y prominente
     final logoSize = isThinkingSmall ? 150.0 : (isMediumScreen ? 180.0 : 200.0);
     final logoIconSize = isThinkingSmall ? 75.0 : (isMediumScreen ? 90.0 : 100.0);
 
@@ -498,7 +498,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       resizeToAvoidBottomInset: false,
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF3E2723), // MarrÃ³n oscuro
+          color: Color(0xFF3E2723), // Marrón oscuro
         ),
         child: SafeArea(
           child: SingleChildScrollView(
@@ -516,7 +516,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: 500, // Limitar ancho mÃ¡ximo para tablets en modo vertical
+                  maxWidth: 500, // Limitar ancho máximo para tablets en modo vertical
                   minHeight: _keyboardHeight > 0 
                       ? 0 
                       : (mediaQuery.size.height - 
@@ -677,7 +677,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'MÃºsica que conecta.',
+                                  'Música que conecta.',
                                   style: AppTextStyles.headlineMedium.copyWith(
                                     color: Colors.white.withValues(alpha: 0.9),
                                     fontWeight: FontWeight.w300,

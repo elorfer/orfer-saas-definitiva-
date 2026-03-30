@@ -71,6 +71,6 @@
 
 	<!-- 📢 ADMOB: ID de Aplicación (Requerido para iOS) -->
 	<key>GADApplicationIdentifier</key>
-	<string>AQUÍ_TU_ID_REAL_IOS</string>
+	<string>ca-app-pub-2929540794612262~9881124050</string>
 </dict>
 </plist>

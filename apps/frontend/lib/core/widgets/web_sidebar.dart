@@ -1,4 +1,4 @@
-﻿
+
 import 'package:flutter/material.dart';
 import '../theme/neumorphism_theme.dart';
 import '../theme/text_styles.dart';
@@ -62,7 +62,7 @@ class WebSidebar extends StatelessWidget {
           Divider(color: NeumorphismTheme.textSecondary.withValues(alpha: 0.1)),
           const SizedBox(height: 20),
           _buildSimpleItem(context, Icons.person_outline, 'Mi Cuenta', () {}),
-          _buildSimpleItem(context, Icons.settings_outlined, 'ConfiguraciÃ³n', () {}),
+          _buildSimpleItem(context, Icons.settings_outlined, 'Configuración', () {}),
         ],
       ),
     );

@@ -98,6 +98,10 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   static const int _maxCorruptedRetries = 2; // Máximo 2 reintentos antes de saltar
   static const Duration _corruptedErrorCooldown = Duration(seconds: 2); // Cooldown entre detecciones de CORRUPTED
   
+  // 🚀 STOP INTENCIONAL: Flag para evitar que el guard anti-corrupción reinicie la música
+  // cuando el usuario desliza la notificación o la app se cierra
+  bool _isIntentionallyStopped = false;
+  
   // 🎛️ CONFIGURACIÓN DINÁMICA: Valores que se leen desde el Admin
   // Estos valores se actualizan desde el backend sin necesidad de actualizar la app
   AlgorithmConfig get _algorithmConfig => AlgorithmConfigService.instance.currentConfig;
@@ -603,6 +607,31 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   void _initSubscriptions() {
     AppLogger.debug('[PlaybackNotifier] _initSubscriptions called. Service is null? ${_service == null}');
     if (_service == null) return;
+    
+    // 🚀 SEÑAL DE STOP INTENCIONAL: Escuchar cuando el handler detiene el servicio
+    // (notificación deslizada, app cerrada, etc.)
+    // Esto DEBE ir ANTES de los listeners de playerState para que se active primero
+    final stoppedStream = service.sessionStoppedStream;
+    if (stoppedStream != null) {
+      _subscriptions.add(
+        stoppedStream.listen((_) {
+          AppLogger.info('[PlaybackNotifier] 🛑 SEÑAL DE STOP INTENCIONAL recibida - Limpiando estado');
+          _isIntentionallyStopped = true;
+          
+          // Limpiar estado INMEDIATAMENTE para evitar que el guard anti-corrupción reactive
+          state = state.copyWith(
+            isPlaying: false,
+            isSessionActive: false,
+            isMiniPlayerVisible: false,
+          );
+          
+          // Detener monitores de algoritmo para evitar precargas innecesarias
+          _stopAlgorithmMonitor();
+          _stopQueueProtection();
+          _failsafeTimer?.cancel();
+        }),
+      );
+    }
     
     // 0. 🔑 MASTER KEY: Escuchar cambios de índice directamente
     final indexSub = service.currentIndexStream.listen((index) {
@@ -1626,15 +1655,23 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         // Detectar errores cuando el reproductor está idle inesperadamente
         // (no debería estar idle si está reproduciendo)
         if (playerState.processingState == ProcessingState.idle && state.isPlaying) {
+          // 🚀 FIX CRÍTICO: Si fue un stop intencional (notificación deslizada),
+          // NO intentar recuperar - el usuario quiere que se detenga
+          if (_isIntentionallyStopped) {
+            AppLogger.info('[PlaybackNotifier] 🛑 Idle detectado pero es STOP INTENCIONAL - No recuperar');
+            _isIntentionallyStopped = false; // Reset flag
+            // Forzar estado limpio por si acaso
+            state = state.copyWith(
+              isPlaying: false,
+              isSessionActive: false,
+              isMiniPlayerVisible: false,
+            );
+            return;
+          }
           // Si está idle mientras debería reproducir, puede ser un error CORRUPTED
-          // Intentar obtener el error usando reflexión o simplemente detectar el estado
           try {
-            // En just_audio, cuando hay un error, el processingState cambia a idle
-            // Verificar si hay un error accediendo al playerState directamente
             final hasError = service.hasError;
             if (hasError) {
-              // Crear un PlayerException simulado para manejar el error
-              // El mensaje real vendrá de los logs del sistema
               _checkForSilentCorruption();
             }
           } catch (e) {

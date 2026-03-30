@@ -99,30 +99,32 @@ class _FeaturedPlaylistsSectionState extends ConsumerState<FeaturedPlaylistsSect
   }
 
   Widget _buildPlaylistsList(List<FeaturedPlaylist> featuredPlaylists) {
-    return SizedBox(
-      height: 252,
-      child: ListView.builder(
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(left: 24, right: 8),
-        cacheExtent: 300, // 🚀 OPTIMIZACIÓN: Reducido para evitar trabajo excesivo de GPU
-        physics: const BouncingScrollPhysics(), // 🚀 Bouncing para consistencia con el Home
-        itemExtent: 176.0,
-        addAutomaticKeepAlives: false,
-        addRepaintBoundaries: false, // 🚀 OPTIMIZATION: Manual control below with keys
-        addSemanticIndexes: false,
-        itemCount: featuredPlaylists.length,
-        itemBuilder: (context, index) {
-          final featuredPlaylist = featuredPlaylists[index];
-          return RepaintBoundary(
-            key: ValueKey('playlist_boundary_${featuredPlaylist.playlist.id}'),
-            child: FeaturedPlaylistCard(
-              key: ValueKey('playlist_card_${featuredPlaylist.playlist.id}'),
-              featuredPlaylist: featuredPlaylist,
-              onTap: () => _onPlaylistTap(context, featuredPlaylist.playlist),
-            ),
-          );
-        },
+    return RepaintBoundary(
+      child: SizedBox(
+        height: 252,
+        child: ListView.builder(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.only(left: 24, right: 8),
+          cacheExtent: 300, // 🚀 OPTIMIZACIÓN: Reducido para evitar trabajo excesivo de GPU
+          physics: const BouncingScrollPhysics(), // 🚀 Bouncing para consistencia con el Home
+          itemExtent: 176.0,
+          addAutomaticKeepAlives: false,
+          addRepaintBoundaries: false, // 🚀 OPTIMIZATION: Manual control below with keys
+          addSemanticIndexes: false,
+          itemCount: featuredPlaylists.length,
+          itemBuilder: (context, index) {
+            final featuredPlaylist = featuredPlaylists[index];
+            return RepaintBoundary(
+              key: ValueKey('playlist_boundary_${featuredPlaylist.playlist.id}'),
+              child: FeaturedPlaylistCard(
+                key: ValueKey('playlist_card_${featuredPlaylist.playlist.id}'),
+                featuredPlaylist: featuredPlaylist,
+                onTap: () => _onPlaylistTap(context, featuredPlaylist.playlist),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

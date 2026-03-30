@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/unified_audio_provider_fixed.dart';
+import '../providers/theme_provider.dart'; // 🎨 FIX: Importar themeProvider para reactividad
 import '../theme/neumorphism_theme.dart';
 import '../widgets/final_mini_player.dart';
 import '../widgets/professional_audio_player.dart';
@@ -113,6 +114,9 @@ class _SpotifyPlayerSheetState extends ConsumerState<SpotifyPlayerSheet>
 
   @override
   Widget build(BuildContext context) {
+    // 🎨 FIX: Watch themeProvider for instant theme switching on the main container
+    ref.watch(themeProvider);
+    
     final playbackState = ref.watch(unifiedAudioProviderFixed);
     final currentSong = playbackState.currentSong;
     final isPlayingAd = playbackState.isPlayingAd;
