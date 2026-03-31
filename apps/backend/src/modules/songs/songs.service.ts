@@ -577,6 +577,85 @@ export class SongsService {
   }
 
   /**
+   * Actualiza una canción, soportando la sustitución física de archivos MP3 o Portadas
+   * además de los metadatos de texto.
+   */
+  async updateWithFiles(
+    id: string,
+    updateData: any, // DTO de actualización
+    audioFile?: Express.Multer.File,
+    coverFile?: Express.Multer.File,
+    userId?: string
+  ): Promise<Song> {
+    const song = await this.songRepository.findOne({
+      where: { id },
+    });
+
+    if (!song) {
+      throw new NotFoundException('Canción no encontrada');
+    }
+
+    let filesUpdated = false;
+
+    // 1. Manejo del re-upload de AUDIO
+    if (audioFile) {
+      this.logger.log(`🔄 Sustituyendo archivo de audio para canción: ${song.title}`);
+      if (song.fileUrl) {
+        try {
+          // Extraer key del URL viejo. Ej: http://.../uploads/songs/abc.mp3 -> "songs/abc.mp3"
+          // O si de url local base se trata:
+          const parts = song.fileUrl.split('/');
+          const filename = parts[parts.length - 1];
+          await this.localStorageService.deleteFile(`songs/${filename}`);
+          this.logger.log(`🗑️ Archivo antiguo de audio eliminado del disco: ${filename}`);
+        } catch (e) {
+          this.logger.warn(`⚠️ No se pudo borrar físicamente el audio antiguo: ${e.message}. Se asume huérfano.`);
+        }
+      }
+      
+      const audioResult = await this.localStorageService.uploadAudioFile(audioFile, userId);
+      song.fileUrl = audioResult.url;
+      song.duration = audioResult.duration > 0 ? audioResult.duration : song.duration;
+      filesUpdated = true;
+    }
+
+    // 2. Manejo del re-upload del COVER
+    if (coverFile) {
+      this.logger.log(`🖼️ Sustituyendo archivo de portada para canción: ${song.title}`);
+      if (song.coverArtUrl) {
+        try {
+          const parts = song.coverArtUrl.split('/');
+          const filename = parts[parts.length - 1];
+          // Asume key "covers/abc.jpg" para S3/Local
+          await this.coversStorageService.deleteFile(`covers/${filename}`);
+          this.logger.log(`🗑️ Portada antigua eliminada del disco: ${filename}`);
+        } catch (e) {
+          this.logger.warn(`⚠️ No se pudo borrar físicamente la portada antigua: ${e.message}.`);
+        }
+      }
+
+      const coverResult = await this.coversStorageService.uploadCoverImage(coverFile, userId);
+      song.coverArtUrl = coverResult.url;
+      filesUpdated = true;
+    }
+
+    // 3. Si hubo cambios en los archivos, persistir prematuramente para luego pasar a update
+    if (filesUpdated) {
+      this.logger.log(`💾 Guardando cambios de archivos físicos para canción: ${song.title}`);
+      await this.songRepository.save(song);
+    }
+
+    // 4. Actualizar el resto de la metadato usando el flujo normal
+    // Limpiamos los campos de UpdateData si vinieran objetos nulos, aunque en FormData puede que sí
+    if (updateData && Object.keys(updateData).length > 0) {
+      return await this.update(id, updateData);
+    }
+
+    // Recargar con relaciones por si solo se actualizaron archivos
+    return await this.findOne(id);
+  }
+
+  /**
    * Elimina una canción
    * @param id ID de la canción a eliminar
    */

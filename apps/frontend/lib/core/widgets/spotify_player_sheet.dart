@@ -117,12 +117,14 @@ class _SpotifyPlayerSheetState extends ConsumerState<SpotifyPlayerSheet>
     // 🎨 FIX: Watch themeProvider for instant theme switching on the main container
     ref.watch(themeProvider);
     
-    final playbackState = ref.watch(unifiedAudioProviderFixed);
-    final currentSong = playbackState.currentSong;
-    final isPlayingAd = playbackState.isPlayingAd;
-    final hasContent = currentSong != null || isPlayingAd ||
-        playbackState.currentAd != null || playbackState.isInsertingAd;
-    final isSessionActive = playbackState.isSessionActive;
+    // 🎯 OPTIMIZACIÓN CRÍTICA: No escuchar todo el estado (evita rebuilds por posición)
+    final currentSong = ref.watch(unifiedAudioProviderFixed.select((s) => s.currentSong));
+    final isPlayingAd = ref.watch(unifiedAudioProviderFixed.select((s) => s.isPlayingAd));
+    final hasAd = ref.watch(unifiedAudioProviderFixed.select((s) => s.currentAd != null));
+    final isInsertingAd = ref.watch(unifiedAudioProviderFixed.select((s) => s.isInsertingAd));
+    final isSessionActive = ref.watch(unifiedAudioProviderFixed.select((s) => s.isSessionActive));
+    
+    final hasContent = currentSong != null || isPlayingAd || hasAd || isInsertingAd;
 
     // If nothing to show, return empty
     if (!hasContent || !isSessionActive) {
@@ -205,7 +207,7 @@ class _SpotifyPlayerSheetState extends ConsumerState<SpotifyPlayerSheet>
                             alignment: Alignment.center,
                             child: SizedBox(
                               height: _miniPlayerHeight,
-                              child: isPlayingAd && playbackState.currentAd != null
+                              child: isPlayingAd && hasAd
                                   ? AdsMiniPlayer(
                                       key: const ValueKey('sheet_ads_mini'),
                                       onTap: () => _expandPlayer(instant: true),

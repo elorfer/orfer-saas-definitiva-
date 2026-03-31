@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
@@ -148,6 +149,22 @@ class _InviteCoffeeScreenState extends ConsumerState<InviteCoffeeScreen> {
                         ? _buildEmptyView()
                         : _buildProductsList(),
                 ),
+                
+                if (kDebugMode)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    child: OutlinedButton.icon(
+                      onPressed: _showSuccessDialog,
+                      icon: const Icon(Icons.bug_report_rounded),
+                      label: const Text('PROBAR DIÁLOGO (DEBUG)'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: NeumorphismTheme.textSecondary,
+                        side: BorderSide(color: NeumorphismTheme.textSecondary.withValues(alpha: 0.3)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        minimumSize: const Size(double.infinity, 54),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

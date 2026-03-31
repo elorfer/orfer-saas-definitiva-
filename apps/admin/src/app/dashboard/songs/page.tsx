@@ -393,6 +393,8 @@ export default function SongsPage() {
     artistId: '',
     genres: [] as string[],
     status: 'published' as string,
+    file: null as File | null,
+    coverFile: null as File | null,
   });
   const [uploading, setUploading] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -472,6 +474,32 @@ export default function SongsPage() {
         return;
       }
       setUploadForm((prev) => ({ ...prev, coverFile: file }));
+    }
+  };
+
+  const handleEditFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/m4a', 'audio/x-m4a', 'audio/flac', 'audio/x-flac'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Tipo de archivo no permitido. Solo se permiten: .mp3, .wav, .m4a, .flac');
+        return;
+      }
+      setEditForm((prev) => ({ ...prev, file }));
+      if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
+      setAudioPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleEditCoverFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Tipo de archivo no permitido. Solo se permiten imágenes: .jpg, .jpeg, .png, .webp, .gif');
+        return;
+      }
+      setEditForm((prev) => ({ ...prev, coverFile: file }));
     }
   };
 
@@ -564,7 +592,10 @@ export default function SongsPage() {
       artistId: song.artistId || '',
       genres: song.genres || [],
       status: song.status || 'published',
+      file: null,
+      coverFile: null,
     });
+    setAudioPreviewUrl(null);
     setShowEditModal(true);
   };
 
@@ -579,18 +610,23 @@ export default function SongsPage() {
 
     try {
       setUpdating(true);
+      
+      const formData = new FormData();
+      formData.append('title', editForm.title);
+      formData.append('artistId', editForm.artistId);
+      formData.append('status', editForm.status);
+      editForm.genres.forEach(g => formData.append('genres[]', g));
+      if (editForm.file) formData.append('audio', editForm.file);
+      if (editForm.coverFile) formData.append('cover', editForm.coverFile);
+
       await updateSong({
         id: editingSong.id,
-        data: {
-          title: editForm.title,
-          artistId: editForm.artistId,
-          genres: editForm.genres,
-          status: editForm.status,
-        },
+        data: formData, // Enviamos FormData para que soporte los archivos
       });
       setShowEditModal(false);
       setEditingSong(null);
-      setEditForm({ title: '', artistId: '', genres: [], status: 'published' });
+      setEditForm({ title: '', artistId: '', genres: [], status: 'published', file: null, coverFile: null });
+      setAudioPreviewUrl(null);
     } catch (error) {
       // Error manejado por el hook
     } finally {
@@ -1123,9 +1159,9 @@ export default function SongsPage() {
       )}
 
       {showEditModal && editingSong && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4 py-8">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 sticky top-0 bg-white z-10">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Editar canción</h2>
                 <p className="text-sm text-gray-500">
@@ -1137,7 +1173,7 @@ export default function SongsPage() {
                   if (!updating) {
                     setShowEditModal(false);
                     setEditingSong(null);
-                    setEditForm({ title: '', artistId: '', genres: [], status: 'published' });
+                    setEditForm({ title: '', artistId: '', genres: [], status: 'published', file: null, coverFile: null });
                   }
                 }}
                 className="rounded-full p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1149,6 +1185,99 @@ export default function SongsPage() {
             </div>
 
             <form onSubmit={handleUpdateSong} className="px-6 py-6 space-y-4">
+              <div className="bg-orange-50/50 p-4 border border-orange-100 rounded-xl mb-4">
+                <h4 className="text-sm font-semibold text-orange-800 mb-2">Reemplazo de archivos</h4>
+                <p className="text-xs text-orange-600 mb-4">Sube un nuevo archivo aquí UNICAMENTE si deseas reemplazar y perder los anteriores. Se conservarán los streams y me gusta.</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                      Nuevo Archivo de Audio
+                    </label>
+                    {editingSong?.fileUrl && !editForm.file && (
+                      <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-3">
+                        <MusicalNoteIcon className="h-5 w-5 text-gray-400" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 font-medium truncate">Audio actual</p>
+                        </div>
+                        <audio src={resolveUrl(editingSong.fileUrl, 'audio') || undefined} controls className="h-8 w-48" />
+                      </div>
+                    )}
+                    <div className="mt-1">
+                      {editForm.file ? (
+                        <div className="flex items-center gap-4 bg-green-50 rounded-lg p-3 border border-green-200">
+                          <MusicalNoteIcon className="h-6 w-6 text-green-600" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{editForm.file.name}</p>
+                            <p className="text-xs text-gray-500">{(editForm.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEditForm(prev => ({ ...prev, file: null }))}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            <XMarkIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={handleEditFileChange}
+                          disabled={updating}
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 cursor-pointer"
+                        />
+                      )}
+                      {audioPreviewUrl && editForm.file && (
+                        <audio controls src={audioPreviewUrl} className="w-full h-8 mt-2" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                      Nueva Portada
+                    </label>
+                    {editingSong?.coverImageUrl && !editForm.coverFile && (
+                      <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-3">
+                        <img 
+                          src={resolveUrl(editingSong.coverImageUrl, 'cover') || undefined} 
+                          alt="Portada actual" 
+                          className="h-10 w-10 rounded object-cover border border-gray-200" 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 font-medium truncate">Portada actual</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-1">
+                      {editForm.coverFile ? (
+                        <div className="flex items-center gap-4 bg-blue-50 rounded-lg p-3 border border-blue-200">
+                          <img src={URL.createObjectURL(editForm.coverFile)} className="h-10 w-10 rounded object-cover" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{editForm.coverFile.name}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEditForm(prev => ({ ...prev, coverFile: null }))}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            <XMarkIcon className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleEditCoverFileChange}
+                          disabled={updating}
+                          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                   Título de la canción
@@ -1264,7 +1393,7 @@ export default function SongsPage() {
                     if (!updating) {
                       setShowEditModal(false);
                       setEditingSong(null);
-                      setEditForm({ title: '', artistId: '', genres: [], status: 'published' });
+                      setEditForm({ title: '', artistId: '', genres: [], status: 'published', file: null, coverFile: null });
                     }
                   }}
                   className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-300 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"

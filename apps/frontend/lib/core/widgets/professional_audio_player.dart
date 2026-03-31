@@ -28,6 +28,8 @@ class _ImagePreloadCache {
   static final Map<String, DateTime> _preloadTimes = {};
   static const Duration _cacheExpiry = Duration(hours: 1); // Cache válido por 1 hora
   
+  static const int _maxCacheSize = 100; // 🎯 Límite máximo para evitar fugas de memoria
+  
   static bool isPreloaded(String url) {
     final time = _preloadTimes[url];
     if (time == null) return false;
@@ -43,6 +45,15 @@ class _ImagePreloadCache {
   }
   
   static void markPreloaded(String url) {
+    // 🛡️ EVICTION POLICY: Si el cache está lleno, eliminar la entrada más antigua
+    if (_preloadedUrls.length >= _maxCacheSize) {
+      final oldestUrl = _preloadTimes.entries
+          .reduce((a, b) => a.value.isBefore(b.value) ? a : b)
+          .key;
+      _preloadedUrls.remove(oldestUrl);
+      _preloadTimes.remove(oldestUrl);
+    }
+
     _preloadedUrls.add(url);
     _preloadTimes[url] = DateTime.now();
   }
@@ -253,20 +264,20 @@ class _ProfessionalAudioPlayerState
         }
         
         try {
-          // 2. Obtener datos de Riverpod (Gestión de Estado)
-          final playbackState = ref.watch(unifiedAudioProviderFixed);
-          final isPlaying = playbackState.isPlaying;
+          // 2. Obtener datos de Riverpod (Gestión de Estado) - 🎯 OPTIMIZACIÓN: Solo lo necesario
+          final isPlaying = ref.watch(unifiedAudioProviderFixed.select((s) => s.isPlaying));
+          final lastConfirmedSong = ref.watch(unifiedAudioProviderFixed.select((s) => s.lastConfirmedSong));
+          final currentSong = ref.watch(unifiedAudioProviderFixed.select((s) => s.currentSong));
+          final currentAd = ref.watch(unifiedAudioProviderFixed.select((s) => s.currentAd));
           
           // 3. Fusión de Inteligencia:
           // ✅ FIX PARPADEO: Durante inserción, SOLO usar datos del provider (estables)
-          // Fuera de inserción: Priorizar stream para contenido inmediato
-          // ✅ FIX MINI PLAYER: Usar lastConfirmedSong como fallback para garantizar consistencia
           final finalSong = isInserting 
-              ? (playbackState.lastConfirmedSong ?? playbackState.currentSong)
-              : (streamSong ?? playbackState.lastConfirmedSong ?? playbackState.currentSong);
+              ? (lastConfirmedSong ?? currentSong)
+              : (streamSong ?? lastConfirmedSong ?? currentSong);
           final finalAd = isInserting 
-              ? playbackState.currentAd 
-              : (streamAd ?? playbackState.currentAd);
+              ? currentAd 
+              : (streamAd ?? currentAd);
           
           // Lógica de visualización (prioridad a anuncios)
           final showAd = finalAd != null; // Si el stream dice ad, es ad.

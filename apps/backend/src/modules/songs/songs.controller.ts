@@ -376,28 +376,87 @@ export class SongsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar canción' })
+  @UseInterceptors(
+    MulterExceptionInterceptor,
+    FileFieldsInterceptor([
+      { name: 'audio', maxCount: 1 },
+      { name: 'cover', maxCount: 1 },
+    ], {
+      limits: { fileSize: 100 * 1024 * 1024 },
+      fileFilter: (req, file, callback) => {
+        const allowedAudioTypes = [
+          'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav',
+          'audio/m4a', 'audio/x-m4a', 'audio/flac', 'audio/x-flac',
+        ];
+        const allowedImageTypes = [
+          'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif',
+        ];
+        
+        if (file.fieldname === 'audio') {
+          if (allowedAudioTypes.includes(file.mimetype)) {
+            callback(null, true);
+          } else {
+            callback(new Error(`Tipo de archivo de audio no permitido: ${file.mimetype}`), false);
+          }
+        } else if (file.fieldname === 'cover') {
+          if (allowedImageTypes.includes(file.mimetype)) {
+            callback(null, true);
+          } else {
+            callback(new Error(`Tipo de archivo de imagen no permitido: ${file.mimetype}`), false);
+          }
+        } else {
+          callback(null, true);
+        }
+      },
+    })
+  )
+  @ApiOperation({ summary: 'Actualizar canción y re-subir archivos opcionalmente' })
+  @ApiConsumes('multipart/form-data', 'application/json')
   @ApiResponse({ status: 200, description: 'Canción actualizada exitosamente', type: SongResponseDto })
   @ApiResponse({ status: 404, description: 'Canción no encontrada' })
   async update(
     @Param('id') id: string,
-    @Body() updateSongDto: UpdateSongDto,
+    @Body() updateSongDto: any,
+    @UploadedFiles() files?: { audio?: Express.Multer.File[]; cover?: Express.Multer.File[] },
+    @CurrentUser() user?: User,
   ) {
-    // Parsear géneros si vienen como string o array
+    this.logger.log(`✏️ Petición de UPDATE para canción ID ${id}`);
+
+    // Identificar si vienen archivos nuevos:
+    const audioFile = files?.audio && files.audio.length > 0 ? files.audio[0] : undefined;
+    const coverFile = files?.cover && files.cover.length > 0 ? files.cover[0] : undefined;
+
+    if (audioFile) this.logger.log(`   - Viene con nuevo MP3: ${audioFile.originalname}`);
+    if (coverFile) this.logger.log(`   - Viene con nueva Portada: ${coverFile.originalname}`);
+
+    // Parsear géneros si vienen como string o array (formato formData)
     let genres: string[] | undefined = undefined;
-    if (updateSongDto.genres !== undefined && updateSongDto.genres !== null) {
-      const rawGenres = updateSongDto.genres;
+    
+    // Si viene desde FormData puede usar `genres[]`
+    const rawGenres = updateSongDto.genres || updateSongDto['genres[]'];
+    if (rawGenres !== undefined && rawGenres !== null) {
       if (typeof rawGenres === 'string') {
-        genres = (rawGenres as string).split(',').map(g => g.trim()).filter(g => g.length > 0);
+        genres = rawGenres.split(',').map(g => g.trim()).filter(g => g.length > 0);
       } else if (Array.isArray(rawGenres)) {
-        genres = (rawGenres as string[]).map(g => typeof g === 'string' ? g.trim() : String(g).trim()).filter(g => g.length > 0);
+        genres = rawGenres.map(g => typeof g === 'string' ? g.trim() : String(g).trim()).filter(g => g.length > 0);
       }
     }
 
-    const updatedSong = await this.songsService.update(id, {
+    const cleanUpdateData = {
       ...updateSongDto,
-      genres,
-    });
+      genres: rawGenres !== undefined ? genres : undefined
+    };
+
+    // Remover properties extrañas que multer pone por la notación bracket []
+    delete cleanUpdateData['genres[]'];
+
+    const updatedSong = await this.songsService.updateWithFiles(
+      id, 
+      cleanUpdateData,
+      audioFile,
+      coverFile,
+      user?.id
+    );
 
     return SongMapper.toDto(updatedSong);
   }
