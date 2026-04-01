@@ -1,13 +1,28 @@
 import '../utils/platform_utils.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/logger.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class AppConfig {
   // Configuración de la aplicación
   static const String appName = 'struky';
-  static const String appVersion = '1.1.0';
-  static const int buildNumber = 8; // Sincronizado con pubspec.yaml
+  static String appVersion = '1.0.3'; // Se actualizará dinámicamente
+  static int buildNumber = 10;        // Se actualizará dinámicamente
   static const String updateUrl = 'https://struky.com/download'; // URL de descarga
+
+  /// 🚀 INICIALIZADOR: Carga la versión real del empaquetado (pubspec.yaml -> .apk/.aab)
+  /// para que la sincronización del panel de admi sea 100% automática y nunca más 
+  /// olvides cambiar el número a mano.
+  static Future<void> init() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      appVersion = info.version;
+      buildNumber = int.tryParse(info.buildNumber) ?? buildNumber;
+      AppLogger.info('[AppConfig] 📦 Versión Dinámica Cargada: v$appVersion+Build$buildNumber');
+    } catch (e) {
+      AppLogger.warning('[AppConfig] ⚠️ Error leyendo PackageInfo (Usando Fallback a $appVersion+$buildNumber) - Error: $e');
+    }
+  }
 
   // URLs de configuración (usar `--dart-define` para `API_BASE_URL`)
 

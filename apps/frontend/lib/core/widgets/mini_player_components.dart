@@ -339,21 +339,18 @@ class _MiniPlayerProgressBarState extends ConsumerState<_MiniPlayerProgressBar> 
               // else: ignorar jitter, mantener _maxProgress anterior
             }
             
-            // ✅ ANIMACIÓN SUAVE: Usar TweenAnimationBuilder para interpolar el progreso
+            // ✅ OPTIMIZACIÓN EXTREMA: Eliminar TweenAnimationBuilder
+            // El stream de smoothPositionStream ya emite 20 veces por segundo (50ms).
+            // Tratar de animar iteraciones de 50ms de forma continua encola miles de
+            // animaciones superpuestas del AnimationController, estrangulando el hilo UI y causando ANR.
+            // Para audio, pintar directamente a 20 FPS es suficientemente suave e infinitamente más ligero.
             return SizedBox(
               height: 2,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: _maxProgress, end: _maxProgress),
-                duration: const Duration(milliseconds: 250), // Animación fluida de 250ms
-                curve: Curves.linear, // Movimiento lineal constante para audio
-                builder: (context, value, child) {
-                  return LinearProgressIndicator(
-                    value: value,
-                    backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
-                    borderRadius: const BorderRadius.all(Radius.circular(1.0)),
-                  );
-                },
+              child: LinearProgressIndicator(
+                value: _maxProgress,
+                backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+                borderRadius: const BorderRadius.all(Radius.circular(1.0)),
               ),
             );
           },

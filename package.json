@@ -8,11 +8,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:admin\" \"npm run dev:frontend\"",
+    "dev": "docker-compose -f docker-compose.dev.yml up -d && concurrently \"npm run dev:backend\" \"npm run dev:admin\" \"npm run dev:frontend\"",
     "dev:backend": "cd apps/backend && npm run start:dev",
     "dev:admin": "cd apps/admin && npm run dev",
     "dev:frontend": "cd apps/frontend && flutter run",
-    "dev:backend-admin": "concurrently \"npm run dev:backend\" \"npm run dev:admin\"",
+    "dev:backend-admin": "docker-compose -f docker-compose.dev.yml up -d && concurrently \"npm run dev:backend\" \"npm run dev:admin\"",
     "dev:backend-only": "cd apps/backend && npm run start:dev",
     "dev:admin-only": "cd apps/admin && npm run dev",
     "dev:frontend-only": "cd apps/frontend && flutter run",

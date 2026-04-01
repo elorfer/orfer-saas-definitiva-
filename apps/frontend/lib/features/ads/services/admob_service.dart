@@ -9,7 +9,10 @@ import '../../../core/utils/logger.dart';
 class AdMobService {
   
   /// 🚀 MODO DE PRUEBA (Para desarrollo)
-  static const bool isTestMode = true; // ACTIVADO PARA PREVENIR EL CRASH DE GOOGLE ADS NATIVO
+  // IMPORTANTE: Si es 'false' en el Emulador, Google Mobile Ads bloqueará la petición 
+  // para proteger tu cuenta y arrojará "Error 3: No fill".
+  // Solo ponlo en 'false' cuando vayas a compilar a la PlayStore.
+  static const bool isTestMode = false; 
 
   /// IDs de prueba de Google
   static const String _androidBannerTestId = 'ca-app-pub-3940256099942544/6300978111';

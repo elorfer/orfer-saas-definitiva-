@@ -3,7 +3,7 @@ description: Aplicación de streaming musical vintage para usuarios y artistas
 
 publish_to: 'none'
 
-version: 1.0.2+9
+version: 1.0.3+11
 
 environment:
   sdk: '>=3.11.0 <4.0.0'
@@ -107,6 +107,7 @@ dependencies:
   flutter_animate: ^4.5.2
   google_mobile_ads: ^7.0.0
   visibility_detector: ^0.4.0+2
+  package_info_plus: ^9.0.1
   # qr_code_scanner: ^1.0.1  # Temporalmente deshabilitado por problema de namespace
 
 dev_dependencies:

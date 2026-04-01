@@ -36,28 +36,16 @@ class HttpClientService {
   // ⚡ OPTIMIZACIÓN: Variables para throttling de logs
   DateTime? _lastReuseLogTime;
   String? _lastReusedRequestKey;
-  static const Duration _reuseLogThrottle = Duration(seconds: 3); // Throttle de 3 segundos para logs de reutilización
+  static const Duration _reuseLogThrottle = Duration(seconds: 3);
   
   // ⚡ OPTIMIZACIÓN: Throttling para errores de conexión masivos
   DateTime? _lastConnectionErrorLogTime;
   int _connectionErrorCount = 0;
   static const Duration _connectionErrorLogThrottle = Duration(seconds: 10); // Solo loggear errores de conexión cada 10 segundos cuando hay muchos
 
-  /// Obtener la instancia de Dio (singleton con lazy initialization)
-  Dio get dio {
-    // Lazy initialization: inicializar si no está inicializado
-    if (_dio == null) {
-      // Inicializar de forma asíncrona en background
-      initialize().catchError((e) {
-        // Si falla la inicialización, se manejará en el próximo acceso
-        AppLogger.error('[HttpClientService] Error en lazy initialization', e);
-      });
-      // Mientras tanto, crear una instancia temporal básica
-      return _createTemporaryDio();
-    }
-    return _dio!;
-  }
-  
+  // ✅ RECUPERAR SESIÓN: Callback global para notificar errores 401 (token expirado/inválido)
+  void Function()? onUnauthorized;
+
   /// Crear instancia temporal de Dio mientras se inicializa
   Dio _createTemporaryDio() {
     return Dio(
@@ -70,6 +58,22 @@ class HttpClientService {
         validateStatus: (status) => status != null && status < 600,
       ),
     );
+  }
+
+  /// Obtener la instancia de Dio (singleton con lazy initialization)
+  Dio get dio {
+    // Lazy initialization: inicializar si no está inicializado
+    if (_dio == null) {
+      // Inicializar de forma asíncrona en background
+
+      initialize().catchError((e) {
+        // Si falla la inicialización, se manejará en el próximo acceso
+        AppLogger.error('[HttpClientService] Error en lazy initialization', e);
+      });
+      // Mientras tanto, crear una instancia temporal básica
+      return _createTemporaryDio();
+    }
+    return _dio!;
   }
   
   /// Asegurar que el servicio esté inicializado (para uso explícito)
@@ -176,14 +180,33 @@ class HttpClientService {
 
           handler.next(options);
         },
+        onResponse: (response, handler) async {
+          // 🚨 CLAVE: Como usamos `validateStatus: < 600`, los 401s entran por onResponse, no por onError.
+          if (response.statusCode == 401) {
+            try {
+              await _secureStorage.delete(key: AppConfig.tokenKey);
+            } catch (_) {}
+            
+            if (onUnauthorized != null) {
+              AppLogger.warning('[HttpClientService] 🔒 Token expirado (401 devuelto como Response). Logout forzado...');
+              onUnauthorized!();
+            }
+          }
+          handler.next(response);
+        },
         onError: (error, handler) async {
-          // Manejar errores de autenticación (401)
+          // Manejar errores de autenticación (401) por si acaso alguien altera `validateStatus` en el futuro
           if (error.response?.statusCode == 401) {
             // Limpiar token inválido
             try {
               await _secureStorage.delete(key: AppConfig.tokenKey);
             } catch (_) {
               // Error al limpiar token - ignorar
+            }
+            // ✅ RECUPERAR SESIÓN: Notificar a AuthNotifier para limpieza global
+            if (onUnauthorized != null) {
+              AppLogger.warning('[HttpClientService] 🔒 Token expirado o inválido (401 en Error). Disparando onUnauthorized...');
+              onUnauthorized!();
             }
           }
           handler.next(error);

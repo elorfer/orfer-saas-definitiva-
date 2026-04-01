@@ -108,14 +108,24 @@ class _NativeAdListTileState extends ConsumerState<NativeAdListTile> {
     
     if (_lastIsDark != null && _lastIsDark != currentIsDark) {
       _lastIsDark = currentIsDark;
+      // ⚡ FIX: CRASH FATAL PREVENTION.
+      // Alterne modo oscuro "Se detiene la app" era porque disposing a NativeAd instantáneamente
+      // mientras el AdWidget aún intentaba desmontarse causaba un NullPointerException en JNI.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _nativeAd?.dispose();
+          final oldAd = _nativeAd;
           setState(() {
             _isLoaded = false;
             _nativeAd = null;
           });
-          _loadAd();
+          
+          // Darle tiempo holgado a Flutter para desmontar la Plataforma (PlatformView)
+          Future.delayed(const Duration(milliseconds: 500), () {
+            // Eliminar de memoria cuando ya no vive en la UI
+            oldAd?.dispose();
+            
+            if (mounted) _loadAd();
+          });
         }
       });
     }
@@ -127,8 +137,8 @@ class _NativeAdListTileState extends ConsumerState<NativeAdListTile> {
 
     final surfaceColor = NeumorphismTheme.surface;
     
-    // 📏 Altura dinámica según el tipo de anuncio
-    final double adHeight = widget.adType == NativeAdType.small ? 220 : 480;
+    // 📏 Altura dinámica según el tipo de anuncio (Margen extra para evitar errores de recorte "clipping" del validador de AdMob)
+    final double adHeight = widget.adType == NativeAdType.small ? 200 : 380;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

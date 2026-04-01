@@ -112,37 +112,16 @@ class _AdProgressBarState extends ConsumerState<_AdProgressBar>
     _lastPosition = effectivePosition;
     _lastUpdateTime = now;
     
-    // ✅ FIX: Si la posición está avanzando activamente o hay un salto, usar animación mínima
-    // para evitar el efecto de "ruido" o "detención"
-    final animationDuration = (isPositionAdvancing || isLargeJump)
-        ? const Duration(milliseconds: 50) // ✅ Animación muy rápida cuando avanza o salta
-        : const Duration(milliseconds: 150); // ✅ Animación normal cuando está estático
-    
-    // ✅ FIX: Animar suavemente hacia el progreso objetivo
-    // Se eliminó la animación de entrada "fly-in" que causaba mala experiencia
+    // ✅ FIX CRÍTICO: Eliminar TweenAnimationBuilder
+    // El stream de status ya provee animaciones suficientemente suaves
+    // Usar TweenAnimationBuilder en un stream tan frecuente asfixia el render thread y causa ANR.
     return SizedBox(
       height: 2, // ✅ Barra delgada igual al player normal
-      child: TweenAnimationBuilder<double>(
-        tween: Tween<double>(begin: _animatedProgress, end: targetProgress),
-        duration: animationDuration,
-        curve: (isPositionAdvancing || isLargeJump) 
-            ? Curves.linear 
-            : Curves.easeOutCubic,
-        onEnd: () {
-          if (mounted) {
-            setState(() {
-              _animatedProgress = targetProgress;
-            });
-          }
-        },
-        builder: (context, progress, child) {
-          return LinearProgressIndicator(
-            value: progress.clamp(0.0, 1.0),
-            backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
-            minHeight: 2,
-          );
-        },
+      child: LinearProgressIndicator(
+        value: targetProgress.clamp(0.0, 1.0),
+        backgroundColor: NeumorphismTheme.textSecondary.withValues(alpha: 0.1),
+        valueColor: AlwaysStoppedAnimation<Color>(NeumorphismTheme.coffeeMedium),
+        minHeight: 2,
       ),
     );
   }

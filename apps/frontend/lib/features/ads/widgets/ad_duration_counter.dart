@@ -19,50 +19,16 @@ class AdDurationCounter extends ConsumerStatefulWidget {
   ConsumerState<AdDurationCounter> createState() => _AdDurationCounterState();
 }
 
-class _AdDurationCounterState extends ConsumerState<AdDurationCounter>
-    with SingleTickerProviderStateMixin {
-  
-  // ✅ PROFESIONAL: AnimationController para interpolación suave
-  late AnimationController _progressController;
-  double _targetProgress = 0.0;
-  double _displayedProgress = 0.0;
-  
+class _AdDurationCounterState extends ConsumerState<AdDurationCounter> {
   // ✅ ANTI-RETROCESO: Progreso máximo alcanzado
   double _maxProgress = 0.0;
   
-  @override
-  void initState() {
-    super.initState();
-    // Duración corta para interpolación rápida pero suave
-    _progressController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    
-    _progressController.addListener(() {
-      if (mounted) {
-        setState(() {
-          _displayedProgress = _progressController.value * _targetProgress;
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _progressController.dispose();
-    super.dispose();
-  }
-
   @override
   void didUpdateWidget(AdDurationCounter oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Si cambió el anuncio, resetear todo
     if (oldWidget.ad.id != widget.ad.id) {
       _maxProgress = 0.0;
-      _targetProgress = 0.0;
-      _displayedProgress = 0.0;
-      _progressController.reset();
     }
   }
 
@@ -83,14 +49,6 @@ class _AdDurationCounterState extends ConsumerState<AdDurationCounter>
     // Actualizar máximo
     if (newProgress > _maxProgress) {
       _maxProgress = newProgress;
-    }
-    
-    // ✅ PROFESIONAL: Interpolar suavemente hacia el nuevo valor
-    _targetProgress = _maxProgress;
-    
-    // Solo animar si hay cambio significativo
-    if ((_targetProgress - _displayedProgress).abs() > 0.001) {
-      _progressController.forward(from: _displayedProgress / _maxProgress.clamp(0.001, 1.0));
     }
   }
 
@@ -128,22 +86,16 @@ class _AdDurationCounterState extends ConsumerState<AdDurationCounter>
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           children: [
-            // ✅ Barra de progreso ultra-suave
+            // ✅ FIX CRÍTICO: Eliminar TweenAnimationBuilder
+            // El rebuild a 20 FPS del stream ya lo hace lo suficientemente suave
+            // Eliminar esto evita la creación de cientos de animaciones encoladas por segundo que bloquean el UI.
             ClipRRect(
               borderRadius: const BorderRadius.all(Radius.circular(2)),
-              child: TweenAnimationBuilder<double>(
-                // ✅ PROFESIONAL: TweenAnimationBuilder para transiciones automáticas
-                tween: Tween<double>(begin: _displayedProgress, end: _maxProgress),
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-                builder: (context, value, child) {
-                  return LinearProgressIndicator(
-                    value: value,
-                    backgroundColor: Colors.white.withValues(alpha: 0.3),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                    minHeight: 4,
-                  );
-                },
+              child: LinearProgressIndicator(
+                value: _maxProgress.clamp(0.0, 1.0),
+                backgroundColor: Colors.white.withValues(alpha: 0.3),
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                minHeight: 4,
               ),
             ),
             

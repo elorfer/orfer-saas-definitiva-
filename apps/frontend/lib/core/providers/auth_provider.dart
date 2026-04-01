@@ -12,6 +12,8 @@ import 'playback_notifier.dart'; // 🎵 Playback
 import '../services/audio_service.dart'; // 🔊 Audio Service
 import '../utils/logger.dart'; // 📝 Logger
 
+import '../services/http_client_service.dart'; // 🌐 HTTP Client
+
 /// Provider para el servicio de autenticación
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
@@ -59,11 +61,19 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthService _authService;
 
-
-
   @override
   AuthState build() {
     _authService = ref.read(authServiceProvider);
+    
+    // ✅ RECUPERAR SESIÓN: Configurar callback global para capturar errores 401
+    // Si el token expira o es inválido, forzar un cierre de sesión limpio
+    HttpClientService().onUnauthorized = () {
+      if (state.isAuthenticated) {
+        debugPrint('🔒 AuthNotifier: Token expirado detectado vía onUnauthorized. Cerrando sesión...');
+        // Usar Future.microtask para evitar excepciones de Riverpod durante build o state updates
+        Future.microtask(() => logout());
+      }
+    };
     
     // Escuchar cambios de RevenueCat para actualización optimista instantánea
     // Esto elimina el delay entre la compra y la actualización de la UI

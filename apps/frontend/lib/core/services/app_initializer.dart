@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/logger.dart';
+import '../config/app_config.dart';
 import 'auth_service.dart';
 import '../providers/offline_manager_provider.dart';
 import '../providers/playback_notifier.dart';
@@ -31,6 +32,7 @@ class AppInitializer {
       // Hive y AuthService son independientes en gran medida, pueden arrancar juntos.
       // RevenueCat se excluye explícitamente por ahora.
       await Future.wait([
+        AppConfig.init(), // 🚀 Lee el pubspec.yaml dinámicamente
         _initHive(),
         _initAuth(),
         _initAudioHandler(),
