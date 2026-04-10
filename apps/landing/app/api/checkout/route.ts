@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2026-03-25.dahlia',
-});
+// Forzamos a Next.js a no intentar pre-renderizar esta ruta en Vercel
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            throw new Error('La variable STRIPE_SECRET_KEY no está configurada en Vercel.');
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+            apiVersion: '2026-03-25.dahlia',
+        });
+        
         const body = await req.json();
         
         // Parse the origin from the request to set valid success/cancel URLs
