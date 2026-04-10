@@ -28,19 +28,36 @@ export default function HomePage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const [isLoading, setIsLoading] = useState(false);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        setIsLoading(true);
 
-        // Aquí se integraría con Lemon Squeezy
-        // Por ahora, redirigimos a un checkout placeholder
-        console.log('Datos del formulario:', formData);
+        try {
+            const response = await fetch('/api/checkout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
 
-        // Ejemplo de integración con Lemon Squeezy
-        // window.LemonSqueezy.Url.Open('https://tu-tienda.lemonsqueezy.com/checkout/buy/PRODUCT_ID');
+            const data = await response.json();
 
-        // Temporal: Redirigir a WhatsApp hasta que Lemon Squeezy esté aprobado
-        const message = encodeURIComponent('¡Hola! Me interesa el servicio de producción musical con IA por $99. ¿Podemos hablar?');
-        window.open(`https://wa.me/573009012217?text=${message}`, '_blank');
+            if (data.url) {
+                // Redirigir al Checkout Seguro de Stripe
+                window.location.href = data.url;
+            } else {
+                alert('No se pudo iniciar el checkout: ' + (data.error || 'Error desconocido'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión. Revisa tu internet e intenta de nuevo.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const scrollToForm = () => {
@@ -74,23 +91,32 @@ export default function HomePage() {
         <div className="min-h-screen">
             {/* HERO SECTION */}
             <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-                {/* Animated Background */}
+                {/* Background Image & Gradient overlay */}
                 <div className="absolute inset-0 z-0">
-                    <div className="absolute top-20 left-10 w-72 h-72 bg-coffee-medium/20 rounded-full blur-3xl animate-pulse-slow"></div>
-                    <div className="absolute bottom-20 right-10 w-96 h-96 bg-coffee-light/10 rounded-full blur-3xl animate-pulse-slow animation-delay-1000"></div>
+                    <Image
+                        src="/hero-bg.png"
+                        alt="High-end Music Studio"
+                        fill
+                        className="object-cover opacity-60"
+                        priority
+                        quality={100}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-dark-bg/90 via-dark-bg/50 to-dark-bg"></div>
+                    {/* Animated Glow over image */}
+                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-coffee-medium/20 rounded-full blur-3xl animate-pulse-slow mix-blend-screen"></div>
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
+                <div className="relative z-10 max-w-6xl mx-auto px-6 text-center pt-20">
                     {/* Logo/Brand */}
-                    <div className="mb-8 animate-float">
+                    <div className="mb-12 animate-float">
                         <Image
                             src="/logo.svg"
                             alt="Struky Music AI"
-                            width={500}
-                            height={125}
+                            width={220}
+                            height={55}
                             priority
-                            className="mx-auto drop-shadow-2xl"
+                            className="mx-auto drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] w-[180px] md:w-[220px]"
                         />
                     </div>
 
@@ -231,6 +257,62 @@ export default function HomePage() {
                 </div>
             </section>
 
+            {/* ERROR VS SOLUCIÓN: ANTES Y DESPUÉS */}
+            <section className="section-padding bg-coffee-dark/10 border-y border-coffee-medium/20">
+                <div className="max-w-4xl mx-auto text-center px-4">
+                    <div className="inline-block px-4 py-1.5 rounded-full bg-coffee-medium/20 text-coffee-light text-sm font-bold mb-6">
+                        El secreto de nuestro sonido
+                    </div>
+                    <h2 className="text-3xl md:text-5xl font-display font-bold mb-6">
+                        No suena a <span className="text-gradient">robot</span>, suena a un <strong className="text-white">hit</strong>
+                    </h2>
+                    <p className="text-gray-400 mb-12 max-w-2xl mx-auto text-lg">
+                        Escucha la diferencia real entre la inteligencia artificial cruda (con voces metálicas y ruido) y la pista final después de pasar por el <strong className="text-white">estudio de un productor humano</strong>.
+                    </p>
+
+                    <div className="grid md:grid-cols-2 gap-8 mb-10 text-left">
+                        {/* ANTES */}
+                        <div className="card-dark border-gray-800 bg-black/40">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-xl">❌</div>
+                                <div>
+                                    <h3 className="font-bold text-lg">Antes (IA Cruda)</h3>
+                                    <p className="text-xs text-gray-500">Suno / Udio estándar</p>
+                                </div>
+                            </div>
+                            <ul className="text-sm text-gray-400 mb-6 space-y-2">
+                                <li>• Voces robóticas/metálicas</li>
+                                <li>• Ruido digital de fondo</li>
+                                <li>• Bajos borrosos sin definición</li>
+                                <li>• Volumen inestable</li>
+                            </ul>
+                        </div>
+
+                        {/* DESPUÉS */}
+                        <div className="card-dark border-coffee-medium/50 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-coffee-medium/20 blur-3xl rounded-full"></div>
+                            <div className="flex items-center gap-3 mb-4 relative z-10">
+                                <div className="w-10 h-10 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center font-bold text-xl">✅</div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-white">Después (Struky AI)</h3>
+                                    <p className="text-xs text-coffee-light">Máster humano + Limpieza</p>
+                                </div>
+                            </div>
+                            <ul className="text-sm text-gray-300 mb-6 space-y-2 relative z-10">
+                                <li>• Voces que cortan la mezcla</li>
+                                <li>• Audio cristalino y natural</li>
+                                <li>• Mastering para Spotify (LUFS)</li>
+                                <li>• Pegada comercial real</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <button onClick={scrollToForm} className="btn-primary flex items-center gap-2 mx-auto shadow-lg shadow-coffee-medium/20 hover:shadow-coffee-medium/40">
+                        Quiero esta calidad para mi letra
+                    </button>
+                </div>
+            </section>
+
             {/* HOW IT WORKS SECTION */}
             <section id="how-it-works" className="section-padding bg-gradient-to-b from-dark-bg to-dark-card">
                 <div className="max-w-6xl mx-auto">
@@ -337,8 +419,33 @@ export default function HomePage() {
                 </div>
             </section>
 
-            {/* ORDER FORM SECTION */}
+            {/* TARGET AUDIENCE SECTION */}
+            <section className="py-20 bg-dark-bg">
+                <div className="max-w-6xl mx-auto px-6">
+                    <h2 className="text-3xl md:text-5xl font-display font-bold text-center mb-16">
+                        ¿Para quién es <span className="text-gradient">esto?</span>
+                    </h2>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        <div className="text-center">
+                            <div className="w-16 h-16 mx-auto bg-coffee-medium/10 border border-coffee-medium/20 rounded-full flex items-center justify-center text-3xl mb-4 shadow-lg shadow-coffee-medium/5">✍️</div>
+                            <h3 className="text-xl font-bold mb-3">Letristas y Poetas</h3>
+                            <p className="text-gray-400 text-sm">Tienes cuadernos llenos de versos increíbles pero no cantas o no tocas instrumentos. Dales vida comercial hoy y retén el 100% de las regalías.</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-16 h-16 mx-auto bg-coffee-medium/10 border border-coffee-medium/20 rounded-full flex items-center justify-center text-3xl mb-4 shadow-lg shadow-coffee-medium/5">🎸</div>
+                            <h3 className="text-xl font-bold mb-3">Músicos Solistas</h3>
+                            <p className="text-gray-400 text-sm">¿Tienes la melodía pero te falta la producción, la percusión y los arreglos pesados? Nosotros construimos la pista alrededor de tu idea.</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-16 h-16 mx-auto bg-coffee-medium/10 border border-coffee-medium/20 rounded-full flex items-center justify-center text-3xl mb-4 shadow-lg shadow-coffee-medium/5">🎁</div>
+                            <h3 className="text-xl font-bold mb-3">Regalos Inolvidables</h3>
+                            <p className="text-gray-400 text-sm">Convierte tu historia de amor, votos matrimoniales o un simple poema para un ser querido en una canción de radio impecable y mágica.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
+            {/* ORDER FORM SECTION */}
             <section id="order-form" className="section-padding">
                 <div className="max-w-3xl mx-auto">
                     <div className="card-dark">
@@ -535,32 +642,64 @@ export default function HomePage() {
                                 />
                             </div>
 
-                            {/*Price Info */}
-                            <div className="bg-dark-bg border border-coffee-medium/30 rounded-lg p-6">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-lg">Producción completa:</span>
-                                    <span className="text-2xl font-bold text-gradient">$99 USD</span>
+                            {/* Price Anchoring & Scarcity */}
+                            <div className="mt-8 space-y-6">
+                                <div className="flex flex-col md:flex-row gap-6 p-6 md:p-8 bg-black/40 border border-gray-800 rounded-xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl"></div>
+                                    <div className="flex-1 opacity-70">
+                                        <h4 className="text-red-400 text-sm font-bold uppercase tracking-wider mb-2">Estudio Tradicional ❌</h4>
+                                        <p className="text-3xl font-bold text-gray-500 line-through decoration-red-500/50 mb-2">~$500 USD</p>
+                                        <p className="text-xs text-gray-500">Músicos, tiempo de estudio, ingeniero y vocalistas.</p>
+                                    </div>
+
+                                    <div className="hidden md:block w-px bg-gray-800"></div>
+
+                                    <div className="flex-1 relative z-10">
+                                        <h4 className="text-coffee-medium text-sm font-bold uppercase tracking-wider mb-2">Tu Producción Struky ✅</h4>
+                                        <div className="flex items-end gap-2 mb-2">
+                                            <p className="text-4xl font-black text-white">$50 <span className="text-xl text-gray-400 font-medium">USD</span></p>
+                                        </div>
+                                        <ul className="text-sm text-gray-300 space-y-1 mt-3">
+                                            <li className="flex gap-2"><span className="text-coffee-medium font-bold">✓</span> Canción lista en 24-48 hrs</li>
+                                            <li className="flex gap-2"><span className="text-coffee-medium font-bold">✓</span> <strong>Masterizada por humanos</strong></li>
+                                            <li className="flex gap-2"><span className="text-coffee-medium font-bold">✓</span> Calidad Spotify Premium</li>
+                                            <li className="flex gap-2"><span className="text-coffee-medium font-bold">✓</span> 100% Derechos para ti</li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                <p className="text-sm text-gray-400">
-                                    ✓ IA musical de última generación<br />
-                                    ✓ <strong>Supervisión de productores musicales profesionales humanos</strong><br />
-                                    ✓ Entrega express en 24-48 horas<br />
-                                    ✓ Archivo profesional WAV/MP3 de alta calidad<br />
-                                    ✓ Listo para Spotify, Apple Music, YouTube
-                                </p>
+                                
+                                {/* Scarcity Banner */}
+                                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-start gap-4">
+                                    <span className="text-amber-500 text-2xl mt-0.5 animate-pulse">🔥</span>
+                                    <div>
+                                        <p className="text-base text-amber-200/90 font-bold mb-1">Cupos limitados disponibles</p>
+                                        <p className="text-sm text-amber-200/70">Al depender del trabajo minucioso de productores humanos reales, cerramos pedidos una vez llegamos al límite. <span className="text-amber-400 font-bold">Solo quedan 3 cupos para esta oferta.</span></p>
+                                    </div>
+                                </div>
+                                
+                                <div className="pt-2">
+                                    <button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className={`w-full btn-primary text-xl font-bold py-4 flex items-center justify-center gap-3 relative group overflow-hidden ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
+                                    >
+                                        <svg className="w-6 h-6 text-black z-10 relative" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                        <span className="z-10 relative">{isLoading ? 'Iniciando Pago Seguro...' : 'Pagar $50 USD y Empezar'}</span>
+                                        {!isLoading && <div className="absolute inset-0 bg-gradient-to-r from-coffee-medium to-coffee-dark opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>}
+                                    </button>
+                                </div>
+
+                                {/* Guarantee Badge */}
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left mt-4 pb-2">
+                                    <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center shrink-0 border border-gray-700 shadow-inner">
+                                        <svg className="w-6 h-6 text-coffee-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-200">Garantía de Satisfacción Total</p>
+                                        <p className="text-xs text-gray-500">Pagos 100% seguros y opciones de revisión musical.</p>
+                                    </div>
+                                </div>
                             </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
-                                className="w-full btn-primary text-lg"
-                            >
-                                Proceder al pago
-                            </button>
-
-                            <p className="text-center text-sm text-gray-400">
-                                Pago 100% seguro con Stripe/Lemon Squeezy
-                            </p>
                         </form>
                     </div>
 
@@ -598,6 +737,69 @@ export default function HomePage() {
                                 <svg className="h-[30px] w-auto text-white hover:text-[#EE1D52] transition-colors" viewBox="0 0 448 512" fill="currentColor">
                                     <path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z"/>
                                 </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* TESTIMONIALS SECTION (SOCIAL PROOF) */}
+            <section className="section-padding bg-gradient-to-t from-dark-bg to-dark-card border-t border-gray-800 relative overflow-hidden">
+                <div className="absolute left-1/4 top-1/3 w-96 h-96 bg-coffee-medium/5 rounded-full blur-3xl z-0"></div>
+                <div className="max-w-6xl mx-auto px-4 relative z-10">
+                    <h2 className="text-3xl md:text-5xl font-display font-bold text-center mb-16">
+                        Historias que <span className="text-gradient">suenan increíble</span>
+                    </h2>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {/* Review 1 */}
+                        <div className="card-dark border border-gray-800 bg-black/60 text-left relative flex flex-col hover:border-coffee-medium/50 transition-colors">
+                            <div className="text-coffee-medium/30 text-6xl leading-none font-serif absolute -top-2 left-4">"</div>
+                            <div className="flex gap-1 mb-6 text-coffee-medium justify-center mt-2">
+                                ★★★★★
+                            </div>
+                            <p className="text-gray-300 text-sm mb-8 relative z-10 text-center px-2 flex-grow">
+                                Intenté producir mis letras en un par de programas de IA pero las voces sonaban metálicas. Struky logró limpiar todo eso y el master <span className="text-white font-bold">suena como si la hubiera grabado en un estudio en Miami</span>.
+                            </p>
+                            <div className="flex flex-col items-center gap-2 border-t border-gray-800/80 pt-6 mt-auto">
+                                <img src="https://randomuser.me/api/portraits/men/44.jpg" alt="Carlos M." className="w-12 h-12 rounded-full border-2 border-coffee-medium/30 object-cover" />
+                                <div className="text-center">
+                                    <p className="font-bold text-sm text-white">Carlos M.</p>
+                                    <p className="text-xs text-coffee-light/80">Cantautor Urbano</p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Review 2 */}
+                        <div className="card-dark border border-gray-800 bg-black/60 text-left relative flex flex-col hover:border-coffee-medium/50 transition-colors md:-translate-y-4 shadow-xl shadow-coffee-medium/5">
+                            <div className="text-coffee-medium/30 text-6xl leading-none font-serif absolute -top-2 left-4">"</div>
+                            <div className="flex gap-1 mb-6 text-coffee-medium justify-center mt-2">
+                                ★★★★★
+                            </div>
+                            <p className="text-gray-300 text-sm mb-8 relative z-10 text-center px-2 flex-grow">
+                                Le regalé una canción a mi esposa por nuestro aniversario usando nuestra historia. El resultado me hizo llorar. La calidad es perfecta, <span className="text-white font-bold">es imposible notar que se usó inteligencia artificial</span>.
+                            </p>
+                            <div className="flex flex-col items-center gap-2 border-t border-gray-800/80 pt-6 mt-auto">
+                                <img src="https://randomuser.me/api/portraits/men/68.jpg" alt="Andrés P." className="w-12 h-12 rounded-full border-2 border-coffee-medium/30 object-cover" />
+                                <div className="text-center">
+                                    <p className="font-bold text-sm text-white">Andrés P.</p>
+                                    <p className="text-xs text-coffee-light/80">Regalo de Aniversario</p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Review 3 */}
+                        <div className="card-dark border border-gray-800 bg-black/60 text-left relative flex flex-col hover:border-coffee-medium/50 transition-colors">
+                            <div className="text-coffee-medium/30 text-6xl leading-none font-serif absolute -top-2 left-4">"</div>
+                            <div className="flex gap-1 mb-6 text-coffee-medium justify-center mt-2">
+                                ★★★★★
+                            </div>
+                            <p className="text-gray-300 text-sm mb-8 relative z-10 text-center px-2 flex-grow">
+                                Lo estupendo no es solo el sonido musical, es <span className="text-white font-bold">la tranquilidad de que la entregan con los LUFS exactos para Spotify</span> y sin problemas de Copyright. Se paga sola si de verdad quieres profesionalismo.
+                            </p>
+                            <div className="flex flex-col items-center gap-2 border-t border-gray-800/80 pt-6 mt-auto">
+                                <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Laura V." className="w-12 h-12 rounded-full border-2 border-coffee-medium/30 object-cover" />
+                                <div className="text-center">
+                                    <p className="font-bold text-sm text-white">Laura V.</p>
+                                    <p className="text-xs text-coffee-light/80">Letrista Independiente</p>
+                                </div>
                             </div>
                         </div>
                     </div>
