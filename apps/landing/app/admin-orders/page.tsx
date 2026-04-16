@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminOrdersPage() {
     const cookieStore = await cookies();
-    const isAdmin = cookieStore.get('struky_admin_auth')?.value === process.env.ADMIN_PASSWORD;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const isAdmin = adminPassword ? cookieStore.get('struky_admin_auth')?.value === adminPassword : false;
     
     // Debug: Verifica si la contraseña maestra está cargada
     if (!process.env.ADMIN_PASSWORD) {

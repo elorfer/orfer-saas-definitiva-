@@ -123,8 +123,8 @@ export default function AdminAnalytics({ sessions }: AdminAnalyticsProps) {
                                     
                                     {/* Main Bar */}
                                     <div 
-                                        style={{ height: `${heightPercent}%` }}
-                                        className={`w-full max-w-[12px] md:max-w-[20px] rounded-t-sm transition-all duration-1000 ease-out delay-[${idx * 50}ms] scale-y-0 origin-bottom group-active:scale-y-100 animate-slide-up ${day.count > 0 ? 'bg-coffee-light' : 'bg-white/5'}`}
+                                        style={{ height: `${heightPercent}%`, animationDelay: `${idx * 40}ms` }}
+                                        className={`w-full max-w-[12px] md:max-w-[20px] rounded-t-sm animate-bar-rise ${day.count > 0 ? 'bg-coffee-light shadow-[0_0_10px_rgba(202,160,82,0.3)]' : 'bg-white/5'}`}
                                     ></div>
                                 </div>
                                 <span className={`text-[8px] md:text-[9px] font-black mt-3 transition-colors ${day.count > 0 ? 'text-gray-400' : 'text-gray-700'}`}>
@@ -137,12 +137,14 @@ export default function AdminAnalytics({ sessions }: AdminAnalyticsProps) {
             </div>
 
             <style dangerouslySetInnerHTML={{ __html: `
-                @keyframes slide-up {
-                    from { transform: scaleY(0); }
-                    to { transform: scaleY(1); }
+                @keyframes bar-rise {
+                    from { transform: scaleY(0); opacity: 0; }
+                    to { transform: scaleY(1); opacity: 1; }
                 }
-                .animate-slide-up {
-                    animation: slide-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                .animate-bar-rise {
+                    transform-origin: bottom;
+                    transform: scaleY(0);
+                    animation: bar-rise 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
             `}} />
         </div>
