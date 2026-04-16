@@ -44,8 +44,15 @@ class _UnifiedBannerAdState extends ConsumerState<UnifiedBannerAd>
   void initState() {
     super.initState();
     // 🚀 PROFESIONAL: Iniciar carga inmediatamente
+    // 🚀 ANR FIX: Defer ad loading to avoid main thread contention
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadAd();
+      Future.delayed(const Duration(seconds: 2), () {
+        // 🚀 ANR FIX (ESTABILIDAD ELITE): Solo cargar si la app sigue en primer plano
+        final lifecycle = WidgetsBinding.instance.lifecycleState;
+        if (mounted && lifecycle == AppLifecycleState.resumed) {
+          _loadAd();
+        }
+      });
     });
   }
 

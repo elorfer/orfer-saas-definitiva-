@@ -38,7 +38,19 @@ class _NativeAdListTileState extends ConsumerState<NativeAdListTile> {
   void initState() {
     super.initState();
     _lastIsDark = NeumorphismTheme.isDark;
-    _loadAd();
+    // 🚀 ANR FIX: Defer ad loading to avoid blocking main thread during startup
+    // google_mobile_ads uses WebView internally which can block the UI thread
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          // 🚀 ANR FIX (ESTABILIDAD ELITE): Solo cargar si la app sigue en primer plano
+          final lifecycle = WidgetsBinding.instance.lifecycleState;
+          if (mounted && lifecycle == AppLifecycleState.resumed) {
+            _loadAd();
+          }
+        });
+      }
+    });
   }
 
   void _loadAd() {
@@ -102,34 +114,14 @@ class _NativeAdListTileState extends ConsumerState<NativeAdListTile> {
 
   @override
   Widget build(BuildContext context) {
-    // 🚀 Escuchar cambios de tema para recargar el anuncio
-    ref.watch(themeProvider);
-    final currentIsDark = NeumorphismTheme.isDark;
-    
-    if (_lastIsDark != null && _lastIsDark != currentIsDark) {
-      _lastIsDark = currentIsDark;
-      // ⚡ FIX: CRASH FATAL PREVENTION.
-      // Alterne modo oscuro "Se detiene la app" era porque disposing a NativeAd instantáneamente
-      // mientras el AdWidget aún intentaba desmontarse causaba un NullPointerException en JNI.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          final oldAd = _nativeAd;
-          setState(() {
-            _isLoaded = false;
-            _nativeAd = null;
-          });
-          
-          // Darle tiempo holgado a Flutter para desmontar la Plataforma (PlatformView)
-          Future.delayed(const Duration(milliseconds: 500), () {
-            // Eliminar de memoria cuando ya no vive en la UI
-            oldAd?.dispose();
-            
-            if (mounted) _loadAd();
-          });
-        }
-      });
+    // 🌚 FIXED DARK MODE: No longer watching theme changes. The ad loads once in Dark Mode and stays there.
+    if (!_isLoaded && _nativeAd == null) {
+       // Si el ad es null y no est cargado, podra ser por una rotacin o reconstruccin,
+       // el initState se encargar de disparar el _loadAd inicial.
     }
-    _lastIsDark ??= currentIsDark;
+    
+    final currentIsDark = true; // Forzado
+    _lastIsDark = true;
 
     if (!_isLoaded || _nativeAd == null) {
       return const SizedBox.shrink();

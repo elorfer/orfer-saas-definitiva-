@@ -142,6 +142,8 @@ class IntelligentFeaturedService {
       }
 
       // 4. Combinar y diversificar
+      // 🚀 ANR SHIELD: Ceder el hilo antes de combinaciones pesadas
+      await Future.delayed(Duration.zero);
       final combinedResults = _combineAndDiversify(
         staticFeatured: staticFeatured,
         dynamicRecommendations: dynamicRecommendations,
@@ -501,85 +503,25 @@ class IntelligentFeaturedService {
       final maxAttempts = remainingCount > absoluteMaxAttempts ? absoluteMaxAttempts : remainingCount;
       final Map<String, int> seedAttempts = {};
       
-      while (recommendations.length < count && totalAttempts < maxAttempts && consecutiveFailures < maxConsecutiveFailures) {
-        final seedId = seeds[seedIndex % seeds.length];
-        if ((seedAttempts[seedId] ?? 0) >= 1) {
-          seedIndex++;
-          continue;
-        }
+      // 🚀 BATCH FASE 2: Evitar waterfall secuencial usando el método de batch paralelo
+      if (seeds.isNotEmpty) {
+        final missingCount = count - recommendations.length;
+        final phase2Songs = await generatePhase2RecommendationsFromSeeds(
+          seeds: seeds,
+          count: missingCount,
+          excludeIds: usedIds,
+          user: user,
+        );
         
-        final needed = 1;
-        debugPrint('🚀 [IntelligentFeatured] Fase 2: solicitando $needed recomendaciones con semilla ${seedId.substring(0, 8)}...');
-        
-        try {
-          seedAttempts[seedId] = (seedAttempts[seedId] ?? 0) + 1;
-          var batchResult = await _recommendationService.generatePlaylistBatch(
-            seedSongId: seedId,
-            count: needed,
-            user: user,
-            genres: null,
-            excludeIds: usedIds.toList(),
-            useCache: false,
-          );
-
-          if (batchResult.songs.isEmpty) {
-            debugPrint('⚠️ [IntelligentFeatured] 0 resultados en Fase 2. Intentando Relajación Nivel 1...');
-            final minimalExcludes = usedIds.toList();
-            if (minimalExcludes.length > 5) {
-               minimalExcludes.removeRange(0, minimalExcludes.length - 5);
-            }
-            if (!minimalExcludes.contains(seedId)) {
-               minimalExcludes.add(seedId);
-            }
-
-            batchResult = await _recommendationService.generatePlaylistBatch(
-               seedSongId: seedId,
-               count: needed,
-               user: user,
-               genres: null,
-               excludeIds: minimalExcludes,
-               useCache: false,
-            );
+        for (final song in phase2Songs) {
+          if (recommendations.length < count && !usedIds.contains(song.id)) {
+            recommendations.add(FeaturedSong(
+              song: song,
+              featuredReason: 'Recomendada por IA • ${_getRecommendationReason(recommendations.length)}',
+              rank: recommendations.length + 1,
+            ));
+            usedIds.add(song.id);
           }
-
-          if (batchResult.songs.isEmpty) {
-            consecutiveFailures++;
-            debugPrint('❌ [IntelligentFeatured] Fase 2: 0 recomendaciones recibidas.');
-            
-            // Fallback rápido a populares si falla Fase 2
-            final fallbackNeeded = (count - recommendations.length).clamp(1, 2);
-            final fallback = await _getPopularDiverseSongs(count: fallbackNeeded, excludeIds: usedIds);
-            if (fallback.isNotEmpty) {
-              for (final fs in fallback) {
-                if (recommendations.length < count && !usedIds.contains(fs.song.id)) {
-                  recommendations.add(FeaturedSong(
-                    song: fs.song,
-                    featuredReason: 'Popular • ${fs.song.totalStreams}',
-                    rank: recommendations.length + 1,
-                  ));
-                  usedIds.add(fs.song.id);
-                }
-              }
-            }
-            break; // Cortar el loop si falló y usamos fallback
-          } else {
-            consecutiveFailures = 0;
-            for (final song in batchResult.songs) {
-              if (recommendations.length < count && !usedIds.contains(song.id)) {
-                recommendations.add(FeaturedSong(
-                  song: song,
-                  featuredReason: 'Recomendada por IA • ${_getRecommendationReason(recommendations.length)}',
-                  rank: recommendations.length + 1,
-                ));
-                usedIds.add(song.id);
-                if (!seeds.contains(song.id)) seeds.add(song.id);
-              }
-            }
-          }
-        } catch (error) {
-          debugPrint('❌ [IntelligentFeatured] Error en Fase 2: $error');
-          seedIndex++;
-          totalAttempts++;
         }
       }
     }

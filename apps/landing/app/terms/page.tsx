@@ -8,7 +8,7 @@ export default function TermsPage() {
                     ← Volver al inicio
                 </Link>
 
-                <h1 className="text-4xl md:text-5xl font-display font-bold mb-8">
+                <h1 className="text-4xl md:text-5xl font-heading font-bold mb-8">
                     Términos de <span className="text-gradient">Servicio</span>
                 </h1>
 
@@ -23,10 +23,13 @@ export default function TermsPage() {
 
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">2. Descripción del Servicio</h2>
-                        <p>
+                        <p className="mb-3">
                             Struky ofrece servicios de producción musical asistida por inteligencia artificial avanzada,
                             supervisada y refinada por productores musicales profesionales humanos. Convertimos letras de canciones proporcionadas por el cliente
                             en producciones musicales de calidad profesional.
+                        </p>
+                        <p>
+                            Dependiendo del plan elegido (Pro o Elite), el servicio puede incluir un <strong>Video Obsequio</strong> (visualizer o video lírico sencillo) como complemento a la producción musical. Este video es un valor añadido y no constituye el núcleo principal del servicio de producción.
                         </p>
                     </section>
 

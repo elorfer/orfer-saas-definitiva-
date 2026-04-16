@@ -1,0 +1,60 @@
+'use client';
+
+import { Star, Quote } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+export default function Testimonials({ t }: { t: any }) {
+    const list = [
+        { text: t.t1, author: t.t1_a, img: "https://randomuser.me/api/portraits/men/1.jpg" },
+        { text: t.t2_t, author: t.t2_a, img: "https://randomuser.me/api/portraits/women/2.jpg" },
+        { text: t.t3_t, author: t.t3_a, img: "https://randomuser.me/api/portraits/men/3.jpg" },
+        { text: t.t4_t, author: t.t4_a, img: "https://randomuser.me/api/portraits/women/4.jpg" }
+    ];
+
+    return (
+        <section className="section-padding bg-dark-bg overflow-hidden">
+            <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl md:text-5xl font-bold mb-4">{t.title}</h2>
+                    <p className="text-gray-500 max-w-2xl mx-auto">
+                        Más de 500 artistas han transformado su música con nosotros.
+                    </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-8">
+                    {list.map((item, i) => (
+                        <motion.div 
+                            key={i}
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: i * 0.1 }}
+                            className="card-dark p-8 relative flex flex-col justify-between hover:bg-white/[0.04] transition-all border-white/5"
+                        >
+                            <Quote className="absolute top-6 right-8 w-10 h-10 text-coffee-medium/10 rotate-180" />
+                            
+                            <div className="mb-6">
+                                <div className="flex gap-1 text-coffee-medium mb-4">
+                                    {[1, 2, 3, 4, 5].map(star => <Star key={star} className="w-4 h-4 fill-current" />)}
+                                </div>
+                                <p className="text-lg text-gray-300 italic leading-relaxed">
+                                    "{item.text}"
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-4 mt-auto">
+                                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-coffee-medium/30">
+                                    <img src={item.img} alt={item.author} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-white">{item.author}</span>
+                                    <span className="text-xs text-coffee-light uppercase tracking-widest font-bold">Artista Verificado</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}

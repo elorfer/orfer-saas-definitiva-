@@ -39,8 +39,12 @@ export async function POST(req: Request) {
             mood: String(body.mood || '').substring(0, 500),
             referenceTrack: String(body.referenceTrack || '').substring(0, 500),
             notes: String(body.notes || '').substring(0, 500),
+            phone: String(body.phone || '').substring(0, 500),
+            plan: String(body.plan || 'Starter').substring(0, 500),
             ...lyricsMetadata
         };
+
+        const finalPrice = [50, 97, 147].includes(Number(body.price)) ? Number(body.price) : 50;
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -50,16 +54,16 @@ export async function POST(req: Request) {
                     price_data: {
                         currency: 'usd',
                         product_data: {
-                            name: 'Producción Musical Struky AI',
-                            description: 'Tu canción masterizada profesionalmente en 24-48 hrs.',
+                            name: `Plan ${body.plan || 'Starter'} - Struky AI`,
+                            description: 'Tu producción musical personalizada con calidad internacional.',
                         },
-                        unit_amount: 5000, // $50.00 USD
+                        unit_amount: finalPrice * 100,
                     },
                     quantity: 1,
                 },
             ],
             mode: 'payment',
-            success_url: `${origin}/success`,
+            success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${origin}?canceled=true`,
             metadata: safeMetadata,
             payment_intent_data: {

@@ -1,0 +1,8 @@
+﻿e86ee2b0b54d798b62938c768230721cc10aff7d	HEAD
+e86ee2b0b54d798b62938c768230721cc10aff7d	refs/heads/master
+463bba709024a4ade92fc39fddf797599e49f855	refs/tags/v1.0-beta
+d458dfea19eaf5adf90300514904fdbc07fbd81d	refs/tags/v1.0-beta^{}
+b15539d543fc4ebdbfee46bf4e06ed274dc6a741	refs/tags/v1.0.0
+5e2153e6a72ad081e6f781b3d36e390d0f50ab89	refs/tags/v1.0.0^{}
+087615015d700197351158aff784abd5f67d59a1	refs/tags/v1.0.0-PROD
+fa23b171783f664a3595f568eb90cfc932ce8de5	refs/tags/v1.0.0-PROD^{}

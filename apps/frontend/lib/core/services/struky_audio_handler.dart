@@ -296,7 +296,8 @@ class StrukyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler
 
   @override
   Future<void> skipToQueueItem(int index) async {
-    if (index < 0 || index >= (_player.sequence.length ?? 0)) return;
+    final seqLength = _player.sequence != null ? _player.sequence!.length : 0;
+    if (index < 0 || index >= seqLength) return;
     await _player.seek(Duration.zero, index: index);
   }
 

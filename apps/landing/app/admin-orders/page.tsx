@@ -1,0 +1,127 @@
+import Stripe from 'stripe';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import ClientOrderManager from './ClientOrderManager';
+import { Suspense } from 'react';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2026-03-25.dahlia',
+});
+
+// Forzamos a que no se cachee esta página
+export const dynamic = 'force-dynamic';
+
+export default async function AdminOrdersPage() {
+    const cookieStore = await cookies();
+    const isAdmin = cookieStore.get('struky_admin_auth')?.value === process.env.ADMIN_PASSWORD;
+    
+    // Debug: Verifica si la contraseña maestra está cargada
+    if (!process.env.ADMIN_PASSWORD) {
+        console.warn('⚠️ ALERTA: La contraseña de administrador no está configurada.');
+    }
+
+    // Si no está autenticado, mostramos un formulario de login súper simple en la misma página
+    if (!isAdmin) {
+        return (
+            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
+                <form action={async (formData) => {
+                    'use server'
+                    const password = formData.get('password');
+                    if (password === process.env.ADMIN_PASSWORD) {
+                        const cookieStore = await cookies();
+                        cookieStore.set('struky_admin_auth', password as string, {
+                            httpOnly: true,
+                            secure: process.env.NODE_ENV === 'production',
+                            sameSite: 'lax',
+                            maxAge: 60 * 60 * 24 // 24 horas
+                        });
+                        redirect('/admin-orders');
+                    }
+                }} className="glass-morphism p-8 rounded-3xl w-full max-w-md border border-white/10">
+                    <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Panel de Control Struky</h1>
+                    <input 
+                        type="password" 
+                        name="password" 
+                        placeholder="Contraseña de Administrador"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-4 focus:border-coffee-light outline-none"
+                    />
+                    <button type="submit" className="btn-primary w-full">Entrar</button>
+                </form>
+            </div>
+        );
+    }
+
+    // Si está autenticado, cargamos los pedidos de Stripe
+    const sessions = await stripe.checkout.sessions.list({
+        limit: 100, // Aumentamos límite para que el filtrado sea más útil
+        status: 'complete',
+        expand: ['data.payment_intent']
+    });
+
+    // Estadísticas
+    const stats = {
+        total: sessions.data.length,
+        pending: sessions.data.filter(s => (s.metadata?.status || 'Pendiente') === 'Pendiente').length,
+        inProgress: sessions.data.filter(s => s.metadata?.status === 'Producción').length,
+        completed: sessions.data.filter(s => s.metadata?.status === 'Entregado').length,
+    };
+
+    return (
+        <main className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
+            <div className="max-w-7xl mx-auto">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-coffee-medium flex items-center justify-center animate-pulse shadow-[0_0_15px_rgba(202,160,82,0.3)]">
+                                <div className="w-4 h-4 bg-white rounded-sm"></div>
+                            </div>
+                            <h1 className="text-4xl font-black tracking-tighter text-gradient">Struky Admin</h1>
+                        </div>
+                        <p className="text-gray-500 text-sm">Control central de producciones musicales</p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4 items-center">
+                        <form action={async () => {
+                            'use server'
+                            const cookieStore = await cookies();
+                            cookieStore.delete('struky_admin_auth');
+                            redirect('/admin-orders');
+                        }}>
+                            <button type="submit" className="text-[9px] font-bold text-gray-600 hover:text-red-500 uppercase tracking-widest transition-colors border border-white/5 px-3 py-2 rounded-xl">
+                                Cerrar Sesión
+                            </button>
+                        </form>
+
+                        {[
+                            { label: 'Pendientes', value: stats.pending, color: 'text-coffee-light' },
+                            { label: 'Producción', value: stats.inProgress, color: 'text-blue-400' },
+                            { label: 'Entregados', value: stats.completed, color: 'text-green-400' }
+                        ].map(stat => (
+                            <div key={stat.label} className="bg-white/5 border border-white/10 px-5 py-2 rounded-2xl flex flex-col items-center min-w-[100px]">
+                                <span className={`text-xl font-black ${stat.color}`}>{stat.value}</span>
+                                <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{stat.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </header>
+
+                <Suspense fallback={<div className="text-gray-500">Cargando gestión...</div>}>
+                    <ClientOrderManager initialSessions={sessions.data} />
+                </Suspense>
+            </div>
+            
+            <style dangerouslySetInnerHTML={{ __html: `
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.05);
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #caa052;
+                    border-radius: 10px;
+                }
+            `}} />
+        </main>
+    );
+}

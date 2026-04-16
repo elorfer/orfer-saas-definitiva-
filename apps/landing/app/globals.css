@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -8,58 +8,53 @@
     --color-dark-bg: #0a0a0a;
     --color-dark-card: #141414;
 
-    --font-family-display: 'Inter', sans-serif;
+    --font-family-sans: 'Inter', system-ui, sans-serif;
+    --font-family-heading: 'Outfit', sans-serif;
 }
 
 @layer base {
     body {
         background-color: var(--color-dark-bg);
         color: white;
+        font-family: var(--font-family-sans);
     }
 
     html {
         scroll-behavior: smooth;
     }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: var(--font-family-heading);
+    }
 }
 
 @layer components {
-    .btn-primary {
-        @apply bg-gradient-to-r from-[#8D6E63] to-[#5D4037] text-white font-bold py-4 px-8 rounded-full transition-all duration-300 hover:scale-105 active:scale-95;
-        box-shadow: 0 0 20px rgba(141, 110, 99, 0.4);
+    .glass-morphism {
+        @apply bg-black/40 backdrop-blur-xl shadow-2xl shadow-black/50 border-none;
     }
 
-    .btn-primary:hover {
-        box-shadow: 0 0 30px rgba(141, 110, 99, 0.6);
+    .brand-whatsapp {
+        background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    }
+
+    .btn-primary {
+        @apply bg-gradient-to-r from-coffee-medium to-coffee-dark text-white font-bold py-4 px-8 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-coffee-medium/20;
     }
 
     .btn-secondary {
-        @apply bg-transparent border-2 text-white font-bold py-3 px-6 rounded-full transition-all duration-300;
-        border-color: var(--color-coffee-medium);
-    }
-
-    .btn-secondary:hover {
-        background-color: var(--color-coffee-medium);
-        box-shadow: 0 0 20px rgba(141, 110, 99, 0.4);
+        @apply bg-transparent border border-coffee-medium/40 text-white font-bold py-3 px-6 rounded-full transition-all duration-300 hover:bg-coffee-medium/10 hover:border-coffee-medium;
     }
 
     .card-dark {
-        background-color: var(--color-dark-card);
-        @apply rounded-2xl p-6 border border-gray-800 transition-all duration-300;
-    }
-
-    .card-dark:hover {
-        border-color: rgba(168, 85, 247, 0.5);
+        @apply bg-dark-card rounded-2xl p-6 border border-white/5 transition-all duration-300 hover:border-coffee-medium/30 hover:bg-white/[0.02];
     }
 
     .text-gradient {
-        background: linear-gradient(135deg, #D7CCC8 0%, #8D6E63 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-coffee-light to-coffee-medium;
     }
 
     .section-padding {
-        @apply py-20 px-6 md:px-12 lg:px-24;
+        @apply py-24 px-6 md:px-12 lg:px-24;
     }
 }
 
@@ -68,70 +63,33 @@
         text-shadow: 0 0 20px rgba(215, 204, 200, 0.3);
     }
 
-    .neon-border {
-        border: 2px solid;
-        border-image: linear-gradient(135deg, #D7CCC8, #8D6E63) 1;
-    }
-
-    /* Custom Audio Player Styles */
-    .audio-player {
-        height: 40px;
-        border-radius: 20px;
-        background: rgba(141, 110, 99, 0.1);
-        border: 1px solid rgba(141, 110, 99, 0.3);
-    }
-
-    .audio-player::-webkit-media-controls-panel {
-        background: linear-gradient(to right, rgba(141, 110, 99, 0.2), rgba(215, 204, 200, 0.2));
-        border-radius: 20px;
-    }
-
-    .audio-player::-webkit-media-controls-play-button,
-    .audio-player::-webkit-media-controls-pause-button {
-        background-color: #8D6E63;
-        border-radius: 50%;
-    }
-
-    .audio-player::-webkit-media-controls-current-time-display,
-    .audio-player::-webkit-media-controls-time-remaining-display {
-        color: #fff;
-    }
-
-    .audio-player::-webkit-media-controls-timeline {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 25px;
-        margin: 0 10px;
-    }
-
-    .bg-neon-glow {
-        background: linear-gradient(135deg, #D7CCC8 0%, #8D6E63 100%);
-    }
-
-    .shadow-neon-purple {
-        box-shadow: 0 0 20px rgba(141, 110, 99, 0.4);
-    }
-
-    .shadow-neon-blue {
-        box-shadow: 0 0 20px rgba(215, 204, 200, 0.4);
-    }
-
     .animate-pulse-slow {
-        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
     .animate-float {
-        animation: float 3s ease-in-out infinite;
+        animation: float 6s ease-in-out infinite;
     }
 
     @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-15px); }
+    }
 
-        0%,
-        100% {
-            transform: translateY(0px);
-        }
+    /* Custom Audio Player Styles */
+    .audio-player-custom {
+        @apply w-full h-12 rounded-full px-4 flex items-center gap-4 bg-white/5 border border-white/10;
+    }
 
-        50% {
-            transform: translateY(-10px);
-        }
+    .scarcity-banner {
+        @apply bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 text-amber-500;
+    }
+
+    .comparison-grid {
+        @apply grid grid-cols-1 md:grid-cols-2 gap-px bg-white/5 rounded-3xl overflow-hidden border border-white/10;
+    }
+
+    .comparison-col {
+        @apply p-8 md:p-10;
     }
 }

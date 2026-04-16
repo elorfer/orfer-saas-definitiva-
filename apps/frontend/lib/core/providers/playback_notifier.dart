@@ -147,9 +147,6 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
   bool _nextSongPrepared = false; // Flag para evitar preparación múltiple
   int? _lastPreparedSongIndex; // Trackear qué canción fue preparada
   
-  // 🎯 OPTIMIZACIÓN: Throttling de actualizaciones de posición
-  DateTime? _lastPositionUpdateTime;
-  
   // 🛡️ PREVENCIÓN DE COLA VACÍA: Sistema robusto de protección
   static const int _minQueueSize = 5; // Tamaño mínimo garantizado de la cola
   // 🎯 FASE 2: Usar preloadThreshold como umbral crítico (unificado)
@@ -1508,21 +1505,7 @@ class PlaybackNotifier extends Notifier<PlaybackState> {
         }
         */
 
-        // ✅ OPTIMIZACIÓN CRÍTICA PARA ANR: Throttling de actualizaciones de posición
-        // No notificar al estado si el cambio es insignificante ( < 250ms )
-        // Esto reduce drásticamente el número de rebuilds/notifications globales.
-        final now = DateTime.now();
-        final diffMs = (position - (state.currentPosition)).inMilliseconds.abs();
-        final timeSinceLastUpdate = _lastPositionUpdateTime != null 
-            ? now.difference(_lastPositionUpdateTime!) 
-            : const Duration(seconds: 1);
-
-        if (diffMs < 250 && timeSinceLastUpdate < const Duration(milliseconds: 250)) {
-           return; 
-        }
-
         // Actualizar posición (válida)
-        _lastPositionUpdateTime = now;
         state = state.copyWith(currentPosition: position);
         
         // 🚀 SPOTIFY-LEVEL: Pre-cargar audio de siguiente canción

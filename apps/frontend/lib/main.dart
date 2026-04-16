@@ -112,9 +112,9 @@ Future<void> _mainApp() async {
   // Carga Hive y AuthService simultáneamente sin bloquear innecesariamente
   await AppInitializer.init();
   
-  // 📢 ADMOB: Inicializar SDK en segundo plano
-  // No bloquea el inicio de la app pero asegura que esté listo para el primer anuncio
-  unawaited(AdMobService.initialize());
+  // 📢 ADMOB: Inicializar SDK en segundo plano con delay
+  // 🚀 ANR FIX: Defer 3s to let UI render first - AdMob WebView competes for main thread
+  Future.delayed(const Duration(seconds: 3), () => AdMobService.initialize());
   
   // 🚀 OPTIMIZACIÓN DE MEMORIA: Limitar caché de imágenes
   // Evita que la app consuma GBs de RAM en sesiones largas

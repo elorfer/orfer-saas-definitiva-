@@ -1,0 +1,5 @@
+﻿DATE: Wed Apr 1 01:56:46 2026 -0500  REF:  (refs/stash)  MSG: On master: Backup antes de restaurar la mas reciente subida
+DATE: Wed Apr 1 01:56:46 2026 -0500  REF:   MSG: index on master: fa23b17 Version 1.0 Oficial Producci├│n - Soluci├│n a solapamiento de pantallas de actualizaci├│n y mejoras visuales
+DATE: Tue Mar 31 23:11:04 2026 -0500  REF:  (HEAD -> master, origin/master)  MSG: feat: stable production build 1.0.3+11 - Fixes for AdMob, Auth 401, and Dynamic Versioning
+DATE: Tue Mar 31 02:06:36 2026 -0500  REF:   MSG: Actualizar cambios en admin para Vercel
+DATE: Sun Mar 29 21:33:18 2026 -0500  REF:  (tag: v1.0.0-PROD)  MSG: Version 1.0 Oficial Producci├│n - Soluci├│n a solapamiento de pantallas de actualizaci├│n y mejoras visuales

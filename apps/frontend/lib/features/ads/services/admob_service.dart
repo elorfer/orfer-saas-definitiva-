@@ -12,7 +12,7 @@ class AdMobService {
   // IMPORTANTE: Si es 'false' en el Emulador, Google Mobile Ads bloqueará la petición 
   // para proteger tu cuenta y arrojará "Error 3: No fill".
   // Solo ponlo en 'false' cuando vayas a compilar a la PlayStore.
-  static const bool isTestMode = false; 
+  static const bool isTestMode = true; // ⚠️ DEVELOPMENT: Set to false only for Play Store builds
 
   /// IDs de prueba de Google
   static const String _androidBannerTestId = 'ca-app-pub-3940256099942544/6300978111';

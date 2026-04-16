@@ -27,12 +27,14 @@ export class CreateAdDto {
   description?: string;
 
   @ApiPropertyOptional({ description: 'URL del archivo de audio (se puede subir después)', example: 'https://cdn.example.com/ads/audio.mp3' })
-  @IsUrl()
+  @ValidateIf((o) => o.audioUrl && o.audioUrl !== '')
+  @IsUrl({ require_tld: false })
   @IsOptional()
   audioUrl?: string;
 
   @ApiPropertyOptional({ description: 'URL de la carátula del anuncio' })
-  @IsUrl()
+  @ValidateIf((o) => o.coverImageUrl && o.coverImageUrl !== '')
+  @IsUrl({ require_tld: false })
   @IsOptional()
   coverImageUrl?: string;
 
@@ -42,7 +44,8 @@ export class CreateAdDto {
   advertiserName: string;
 
   @ApiPropertyOptional({ description: 'URL a abrir al hacer click en el anuncio' })
-  @IsUrl()
+  @ValidateIf((o) => o.clickThroughUrl && o.clickThroughUrl !== '')
+  @IsUrl({ require_tld: false })
   @IsOptional()
   clickThroughUrl?: string;
 

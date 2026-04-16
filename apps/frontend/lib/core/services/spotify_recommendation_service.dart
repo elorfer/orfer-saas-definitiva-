@@ -295,7 +295,7 @@ class SpotifyRecommendationService {
       // Si aún no hay genreId y no hay nombres de géneros, intentar recuperar metadata de la canción (backend)
       if (resolvedGenreId == null && normalizedGenres.isEmpty && !_songGenreCache.containsKey(seedSongId)) {
         try {
-          debugPrint('🔍 [SpotifyRec Batch] Obteniendo metadata de canción para extraer genreId: $seedSongId');
+          // debugPrint('🔍 [SpotifyRec Batch] Obteniendo metadata de canción para extraer genreId: $seedSongId');
           final songResp = await _httpClient.dio.get('/public/songs/$seedSongId',
             options: Options(receiveTimeout: const Duration(seconds: 3), sendTimeout: const Duration(seconds: 3)),
           );
@@ -312,7 +312,7 @@ class SpotifyRecommendationService {
                 }
               }
               _songGenreCache[seedSongId] = rawCandidate;
-              debugPrint('🔍 [SpotifyRec Batch] genre mapping: $rawCandidate (isUuid: ${isValidUuid(rawCandidate)})');
+              // debugPrint('🔍 [SpotifyRec Batch] genre mapping: $rawCandidate (isUuid: ${isValidUuid(rawCandidate)})');
             }
           }
         } catch (e) {
@@ -349,7 +349,7 @@ class SpotifyRecommendationService {
       final maxExcludeIds = AlgorithmConfigService.instance.currentConfig.effectiveHistorySize;
       var effectiveExcludeIds = excludeIds;
       if (excludeIds.length > maxExcludeIds) {
-        debugPrint('⚠️ [SpotifyRec Batch] Demasiados excludeIds (${excludeIds.length}). Limitando a últimos $maxExcludeIds (Admin config).');
+        // debugPrint('⚠️ [SpotifyRec Batch] Demasiados excludeIds (${excludeIds.length}). Limitando a últimos $maxExcludeIds (Admin config).');
         // Tomar solo los últimos N (los más recientes)
         effectiveExcludeIds = excludeIds.skip(excludeIds.length - maxExcludeIds).toList();
       }
@@ -359,16 +359,16 @@ class SpotifyRecommendationService {
       }
 
       // 🚀 NUEVO ENDPOINT: /public/songs/playlist/generate
-      debugPrint('🚀 [SpotifyRec Batch] ⚠️ NUEVO ENDPOINT: Llamando a /public/songs/playlist/generate');
-      debugPrint('🚀 [SpotifyRec Batch] Parámetros: seed=$seedSongId, count=$count, excludeIds=${excludeIds.length}, genreId=$genreId');
+      // debugPrint('🚀 [SpotifyRec Batch] ⚠️ NUEVO ENDPOINT: Llamando a /public/songs/playlist/generate');
+      // debugPrint('🚀 [SpotifyRec Batch] Parámetros: seed=$seedSongId, count=$count, excludeIds=${excludeIds.length}, genreId=$genreId');
       debugPrint('GENRE_DEBUG before request: seed=$seedSongId resolvedGenreId=$resolvedGenreId providedGenreParam=$genreId');
       
       final requestKey = '/public/songs/playlist/generate?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
       
-      debugPrint('🚀 [SpotifyRec Batch] Request key: $requestKey');
+      // debugPrint('🚀 [SpotifyRec Batch] Request key: $requestKey');
       // Depuración adicional: imprimir mapa de parámetros final para confirmar genreId
-      debugPrint('🔍 [SpotifyRec Batch] Final queryParams: $queryParams');
-      debugPrint('🔍 [SpotifyRec Batch] genreId used: ${queryParams['genreId'] ?? 'none'}');
+      // debugPrint('🔍 [SpotifyRec Batch] Final queryParams: $queryParams');
+      // debugPrint('🔍 [SpotifyRec Batch] genreId used: ${queryParams['genreId'] ?? 'none'}');
       debugPrint('GENRE_DEBUG Final queryParams (text): ${queryParams.entries.map((e) => '${e.key}=${e.value}').join(', ')}');
       
       final response = await HttpRequestPool().executeRequest(
@@ -393,7 +393,7 @@ class SpotifyRecommendationService {
       try {
         final raw = response.data;
         final rawStr = raw is String ? raw : raw.toString();
-        debugPrint('🔎 [SpotifyRec Batch] RAW response body (trunc 4000): ${rawStr.length > 4000 ? "${rawStr.substring(0, 4000)}..." : rawStr}');
+        // debugPrint('🔎 [SpotifyRec Batch] RAW response body (trunc 4000): ${rawStr.length > 4000 ? "${rawStr.substring(0, 4000)}..." : rawStr}');
       } catch (_) {}
 
       if (response.statusCode == 200) {
@@ -406,50 +406,28 @@ class SpotifyRecommendationService {
         final String? originalGenre = data['originalGenre'] as String?;
         
         if (vibeChangedToMix) {
-          debugPrint('🔀 [SpotifyRec Batch] ¡Backend activó modo MIX! Género agotado: $originalGenre');
+          // debugPrint('🔀 [SpotifyRec Batch] ¡Backend activó modo MIX! Género agotado: $originalGenre');
         }
         
         if (data['songs'] != null && data['songs'] is List) {
           final songsList = data['songs'] as List;
 
-          // Normalizar todos los items primero (rápido, sin parse pesado)
-          final normalizedList = <Map<String, dynamic>>[];
-          for (final songData in songsList) {
-            try {
-              final songMap = Map<String, dynamic>.from(songData);
-
-              if (songMap['fileUrl'] != null && songMap['file_url'] == null) {
-                songMap['file_url'] = songMap['fileUrl'];
-              }
-
-              final normalizedSong = DataNormalizer.normalizeSong(songMap);
-
-              if ((normalizedSong['file_url'] == null || normalizedSong['file_url'] == '') &&
-                  songMap['fileUrl'] != null) {
-                normalizedSong['file_url'] = songMap['fileUrl'];
-                normalizedSong['fileUrl'] = songMap['fileUrl'];
-              }
-
-              final rawCoverUrl = normalizedSong['cover_art_url'] as String?;
-              final normalizedCoverUrl = UrlNormalizer.normalizeImageUrl(rawCoverUrl);
-              if (normalizedCoverUrl != null) {
-                normalizedSong['cover_art_url'] = normalizedCoverUrl;
-              }
-
-              final rawFileUrl = normalizedSong['file_url'] as String?;
-              if (rawFileUrl != null && rawFileUrl.isNotEmpty) {
-                final normalizedFileUrl = UrlNormalizer.normalizeUrl(rawFileUrl);
-                normalizedSong['file_url'] = normalizedFileUrl;
-                normalizedSong['fileUrl'] = normalizedFileUrl;
-              }
-
-              normalizedList.add(normalizedSong);
-            } catch (e) {
-              debugPrint('⚠️ [SpotifyRec Batch] Error normalizando canción: $e');
+          // 🚀 ANR FIX: Mover TODA la normalización de JSON al Isolate en background
+          // Esto evita bloquear el hilo principal al procesar docenas de canciones complejas
+          List<Map<String, dynamic>> normalizedList = [];
+          try {
+            normalizedList = await DataNormalizer.normalizeSongsAsync(songsList);
+          } catch (e) {
+            debugPrint('⚠️ [SpotifyRec Batch] Error en normalización asíncrona: $e');
+            // Fallback síncrono ultra-rápido en caso extremo de fallo del isolate
+            for (final songData in songsList) {
+               try {
+                  normalizedList.add(DataNormalizer.normalizeSong(Map<String, dynamic>.from(songData)));
+               } catch (_) {}
             }
           }
 
-          // Parsear en batch en un isolate para evitar bloquear el UI thread
+          // Parsear en batch en un isolate estructurado para los Modelos Dart
           List<Song> parsedSongs = [];
           try {
             parsedSongs = await Song.parseList(normalizedList);
@@ -465,7 +443,7 @@ class SpotifyRecommendationService {
           final songs = parsedSongs.where((s) => s.isValidForPlayback).toList();
 
           _successfulRecommendations += songs.length;
-          debugPrint('✅ [SpotifyRec Batch] ${songs.length} canciones parseadas exitosamente');
+          // debugPrint('✅ [SpotifyRec Batch] ${songs.length} canciones parseadas exitosamente');
 
           return BatchResult(
             songs: songs,
@@ -474,7 +452,7 @@ class SpotifyRecommendationService {
           );
         }
         
-        debugPrint('⚠️ [SpotifyRec Batch] Respuesta no contiene campo "songs" o no es una lista');
+        // debugPrint('⚠️ [SpotifyRec Batch] Respuesta no contiene campo "songs" o no es una lista');
         return const BatchResult(songs: []);
       }
       

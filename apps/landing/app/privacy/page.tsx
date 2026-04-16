@@ -8,7 +8,7 @@ export default function PrivacyPage() {
                     ← Volver al inicio
                 </Link>
 
-                <h1 className="text-4xl md:text-5xl font-display font-bold mb-8">
+                <h1 className="text-4xl md:text-5xl font-heading font-bold mb-8">
                     Política de <span className="text-gradient">Privacidad</span>
                 </h1>
 

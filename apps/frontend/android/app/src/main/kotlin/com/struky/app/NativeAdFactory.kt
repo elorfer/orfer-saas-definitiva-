@@ -50,21 +50,46 @@ class ListTileNativeAdFactory(private val layoutInflater: LayoutInflater) : Goog
             adView.mediaView = mediaView
         }
 
-        // 🎨 APLICAR ESTILOS PROFESIONALES
-        card.setCardBackgroundColor(Color.parseColor(surfaceColor))
-        headline.setTextColor(Color.parseColor(textPrimary))
-        body.setTextColor(Color.parseColor(textSecondary))
-        advertiser.setTextColor(Color.parseColor(textSecondary))
+        // 🎨 APLICAR ESTILOS PROFESIONALES (with try-catch safety)
+        try {
+            card.setCardBackgroundColor(Color.parseColor(surfaceColor))
+        } catch (e: Exception) {
+            card.setCardBackgroundColor(if (isDark) Color.parseColor("#141414") else Color.WHITE)
+        }
         
-        // Badge color
-        (badge.background as? GradientDrawable)?.setColor(Color.parseColor(accentColor))
+        try {
+            headline.setTextColor(Color.parseColor(textPrimary))
+        } catch (e: Exception) {
+            headline.setTextColor(if (isDark) Color.WHITE else Color.BLACK)
+        }
+        
+        try {
+            val secondaryColorInt = Color.parseColor(textSecondary)
+            body.setTextColor(secondaryColorInt)
+            advertiser.setTextColor(secondaryColorInt)
+        } catch (e: Exception) {
+            val fallbackSecondary = if (isDark) Color.LTGRAY else Color.GRAY
+            body.setTextColor(fallbackSecondary)
+            advertiser.setTextColor(fallbackSecondary)
+        }
+        
+        // Badge color with safety
+        try {
+            (badge.background as? GradientDrawable)?.setColor(Color.parseColor(accentColor))
+        } catch (e: Exception) {
+            (badge.background as? GradientDrawable)?.setColor(if (isDark) Color.DKGRAY else Color.GRAY)
+        }
         badge.setTextColor(if (isDark) Color.BLACK else Color.WHITE)
 
-        // CTA Button color & ripple
-        val ripple = cta.background as? RippleDrawable
-        val ctaShape = ripple?.findDrawableByLayerId(android.R.id.mask) as? GradientDrawable 
-            ?: (ripple?.getDrawable(0) as? GradientDrawable)
-        ctaShape?.setColor(Color.parseColor(accentColor))
+        // CTA Button color & ripple with safety
+        try {
+            val ripple = cta.background as? RippleDrawable
+            val ctaShape = ripple?.findDrawableByLayerId(android.R.id.mask) as? GradientDrawable 
+                ?: (ripple?.getDrawable(0) as? GradientDrawable)
+            ctaShape?.setColor(Color.parseColor(accentColor))
+        } catch (e: Exception) {
+            // Silently fail or use default
+        }
         cta.setTextColor(if (isDark) Color.BLACK else Color.WHITE)
 
         // 🛡️ RELLENAR DATOS

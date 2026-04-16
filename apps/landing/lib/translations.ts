@@ -1,0 +1,142 @@
+export const translations = {
+  es: {
+    hero: {
+      tag: "Struky Music AI",
+      title: "Da vida a tus composiciones.",
+      subtitle: "Tus letras hechas canciones de estudio",
+      description: "No dejes tus mejores letras guardadas en un cajón. Logra ese sonido profesional que buscan los artistas, trabajando con IA avanzada + productores humanos.",
+      cta: "Crear mi canción ahora",
+      listen: "Escuchar Ejemplos"
+    },
+    features: {
+      human: "El factor humano marca la diferencia",
+      quality: "No suena a robot, suena a un hit",
+      distribution: "Distribución Premium Asegurada"
+    },
+    examples: {
+      title: "Escucha nuestros ejemplos",
+      subtitle: "Canciones reales creadas con nuestra tecnología de IA avanzada + refinamiento humano."
+    },
+    form: {
+      title: "Crea tu canción ahora",
+      step1: "Género y Estilo",
+      step2: "Letras y Notas",
+      step3: "Pago Seguro",
+      labels: {
+        name: "Tu nombre",
+        email: "Tu email",
+        genre: "Género musical",
+        lyrics: "Tu letra",
+        notes: "Notas para el productor"
+      }
+    },
+    benefits: {
+      title: "¿Por qué elegir Struky?",
+      q1: "Calidad de Estudio",
+      a1: "Sonido profesional radio-ready optimizado para Spotify y Apple Music.",
+      q2: "100% Tus Derechos",
+      a2: "Eres dueño total de la propiedad intelectual de tu canción para siempre.",
+      q3: "Entrega Rápida",
+      a3: "Tu canción terminada y masterizada en menos de 48 horas."
+    },
+    howItWorks: {
+      title: "Tu Hit en 3 Pasos",
+      s1_t: "Escribe tu Letra",
+      s1_d: "Dinos de qué trata tu canción y elige tu género favorito.",
+      s2_t: "Refinamiento Humano",
+      s2_d: "Nuestros productores ajustan cada detalle para que suene perfecto.",
+      s3_t: "Recibe tu Canción",
+      s3_d: "Descarga tu hit directamente en tu email listo para sonar."
+    },
+    testimonials: {
+      title: "Lo que dicen nuestros artistas",
+      t1: "Struky le dio vida a un poema que le escribí a mi madre. La calidad es increíble.",
+      t1_a: "David R., Cantautor",
+      t2_t: "Pasé de tener notas en mi móvil a sonar en Spotify en 2 días. Brutal.",
+      t2_a: "Marta S., Compositora",
+      t3_t: "El sonido es profesional de verdad. No parece hecho por una máquina, tiene alma.",
+      t3_a: "Juan P., Productor Independiente",
+      t4_t: "Ideal para maquetar ideas rápido o lanzar hits sin gastar miles en estudio.",
+      t4_a: "Sofía L., Artista Urbana"
+    },
+    faq: {
+      title: "Dudas Frecuentes",
+      q1: "¿Quién es el dueño de la canción?",
+      a1: "Tú. Tienes los derechos de autor al 100%.",
+      q2: "¿Puedo pedir cambios?",
+      a2: "Sí, todos nuestros planes incluyen una ronda de refinamiento gratuito.",
+      q3: "¿Qué formato recibo?",
+      a3: "Recibirás un archivo WAV y MP3 de alta calidad (320kbps)."
+    }
+  },
+  en: {
+    hero: {
+      tag: "Struky Music AI",
+      title: "Bring your compositions to life.",
+      subtitle: "Your lyrics turned into studio songs",
+      description: "Don't leave your best lyrics in a drawer. Get that professional sound artists look for, working with advanced AI + human producers.",
+      cta: "Create my song now",
+      listen: "Listen to Examples"
+    },
+    features: {
+      human: "The human factor makes the difference",
+      quality: "Doesn't sound like a robot, sounds like a hit",
+      distribution: "Premium Distribution Guaranteed"
+    },
+    examples: {
+      title: "Listen to our examples",
+      subtitle: "Real songs created with our advanced AI technology + human refinement."
+    },
+    form: {
+      title: "Create your song now",
+      step1: "Genre & Style",
+      step2: "Lyrics & Notes",
+      step3: "Secure Payment",
+      labels: {
+        name: "Your name",
+        email: "Your email",
+        genre: "Musical genre",
+        lyrics: "Your lyrics",
+        notes: "Notes for the producer"
+      }
+    },
+    benefits: {
+      title: "Why choose Struky?",
+      q1: "Studio Quality",
+      a1: "Professional radio-ready sound optimized for Spotify and Apple Music.",
+      q2: "100% Yours",
+      a2: "You are the full owner of your song's intellectual property forever.",
+      q3: "Fast Delivery",
+      a3: "Your song finished and mastered in less than 48 hours."
+    },
+    howItWorks: {
+      title: "Your Hit in 3 Steps",
+      s1_t: "Write your Lyrics",
+      s1_d: "Tell us what your song is about and choose your favorite genre.",
+      s2_t: "Human Refinement",
+      s2_d: "Our producers adjust every detail to make it sound perfect.",
+      s3_t: "Receive your Song",
+      s3_d: "Download your hit directly in your email ready to play."
+    },
+    testimonials: {
+      title: "What our artists say",
+      t1: "Struky brought to life a poem I wrote for my mother. The quality is incredible.",
+      t1_a: "David R., Songwriter",
+      t2_t: "I went from having notes on my phone to playing on Spotify in 2 days. Amazing.",
+      t2_a: "Marta S., Composer",
+      t3_t: "The sound is truly professional. It doesn't feel machine-made, it has soul.",
+      t3_a: "Juan P., Independent Producer",
+      t4_t: "Perfect for fast-tracking ideas or releasing hits without spending thousands on a studio.",
+      t4_a: "Sofía L., Urban Artist"
+    },
+    faq: {
+      title: "Frequency Asked Questions",
+      q1: "Who owns the song?",
+      a1: "You. You own 100% of the copyrights.",
+      q2: "Can I ask for changes?",
+      a2: "Yes, all our plans include a free refinement round.",
+      q3: "What format do I receive?",
+      a3: "You'll receive a high-quality WAV and MP3 file (320kbps)."
+    }
+  }
+};

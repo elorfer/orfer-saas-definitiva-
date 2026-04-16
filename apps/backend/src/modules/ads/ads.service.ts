@@ -141,6 +141,16 @@ export class AdsService {
    * - Prioridad
    * - Fechas de campaña
    */
+  /**
+   * Algoritmo inteligente de selección de anuncios
+   * Selecciona el mejor anuncio basado en:
+   * 1. 🎯 Segmentación (Género, Artista, Playlist) - Prioridad nivel 1
+   * 2. 📅 Límites de Campaña (Fechas válidas)
+   * 3. 📉 Límite Diario (maxPlaysPerDay)
+   * 4. 🕒 Frecuencia por Usuario (frequencyPerHour)
+   * 5. 💎 Prioridad (0-100)
+   * 6. 🎲 Aleatoriedad controlada (Shuffle para variedad)
+   */
   async getNextAd(
     userId?: string,
     context?: {
@@ -150,10 +160,12 @@ export class AdsService {
     },
   ): Promise<AudioAd | null> {
     const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
 
-    this.logger.log(`[getNextAd] 🌍 GLOBAL SHUFFLE MODE. Usuario: ${userId || 'anónimo'}. Ignorando targeting.`);
+    this.logger.log(`[getNextAd] 🎯 Buscando anuncio inteligente. User: ${userId || 'Anon'}, Context: ${JSON.stringify(context)}`);
 
-    // 1. Obtener todos los anuncios activos (sin targeting)
+    // 1. Obtener todos los anuncios activos (candidatos base)
     const activeAds = await this.audioAdRepository
       .createQueryBuilder('ad')
       .where('ad.status = :status', { status: AdStatus.ACTIVE })
@@ -163,59 +175,134 @@ export class AdsService {
       .andWhere("ad.audioUrl != ''")
       .getMany();
 
-    this.logger.debug(`[getNextAd] 🔍 Query Result - Active Ads Found: ${activeAds.length}`);
-    activeAds.forEach(ad => this.logger.debug(`   - Candidate: ${ad.title} (${ad.id})`));
-
     if (activeAds.length === 0) {
-      this.logger.warn('[getNextAd] ❌ No hay anuncios activos disponibles (Query returned 0).');
+      this.logger.warn('[getNextAd] ❌ No hay anuncios activos en el sistema.');
       return null;
     }
 
-    this.logger.log(`[getNextAd] 📢 Pool de anuncios activos: ${activeAds.length}`);
+    // 2. Filtrar por Límite Diario (maxPlaysPerDay)
+    // Obtenemos conteo de reproducciones de HOY para todos los anuncios
+    const dailyPlayCounts = await this.adPlayLogRepository
+      .createQueryBuilder('log')
+      .select('log.ad_id', 'adId')
+      .addSelect('COUNT(log.id)', 'count')
+      .where('log.playedAt >= :startOfDay', { startOfDay })
+      .groupBy('log.ad_id')
+      .getRawMany();
 
-    // 2. Verificar frecuencia por hora (Protección de usuario)
-    let eligibleAds = activeAds;
+    const playMapToday = new Map<string, number>();
+    dailyPlayCounts.forEach(row => playMapToday.set(row.adId, parseInt(row.count)));
 
+    let candidates = activeAds.filter(ad => {
+      if (!ad.maxPlaysPerDay) return true;
+      const playedToday = playMapToday.get(ad.id) || 0;
+      return playedToday < ad.maxPlaysPerDay;
+    });
+
+    if (candidates.length === 0) {
+      this.logger.warn('[getNextAd] 🛑 Todos los anuncios alcanzaron su límite diario.');
+      return null;
+    }
+
+    // 3. Filtrar por Frecuencia horaria (Per-User)
     if (userId) {
-      this.logger.debug(`[getNextAd] 👤 Checking frequency for user: ${userId}`);
-      // ... Lógica de frecuencia simplificada ...
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-      const recentPlays = await this.adPlayLogRepository.find({
+      const userPlaysLastHour = await this.adPlayLogRepository.find({
         where: { userId, playedAt: MoreThanOrEqual(oneHourAgo) },
+        relations: ['ad']
       });
 
-      this.logger.debug(`[getNextAd] 🕒 Recent plays (last 1h): ${recentPlays.length}`);
-
-      const playCountsByAd: Record<string, number> = {};
-      recentPlays.forEach(play => {
-        const adId = play.ad?.id;
-        if (adId) playCountsByAd[adId] = (playCountsByAd[adId] || 0) + 1;
+      const userPlayMap = new Map<string, number>();
+      userPlaysLastHour.forEach(log => {
+        if (log.ad?.id) {
+          userPlayMap.set(log.ad.id, (userPlayMap.get(log.ad.id) || 0) + 1);
+        }
       });
 
-      eligibleAds = activeAds.filter(ad => {
-        const plays = playCountsByAd[ad.id] || 0;
-        const passed = plays < ad.frequencyPerHour;
-        if (!passed) this.logger.debug(`   - Filtered out ${ad.title}: plays(${plays}) >= limit(${ad.frequencyPerHour})`);
-        return passed;
+      const beforeFrequencyCount = candidates.length;
+      candidates = candidates.filter(ad => {
+        const userPlays = userPlayMap.get(ad.id) || 0;
+        return userPlays < ad.frequencyPerHour;
       });
 
-      this.logger.debug(`[getNextAd] 📉 Eligible after frequency check: ${eligibleAds.length}`);
-
-      if (eligibleAds.length === 0) {
-        this.logger.warn('[getNextAd] ⚠️ Todos los anuncios excedieron frecuencia horaria. Usando fallback con repetición.');
-        eligibleAds = activeAds; // Fallback extremo: permitir repetir si no hay nada más
+      // 🔥 Fallback suave: Si el filtro de frecuencia deja al usuario sin NINGÚN anuncio 
+      // pero hay anuncios disponibles en el sistema, permitimos repetir el menos visto recientemente
+      if (candidates.length === 0 && beforeFrequencyCount > 0) {
+        this.logger.warn('[getNextAd] 🕒 Usuario saturado. Forzando rotación mínima.');
+        candidates = activeAds.filter(ad => {
+          const playedToday = playMapToday.get(ad.id) || 0;
+          return !ad.maxPlaysPerDay || playedToday < ad.maxPlaysPerDay;
+        });
       }
     }
 
-    // 3. SHUFFLE GLOBAL (La clave de la variedad)
-    // Fisher-Yates Shuffle para máxima aleatoriedad
-    for (let i = eligibleAds.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [eligibleAds[i], eligibleAds[j]] = [eligibleAds[j], eligibleAds[i]];
+    // 4. Filtrar por Segmentación (Targeting) - NIVEL ELITE
+    // Intentamos encontrar anuncios que coincidan perfectamente con el contexto (Rock, Jazz, etc.)
+    const targetedAds = candidates.filter(ad => ad.matchesTargeting(context));
+
+    let finalSelection: AudioAd[];
+    if (targetedAds.length > 0) {
+      this.logger.log(`[getNextAd] ✅ Encontrados ${targetedAds.length} anuncios segmentados para el contexto.`);
+      finalSelection = targetedAds;
+    } else {
+      // Fallback: Si no hay anuncios para "Rock", usamos los anuncios marcados como "ALL" (Globales)
+      this.logger.debug('[getNextAd] ℹ️ Sin segmentación específica. Usando anuncios globales.');
+      finalSelection = candidates.filter(ad => ad.targeting === AdTargeting.ALL);
     }
 
-    const selectedAd = eligibleAds[0];
-    this.logger.log(`[getNextAd] 🎲 ✅ Anuncio seleccionado (Random): ${selectedAd.title} (ID: ${selectedAd.id})`);
+    if (finalSelection.length === 0) {
+      this.logger.warn('[getNextAd] ⚠️ Sin anuncios globales disponibles. Usando candidatos generales.');
+      finalSelection = candidates;
+    }
+
+    // 5. Ranking por Prioridad (0-100)
+    finalSelection.sort((a, b) => b.priority - a.priority);
+
+    // Tomamos el grupo de mayor prioridad disponible
+    const topPriority = finalSelection[0].priority;
+    let bestCandidates = finalSelection.filter(ad => ad.priority === topPriority);
+
+    // 6. ROTACIÓN CIRCULAR (Round-Robin / Least Played) - NIVEL ELITE
+    // Para que la secuencia sea A -> B -> C -> D, elegimos el que el usuario haya oído MENOS veces.
+    if (userId && bestCandidates.length > 1) {
+      const candidateIds = bestCandidates.map(ad => ad.id);
+      
+      // Consultar historial de reproducciones de ESTE usuario para ESTOS candidatos
+      const userPlays = await this.adPlayLogRepository
+        .createQueryBuilder('log')
+        .select('log.ad_id', 'adId')
+        .addSelect('COUNT(log.id)', 'count')
+        .where('log.user_id = :userId', { userId })
+        .andWhere('log.ad_id IN (:...candidateIds)', { candidateIds })
+        .groupBy('log.ad_id')
+        .getRawMany();
+
+      const userPlayMap = new Map<string, number>();
+      userPlays.forEach(row => userPlayMap.set(row.adId, parseInt(row.count)));
+
+      // Ordenar por quién ha sido escuchado menos veces por este usuario
+      bestCandidates.sort((a, b) => {
+        const countA = userPlayMap.get(a.id) || 0;
+        const countB = userPlayMap.get(b.id) || 0;
+        return countA - countB; // Ascendente (el menos escuchado primero)
+      });
+
+      // Si hay empates en el conteo mínimo, randomizar entre los empatados para variar un poco
+      const minCount = userPlayMap.get(bestCandidates[0].id) || 0;
+      const tiedForMin = bestCandidates.filter(ad => (userPlayMap.get(ad.id) || 0) === minCount);
+      
+      const randomIndex = Math.floor(Math.random() * tiedForMin.length);
+      const selectedAd = tiedForMin[randomIndex];
+      
+      this.logger.log(`[getNextAd] 🔄 ROTACIÓN: "${selectedAd.title}" seleccionado por ser el menos escuchado por el usuario [Count: ${minCount}]`);
+      return selectedAd;
+    }
+
+    // Fallback para usuarios anónimos o si solo hay un candidato: Random simple
+    const randomIndex = Math.floor(Math.random() * bestCandidates.length);
+    const selectedAd = bestCandidates[randomIndex];
+
+    this.logger.log(`[getNextAd] 🎲 ✅ SELECCIONADO: "${selectedAd.title}" [Prio: ${selectedAd.priority}] [Target: ${selectedAd.targeting}]`);
 
     return selectedAd;
   }

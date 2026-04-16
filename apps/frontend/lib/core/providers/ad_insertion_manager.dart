@@ -73,7 +73,7 @@ class AdInsertionManager {
         
         // ✅ FIX CRÍTICO: Verificar inmediatamente después de insertar que el anuncio esté en la cola
         final sequenceStateAfterInsert = player.sequenceState;
-        if (targetIndex >= sequenceStateAfterInsert.sequence.length) {
+        if (sequenceStateAfterInsert == null || targetIndex >= sequenceStateAfterInsert.sequence.length) {
           AppLogger.error('[AdInsertionManager] ❌ El anuncio no se insertó correctamente en el índice $targetIndex');
           return false;
         }
@@ -110,7 +110,7 @@ class AdInsertionManager {
       }
       
       final sequenceState = player.sequenceState;
-      if (index < 0 || index >= sequenceState.sequence.length) {
+      if (sequenceState == null || index < 0 || index >= sequenceState.sequence.length) {
         AppLogger.warning('[AdInsertionManager] Índice $index fuera de rango');
         return false;
       }

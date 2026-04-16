@@ -13,6 +13,14 @@ class DataNormalizer {
   
   /// Normalizar una lista de canciones en un Isolate secundario
   static Future<List<Map<String, dynamic>>> normalizeSongsAsync(List<dynamic> data) {
+    if (data.length <= 3) {
+      // 🚀 OPTIMIZACIÓN: Solo usar Isolate para listas medianas/largas
+      // El costo de crear un Isolate para 1-3 canciones es mayor que el beneficio
+      return Future.value(data
+          .whereType<Map<String, dynamic>>()
+          .map((item) => normalizeSong(item))
+          .toList());
+    }
     return Isolate.run(() {
       return data
           .whereType<Map<String, dynamic>>()
