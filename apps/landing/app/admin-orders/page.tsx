@@ -23,12 +23,19 @@ export default async function AdminOrdersPage() {
 
     // Si no está autenticado, mostramos un formulario de login súper simple en la misma página
     if (!isAdmin) {
+        const error = (await searchParams).error;
         return (
             <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-4">
                 <form action={async (formData) => {
                     'use server'
                     const password = formData.get('password');
-                    if (password === process.env.ADMIN_PASSWORD) {
+                    const masterPassword = process.env.ADMIN_PASSWORD;
+
+                    if (!masterPassword) {
+                        redirect('/admin-orders?error=config');
+                    }
+
+                    if (password === masterPassword) {
                         const cookieStore = await cookies();
                         cookieStore.set('struky_admin_auth', password as string, {
                             httpOnly: true,
@@ -37,16 +44,40 @@ export default async function AdminOrdersPage() {
                             maxAge: 60 * 60 * 24 // 24 horas
                         });
                         redirect('/admin-orders');
+                    } else {
+                        redirect('/admin-orders?error=wrong');
                     }
-                }} className="glass-morphism p-8 rounded-3xl w-full max-w-md border border-white/10">
-                    <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Panel de Control Struky</h1>
+                }} className="glass-morphism p-8 rounded-3xl w-full max-w-md border border-white/10 shadow-2xl">
+                    <div className="w-12 h-12 rounded-2xl bg-coffee-medium/20 flex items-center justify-center mx-auto mb-4 border border-coffee-medium/30">
+                        <svg className="w-6 h-6 text-coffee-light" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </div>
+                    <h1 className="text-2xl font-black mb-2 text-center text-white tracking-tight">Acceso Restringido</h1>
+                    <p className="text-gray-500 text-[10px] text-center uppercase tracking-widest mb-8 text-pretty px-4">Ingresa la clave maestra para gestionar las producciones</p>
+                    
+                    {error === 'wrong' && (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-widest p-3 rounded-xl mb-4 text-center">
+                            ❌ Contraseña Incorrecta
+                        </div>
+                    )}
+
+                    {error === 'config' && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-widest p-3 rounded-xl mb-4 text-center">
+                            ⚠️ Error: ADMIN_PASSWORD no configurada en Vercel
+                        </div>
+                    )}
+
                     <input 
                         type="password" 
                         name="password" 
-                        placeholder="Contraseña de Administrador"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-4 focus:border-coffee-light outline-none"
+                        required
+                        placeholder="••••••••••••"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 mb-4 text-center text-white placeholder:text-gray-700 focus:border-coffee-light outline-none transition-all ring-0 focus:ring-4 focus:ring-coffee-light/10"
                     />
-                    <button type="submit" className="btn-primary w-full">Entrar</button>
+                    <button type="submit" className="btn-primary w-full py-4 rounded-xl text-xs font-black tracking-[0.2em]">
+                        DESBLOQUEAR PANEL
+                    </button>
+                    
+                    <p className="mt-8 text-[9px] text-gray-700 text-center uppercase tracking-widest font-bold">Struky Admin Protocol v2.5</p>
                 </form>
             </div>
         );
