@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         try {
             // 1. Enviar email al administrador (Struky Team)
             await resend.emails.send({
-                from: 'Struky Orders <orders@resend.dev>',
+                from: 'Struky Orders <onboarding@resend.dev>',
                 to: 'strukyapp@gmail.com',
                 subject: `🔥 ¡NUEVO PEDIDO: ${plan}! - ${metadata.name}`,
                 html: `
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
             // 2. Enviar email de bienvenida al CLIENTE
             await resend.emails.send({
-                from: 'Struky Music <orders@resend.dev>',
+                from: 'Struky Music <onboarding@resend.dev>',
                 to: metadata.email,
                 subject: `🎧 ¡Tu producción en Struky ha comenzado, ${metadata.name}!`,
                 html: `
