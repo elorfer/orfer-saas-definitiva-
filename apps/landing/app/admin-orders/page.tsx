@@ -11,7 +11,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
 // Forzamos a que no se cachee esta página
 export const dynamic = 'force-dynamic';
 
-export default async function AdminOrdersPage() {
+export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
     const cookieStore = await cookies();
     const adminPassword = process.env.ADMIN_PASSWORD;
     const isAdmin = adminPassword ? cookieStore.get('struky_admin_auth')?.value === adminPassword : false;
