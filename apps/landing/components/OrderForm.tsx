@@ -309,19 +309,9 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                     <h4 className="text-xl font-bold text-coffee-light">{lang === 'es' ? 'Selecciona el nivel de acabado' : 'Select production level'}</h4>
                                     <p className="text-gray-500 text-sm">{lang === 'es' ? '¿Qué tan lejos quieres llevar tu canción?' : 'How far do you want to take your song?'}</p>
                                 </div>
-                                <div className="flex lg:grid lg:grid-cols-4 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide">
+                                <div className="flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide">
                                     {[
-                                        { 
-                                            id: 'Test Mode', 
-                                            price: 1, 
-                                            icon: Zap, 
-                                            desc: 'SOLO PARA PRUEBAS REALES',
-                                            features: [
-                                                'Prueba de pasarela real',
-                                                'Verificación de Webhook',
-                                                'Test de correo Resend'
-                                            ]
-                                        },
+
                                         { 
                                             id: 'Starter', 
                                             price: 50, 
