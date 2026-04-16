@@ -42,20 +42,13 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-green-500 via-coffee-medium to-coffee-light"></div>
                     
                     {/* Premium Avatar / Vinyl Photo */}
-                    <div className="relative mx-auto mb-8 w-32 h-32 group">
-                        {/* Spinning vinyl effect */}
-                        <div className="absolute inset-0 rounded-full border border-white/5 bg-gradient-to-tr from-[#111] to-[#222] animate-[spin_10s_linear_infinite] group-hover:scale-105 transition-transform duration-500 shadow-2xl">
-                            <div className="absolute inset-1 rounded-full border border-white/10 flex items-center justify-center relative overflow-hidden bg-[#0a0a0a]">
-                                <div className="absolute inset-0 flex items-center justify-center opacity-80">
-                                    <img src="/logo.svg" alt="Struky Logo" className="w-[60%] h-[60%] object-contain" />
-                                </div>
-                                <div className="absolute w-full h-full bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.9)_100%)] pointer-events-none"></div>
-                                {/* Agujero central del vinilo */}
-                                <div className="w-3 h-3 rounded-full bg-black border border-white/10 z-10 shadow-inner"></div>
-                            </div>
+                    {/* Premium Static Logo */}
+                    <div className="relative mx-auto mb-8 w-32 h-32">
+                        <div className="absolute inset-0 rounded-full border border-white/5 bg-[#050505] flex items-center justify-center shadow-[0_0_50px_rgba(202,160,82,0.1)]">
+                            <img src="/logo.svg" alt="Struky Logo" className="w-[65%] h-[65%] object-contain opacity-90" />
                         </div>
                         {/* Status Check Badge Overlay */}
-                        <div className="absolute -bottom-2 -right-2 bg-green-500 text-black w-10 h-10 rounded-full flex items-center justify-center border-4 border-black text-xl shadow-[0_0_20px_rgba(34,197,94,0.3)] z-20">
+                        <div className="absolute 0-bottom-1 -right-1 bg-green-500 text-black w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#0a0a0a] text-xl shadow-[0_0_20px_rgba(34,197,94,0.3)] z-20">
                             ✓
                         </div>
                     </div>
