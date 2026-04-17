@@ -24,21 +24,13 @@ function HomeContent() {
     const t = translations[lang];
 
     useEffect(() => {
-        // 1. Prioridad: Parámetro URL (?lang=en)
+        // Solo respetamos el parámetro de URL si existe, de lo contrario forzamos Español
         const urlLang = searchParams.get('lang');
         if (urlLang === 'en' || urlLang === 'es') {
             setLang(urlLang as 'es' | 'en');
-            return;
-        }
-
-        // 2. Fallback: Idioma del navegador
-        if (typeof window !== 'undefined') {
-            const browserLang = navigator.language.split('-')[0];
-            if (browserLang === 'en') {
-                setLang('en');
-            }
         }
     }, [searchParams]);
+
 
     const examples = [
         {
