@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Script from 'next/script';
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
 
@@ -134,6 +135,20 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                             * Solo se admiten melodías con la captura del pago
                         </p>
                     </div>
+
+                    {/* Meta Pixel Purchase Event with Deduplication */}
+                    <Script id="fb-purchase" strategy="afterInteractive">
+                        {`
+                            fbq('track', 'Purchase', {
+                                value: ${amount},
+                                currency: 'USD',
+                                content_name: 'Plan ${plan}',
+                                content_category: 'Music Production'
+                            }, { 
+                                eventID: '${sessionId}' 
+                            });
+                        `}
+                    </Script>
 
                     {/* CTA */}
                     <div className="flex flex-col gap-3">

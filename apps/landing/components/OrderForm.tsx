@@ -69,6 +69,16 @@ export default function OrderForm({ lang }: OrderFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Meta Pixel: Initiate Checkout
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+            (window as any).fbq('track', 'InitiateCheckout', {
+                value: formData.price,
+                currency: 'USD',
+                content_name: formData.plan
+            });
+        }
+
         if (step < 4) return nextStep();
 
         setIsLoading(true);
