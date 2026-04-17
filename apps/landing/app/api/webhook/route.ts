@@ -49,8 +49,7 @@ async function sendMetaConversionEvent(session: Stripe.Checkout.Session) {
                     content_category: 'Music Production'
                 }
             }
-        ],
-        test_event_code: process.env.META_TEST_CODE // Movido al nivel superior
+        ]
     };
 
     try {
