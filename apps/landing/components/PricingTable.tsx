@@ -89,7 +89,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                             </div>
 
                             <ul className="space-y-4 mb-10 flex-1">
-                                {plan.features.map((feature, i) => (
+                                {plan.features.map((feature: string, i: number) => (
                                     <li key={i} className={`flex items-start gap-3 text-sm ${feature.includes('OBSEQUIO') ? 'text-coffee-light font-bold' : 'text-gray-400'}`}>
                                         {feature.includes('Video Letra') ? (
                                             <Video className="w-5 h-5 shrink-0 text-coffee-medium animate-pulse" />
