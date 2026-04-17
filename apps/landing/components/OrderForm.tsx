@@ -206,7 +206,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                 className="space-y-6"
                             >
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Tu Letra' : 'Your Lyrics'}</label>
+                                    <label className="block text-sm font-bold text-gray-400 mb-4 uppercase tracking-widest">{lang === 'es' ? 'Tu Letra' : 'Your Lyrics'}</label>
                                     <textarea 
                                         rows={4}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none resize-none"
@@ -215,6 +215,21 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                         required
                                         placeholder={lang === 'es' ? 'Pega aquí tus versos...' : 'Paste your lyrics here...'}
                                     />
+                                    <div className="mt-4 p-4 bg-coffee-medium/5 border border-coffee-medium/10 rounded-xl flex items-start gap-4 shadow-sm">
+                                        <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center shrink-0">
+                                            <Zap className="w-4 h-4 text-coffee-light" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black text-coffee-light uppercase tracking-[0.2em] mb-1">
+                                                {lang === 'es' ? '¿Tienes una melodía propia?' : 'Do you have your own melody?'}
+                                            </p>
+                                            <p className="text-[10px] text-gray-500 leading-normal uppercase tracking-wider">
+                                                {lang === 'es' 
+                                                    ? 'Para conservar tu melodía, envíanos tu audio por WhatsApp tras el pago junto con el comprobante.' 
+                                                    : 'To keep your melody, send your audio via WhatsApp after payment along with the receipt.'}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
