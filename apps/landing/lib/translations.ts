@@ -67,6 +67,31 @@ export const translations = {
       a2: "Sí, todos nuestros planes incluyen una ronda de refinamiento gratuito.",
       q3: "¿Qué formato recibo?",
       a3: "Recibirás un archivo WAV y MP3 de alta calidad (320kbps)."
+    },
+    pricing: {
+      title: "Planes de Producción",
+      subtitle: "Selecciona el nivel de acabado que tu música merece. Calidad internacional para el mercado global.",
+      popular: "Más Popular",
+      plans: {
+        starter: {
+          name: "Starter",
+          desc: "La semilla de tu hit.",
+          cta: "Empezar con Starter",
+          features: ["Producción estándar (48-72h)", "1 revisión musical", "Uso personal / Maqueta", "Calidad MP3 Alta Calidad"]
+        },
+        pro: {
+          name: "Pro Master",
+          desc: "Calidad Radio y Spotify.",
+          cta: "Elegir Plan Pro",
+          features: ["Entrega Rápida (24h)", "3 revisiones musicales", "Derechos Comerciales 100%", "Calidad WAV Profesional", "OBSEQUIO: Video Letra HD"]
+        },
+        elite: {
+          name: "Elite Studio",
+          desc: "Producción VIP Completa.",
+          cta: "Elegir Plan Elite",
+          features: ["Prioridad Máxima en Estudio", "Revisiones Ilimitadas", "Entrega de Multitracks (Stems)", "Mezcla y Master Analógica", "OBSEQUIO: Video Letra HD"]
+        }
+      }
     }
   },
   en: {
@@ -137,6 +162,31 @@ export const translations = {
       a2: "Yes, all our plans include a free refinement round.",
       q3: "What format do I receive?",
       a3: "You'll receive a high-quality WAV and MP3 file (320kbps)."
+    },
+    pricing: {
+      title: "Production Plans",
+      subtitle: "Select the finish level your music deserves. International quality for the global market.",
+      popular: "Most Popular",
+      plans: {
+        starter: {
+          name: "Starter",
+          desc: "The seed of your hit.",
+          cta: "Start with Starter",
+          features: ["Standard production (48-72h)", "1 musical revision", "Personal use / Demo", "High Quality MP3"]
+        },
+        pro: {
+          name: "Pro Master",
+          desc: "Radio and Spotify Quality.",
+          cta: "Choose Pro Plan",
+          features: ["Fast Delivery (24h)", "3 musical revisions", "100% Commercial Rights", "Professional WAV Quality", "GIFT: HD Lyric Video"]
+        },
+        elite: {
+          name: "Elite Studio",
+          desc: "Full VIP Production.",
+          cta: "Choose Elite Plan",
+          features: ["Maximum Studio Priority", "Unlimited Revisions", "Multitracks (Stems) Delivery", "Analog Mix & Master", "GIFT: HD Lyric Video"]
+        }
+      }
     }
   }
 };

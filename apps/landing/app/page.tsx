@@ -14,10 +14,31 @@ import Testimonials from '../components/Testimonials';
 import FAQ from '../components/FAQ';
 import PricingTable from '../components/PricingTable';
 import { translations } from '../lib/translations';
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function HomePage() {
+function HomeContent() {
+    const searchParams = useSearchParams();
     const [lang, setLang] = useState<'es' | 'en'>('es');
     const t = translations[lang];
+
+    useEffect(() => {
+        // 1. Prioridad: Parámetro URL (?lang=en)
+        const urlLang = searchParams.get('lang');
+        if (urlLang === 'en' || urlLang === 'es') {
+            setLang(urlLang as 'es' | 'en');
+            return;
+        }
+
+        // 2. Fallback: Idioma del navegador
+        if (typeof window !== 'undefined') {
+            const browserLang = navigator.language.split('-')[0];
+            if (browserLang === 'en') {
+                setLang('en');
+            }
+        }
+    }, [searchParams]);
 
     const examples = [
         {
@@ -104,7 +125,10 @@ export default function HomePage() {
 
             <Testimonials t={t.testimonials} />
 
-            <PricingTable onSelectPlan={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })} />
+            <PricingTable 
+                t={t.pricing} 
+                onSelectPlan={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })} 
+            />
 
             <OrderForm lang={lang} />
 
@@ -112,5 +136,13 @@ export default function HomePage() {
 
             <Footer lang={lang} />
         </main>
+    );
+}
+
+export default function HomePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-dark-bg" />}>
+            <HomeContent />
+        </Suspense>
     );
 }

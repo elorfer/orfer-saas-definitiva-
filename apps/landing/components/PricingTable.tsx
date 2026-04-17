@@ -5,56 +5,40 @@ import { motion } from 'framer-motion';
 
 interface PricingTableProps {
     onSelectPlan: (plan: string, price: number) => void;
+    t: any;
 }
 
-export default function PricingTable({ onSelectPlan }: PricingTableProps) {
+export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
     const plans = [
         {
             id: 'starter',
-            name: 'Starter',
+            name: t.plans.starter.name,
             price: 50,
-            description: 'La semilla de tu hit.',
-            features: [
-                'Producción estándar (48-72h)',
-                '1 revisión musical',
-                'Uso personal / Maqueta',
-                'Calidad MP3 Alta Calidad'
-            ],
+            description: t.plans.starter.desc,
+            features: t.plans.starter.features,
             icon: Zap,
             highlight: false,
-            cta: 'Empezar con Starter'
+            cta: t.plans.starter.cta
         },
         {
             id: 'pro',
-            name: 'Pro Master',
+            name: t.plans.pro.name,
             price: 97,
-            description: 'Calidad Radio y Spotify.',
-            features: [
-                'Entrega Rápida (24h)',
-                '3 revisiones musicales',
-                'Derechos Comerciales 100%',
-                'Calidad WAV Profesional',
-                'OBSEQUIO: Video Letra HD'
-            ],
+            description: t.plans.pro.desc,
+            features: t.plans.pro.features,
             icon: Star,
             highlight: true,
-            cta: 'Elegir Plan Pro'
+            cta: t.plans.pro.cta
         },
         {
             id: 'elite',
-            name: 'Elite Studio',
+            name: t.plans.elite.name,
             price: 147,
-            description: 'Producción VIP Completa.',
-            features: [
-                'Prioridad Máxima en Estudio',
-                'Revisiones Ilimitadas',
-                'Entrega de Multitracks (Stems)',
-                'Mezcla y Master Analógica',
-                'OBSEQUIO: Video Letra HD'
-            ],
+            description: t.plans.elite.desc,
+            features: t.plans.elite.features,
             icon: Crown,
             highlight: false,
-            cta: 'Elegir Plan Elite'
+            cta: t.plans.elite.cta
         }
     ];
 
