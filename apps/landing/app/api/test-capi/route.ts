@@ -28,7 +28,6 @@ export async function GET() {
                 event_id: eventId,
                 event_source_url: 'https://www.struky.com/success',
                 action_source: 'website',
-                test_event_code: testCode,
                 user_data: {
                     em: [hashData(mockEmail)],
                     ph: [hashData(mockPhone)],
@@ -42,7 +41,8 @@ export async function GET() {
                     content_category: 'Music Production'
                 }
             }
-        ]
+        ],
+        test_event_code: testCode
     };
 
     try {

@@ -39,7 +39,7 @@ async function sendMetaConversionEvent(session: Stripe.Checkout.Session) {
                 user_data: {
                     em: [hashData(email)],
                     ph: [hashData(phone)],
-                    client_ip_address: session.customer_details?.address?.country || '', // Opcional si no tenemos la IP aquí
+                    client_ip_address: session.customer_details?.address?.country || '',
                     client_user_agent: 'StrukyServer/1.0'
                 },
                 custom_data: {
@@ -49,7 +49,8 @@ async function sendMetaConversionEvent(session: Stripe.Checkout.Session) {
                     content_category: 'Music Production'
                 }
             }
-        ]
+        ],
+        test_event_code: process.env.META_TEST_CODE // Movido al nivel superior
     };
 
     try {
