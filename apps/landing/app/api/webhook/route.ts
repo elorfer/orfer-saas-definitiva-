@@ -90,7 +90,6 @@ export async function POST(req: Request) {
         sendMetaConversionEvent(session).catch(console.error);
 
         const metadata = session.metadata || {};
-// ... rest of the code remains the same
 
         // Reconstruir la letra desde las partes
         const lyricsParts = Object.keys(metadata)

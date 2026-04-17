@@ -28,11 +28,11 @@ export const metadata: Metadata = {
     title: "Struky | Producción Musical Profesional con IA",
     description: "Tus letras, convertidas en música profesional con IA. Producción musical experta supervisada por humanos.",
     keywords: "producción musical, IA, inteligencia artificial, música, letras, canciones, reggaetón, trap, pop",
-    metadataBase: new URL('https://struky.com'), // Reemplazar por el dominio real cuando esté listo
+    metadataBase: new URL('https://www.struky.com'),
     openGraph: {
         title: "Struky | Producción Musical Profesional con IA",
         description: "Tus letras, convertidas en música profesional con IA",
-        url: 'https://struky.com',
+        url: 'https://www.struky.com',
         siteName: 'Struky Music',
         images: [
             {

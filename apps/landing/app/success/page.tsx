@@ -2,6 +2,12 @@ import Link from 'next/link';
 import Script from 'next/script';
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
+import crypto from 'crypto';
+
+function hashData(data: string) {
+    if (!data) return '';
+    return crypto.createHash('sha256').update(data.trim().toLowerCase()).digest('hex');
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
     apiVersion: '2026-03-25.dahlia',
@@ -26,7 +32,11 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
     const plan = session.metadata?.plan || 'Starter';
     const amount = (session.amount_total || 0) / 100;
     const genre = session.metadata?.genre || '';
-    const vocalist = session.metadata?.vocalist || '';
+    const email = session.customer_details?.email || '';
+    const phone = session.metadata?.phone || '';
+
+    const hashedEmail = hashData(email);
+    const hashedPhone = hashData(phone);
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-dark-bg relative overflow-hidden">
@@ -136,9 +146,15 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                         </p>
                     </div>
 
-                    {/* Meta Pixel Purchase Event with Deduplication */}
+                    {/* Meta Pixel Purchase Event with Deduplication & Advanced Matching */}
                     <Script id="fb-purchase" strategy="afterInteractive">
                         {`
+                            // Advanced Matching
+                            fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1445433937281922"}', {
+                                em: '${hashedEmail}',
+                                ph: '${hashedPhone}'
+                            });
+                            
                             fbq('track', 'Purchase', {
                                 value: ${amount},
                                 currency: 'USD',
