@@ -49,7 +49,7 @@ export default function Footer({ lang }: FooterProps) {
                         <h4 className="text-white font-bold mb-6 tracking-wide uppercase text-xs">
                             {lang === 'es' ? 'Legal' : 'Legal'}
                         </h4>
-                        <ul className="space-y-4 text-sm font-medium text-gray-500">
+                        <ul className="space-y-4 text-sm font-medium text-gray-400">
                             <li>
                                 <Link href="/terms" className="hover:text-coffee-light transition-colors">
                                     {lang === 'es' ? 'Términos de Servicio' : 'Terms of Service'}
@@ -73,7 +73,7 @@ export default function Footer({ lang }: FooterProps) {
                         <h4 className="text-white font-bold mb-6 tracking-wide uppercase text-xs">
                             {lang === 'es' ? 'Contacto' : 'Contact'}
                         </h4>
-                        <p className="text-gray-500 text-sm mb-4">
+                        <p className="text-gray-400 text-sm mb-4">
                             {lang === 'es' ? '¿Tienes dudas? Escríbenos.' : 'Any questions? Get in touch.'}
                         </p>
                         <a href="mailto:hola@struky.com" className="flex items-center gap-2 text-coffee-light hover:text-white transition-colors text-sm font-bold">
@@ -84,13 +84,13 @@ export default function Footer({ lang }: FooterProps) {
                 </div>
 
                 <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-700 font-bold">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
                         © {currentYear} Struky Music AI. ALL RIGHTS RESERVED.
                     </p>
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Server: Latin-1 North</span>
+                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Server: Latin-1 North</span>
                         </div>
                     </div>
                 </div>

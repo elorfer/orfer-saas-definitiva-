@@ -1,7 +1,7 @@
 export const translations = {
   es: {
     hero: {
-      tag: "Struky Music AI",
+      tag: "Producción Musical Profesional",
       title: "Da vida a tus composiciones.",
       subtitle: "Tus letras hechas canciones de estudio",
       description: "No dejes tus mejores letras guardadas en un cajón. Logra ese sonido profesional que buscan los artistas, trabajando con IA avanzada + productores humanos.",
@@ -70,7 +70,9 @@ export const translations = {
       q2: "¿Puedo pedir cambios?",
       a2: "Sí, todos nuestros planes incluyen una ronda de refinamiento gratuito.",
       q3: "¿Qué formato recibo?",
-      a3: "Recibirás un archivo WAV y MP3 de alta calidad (320kbps)."
+      a3: "Recibirás un archivo WAV y MP3 de alta calidad (320kbps).",
+      q4: "¿La canción la hace la IA o un productor humano?",
+      a4: "Las dos partes trabajan juntas. La IA genera la base musical y la letra inicial a partir de tu idea, y luego nuestros productores humanos con años de experiencia refinan cada detalle del arreglo, la mezcla y la voz para que suene a un hit de radio, no a un bot. Ese toque humano es lo que nos diferencia."
     },
     pricing: {
       title: "Planes de Producción",
@@ -100,7 +102,7 @@ export const translations = {
   },
   en: {
     hero: {
-      tag: "Struky Music AI",
+      tag: "Producción Musical Profesional",
       title: "Bring your compositions to life.",
       subtitle: "Your lyrics turned into studio songs",
       description: "Don't leave your best lyrics in a drawer. Get that professional sound artists look for, working with advanced AI + human producers.",
@@ -169,7 +171,9 @@ export const translations = {
       q2: "Can I ask for changes?",
       a2: "Yes, all our plans include a free refinement round.",
       q3: "What format do I receive?",
-      a3: "You'll receive a high-quality WAV and MP3 file (320kbps)."
+      a3: "You'll receive a high-quality WAV and MP3 file (320kbps).",
+      q4: "Is the song made by AI or a human producer?",
+      a4: "Both work together. The AI generates the musical base and initial lyrics from your idea, then our experienced human producers refine every detail of the arrangement, mix, and vocals so it sounds like a radio hit, not a bot. That human touch is what sets us apart."
     },
     pricing: {
       title: "Production Plans",

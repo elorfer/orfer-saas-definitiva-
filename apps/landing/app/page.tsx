@@ -13,10 +13,12 @@ import HowItWorks from '../components/HowItWorks';
 import Testimonials from '../components/Testimonials';
 import FAQ from '../components/FAQ';
 import PricingTable from '../components/PricingTable';
+import PlatformLogos from '../components/PlatformLogos';
 import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
 import { Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 
 function HomeContent() {
     const searchParams = useSearchParams();
@@ -99,37 +101,99 @@ function HomeContent() {
         }
     ];
 
+    const handleSelectPlan = () => {
+        // Efecto de Confetti Premium (Colores Struky)
+        const duration = 2 * 1000;
+        const animationEnd = Date.now() + duration;
+        const colors = ['#CAA052', '#8B6A35', '#ffffff'];
+
+        const frame = () => {
+            confetti({
+                particleCount: 3,
+                angle: 60,
+                spread: 55,
+                origin: { x: 0 },
+                colors: colors
+            });
+            confetti({
+                particleCount: 3,
+                angle: 120,
+                spread: 55,
+                origin: { x: 1 },
+                colors: colors
+            });
+
+            if (Date.now() < animationEnd) {
+                requestAnimationFrame(frame);
+            }
+        };
+        
+        frame();
+        document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
+    };
+
     return (
         <main className="min-h-screen bg-dark-bg font-sans selection:bg-coffee-medium selection:text-white pb-24 md:pb-0">
             <Header lang={lang} setLang={setLang} />
             
             <Hero t={t.hero} lang={lang} />
 
+            <PlatformLogos lang={lang} />
+
             {/* EXAMPLES SECTION */}
             <section id="examples" className="section-padding bg-dark-bg relative overflow-hidden">
-                {/* Background Decor */}
-                <div className="absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none"></div>
-                <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none"></div>
+                {/* Background Decor - Animated Orbs */}
+                <motion.div 
+                    animate={{ 
+                        scale: [1, 1.2, 1],
+                        x: [0, 50, 0],
+                        y: [0, 30, 0] 
+                    }}
+                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                    className="absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none"
+                />
+                <motion.div 
+                    animate={{ 
+                        scale: [1, 1.3, 1],
+                        x: [0, -40, 0],
+                        y: [0, -50, 0] 
+                    }}
+                    transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
+                    className="absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none"
+                />
                 
-                <div className="max-w-6xl mx-auto relative z-10">
-                    <div className="text-center mb-16">
+                <div className="max-w-7xl mx-auto relative z-10">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 40 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8 }}
+                        className="text-center mb-16"
+                    >
                         <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">
                             {t.examples.title.split(' ')[0]} <span className="text-gradient">{t.examples.title.split(' ').slice(1).join(' ')}</span>
                         </h2>
                         <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto">
                             {t.examples.subtitle}
                         </p>
-                    </div>
+                    </motion.div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
                         {examples.map((example, i) => (
-                            <ProfessionalAudioPlayer 
+                            <motion.div
                                 key={i}
-                                src={example.src}
-                                title={example.title}
-                                description={example.desc}
-                                cover={example.cover}
-                            />
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.5, delay: i * 0.1 }}
+                            >
+                                <ProfessionalAudioPlayer 
+                                    src={example.src}
+                                    title={example.title}
+                                    description={example.desc}
+                                    cover={example.cover}
+                                />
+                            </motion.div>
                         ))}
                     </div>
                 </div>
@@ -147,7 +211,7 @@ function HomeContent() {
 
             <PricingTable 
                 t={t.pricing} 
-                onSelectPlan={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })} 
+                onSelectPlan={handleSelectPlan} 
             />
 
             <OrderForm lang={lang} />

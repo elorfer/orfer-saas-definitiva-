@@ -20,11 +20,18 @@ export default function Testimonials({ t }: { t: any }) {
         }
     };
 
+    const avatarColors = [
+        'from-amber-500 to-orange-600',
+        'from-purple-500 to-pink-600',
+        'from-blue-500 to-cyan-600',
+        'from-green-500 to-emerald-600',
+    ];
+
     const list = [
-        { text: t.t1, author: t.t1_a, img: "https://randomuser.me/api/portraits/men/1.jpg" },
-        { text: t.t2_t, author: t.t2_a, img: "https://randomuser.me/api/portraits/women/2.jpg" },
-        { text: t.t3_t, author: t.t3_a, img: "https://randomuser.me/api/portraits/men/3.jpg" },
-        { text: t.t4_t, author: t.t4_a, img: "https://randomuser.me/api/portraits/women/4.jpg" }
+        { text: t.t1, author: t.t1_a, img: "https://randomuser.me/api/portraits/men/32.jpg", initials: "JM" },
+        { text: t.t2_t, author: t.t2_a, img: "https://randomuser.me/api/portraits/women/44.jpg", initials: "SL" },
+        { text: t.t3_t, author: t.t3_a, img: "https://randomuser.me/api/portraits/men/67.jpg", initials: "CR" },
+        { text: t.t4_t, author: t.t4_a, img: "https://randomuser.me/api/portraits/women/89.jpg", initials: "AM" }
     ];
 
     return (
@@ -60,8 +67,20 @@ export default function Testimonials({ t }: { t: any }) {
                             </div>
 
                             <div className="flex items-center gap-4 mt-auto">
-                                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-coffee-medium/30">
-                                    <img src={item.img} alt={item.author} className="w-full h-full object-cover" />
+                                <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-coffee-medium/40 shrink-0">
+                                    <img 
+                                        src={item.img} 
+                                        alt={item.author} 
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            const target = e.currentTarget;
+                                            target.style.display = 'none';
+                                            const parent = target.parentElement;
+                                            if (parent) {
+                                                parent.innerHTML = `<div class="w-full h-full bg-gradient-to-br ${avatarColors[i]} flex items-center justify-center"><span class="text-white font-black text-sm">${item.initials}</span></div>`;
+                                            }
+                                        }}
+                                    />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="font-bold text-white">{item.author}</span>

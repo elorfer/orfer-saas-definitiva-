@@ -130,7 +130,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 }}
                                 className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${
                                     plan.highlight
-                                    ? 'bg-coffee-medium text-black hover:bg-coffee-light shadow-[0_0_20px_rgba(202,160,82,0.3)]'
+                                    ? 'bg-[#A67C37] text-white hover:bg-[#B88C45] shadow-[0_0_20px_rgba(166,124,55,0.3)]'
                                     : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
                                 }`}
                             >

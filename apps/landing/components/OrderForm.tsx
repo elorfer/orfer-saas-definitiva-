@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { translations } from '../lib/translations';
 import { Check, Star, Zap, Crown, Video, ChevronDown, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard } from 'lucide-react';
 
@@ -78,14 +79,61 @@ export default function OrderForm({ lang }: OrderFormProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [aiIdea, setAiIdea] = useState('');
     const [showAiInput, setShowAiInput] = useState(false);
+    const [genCount, setGenCount] = useState(0);
+    const [lyricsExpanded, setLyricsExpanded] = useState(false);
     const [planActiveIndex, setPlanActiveIndex] = useState(1); // Default to middle card (Pro)
+    const [notification, setNotification] = useState<string | null>(null);
     const planScrollRef = useRef<HTMLDivElement>(null);
+
+    // Cargar contador de IA al montar
+    useEffect(() => {
+        const saved = localStorage.getItem('struky_ai_gen_count');
+        if (saved) setGenCount(parseInt(saved));
+    }, []);
 
     const nextStep = () => setStep(s => Math.min(s + 1, 4));
     const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
+    // Efecto de Confetti Premium (Colores Struky)
+    const triggerSuccessConfetti = () => {
+        const colors = ['#CAA052', '#8B6A35', '#ffffff'];
+        const fire = (particleRatio: number, opts: any) => {
+            confetti({
+                ...opts,
+                particleCount: Math.floor(200 * particleRatio),
+                colors: colors
+            });
+        };
+
+        fire(0.25, { spread: 26, startVelocity: 55, origin: { x: 0.5, y: 0.7 } });
+        fire(0.2, { spread: 60, origin: { x: 0.5, y: 0.7 } });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8, origin: { x: 0.5, y: 0.7 } });
+        fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2, origin: { x: 0.5, y: 0.7 } });
+        fire(0.1, { spread: 120, startVelocity: 45, origin: { x: 0.5, y: 0.7 } });
+    };
+
+    // Auto-scroll al entrar en Paso 3
+    useEffect(() => {
+        if (step === 3 && formData.plan) {
+            const plans = ['Starter', 'Pro Master', 'Elite Studio'];
+            const idx = plans.indexOf(formData.plan);
+            if (idx >= 0) {
+                setPlanActiveIndex(idx);
+                const timer = setTimeout(() => {
+                    if (planScrollRef.current) {
+                        const containerWidth = planScrollRef.current.offsetWidth;
+                        const cardWidth = containerWidth * 0.85 + 16;
+                        planScrollRef.current.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+                    }
+                }, 100);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [step]);
+
     const selectPlan = (plan: string, price: number) => {
         setFormData(prev => ({ ...prev, plan, price }));
+        triggerSuccessConfetti();
         setStep(2);
     };
 
@@ -139,8 +187,17 @@ export default function OrderForm({ lang }: OrderFormProps) {
             });
             const data = await response.json();
             if (data.lyrics) {
+                const newCount = genCount + 1;
+                setGenCount(newCount);
+                localStorage.setItem('struky_ai_gen_count', newCount.toString());
+                
                 setFormData({ ...formData, lyrics: data.lyrics });
                 setShowAiInput(false);
+                
+                // Efecto de celebración
+                triggerSuccessConfetti();
+                setNotification(lang === 'es' ? '¡Tu letra ha sido compuesta con éxito! ✨' : 'Your lyrics have been composed successfully! ✨');
+                setTimeout(() => setNotification(null), 4000);
             }
         } catch (error) {
             console.error("Error generating lyrics:", error);
@@ -189,6 +246,21 @@ export default function OrderForm({ lang }: OrderFormProps) {
                 </div>
 
                 <form onSubmit={handleSubmit} className="glass-morphism rounded-3xl p-5 sm:p-8 md:p-12 relative overflow-hidden">
+                    {/* Floating Notification */}
+                    <AnimatePresence>
+                        {notification && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -50, x: '-50%' }}
+                                animate={{ opacity: 1, y: 20, x: '-50%' }}
+                                exit={{ opacity: 0, y: -50, x: '-50%' }}
+                                className="fixed top-4 left-1/2 z-[100] bg-[#CAA052] text-white px-6 py-3 rounded-full font-bold shadow-[0_0_40px_rgba(202,160,82,0.5)] flex items-center gap-3 whitespace-nowrap border border-white/20"
+                            >
+                                <Sparkles className="w-5 h-5 text-white" />
+                                {notification}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <AnimatePresence mode="wait">
                         {step === 1 && (
                             <motion.div 
@@ -292,47 +364,92 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                         <motion.div 
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
-                                            className="mb-6 p-4 bg-purple-500/5 border border-purple-500/20 rounded-2xl"
+                                            className={`mb-6 p-4 rounded-2xl border ${genCount >= 3 ? 'bg-coffee-medium/10 border-coffee-medium/30' : 'bg-purple-500/5 border-purple-500/20'}`}
                                         >
-                                            <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3">{lang === 'es' ? 'Describe tu idea' : 'Describe your idea'}</p>
-                                            <div className="flex gap-2">
-                                                <input 
-                                                    type="text"
-                                                    placeholder={t.form.labels.aiIdeaPlaceholder}
-                                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-purple-500/50 transition-all"
-                                                    value={aiIdea}
-                                                    onChange={e => setAiIdea(e.target.value)}
-                                                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleGenerateLyrics())}
-                                                />
-                                                <button 
-                                                    type="button"
-                                                    disabled={isGenerating || !aiIdea}
-                                                    onClick={handleGenerateLyrics}
-                                                    className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 rounded-xl transition-all flex items-center justify-center min-w-[44px]"
-                                                >
-                                                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                                                </button>
-                                            </div>
+                                            {genCount >= 3 ? (
+                                                <div className="text-center py-2">
+                                                    <p className="text-xs font-bold text-coffee-light uppercase tracking-wider mb-2">
+                                                        {lang === 'es' ? 'Límite de demos alcanzado' : 'Demo limit reached'}
+                                                    </p>
+                                                    <p className="text-[10px] text-gray-400 leading-relaxed">
+                                                        {lang === 'es' 
+                                                            ? '¡Has creado rimas increíbles! Pide tu canción ahora para que nuestros productores le den vida a esta letra.' 
+                                                            : 'You created amazing rhymes! Order your song now so our producers can bring these lyrics to life.'}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3">
+                                                        {lang === 'es' ? `Describe tu idea (Intento ${genCount + 1}/3)` : `Describe your idea (Attempt ${genCount + 1}/3)`}
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <input 
+                                                            type="text"
+                                                            placeholder={t.form.labels.aiIdeaPlaceholder}
+                                                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-purple-500/50 transition-all text-white"
+                                                            value={aiIdea}
+                                                            onChange={e => setAiIdea(e.target.value)}
+                                                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleGenerateLyrics())}
+                                                        />
+                                                        <button 
+                                                            type="button"
+                                                            disabled={isGenerating || !aiIdea}
+                                                            onClick={handleGenerateLyrics}
+                                                            className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 rounded-xl transition-all flex items-center justify-center min-w-[44px]"
+                                                        >
+                                                            {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </motion.div>
                                     )}
 
-                                    <textarea 
-                                        rows={6}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none resize-y text-white placeholder:text-gray-600 text-base sm:text-sm min-h-[120px]"
-                                        value={formData.lyrics}
-                                        onChange={e => setFormData({...formData, lyrics: e.target.value})}
-                                        required
-                                        placeholder={lang === 'es' ? 'Pega aquí tus versos o genéralos con IA arriba...' : 'Paste your lyrics here or generate them with AI above...'}
-                                    />
-                                    <div className="mt-4 p-4 bg-coffee-medium/5 border border-coffee-medium/10 rounded-xl flex items-start gap-4 shadow-sm">
+                                    <div className="relative group/textarea">
+                                        <textarea 
+                                            rows={4}
+                                            style={{ minHeight: lyricsExpanded ? '400px' : '120px' }}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-[border-color] outline-none resize-none sm:resize-y text-white placeholder:text-gray-600 text-base sm:text-sm max-h-[60vh] pb-10 overflow-y-auto"
+                                            value={formData.lyrics}
+                                            onChange={e => setFormData({...formData, lyrics: e.target.value})}
+                                            onInput={e => {
+                                                // Auto-expand solo en móvil (< 640px)
+                                                if (window.innerWidth < 640) {
+                                                    const el = e.currentTarget;
+                                                    el.style.height = 'auto';
+                                                    el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + 'px';
+                                                }
+                                            }}
+                                            required
+                                            placeholder={lang === 'es' ? 'Pega aquí tus versos o genéralos con IA arriba...' : 'Paste your lyrics here or generate them with AI above...'}
+                                        />
+                                        {/* Botón funcional de expandir/contraer - solo desktop */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setLyricsExpanded(!lyricsExpanded)}
+                                            className="absolute bottom-3 right-3 items-center gap-2 text-gray-500 hover:text-coffee-light transition-colors hidden sm:flex cursor-pointer z-10 group/expand"
+                                        >
+                                            <span className="text-[9px] font-bold uppercase tracking-wider group-hover/expand:text-coffee-medium">
+                                                {lyricsExpanded 
+                                                    ? (lang === 'es' ? 'Contraer' : 'Collapse') 
+                                                    : (lang === 'es' ? 'Expandir' : 'Expand')}
+                                            </span>
+                                            <div className="w-6 h-6 rounded-md bg-white/5 border border-white/10 flex items-center justify-center group-hover/expand:bg-coffee-medium/20 group-hover/expand:border-coffee-medium/30 transition-all">
+                                                <svg className={`w-3.5 h-3.5 transition-transform ${lyricsExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
+                                        </button>
+                                    </div>
+                                    <div className="mt-4 p-4 bg-coffee-medium/10 border border-coffee-medium/20 rounded-xl flex items-center gap-4 shadow-xl">
                                         <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center shrink-0">
-                                            <Zap className="w-4 h-4 text-coffee-light" />
+                                            <Zap className="w-4 h-4 text-coffee-medium" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black text-coffee-light uppercase tracking-[0.2em] mb-1">
+                                            <p className="text-[10px] font-black text-coffee-medium uppercase tracking-[0.2em] mb-1">
                                                 {lang === 'es' ? '¿Tienes una melodía propia?' : 'Do you have your own melody?'}
                                             </p>
-                                            <p className="text-[10px] text-gray-500 leading-normal uppercase tracking-wider">
+                                            <p className="text-[10px] text-gray-300 leading-normal uppercase tracking-widest font-medium">
                                                 {lang === 'es' 
                                                     ? 'Para conservar tu melodía, envíanos tu audio por WhatsApp tras el pago junto con el comprobante.' 
                                                     : 'To keep your melody, send your audio via WhatsApp after payment along with the receipt.'}
@@ -482,6 +599,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                             type="button"
                                             onClick={() => {
                                                 setFormData(prev => ({ ...prev, plan: plan.id, price: plan.price }));
+                                                triggerSuccessConfetti();
                                                 nextStep();
                                             }}
                                             className={`relative p-8 rounded-3xl border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[85%] lg:w-full snap-center ${
@@ -548,18 +666,18 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                     <div className="grid md:grid-cols-2 gap-8 mb-8">
                                         {/* Columna 1: Datos Personales */}
                                         <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5 pb-2">Información de Contacto</h4>
+                                            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-white/10 pb-2">Información de Contacto</h4>
                                             <div className="grid gap-3">
                                                 <div>
-                                                    <p className="text-[9px] text-gray-600 uppercase mb-1">Artista / Cliente</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Artista / Cliente</p>
                                                     <p className="text-xs text-white font-bold">{formData.name || '-'}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] text-gray-600 uppercase mb-1">WhatsApp de Entrega</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">WhatsApp de Entrega</p>
                                                     <p className="text-xs text-white font-bold">{selectedCountry.code} {formData.phone || '-'}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] text-gray-600 uppercase mb-1">Correo Electrónico</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Correo Electrónico</p>
                                                     <p className="text-xs text-white font-bold">{formData.email || '-'}</p>
                                                 </div>
                                             </div>
@@ -567,22 +685,22 @@ export default function OrderForm({ lang }: OrderFormProps) {
 
                                         {/* Columna 2: Especificaciones */}
                                         <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5 pb-2">Especificaciones Creativas</h4>
+                                            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-white/10 pb-2">Especificaciones Creativas</h4>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <p className="text-[9px] text-gray-600 uppercase mb-1">Género</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Género</p>
                                                     <p className="text-xs text-white font-bold">{formData.genre}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] text-gray-600 uppercase mb-1">Preferencia de Voz</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Preferencia de Voz</p>
                                                     <p className="text-xs text-white font-bold">{formData.vocalist}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] text-gray-600 uppercase mb-1">Estado de Ánimo</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Estado de Ánimo</p>
                                                     <p className="text-xs text-white font-bold">{formData.mood}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[9px] text-gray-600 uppercase mb-1">Entrega Estimada</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Entrega Estimada</p>
                                                     <p className="text-xs text-coffee-light font-bold">
                                                         {formData.plan === 'Elite Studio' ? '24 HORAS' : formData.plan === 'Pro Master' ? '24-48 HORAS' : '48-72 HORAS'}
                                                     </p>
@@ -594,7 +712,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                     {/* Letra */}
                                     <div className="bg-white/5 rounded-2xl p-5 border border-white/5 mb-8 relative">
                                         <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                                        <div className="text-[9px] text-gray-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                                             <div className="w-1 h-1 rounded-full bg-coffee-medium"></div>
                                             Versos Confirmados
                                         </div>
@@ -611,7 +729,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                             formData.plan !== 'Starter' ? 'Video Obsequio Incluido' : 'Audio en Alta Calidad',
                                             formData.plan === 'Elite Studio' ? 'Multitracks / STEMS' : 'Masterización Profesional'
                                         ].map(check => (
-                                            <div key={check} className="flex items-center gap-2 text-[9px] text-gray-500 font-bold uppercase">
+                                            <div key={check} className="flex items-center gap-2 text-[10px] text-gray-300 font-bold uppercase">
                                                 <Check className="w-3 h-3 text-coffee-medium" />
                                                 {check}
                                             </div>
@@ -672,27 +790,25 @@ export default function OrderForm({ lang }: OrderFormProps) {
 
                                 {/* TRUST GUARANTEE PIE */}
                                 <div className="flex flex-col items-center gap-6 py-6 border-t border-white/5 mt-8">
-                                    <div className="flex items-center justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-                                        <div className="flex flex-col items-center gap-1.5 pt-1">
-                                            <div className="flex items-center gap-2">
-                                                {/* Visa */}
-                                                <div className="bg-white/10 border border-white/20 rounded px-2 py-1 flex items-center justify-center min-w-[44px]">
-                                                    <span className="text-white font-black text-[11px] italic tracking-tight">VISA</span>
-                                                </div>
-                                                {/* Mastercard */}
-                                                <div className="bg-white/10 border border-white/20 rounded px-2 py-1 flex items-center gap-1">
-                                                    <div className="w-4 h-4 rounded-full bg-red-500 -mr-2"></div>
-                                                    <div className="w-4 h-4 rounded-full bg-yellow-400 opacity-90"></div>
-                                                </div>
-                                                {/* Stripe */}
-                                                <div className="bg-white/10 border border-white/20 rounded px-2 py-1 flex items-center justify-center min-w-[44px]">
-                                                    <span className="text-[#635bff] font-black text-[11px] tracking-tight">stripe</span>
-                                                </div>
-                                            </div>
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Secure Checkout</span>
+                                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                                        {/* Visa */}
+                                        <div className="bg-white/[0.06] border border-white/15 rounded-lg px-3 py-2 flex items-center justify-center min-w-[52px] hover:bg-white/10 transition-all">
+                                            <span className="text-white font-black text-[13px] italic tracking-tight">VISA</span>
                                         </div>
-                                        <Lock className="w-5 h-5 text-gray-500" />
-                                        <div className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 border border-white/10 px-2 py-1 rounded">SSL SECURE</div>
+                                        {/* Mastercard */}
+                                        <div className="bg-white/[0.06] border border-white/15 rounded-lg px-3 py-2 flex items-center gap-1.5 hover:bg-white/10 transition-all">
+                                            <div className="w-5 h-5 rounded-full bg-red-500 -mr-2.5"></div>
+                                            <div className="w-5 h-5 rounded-full bg-yellow-400 opacity-90"></div>
+                                        </div>
+                                        {/* Stripe */}
+                                        <div className="bg-white/[0.06] border border-white/15 rounded-lg px-3 py-2 flex items-center justify-center min-w-[52px] hover:bg-white/10 transition-all">
+                                            <span className="text-[#7c75ff] font-black text-[13px] tracking-tight">stripe</span>
+                                        </div>
+                                        {/* SSL */}
+                                        <div className="flex items-center gap-1.5 border border-white/15 rounded-lg px-3 py-2 bg-white/[0.06]">
+                                            <Lock className="w-3 h-3 text-green-400" />
+                                            <span className="text-[10px] font-black text-green-400 tracking-widest">SSL</span>
+                                        </div>
                                     </div>
 
                                     <div className="flex items-center justify-center gap-4 px-6 py-4 bg-white/[0.02] border border-white/5 rounded-2xl w-full">
@@ -722,18 +838,22 @@ export default function OrderForm({ lang }: OrderFormProps) {
                         <button 
                             type="submit"
                             disabled={isLoading}
-                            className={`btn-primary w-full md:flex-1 ${step === 4 ? 'bg-coffee-medium !py-4' : ''}`}
+                            className={`btn-primary w-full md:flex-1 ${step === 4 ? 'bg-[#A67C37] !py-4 shadow-[0_0_30px_rgba(166,124,55,0.4)] hover:bg-[#B88C45]' : ''}`}
                         >
-                            {isLoading ? '...' : (
+                            {isLoading ? (
+                                <Loader2 className="w-6 h-6 animate-spin mx-auto text-white" />
+                            ) : (
                                 step === 4 ? (
                                     <div className="flex items-center justify-center gap-3">
-                                        <Sparkles className="w-5 h-5 text-black animate-pulse" />
-                                        <span className="whitespace-nowrap font-black uppercase tracking-tight text-base">
-                                            {lang === 'es' ? `¡Lanzar mi Producción! ($${formData.price} USD)` : `Launch My Production! ($${formData.price} USD)`}
+                                        <Sparkles className="w-5 h-5 text-white animate-pulse" />
+                                        <span className="whitespace-nowrap font-black uppercase tracking-tight text-base text-white">
+                                            {lang === 'es' ? `¡RESERVAR MI CANCIÓN PROFESIONAL! ($${formData.price})` : `ORDER MY PROFESSIONAL SONG! ($${formData.price})`}
                                         </span>
                                     </div>
                                 ) : (
-                                    lang === 'es' ? 'Continuar' : 'Continue'
+                                    <span className="font-black uppercase tracking-widest text-white/90">
+                                        {lang === 'es' ? 'Continuar' : 'Continue'}
+                                    </span>
                                 )
                             )}
                         </button>

@@ -8,7 +8,8 @@ export default function FAQ({ t }: { t: any }) {
     const questions = [
         { q: t.q1, a: t.a1 },
         { q: t.q2, a: t.a2 },
-        { q: t.q3, a: t.a3 }
+        { q: t.q3, a: t.a3 },
+        { q: t.q4, a: t.a4, highlight: true }
     ];
 
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
