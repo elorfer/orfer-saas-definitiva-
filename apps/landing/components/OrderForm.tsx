@@ -35,9 +35,9 @@ export default function OrderForm({ lang }: OrderFormProps) {
             setSlots(prev => {
                 const rand = Math.random();
                 if (rand > 0.4) { // 60% probabilidad de bajar
-                    return prev > 1 ? prev - 1 : 2; 
+                    return prev > 5 ? prev - 1 : 5; // Nunca baja de 5 cupos
                 } else if (rand < 0.2) { // 20% probabilidad de subir
-                    return prev < 9 ? prev + 1 : 8;
+                    return prev < 12 ? prev + 1 : 11;
                 }
                 return prev; 
             });
@@ -45,6 +45,18 @@ export default function OrderForm({ lang }: OrderFormProps) {
 
         return () => clearInterval(interval);
     }, []);
+
+    // Efecto para auto-scroll al cambiar de paso en dispositivos móviles
+    useEffect(() => {
+        // Hacemos scroll siempre que cambiemos a los pasos 2, 3 o 4.
+        const element = document.getElementById('order-form');
+        if (element) {
+            // Un pequeño delay (100ms) es clave porque Framer Motion tarda en renderizar el nuevo paso
+            setTimeout(() => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }, [step]);
 
     const [formData, setFormData] = React.useState({
         name: '',
@@ -218,8 +230,8 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                 <div>
                                     <label className="block text-sm font-bold text-gray-400 mb-4 uppercase tracking-widest">{lang === 'es' ? 'Tu Letra' : 'Your Lyrics'}</label>
                                     <textarea 
-                                        rows={4}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none resize-none"
+                                        rows={6}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none resize-y text-white placeholder:text-gray-600 text-base sm:text-sm min-h-[120px]"
                                         value={formData.lyrics}
                                         onChange={e => setFormData({...formData, lyrics: e.target.value})}
                                         required
