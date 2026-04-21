@@ -76,9 +76,9 @@ export default function Footer({ lang }: FooterProps) {
                         <p className="text-gray-400 text-sm mb-4">
                             {lang === 'es' ? '¿Tienes dudas? Escríbenos.' : 'Any questions? Get in touch.'}
                         </p>
-                        <a href="mailto:hola@struky.com" className="flex items-center gap-2 text-coffee-light hover:text-white transition-colors text-sm font-bold">
+                        <a href="mailto:strukyapp@gmail.com" className="flex items-center gap-2 text-coffee-light hover:text-white transition-colors text-sm font-bold">
                             <Mail className="w-4 h-4" />
-                            hola@struky.com
+                            strukyapp@gmail.com
                         </a>
                     </div>
                 </div>

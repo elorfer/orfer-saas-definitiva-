@@ -427,7 +427,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                         <button
                                             type="button"
                                             onClick={() => setLyricsExpanded(!lyricsExpanded)}
-                                            className="absolute bottom-3 right-3 items-center gap-2 text-gray-500 hover:text-coffee-light transition-colors hidden sm:flex cursor-pointer z-10 group/expand"
+                                            className="absolute bottom-5 right-5 items-center gap-2 text-gray-500 hover:text-coffee-light transition-colors hidden sm:flex cursor-pointer z-10 group/expand"
                                         >
                                             <span className="text-[9px] font-bold uppercase tracking-wider group-hover/expand:text-coffee-medium">
                                                 {lyricsExpanded 
