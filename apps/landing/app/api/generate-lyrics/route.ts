@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function POST(req: Request) {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
       { error: "API Key de OpenAI no configurada en el servidor." },
