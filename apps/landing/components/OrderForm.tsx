@@ -116,24 +116,28 @@ export default function OrderForm({ lang }: OrderFormProps) {
         fire(0.1, { spread: 120, startVelocity: 45, origin: { x: 0.5, y: 0.7 } });
     };
 
-    // Auto-scroll al entrar en Paso 3
+    // Auto-scroll al entrar en Paso 3 o cambiar plan
     useEffect(() => {
         if (step === 3 && formData.plan) {
             const plans = ['Starter', 'Pro Master', 'Elite Studio'];
             const idx = plans.indexOf(formData.plan);
             if (idx >= 0) {
                 setPlanActiveIndex(idx);
+                // Aumentamos el delay para asegurar que el componente esté montado y las dimensiones sean finales
                 const timer = setTimeout(() => {
                     if (planScrollRef.current) {
-                        const containerWidth = planScrollRef.current.offsetWidth;
-                        const cardWidth = containerWidth * 0.85 + 16;
-                        planScrollRef.current.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+                        const container = planScrollRef.current;
+                        const card = container.children[idx] as HTMLElement;
+                        if (card) {
+                            // Usamos scrollIntoView nativo en el elemento hijo para mayor precisión
+                            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }
                     }
-                }, 100);
+                }, 300);
                 return () => clearTimeout(timer);
             }
         }
-    }, [step]);
+    }, [step, formData.plan]);
 
     const selectPlan = (plan: string, price: number) => {
         setFormData(prev => ({ ...prev, plan, price }));
@@ -223,7 +227,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
     };
 
     return (
-        <section id="order-form" className="section-padding bg-dark-card/30">
+        <section id="order-form" className="section-padding bg-dark-card/30 scroll-mt-24 md:scroll-mt-32">
             <div className="max-w-3xl mx-auto">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4">
@@ -848,9 +852,9 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                 <Loader2 className="w-6 h-6 animate-spin mx-auto text-white" />
                             ) : (
                                 step === 4 ? (
-                                    <div className="flex items-center justify-center gap-3">
-                                        <Sparkles className="w-5 h-5 text-white animate-pulse" />
-                                        <span className="whitespace-nowrap font-black uppercase tracking-tight text-base text-white">
+                                    <div className="flex items-center justify-center gap-2 sm:gap-4 py-0.5">
+                                        <Sparkles className="w-5 h-5 text-white animate-pulse shrink-0 hidden xs:block" />
+                                        <span className="font-black uppercase tracking-tight text-xs sm:text-base text-white text-center leading-tight">
                                             {lang === 'es' ? `¡RESERVAR MI CANCIÓN PROFESIONAL! ($${formData.price})` : `ORDER MY PROFESSIONAL SONG! ($${formData.price})`}
                                         </span>
                                     </div>
