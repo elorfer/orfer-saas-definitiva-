@@ -25,6 +25,7 @@ function HomeContent() {
     const [lang, setLang] = useState<'es' | 'en'>('es');
     const [showStickyCTA, setShowStickyCTA] = useState(false);
     const [isFormVisible, setIsFormVisible] = useState(false);
+    const [selectedPlanFromTable, setSelectedPlanFromTable] = useState<string | null>(null);
     const t = translations[lang];
 
     useEffect(() => {
@@ -101,7 +102,13 @@ function HomeContent() {
         }
     ];
 
-    const handleSelectPlan = () => {
+    const handleSelectPlan = (planId: string, price: number) => {
+        const planMapping: Record<string, string> = {
+            'starter': 'Starter',
+            'pro': 'Pro Master',
+            'elite': 'Elite Studio'
+        };
+        setSelectedPlanFromTable(planMapping[planId] || 'Starter');
         // Efecto de Confetti Premium (Colores Struky)
         const duration = 2 * 1000;
         const animationEnd = Date.now() + duration;
@@ -214,7 +221,7 @@ function HomeContent() {
                 onSelectPlan={handleSelectPlan} 
             />
 
-            <OrderForm lang={lang} />
+            <OrderForm lang={lang} initialPlan={selectedPlanFromTable} />
 
             <FAQ t={t.faq} />
 

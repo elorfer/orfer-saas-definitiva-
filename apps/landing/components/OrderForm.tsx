@@ -22,9 +22,10 @@ const COUNTRIES = [
 
 interface OrderFormProps {
     lang: 'es' | 'en';
+    initialPlan?: string | null;
 }
 
-export default function OrderForm({ lang }: OrderFormProps) {
+export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const t = translations[lang];
     const [step, setStep] = React.useState(1);
     const [isLoading, setIsLoading] = React.useState(false);
@@ -89,6 +90,17 @@ export default function OrderForm({ lang }: OrderFormProps) {
     const [notification, setNotification] = useState<string | null>(null);
     const planScrollRef = useRef<HTMLDivElement>(null);
 
+    // Sync external plan selection internally
+    useEffect(() => {
+        if (initialPlan && initialPlan !== formData.plan) {
+            setFormData(prev => ({ 
+                ...prev, 
+                plan: initialPlan,
+                price: initialPlan === 'Elite Studio' ? 147 : initialPlan === 'Pro Master' ? 97 : 50
+            }));
+        }
+    }, [initialPlan]);
+
     // Cargar contador de IA al montar
     useEffect(() => {
         const saved = localStorage.getItem('struky_ai_gen_count');
@@ -117,23 +129,34 @@ export default function OrderForm({ lang }: OrderFormProps) {
     };
 
     // Auto-scroll al entrar en Paso 3 o cambiar plan
+    // Usa polling porque AnimatePresence puede tardar en montar el contenedor
     useEffect(() => {
         if (step === 3 && formData.plan) {
             const plans = ['Starter', 'Pro Master', 'Elite Studio'];
             const idx = plans.indexOf(formData.plan);
             if (idx >= 0) {
                 setPlanActiveIndex(idx);
-                // Aumentamos el delay para asegurar que el componente esté montado y las dimensiones sean finales
-                const timer = setTimeout(() => {
-                    if (planScrollRef.current) {
-                        const container = planScrollRef.current;
+                let attempts = 0;
+                const maxAttempts = 15;
+                const tryScroll = () => {
+                    attempts++;
+                    const container = planScrollRef.current;
+                    if (container && container.children.length >= 3) {
                         const card = container.children[idx] as HTMLElement;
-                        if (card) {
-                            // Usamos scrollIntoView nativo en el elemento hijo para mayor precisión
-                            card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        if (card && card.offsetWidth > 0) {
+                            requestAnimationFrame(() => {
+                                const scrollAmount = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
+                                container.scrollTo({ left: scrollAmount, behavior: 'auto' });
+                            });
+                            return; // Éxito, dejar de intentar
                         }
                     }
-                }, 300);
+                    if (attempts < maxAttempts) {
+                        setTimeout(tryScroll, 100);
+                    }
+                };
+                // Primer intento tras un breve delay para que AnimatePresence inicie el mount
+                const timer = setTimeout(tryScroll, 50);
                 return () => clearTimeout(timer);
             }
         }
@@ -561,7 +584,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                 <div 
                                     ref={planScrollRef}
                                     onScroll={handlePlanScroll}
-                                    className="flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
+                                    className="relative flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
                                 >
                                     {[
 

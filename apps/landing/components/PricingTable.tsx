@@ -125,7 +125,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
 
                             <button
                                 onClick={() => {
-                                    onSelectPlan(plan.name, plan.price);
+                                    onSelectPlan(plan.id, plan.price);
                                     document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
                                 }}
                                 className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${
