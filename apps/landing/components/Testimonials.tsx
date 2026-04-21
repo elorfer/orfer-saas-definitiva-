@@ -1,9 +1,25 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import { Star, Quote } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Testimonials({ t }: { t: any }) {
+    const [activeIndex, setActiveIndex] = useState(0);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const scrollPosition = scrollRef.current.scrollLeft;
+            const containerWidth = scrollRef.current.offsetWidth;
+            const cardWidth = containerWidth * 0.8 + 24; 
+            const index = Math.round(scrollPosition / cardWidth);
+            if (index !== activeIndex) {
+                setActiveIndex(index);
+            }
+        }
+    };
+
     const list = [
         { text: t.t1, author: t.t1_a, img: "https://randomuser.me/api/portraits/men/1.jpg" },
         { text: t.t2_t, author: t.t2_a, img: "https://randomuser.me/api/portraits/women/2.jpg" },
@@ -21,14 +37,15 @@ export default function Testimonials({ t }: { t: any }) {
                     </p>
                 </div>
 
-                <div className="flex md:grid md:grid-cols-2 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
+                <div 
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                    className="flex md:grid md:grid-cols-2 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                >
                     {list.map((item, i) => (
                         <motion.div 
                             key={i}
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.1 }}
+                            initial={{ opacity: 1 }} // Prevent flicker on mount/scroll
                             className="card-dark p-8 relative flex flex-col justify-between hover:bg-white/[0.04] transition-all border-white/5 flex-shrink-0 w-[85%] md:w-auto snap-center"
                         >
                             <Quote className="absolute top-6 right-8 w-10 h-10 text-coffee-medium/10 rotate-180" />
@@ -57,10 +74,14 @@ export default function Testimonials({ t }: { t: any }) {
 
                 {/* Mobile Indicators */}
                 <div className="flex justify-center gap-2 mt-4 md:hidden">
-                    <div className="w-1.5 h-1.5 rounded-full bg-coffee-medium"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
+                    {list.map((_, i) => (
+                        <div 
+                            key={i}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                                activeIndex === i ? 'w-6 bg-coffee-medium' : 'w-1.5 bg-white/10'
+                            }`}
+                        ></div>
+                    ))}
                 </div>
             </div>
         </section>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import { Check, Star, Zap, Crown, Video } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -9,6 +10,22 @@ interface PricingTableProps {
 }
 
 export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
+    const [activeIndex, setActiveIndex] = useState(0);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const scrollPosition = scrollRef.current.scrollLeft;
+            const containerWidth = scrollRef.current.offsetWidth;
+            // 80% is the card width on mobile, plus the gap
+            const cardWidth = containerWidth * 0.8 + 24; 
+            const index = Math.round(scrollPosition / cardWidth);
+            if (index !== activeIndex) {
+                setActiveIndex(index);
+            }
+        }
+    };
+
     const plans = [
         {
             id: 'starter',
@@ -54,11 +71,16 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                     </p>
                 </div>
 
-                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 pt-8 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
+                <div 
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                    className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 pt-8 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                >
                     {plans.map((plan) => (
                         <motion.div
                             key={plan.id}
                             whileHover={{ y: -10 }}
+                            initial={{ opacity: 1 }} // Remove initial 0 to prevent flickers on mount/scroll
                             className={`relative glass-morphism rounded-3xl p-6 border ${
                                 plan.highlight 
                                 ? 'border-coffee-medium shadow-[0_0_40px_rgba(202,160,82,0.15)] ring-1 ring-coffee-medium/50' 
@@ -120,9 +142,14 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
 
                 {/* Mobile Indicators */}
                 <div className="flex justify-center gap-2 mt-8 md:hidden">
-                    <div className="w-1.5 h-1.5 rounded-full bg-coffee-medium animate-pulse"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
+                    {plans.map((_, i) => (
+                        <div 
+                            key={i}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                                activeIndex === i ? 'w-6 bg-coffee-medium' : 'w-1.5 bg-white/20'
+                            }`}
+                        ></div>
+                    ))}
                 </div>
             </div>
         </section>

@@ -1,9 +1,25 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 
 export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
+    const [activeIndex, setActiveIndex] = useState(0);
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const scrollPosition = scrollRef.current.scrollLeft;
+            const containerWidth = scrollRef.current.offsetWidth;
+            const cardWidth = containerWidth * 0.8 + 24; 
+            const index = Math.round(scrollPosition / cardWidth);
+            if (index !== activeIndex) {
+                setActiveIndex(index);
+            }
+        }
+    };
+
     const composers = [
         {
             name: "Marco 'The Ghost' Ruiz",
@@ -41,14 +57,15 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                     </p>
                 </div>
 
-                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
+                <div 
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                    className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                >
                     {composers.map((composer, i) => (
                         <motion.div 
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.2 }}
+                            initial={{ opacity: 1 }} // Prevent flicker on mount/scroll
                             className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[85%] md:w-auto snap-center"
                         >
                             <div className="relative w-32 h-32 rounded-full border-2 border-coffee-medium/30 p-1 mb-6 overflow-hidden">
@@ -68,9 +85,14 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
 
                 {/* Mobile Indicators */}
                 <div className="flex justify-center gap-2 mt-8 md:hidden">
-                    <div className="w-1.5 h-1.5 rounded-full bg-coffee-medium"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
-                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
+                    {composers.map((_, i) => (
+                        <div 
+                            key={i}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                                activeIndex === i ? 'w-6 bg-coffee-medium' : 'w-1.5 bg-white/10'
+                            }`}
+                        ></div>
+                    ))}
                 </div>
             </div>
         </section>
