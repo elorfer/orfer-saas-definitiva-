@@ -594,10 +594,10 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                     {/* Letra */}
                                     <div className="bg-white/5 rounded-2xl p-5 border border-white/5 mb-8 relative">
                                         <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                                        <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <div className="text-[9px] text-gray-600 uppercase tracking-widest mb-3 flex items-center gap-2">
                                             <div className="w-1 h-1 rounded-full bg-coffee-medium"></div>
                                             Versos Confirmados
-                                        </p>
+                                        </div>
                                         <p className="text-xs text-gray-300 italic line-clamp-3 leading-relaxed">
                                             "{formData.lyrics || 'Sin letra proporcionada'}"
                                         </p>
@@ -673,13 +673,16 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                 {/* TRUST GUARANTEE PIE */}
                                 <div className="flex flex-col items-center gap-6 py-6 border-t border-white/5 mt-8">
                                     <div className="flex items-center justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-                                        <div className="flex flex-col items-center gap-1">
-                                            <div className="h-6 w-auto flex items-center gap-1">
-                                                <div className="w-6 h-4 bg-white/20 rounded-sm"></div>
-                                                <div className="w-6 h-4 bg-white/20 rounded-sm"></div>
-                                                <div className="w-6 h-4 bg-white/20 rounded-sm"></div>
+                                        <div className="flex flex-col items-center gap-1.5 pt-1">
+                                            <div className="flex items-center gap-2">
+                                                {/* Visa */}
+                                                <svg className="w-7 h-auto opacity-80" viewBox="0 0 48 48" fill="none"><path d="M19 32l2-12h4l-2 12h-4z" fill="#fff"/><path d="M12.35 19.95c-.35-1.5-.7-1.95-1.95-2.6C9.35 16.8 7.35 16 3 16v1.3c2.75.6 5.25 1.55 7.15 2.65L12.35 32h4.5l6.75-16h-4.65l-4.25 11.25-2.35-7.3z" fill="#fff"/><path d="M37.5 16l-3.5 10.6-1.5-7.6c-.3-1.5-1.5-3-3-3h-7l10 16h4.5l7-16h-6.5z" fill="#fff"/><circle cx="41" cy="19" r="2" fill="#F79E1B"/></svg>
+                                                {/* Mastercard */}
+                                                <svg className="w-6 h-auto opacity-80" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="12" r="7" fill="#EB001B"/><circle cx="17" cy="12" r="7" fill="#F79E1B" fillOpacity="0.8"/></svg>
+                                                {/* Stripe */}
+                                                <svg className="w-10 h-auto opacity-80" viewBox="0 0 48 48" fill="none"><path d="M22.5 18.5c0-1.4 1.1-2.1 2.9-2.1 2.2 0 4.6.7 6.1 1.6V13c-1.7-.6-4.1-1.1-6.4-1.1-5.1 0-8.8 2.6-8.8 7 0 6.9 9.5 5.8 9.5 9.7 0 1.6-1.4 2.3-3.4 2.3-2.5 0-5.3-1-7.1-2V34c2 1 4.9 1.6 7.4 1.6 5.3 0 9.2-2.5 9.2-7.1 0-7.3-9.4-6.1-9.4-10z" fill="#fff"/></svg>
                                             </div>
-                                            <span className="text-[7px] font-bold uppercase tracking-widest">Secure Payments</span>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Secure Checkout</span>
                                         </div>
                                         <Lock className="w-5 h-5 text-gray-500" />
                                         <div className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 border border-white/10 px-2 py-1 rounded">SSL SECURE</div>
