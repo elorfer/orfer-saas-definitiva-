@@ -22,6 +22,7 @@ function HomeContent() {
     const searchParams = useSearchParams();
     const [lang, setLang] = useState<'es' | 'en'>('es');
     const [showStickyCTA, setShowStickyCTA] = useState(false);
+    const [isFormVisible, setIsFormVisible] = useState(false);
     const t = translations[lang];
 
     useEffect(() => {
@@ -32,7 +33,7 @@ function HomeContent() {
         }
 
         const handleScroll = () => {
-            // Mostramos el botón solo después de bajar 500px o según el tamaño del Hero
+            // Mostramos el botón solo después de bajar 500px y si el formulario no está visible
             if (window.scrollY > 500) {
                 setShowStickyCTA(true);
             } else {
@@ -40,8 +41,22 @@ function HomeContent() {
             }
         };
 
+        // Observador para el formulario
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsFormVisible(entry.isIntersecting);
+            },
+            { threshold: 0.1 }
+        );
+
+        const formElement = document.getElementById('order-form');
+        if (formElement) observer.observe(formElement);
+
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            if (formElement) observer.unobserve(formElement);
+        };
     }, [searchParams]);
 
 
@@ -143,7 +158,7 @@ function HomeContent() {
 
             {/* Sticky Mobile CTA with Animation */}
             <AnimatePresence>
-                {showStickyCTA && (
+                {showStickyCTA && !isFormVisible && (
                     <motion.div 
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { translations } from '../lib/translations';
 import { Check, Star, Zap, Crown, Video, ChevronDown, Sparkles, Wand2, Loader2 } from 'lucide-react';
@@ -78,6 +78,8 @@ export default function OrderForm({ lang }: OrderFormProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [aiIdea, setAiIdea] = useState('');
     const [showAiInput, setShowAiInput] = useState(false);
+    const [planActiveIndex, setPlanActiveIndex] = useState(1); // Default to middle card (Pro)
+    const planScrollRef = useRef<HTMLDivElement>(null);
 
     const nextStep = () => setStep(s => Math.min(s + 1, 4));
     const prevStep = () => setStep(s => Math.max(s - 1, 1));
@@ -144,6 +146,18 @@ export default function OrderForm({ lang }: OrderFormProps) {
             console.error("Error generating lyrics:", error);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handlePlanScroll = () => {
+        if (planScrollRef.current) {
+            const scrollPosition = planScrollRef.current.scrollLeft;
+            const containerWidth = planScrollRef.current.offsetWidth;
+            const cardWidth = Math.min(containerWidth * 0.85 + 16, 400); 
+            const index = Math.round(scrollPosition / cardWidth);
+            if (index !== planActiveIndex) {
+                setPlanActiveIndex(index);
+            }
         }
     };
 
@@ -419,7 +433,11 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                     <h4 className="text-xl font-bold text-coffee-light">{lang === 'es' ? 'Selecciona el nivel de acabado' : 'Select production level'}</h4>
                                     <p className="text-gray-500 text-sm">{lang === 'es' ? '¿Qué tan lejos quieres llevar tu canción?' : 'How far do you want to take your song?'}</p>
                                 </div>
-                                <div className="flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide">
+                                <div 
+                                    ref={planScrollRef}
+                                    onScroll={handlePlanScroll}
+                                    className="flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
+                                >
                                     {[
 
                                         { 
@@ -494,9 +512,9 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                     ))}
                                 </div>
                                 <div className="flex justify-center gap-2 mt-4 lg:hidden">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${formData.plan === 'Starter' ? 'bg-coffee-light' : 'bg-white/10'}`}></div>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${formData.plan === 'Pro Master' ? 'bg-coffee-light' : 'bg-white/10'}`}></div>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${formData.plan === 'Elite Studio' ? 'bg-coffee-light' : 'bg-white/10'}`}></div>
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
                                 </div>
                             </motion.div>
                         )}
