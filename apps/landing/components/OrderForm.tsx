@@ -676,11 +676,18 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                         <div className="flex flex-col items-center gap-1.5 pt-1">
                                             <div className="flex items-center gap-2">
                                                 {/* Visa */}
-                                                <svg className="w-8 h-auto" viewBox="0 0 48 48" fill="none"><path d="M19 32l2-12h4l-2 12h-4z" fill="#1A1F71"/><path d="M12.35 19.95c-.35-1.5-.7-1.95-1.95-2.6C9.35 16.8 7.35 16 3 16v1.3c2.75.6 5.25 1.55 7.15 2.65L12.35 32h4.5l6.75-16h-4.65l-4.25 11.25-2.35-7.3z" fill="#1A1F71"/><path d="M37.5 16l-3.5 10.6-1.5-7.6c-.3-1.5-1.5-3-3-3h-7l10 16h4.5l7-16h-6.5z" fill="#1A1F71"/><circle cx="41" cy="19" r="3" fill="#F79E1B"/></svg>
+                                                <div className="bg-white/10 border border-white/20 rounded px-2 py-1 flex items-center justify-center min-w-[44px]">
+                                                    <span className="text-white font-black text-[11px] italic tracking-tight">VISA</span>
+                                                </div>
                                                 {/* Mastercard */}
-                                                <svg className="w-7 h-auto" viewBox="0 0 24 24" fill="none"><circle cx="7" cy="12" r="7" fill="#EB001B"/><circle cx="17" cy="12" r="7" fill="#F79E1B" fillOpacity="0.9"/></svg>
+                                                <div className="bg-white/10 border border-white/20 rounded px-2 py-1 flex items-center gap-1">
+                                                    <div className="w-4 h-4 rounded-full bg-red-500 -mr-2"></div>
+                                                    <div className="w-4 h-4 rounded-full bg-yellow-400 opacity-90"></div>
+                                                </div>
                                                 {/* Stripe */}
-                                                <svg className="w-11 h-auto" viewBox="0 0 48 48" fill="none"><path d="M22.5 18.5c0-1.4 1.1-2.1 2.9-2.1 2.2 0 4.6.7 6.1 1.6V13c-1.7-.6-4.1-1.1-6.4-1.1-5.1 0-8.8 2.6-8.8 7 0 6.9 9.5 5.8 9.5 9.7 0 1.6-1.4 2.3-3.4 2.3-2.5 0-5.3-1-7.1-2V34c2 1 4.9 1.6 7.4 1.6 5.3 0 9.2-2.5 9.2-7.1 0-7.3-9.4-6.1-9.4-10z" fill="#635bff"/></svg>
+                                                <div className="bg-white/10 border border-white/20 rounded px-2 py-1 flex items-center justify-center min-w-[44px]">
+                                                    <span className="text-[#635bff] font-black text-[11px] tracking-tight">stripe</span>
+                                                </div>
                                             </div>
                                             <span className="text-[8px] font-black uppercase tracking-widest text-gray-500">Secure Checkout</span>
                                         </div>
