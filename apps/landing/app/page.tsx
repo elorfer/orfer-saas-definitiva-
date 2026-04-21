@@ -72,10 +72,10 @@ function HomeContent() {
     ];
 
     return (
-        <main className="min-h-screen bg-dark-bg font-sans selection:bg-coffee-medium selection:text-white">
+        <main className="min-h-screen bg-dark-bg font-sans selection:bg-coffee-medium selection:text-white pb-24 md:pb-0">
             <Header lang={lang} setLang={setLang} />
             
-            <Hero t={t.hero} />
+            <Hero t={t.hero} lang={lang} />
 
             {/* EXAMPLES SECTION */}
             <section id="examples" className="section-padding bg-dark-bg relative overflow-hidden">
@@ -127,6 +127,16 @@ function HomeContent() {
             <FAQ t={t.faq} />
 
             <Footer lang={lang} />
+
+            {/* Sticky Mobile CTA */}
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg/95 via-dark-bg/90 to-transparent z-[50] md:hidden pointer-events-none backdrop-blur-sm">
+                <button 
+                    onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] mb-2 animate-bounce-slow"
+                >
+                    {lang === 'es' ? '🎵 Componer Mi Canción' : '🎵 Start My Song'}
+                </button>
+            </div>
         </main>
     );
 }

@@ -2,12 +2,14 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { Star } from 'lucide-react';
 
 interface HeroProps {
     t: any;
+    lang: 'es' | 'en';
 }
 
-export default function Hero({ t }: HeroProps) {
+export default function Hero({ t, lang }: HeroProps) {
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
             {/* Background */}
@@ -58,6 +60,22 @@ export default function Hero({ t }: HeroProps) {
                             {t.listen}
                         </a>
                     </div>
+
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.8, duration: 0.8 }}
+                        className="mt-10 flex flex-col items-center justify-center gap-3"
+                    >
+                        <div className="flex gap-1 text-[#CAA052]">
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} className="w-5 h-5 fill-current" />
+                            ))}
+                        </div>
+                        <span className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest">
+                            {lang === 'en' ? 'More than 50 custom songs delivered' : 'Más de 50 canciones personalizadas entregadas'}
+                        </span>
+                    </motion.div>
                 </motion.div>
 
                 <motion.div 

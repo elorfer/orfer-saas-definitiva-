@@ -11,7 +11,7 @@ export default function WhatsAppButton() {
             href={`https://wa.me/${phoneNumber}?text=${message}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed bottom-8 right-8 z-[60] flex items-center justify-center w-16 h-16 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 text-white shadow-[0_0_20px_rgba(0,0,0,0.8)] hover:border-coffee-medium hover:shadow-[0_0_25px_rgba(202,160,82,0.4)] hover:scale-110 transition-all duration-300 group"
+            className="fixed md:bottom-8 bottom-24 right-4 md:right-8 z-[60] flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 text-white shadow-[0_0_20px_rgba(0,0,0,0.8)] hover:border-coffee-medium hover:shadow-[0_0_25px_rgba(202,160,82,0.4)] hover:scale-110 transition-all duration-300 group"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             whileHover={{ y: -5 }}
