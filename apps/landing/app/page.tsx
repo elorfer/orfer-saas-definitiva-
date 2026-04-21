@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import ProfessionalAudioPlayer from '../components/ProfessionalAudioPlayer';
@@ -15,7 +15,6 @@ import FAQ from '../components/FAQ';
 import PricingTable from '../components/PricingTable';
 import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 import { Music } from 'lucide-react';
 
 function HomeContent() {
