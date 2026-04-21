@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { translations } from '../lib/translations';
-import { Check, Star, Zap, Crown, Video, ChevronDown, Sparkles, Wand2, Loader2 } from 'lucide-react';
+import { Check, Star, Zap, Crown, Video, ChevronDown, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard } from 'lucide-react';
 
 const COUNTRIES = [
     { name: 'Estados Unidos', code: '+1', flag: '🇺🇸' },
@@ -592,8 +592,12 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                     </div>
 
                                     {/* Letra */}
-                                    <div className="bg-white/5 rounded-2xl p-5 border border-white/5 mb-8">
-                                        <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-3">Versos Confirmados</p>
+                                    <div className="bg-white/5 rounded-2xl p-5 border border-white/5 mb-8 relative">
+                                        <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                                        <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-1 rounded-full bg-coffee-medium"></div>
+                                            Versos Confirmados
+                                        </p>
                                         <p className="text-xs text-gray-300 italic line-clamp-3 leading-relaxed">
                                             "{formData.lyrics || 'Sin letra proporcionada'}"
                                         </p>
@@ -667,13 +671,28 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                 </div>
 
                                 {/* TRUST GUARANTEE PIE */}
-                                <div className="flex items-center justify-center gap-4 py-4 opacity-60">
-                                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shrink-0">
-                                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                <div className="flex flex-col items-center gap-6 py-6 border-t border-white/5 mt-8">
+                                    <div className="flex items-center justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
+                                        <div className="flex flex-col items-center gap-1">
+                                            <div className="h-6 w-auto flex items-center gap-1">
+                                                <div className="w-6 h-4 bg-white/20 rounded-sm"></div>
+                                                <div className="w-6 h-4 bg-white/20 rounded-sm"></div>
+                                                <div className="w-6 h-4 bg-white/20 rounded-sm"></div>
+                                            </div>
+                                            <span className="text-[7px] font-bold uppercase tracking-widest">Secure Payments</span>
+                                        </div>
+                                        <Lock className="w-5 h-5 text-gray-500" />
+                                        <div className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 border border-white/10 px-2 py-1 rounded">SSL SECURE</div>
                                     </div>
-                                    <div className="text-left">
-                                        <div className="text-sm font-bold text-white uppercase tracking-widest">{lang === 'es' ? 'Garantía de Satisfacción Total' : 'Total Satisfaction Guarantee'}</div>
-                                        <div className="text-[10px] text-gray-400">{lang === 'es' ? 'Pagos 100% seguros y opciones de revisión musical.' : '100% Secure payments and musical revision options.'}</div>
+
+                                    <div className="flex items-center justify-center gap-4 px-6 py-4 bg-white/[0.02] border border-white/5 rounded-2xl w-full">
+                                        <div className="w-10 h-10 rounded-full bg-coffee-medium/10 flex items-center justify-center border border-coffee-medium/20 shrink-0">
+                                            <ShieldCheck className="w-5 h-5 text-coffee-medium" />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="text-[11px] font-black text-white uppercase tracking-widest mb-0.5">{lang === 'es' ? 'Garantía Estándar Struky' : 'Struky Standard Guarantee'}</div>
+                                            <div className="text-[9px] text-gray-500 leading-tight uppercase tracking-wider">{lang === 'es' ? 'Tu inversión está protegida. Calidad garantizada o revisamos hasta que ames tu canción.' : 'Your investment is protected. Guaranteed quality or we revise until you love your song.'}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </motion.div>
@@ -697,9 +716,11 @@ export default function OrderForm({ lang }: OrderFormProps) {
                         >
                             {isLoading ? '...' : (
                                 step === 4 ? (
-                                    <div className="flex items-center justify-center gap-2">
-                                        <svg className="w-5 h-5 text-black shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                        <span className="whitespace-nowrap sm:whitespace-normal">{lang === 'es' ? `Finalizar y Pagar ($${formData.price} USD)` : `Finish & Pay ($${formData.price} USD)`}</span>
+                                    <div className="flex items-center justify-center gap-3">
+                                        <Sparkles className="w-5 h-5 text-black animate-pulse" />
+                                        <span className="whitespace-nowrap font-black uppercase tracking-tight text-base">
+                                            {lang === 'es' ? `¡Lanzar mi Producción! ($${formData.price} USD)` : `Launch My Production! ($${formData.price} USD)`}
+                                        </span>
                                     </div>
                                 ) : (
                                     lang === 'es' ? 'Continuar' : 'Continue'
