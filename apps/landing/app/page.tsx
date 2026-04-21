@@ -16,10 +16,12 @@ import PricingTable from '../components/PricingTable';
 import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
 import { Music } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function HomeContent() {
     const searchParams = useSearchParams();
     const [lang, setLang] = useState<'es' | 'en'>('es');
+    const [showStickyCTA, setShowStickyCTA] = useState(false);
     const t = translations[lang];
 
     useEffect(() => {
@@ -28,6 +30,18 @@ function HomeContent() {
         if (urlLang === 'en' || urlLang === 'es') {
             setLang(urlLang as 'es' | 'en');
         }
+
+        const handleScroll = () => {
+            // Mostramos el botón solo después de bajar 500px o según el tamaño del Hero
+            if (window.scrollY > 500) {
+                setShowStickyCTA(true);
+            } else {
+                setShowStickyCTA(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
     }, [searchParams]);
 
 
@@ -127,16 +141,26 @@ function HomeContent() {
 
             <Footer lang={lang} />
 
-            {/* Sticky Mobile CTA */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg/95 via-dark-bg/90 to-transparent z-[50] md:hidden pointer-events-none backdrop-blur-sm">
-                <button 
-                    onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] mb-2 flex items-center justify-center gap-2"
-                >
-                    <Music className="w-5 h-5" />
-                    {t.hero.stickyCTA}
-                </button>
-            </div>
+            {/* Sticky Mobile CTA with Animation */}
+            <AnimatePresence>
+                {showStickyCTA && (
+                    <motion.div 
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                        className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg/95 via-dark-bg/90 to-transparent z-[50] md:hidden pointer-events-none backdrop-blur-sm"
+                    >
+                        <button 
+                            onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
+                            className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] mb-2 flex items-center justify-center gap-2"
+                        >
+                            <Music className="w-5 h-5" />
+                            {t.hero.stickyCTA}
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }

@@ -54,16 +54,16 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                     </p>
                 </div>
 
-                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
+                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 pt-8 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
                     {plans.map((plan) => (
                         <motion.div
                             key={plan.id}
                             whileHover={{ y: -10 }}
-                            className={`relative glass-morphism rounded-3xl p-8 border ${
+                            className={`relative glass-morphism rounded-3xl p-6 border ${
                                 plan.highlight 
                                 ? 'border-coffee-medium shadow-[0_0_40px_rgba(202,160,82,0.15)] ring-1 ring-coffee-medium/50' 
                                 : 'border-white/5'
-                            } flex flex-col flex-shrink-0 w-[85%] md:w-auto snap-center`}
+                            } flex flex-col flex-shrink-0 w-[80%] md:w-auto snap-center`}
                         >
                             {plan.highlight && (
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-coffee-medium to-coffee-light text-black text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg z-10">
