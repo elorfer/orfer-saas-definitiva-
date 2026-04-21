@@ -28,7 +28,10 @@ export const translations = {
         email: "Tu email",
         genre: "Género musical",
         lyrics: "Tu letra",
-        notes: "Notas para el productor"
+        notes: "Notas para el productor",
+        aiButton: "Generar con IA ✨",
+        aiLoading: "Diseñando tu hit...",
+        aiIdeaPlaceholder: "Solo danos una idea (ej: canción para mi madre en su cumple)..."
       }
     },
     benefits: {
@@ -124,7 +127,10 @@ export const translations = {
         email: "Your email",
         genre: "Musical genre",
         lyrics: "Your lyrics",
-        notes: "Notes for the producer"
+        notes: "Notes for the producer",
+        aiButton: "Generate with AI ✨",
+        aiLoading: "Designing your hit...",
+        aiIdeaPlaceholder: "Just give us an idea (ex: song for my mom on her bday)..."
       }
     },
     benefits: {

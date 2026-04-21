@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Star, Zap, Crown, Video, ChevronDown } from 'lucide-react';
+import { Check, Star, Zap, Crown, Video, ChevronDown, Sparkles, Wand2, Loader2 } from 'lucide-react';
 
 const COUNTRIES = [
     { name: 'Estados Unidos', code: '+1', flag: '🇺🇸' },
@@ -73,6 +73,10 @@ export default function OrderForm({ lang }: OrderFormProps) {
         price: 50
     });
 
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiIdea, setAiIdea] = useState('');
+    const [showAiInput, setShowAiInput] = useState(false);
+
     const nextStep = () => setStep(s => Math.min(s + 1, 4));
     const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
@@ -112,6 +116,32 @@ export default function OrderForm({ lang }: OrderFormProps) {
             alert(lang === 'es' ? 'Error de conexión' : 'Connection error');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleGenerateLyrics = async () => {
+        if (!aiIdea) return;
+        setIsGenerating(true);
+        try {
+            const response = await fetch('/api/generate-lyrics', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    idea: aiIdea,
+                    genre: formData.genre,
+                    mood: formData.mood,
+                    lang
+                }),
+            });
+            const data = await response.json();
+            if (data.lyrics) {
+                setFormData({ ...formData, lyrics: data.lyrics });
+                setShowAiInput(false);
+            }
+        } catch (error) {
+            console.error("Error generating lyrics:", error);
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -230,14 +260,53 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                 className="space-y-6"
                             >
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-400 mb-4 uppercase tracking-widest">{lang === 'es' ? 'Tu Letra' : 'Your Lyrics'}</label>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <label className="block text-sm font-bold text-gray-400 uppercase tracking-widest">{lang === 'es' ? 'Tu Letra' : 'Your Lyrics'}</label>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowAiInput(!showAiInput)}
+                                            className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#9c88ff] to-[#8c7ae6] text-white flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-purple-500/20"
+                                        >
+                                            <Sparkles className="w-3 h-3" />
+                                            {t.form.labels.aiButton}
+                                        </button>
+                                    </div>
+
+                                    {showAiInput && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            className="mb-6 p-4 bg-purple-500/5 border border-purple-500/20 rounded-2xl"
+                                        >
+                                            <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3">{lang === 'es' ? 'Describe tu idea' : 'Describe your idea'}</p>
+                                            <div className="flex gap-2">
+                                                <input 
+                                                    type="text"
+                                                    placeholder={t.form.labels.aiIdeaPlaceholder}
+                                                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-purple-500/50 transition-all"
+                                                    value={aiIdea}
+                                                    onChange={e => setAiIdea(e.target.value)}
+                                                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleGenerateLyrics())}
+                                                />
+                                                <button 
+                                                    type="button"
+                                                    disabled={isGenerating || !aiIdea}
+                                                    onClick={handleGenerateLyrics}
+                                                    className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 rounded-xl transition-all flex items-center justify-center min-w-[44px]"
+                                                >
+                                                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+
                                     <textarea 
                                         rows={6}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none resize-y text-white placeholder:text-gray-600 text-base sm:text-sm min-h-[120px]"
                                         value={formData.lyrics}
                                         onChange={e => setFormData({...formData, lyrics: e.target.value})}
                                         required
-                                        placeholder={lang === 'es' ? 'Pega aquí tus versos...' : 'Paste your lyrics here...'}
+                                        placeholder={lang === 'es' ? 'Pega aquí tus versos o genéralos con IA arriba...' : 'Paste your lyrics here or generate them with AI above...'}
                                     />
                                     <div className="mt-4 p-4 bg-coffee-medium/5 border border-coffee-medium/10 rounded-xl flex items-start gap-4 shadow-sm">
                                         <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center shrink-0">
