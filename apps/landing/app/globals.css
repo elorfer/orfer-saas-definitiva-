@@ -92,4 +92,12 @@
     .comparison-col {
         @apply p-8 md:p-10;
     }
+    
+    .custom-scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .custom-scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
 }

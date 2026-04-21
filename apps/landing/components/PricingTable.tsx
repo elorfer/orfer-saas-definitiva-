@@ -54,7 +54,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
                     {plans.map((plan) => (
                         <motion.div
                             key={plan.id}
@@ -63,7 +63,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 plan.highlight 
                                 ? 'border-coffee-medium shadow-[0_0_40px_rgba(202,160,82,0.15)] ring-1 ring-coffee-medium/50' 
                                 : 'border-white/5'
-                            } flex flex-col`}
+                            } flex flex-col flex-shrink-0 w-[85%] md:w-auto snap-center`}
                         >
                             {plan.highlight && (
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-coffee-medium to-coffee-light text-black text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg z-10">
@@ -116,6 +116,13 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                             </button>
                         </motion.div>
                     ))}
+                </div>
+
+                {/* Mobile Indicators */}
+                <div className="flex justify-center gap-2 mt-8 md:hidden">
+                    <div className="w-1.5 h-1.5 rounded-full bg-coffee-medium animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/20"></div>
                 </div>
             </div>
         </section>
