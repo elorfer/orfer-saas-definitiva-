@@ -43,7 +43,7 @@ export default function RefundPage() {
                                 <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center flex-shrink-0 text-coffee-medium font-bold">1</div>
                                 <div>
                                     <strong className="text-white">Envía un correo electrónico</strong>
-                                    <p className="text-sm mt-1">Escribe a: <a href="mailto:strukyapp@gmail.com" className="text-coffee-medium hover:text-coffee-light underline">strukyapp@gmail.com</a></p>
+                                    <p className="text-sm mt-1">Escribe a: <a href="mailto:welcome@struky.com" className="text-coffee-medium hover:text-coffee-light underline">welcome@struky.com</a></p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-4">
@@ -165,8 +165,8 @@ export default function RefundPage() {
                                 <span className="text-2xl">📧</span>
                                 <div>
                                     <div className="text-sm text-gray-400">Email</div>
-                                    <a href="mailto:strukyapp@gmail.com" className="text-coffee-medium hover:text-coffee-light underline font-semibold">
-                                        strukyapp@gmail.com
+                                    <a href="mailto:welcome@struky.com" className="text-coffee-medium hover:text-coffee-light underline font-semibold">
+                                        welcome@struky.com
                                     </a>
                                 </div>
                             </div>

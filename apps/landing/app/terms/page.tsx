@@ -124,8 +124,8 @@ export default function TermsPage() {
                         <h2 className="text-2xl font-bold text-white mb-4">11. Contacto</h2>
                         <p>
                             Para preguntas sobre estos términos, contáctanos en:{' '}
-                            <a href="mailto:strukyapp@gmail.com" className="text-neon-purple hover:text-neon-blue underline">
-                                strukyapp@gmail.com
+                            <a href="mailto:welcome@struky.com" className="text-neon-purple hover:text-neon-blue underline">
+                                welcome@struky.com
                             </a>
                         </p>
                     </section>

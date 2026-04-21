@@ -108,7 +108,7 @@ export async function POST(req: Request) {
             // 1. Enviar email al administrador (Struky Team)
             await resend.emails.send({
                 from: 'Struky Orders <welcome@struky.com>',
-                to: 'strukyapp@gmail.com',
+                to: 'welcome@struky.com',
                 subject: `🔥 ¡NUEVO PEDIDO: ${plan}! - ${metadata.name}`,
                 html: `
                     <div style="font-family: sans-serif; background-color: #050505; color: #ffffff; padding: 40px; border-radius: 24px; border: 1px solid #1a1a1a;">
