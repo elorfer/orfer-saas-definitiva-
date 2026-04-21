@@ -21,7 +21,7 @@ export default function Testimonials({ t }: { t: any }) {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-8">
+                <div className="flex md:grid md:grid-cols-2 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
                     {list.map((item, i) => (
                         <motion.div 
                             key={i}
@@ -29,7 +29,7 @@ export default function Testimonials({ t }: { t: any }) {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: i * 0.1 }}
-                            className="card-dark p-8 relative flex flex-col justify-between hover:bg-white/[0.04] transition-all border-white/5"
+                            className="card-dark p-8 relative flex flex-col justify-between hover:bg-white/[0.04] transition-all border-white/5 flex-shrink-0 w-[85%] md:w-auto snap-center"
                         >
                             <Quote className="absolute top-6 right-8 w-10 h-10 text-coffee-medium/10 rotate-180" />
                             
@@ -53,6 +53,14 @@ export default function Testimonials({ t }: { t: any }) {
                             </div>
                         </motion.div>
                     ))}
+                </div>
+
+                {/* Mobile Indicators */}
+                <div className="flex justify-center gap-2 mt-4 md:hidden">
+                    <div className="w-1.5 h-1.5 rounded-full bg-coffee-medium"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
                 </div>
             </div>
         </section>

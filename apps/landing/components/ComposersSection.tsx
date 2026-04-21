@@ -41,7 +41,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide">
                     {composers.map((composer, i) => (
                         <motion.div 
                             key={i}
@@ -49,7 +49,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ delay: i * 0.2 }}
-                            className="card-dark text-center flex flex-col items-center"
+                            className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[85%] md:w-auto snap-center"
                         >
                             <div className="relative w-32 h-32 rounded-full border-2 border-coffee-medium/30 p-1 mb-6 overflow-hidden">
                                 <Image 
@@ -64,6 +64,13 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                             <p className="text-sm text-gray-400 italic">"{composer.description}"</p>
                         </motion.div>
                     ))}
+                </div>
+
+                {/* Mobile Indicators */}
+                <div className="flex justify-center gap-2 mt-8 md:hidden">
+                    <div className="w-1.5 h-1.5 rounded-full bg-coffee-medium"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
                 </div>
             </div>
         </section>
