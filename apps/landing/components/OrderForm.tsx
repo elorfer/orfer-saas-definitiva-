@@ -49,17 +49,21 @@ export default function OrderForm({ lang }: OrderFormProps) {
         return () => clearInterval(interval);
     }, []);
 
-    // Efecto para auto-scroll al cambiar de paso en dispositivos móviles
+    const isInitialRender = useRef(true);
+
+    // Efecto para auto-scroll al cambiar de paso
     useEffect(() => {
-        // Solo hacemos scroll si ya pasamos del primer paso (para no bajar al cargar la página)
-        if (step > 1) {
-            const element = document.getElementById('order-form');
-            if (element) {
-                // Un pequeño delay (100ms) es clave porque Framer Motion tarda en renderizar el nuevo paso
-                setTimeout(() => {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            return;
+        }
+
+        const element = document.getElementById('order-form');
+        if (element) {
+            // Un pequeño delay (100ms) es clave porque Framer Motion tarda en renderizar el nuevo paso
+            setTimeout(() => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
     }, [step]);
 
