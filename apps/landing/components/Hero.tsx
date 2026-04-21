@@ -52,7 +52,7 @@ export default function Hero({ t, lang }: HeroProps) {
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
+                    transition={{ duration: 0.4 }}
                 >
                     <span className="inline-block px-4 py-1.5 rounded-full bg-coffee-medium/20 text-coffee-light text-sm font-bold mb-8 border border-coffee-medium/30">
                         {t.tag}
@@ -60,7 +60,7 @@ export default function Hero({ t, lang }: HeroProps) {
                     
                     <h1 className="text-5xl md:text-8xl font-black mb-6 leading-tight tracking-tight">
                         {t.title}<br />
-                        <span className="text-gradient hover:glow-text transition-all duration-500">
+                        <span className="text-gradient hover:glow-text transition-all duration-300">
                             {t.subtitle}
                         </span>
                     </h1>
@@ -87,7 +87,7 @@ export default function Hero({ t, lang }: HeroProps) {
                     <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.8, duration: 0.8 }}
+                        transition={{ delay: 0.4, duration: 0.4 }}
                         className="mt-10 flex flex-col items-center justify-center gap-3"
                     >
                         <div className="flex flex-col items-center gap-3 mt-4">
@@ -115,7 +115,7 @@ export default function Hero({ t, lang }: HeroProps) {
                 <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 1.2, duration: 1 }}
+                    transition={{ delay: 0.6, duration: 0.5 }}
                     className="mt-20 animate-float"
                 >
                     <div className="w-1 h-12 rounded-full bg-gradient-to-b from-coffee-medium/80 to-transparent mx-auto"></div>

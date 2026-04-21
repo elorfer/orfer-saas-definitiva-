@@ -145,7 +145,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                     {plans.map((_, i) => (
                         <div 
                             key={i}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                            className={`h-1.5 rounded-full transition-all duration-200 ${
                                 activeIndex === i ? 'w-6 bg-coffee-medium' : 'w-1.5 bg-white/20'
                             }`}
                         ></div>

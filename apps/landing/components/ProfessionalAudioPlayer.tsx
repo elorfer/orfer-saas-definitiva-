@@ -68,17 +68,17 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
     };
 
     return (
-        <div className={`card-dark group p-4 md:p-7 border transition-all duration-700 overflow-hidden relative flex flex-col sm:flex-row h-full ${isPlaying ? 'border-coffee-medium/50 shadow-[0_0_30px_rgba(202,160,82,0.15)] bg-white/5' : 'border-white/5 hover:border-white/20'}`}>
+        <div className={`card-dark group p-4 md:p-7 border transition-all duration-300 overflow-hidden relative flex flex-col sm:flex-row h-full ${isPlaying ? 'border-coffee-medium/50 shadow-[0_0_30px_rgba(202,160,82,0.15)] bg-white/5' : 'border-white/5 hover:border-white/20'}`}>
             {/* Shimmer Effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none z-20"></div>
 
             {/* COVER IMAGE */}
-            <div className="relative w-full sm:w-32 md:w-40 aspect-square shrink-0 overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-black/40 group-hover:scale-[1.03] transition-transform duration-700">
+            <div className="relative w-full sm:w-32 md:w-40 aspect-square shrink-0 overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-black/40 group-hover:scale-[1.03] transition-transform duration-300">
                 <Image 
                     src={cover} 
                     alt={title}
                     fill
-                    className={`object-cover transition-opacity duration-700 ${isPlaying ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`}
+                    className={`object-cover transition-opacity duration-300 ${isPlaying ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`}
                     sizes="(max-width: 768px) 50vw, 160px"
                     priority
                 />
@@ -104,7 +104,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
             <div className="flex-1 min-w-0 flex flex-col mt-4 sm:mt-0 sm:ml-8 justify-center">
                 <div className="mb-5">
                     <div className="flex items-center gap-2 mb-1.5">
-                        <h3 className={`text-base md:text-2xl font-black leading-tight truncate transition-colors duration-500 ${isPlaying ? 'text-coffee-light' : 'text-white'}`}>
+                        <h3 className={`text-base md:text-2xl font-black leading-tight truncate transition-colors duration-300 ${isPlaying ? 'text-coffee-light' : 'text-white'}`}>
                             {title}
                         </h3>
                         {isPlaying && (
@@ -124,7 +124,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                     {/* Play Button - Premium Neumorphism/Glass style */}
                     <button 
                         onClick={togglePlay}
-                        className={`w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 shadow-xl group/btn ${isPlaying ? 'bg-white text-black scale-110 shadow-coffee-medium/40 border-2 border-white' : 'bg-coffee-medium text-white hover:bg-coffee-light active:scale-95 border-2 border-transparent'}`}
+                        className={`w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 shadow-xl group/btn ${isPlaying ? 'bg-white text-black scale-110 shadow-coffee-medium/40 border-2 border-white' : 'bg-coffee-medium text-white hover:bg-coffee-light active:scale-95 border-2 border-transparent'}`}
                     >
                         {isPlaying ? (
                             <svg className="w-5 h-5 md:w-8 md:h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>

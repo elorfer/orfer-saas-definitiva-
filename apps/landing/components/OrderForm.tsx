@@ -261,11 +261,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                             <div key={s} className="flex items-center flex-1">
                                 <div className="flex flex-col items-center flex-1">
                                     <div 
-                                        className={`h-2 relative w-full rounded-full transition-all duration-500 mb-2 ${
+                                        className={`h-2 relative w-full rounded-full transition-all duration-300 mb-2 ${
                                             s <= step ? 'bg-gradient-to-r from-coffee-medium to-coffee-light shadow-[0_0_10px_rgba(202,160,82,0.5)]' : 'bg-white/10'
                                         }`}
                                     />
-                                    <span className={`text-[9px] font-bold uppercase tracking-wider transition-colors duration-300 ${s <= step ? 'text-coffee-light' : 'text-gray-600'}`}>
+                                    <span className={`text-[9px] font-bold uppercase tracking-wider transition-colors duration-200 ${s <= step ? 'text-coffee-light' : 'text-gray-600'}`}>
                                         {lang === 'es' 
                                             ? (s === 1 ? 'Estilo' : s === 2 ? 'Letra' : s === 3 ? 'Plan' : 'Confirmar') 
                                             : (s === 1 ? 'Style' : s === 2 ? 'Lyrics' : s === 3 ? 'Plan' : 'Confirm')}
@@ -298,6 +298,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 key="step1"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.25 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 className="space-y-6"
                             >
@@ -342,6 +343,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     <motion.div
                                         initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.2 }}
                                         className="bg-white/5 p-4 rounded-xl border border-coffee-medium/30"
                                     >
                                         <label className="block text-[10px] font-black text-coffee-light mb-2 uppercase tracking-widest">
@@ -375,6 +377,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 key="step2"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.25 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 className="space-y-6"
                             >
@@ -395,6 +398,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         <motion.div 
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
+                                            transition={{ duration: 0.2 }}
                                             className={`mb-6 p-4 rounded-2xl border ${genCount >= 3 ? 'bg-coffee-medium/10 border-coffee-medium/30' : 'bg-purple-500/5 border-purple-500/20'}`}
                                         >
                                             {genCount >= 3 ? (
@@ -574,7 +578,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 key="step3"
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.25 }}
+                                transition={{ duration: 0.25 }}
                                 className="space-y-8"
                             >
                                 <div className="text-center mb-4">
@@ -673,6 +678,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 key="step4"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.25 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 className="space-y-8"
                             >
@@ -813,7 +819,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </div>
                                     </div>
                                     <div className="bg-red-500/20 px-3 py-1 rounded-lg border border-red-500/30">
-                                        <span className="text-sm font-black text-red-400 tabular-nums transition-all duration-500 inline-block scale-110">
+                                        <span className="text-sm font-black text-red-400 tabular-nums transition-all duration-300 inline-block scale-110">
                                             {slots} {lang === 'es' ? (slots === 1 ? 'CUPO RESTANTE' : 'CUPOS RESTANTES') : (slots === 1 ? 'SLOT LEFT' : 'SLOTS LEFT')}
                                         </span>
                                     </div>

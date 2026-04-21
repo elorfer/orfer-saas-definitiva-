@@ -174,7 +174,7 @@ function HomeContent() {
                         initial={{ opacity: 0, y: 40 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.8 }}
+                        transition={{ duration: 0.4 }}
                         className="text-center mb-16"
                     >
                         <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">
@@ -192,7 +192,7 @@ function HomeContent() {
                                 initial={{ opacity: 0, y: 30 }}
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ duration: 0.5, delay: i * 0.1 }}
+                                transition={{ duration: 0.3, delay: i * 0.05 }}
                             >
                                 <ProfessionalAudioPlayer 
                                     src={example.src}
