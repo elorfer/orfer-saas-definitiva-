@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { translations } from '../lib/translations';
 import { Check, Star, Zap, Crown, Video, ChevronDown, Sparkles, Wand2, Loader2 } from 'lucide-react';
 
 const COUNTRIES = [
@@ -23,6 +24,7 @@ interface OrderFormProps {
 }
 
 export default function OrderForm({ lang }: OrderFormProps) {
+    const t = translations[lang];
     const [step, setStep] = React.useState(1);
     const [isLoading, setIsLoading] = React.useState(false);
     const [slots, setSlots] = useState(8); // Iniciar siempre en 8 para ver el descenso
