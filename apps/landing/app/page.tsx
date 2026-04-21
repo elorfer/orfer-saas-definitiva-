@@ -14,9 +14,9 @@ import Testimonials from '../components/Testimonials';
 import FAQ from '../components/FAQ';
 import PricingTable from '../components/PricingTable';
 import { translations } from '../lib/translations';
-import { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { Music } from 'lucide-react';
 
 function HomeContent() {
     const searchParams = useSearchParams();
@@ -132,9 +132,10 @@ function HomeContent() {
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg/95 via-dark-bg/90 to-transparent z-[50] md:hidden pointer-events-none backdrop-blur-sm">
                 <button 
                     onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] mb-2 animate-bounce-slow"
+                    className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] mb-2 flex items-center justify-center gap-2"
                 >
-                    {lang === 'es' ? '🎵 Componer Mi Canción' : '🎵 Start My Song'}
+                    <Music className="w-5 h-5" />
+                    {t.hero.stickyCTA}
                 </button>
             </div>
         </main>

@@ -140,7 +140,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="glass-morphism rounded-3xl p-8 md:p-12 relative overflow-hidden">
+                <form onSubmit={handleSubmit} className="glass-morphism rounded-3xl p-5 sm:p-8 md:p-12 relative overflow-hidden">
                     <AnimatePresence mode="wait">
                         {step === 1 && (
                             <motion.div 
@@ -312,7 +312,7 @@ export default function OrderForm({ lang }: OrderFormProps) {
                                             <input 
                                                 type="tel"
                                                 placeholder="..."
-                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
+                                                className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                                 value={formData.phone}
                                                 onChange={e => setFormData({...formData, phone: e.target.value})}
                                                 required
