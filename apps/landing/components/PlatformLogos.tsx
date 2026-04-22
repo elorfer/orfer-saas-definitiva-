@@ -1,7 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
-
 interface PlatformLogosProps {
     lang: 'es' | 'en';
 }
@@ -53,30 +51,14 @@ export default function PlatformLogos({ lang }: PlatformLogosProps) {
     return (
         <section className="py-12 md:py-16 bg-dark-bg/50 border-y border-white/5">
             <div className="max-w-5xl mx-auto px-6">
-                <motion.p
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                    className="text-center text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-8"
-                >
+                <p className="text-center text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-8">
                     {lang === 'es' ? 'Tu canción en las principales plataformas' : 'Your song on major platforms'}
-                </motion.p>
+                </p>
 
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="flex flex-wrap items-center justify-center gap-6 md:gap-10"
-                >
-                    {platforms.map((platform, i) => (
-                        <motion.div
+                <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
+                    {platforms.map((platform) => (
+                        <div
                             key={platform.name}
-                            initial={{ opacity: 0, y: 10 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.1 * i, duration: 0.5 }}
                             className="flex items-center gap-2 text-gray-500 hover:text-coffee-light transition-colors duration-300 group cursor-default"
                         >
                             <span className="opacity-60 group-hover:opacity-100 transition-opacity">
@@ -85,10 +67,11 @@ export default function PlatformLogos({ lang }: PlatformLogosProps) {
                             <span className="text-xs md:text-sm font-bold tracking-wider hidden sm:block">
                                 {platform.name}
                             </span>
-                        </motion.div>
+                        </div>
                     ))}
-                </motion.div>
+                </div>
             </div>
         </section>
     );
 }
+

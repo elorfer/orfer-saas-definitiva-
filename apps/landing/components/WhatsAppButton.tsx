@@ -1,33 +1,18 @@
 'use client';
 
-import { motion } from 'framer-motion';
-
 export default function WhatsAppButton() {
     const phoneNumber = "573009012217";
     const message = encodeURIComponent("Hola STRUKY, me gustaría obtener más información sobre sus servicios de producción musical.");
     
     return (
-        <motion.a
+        <a
             href={`https://wa.me/${phoneNumber}?text=${message}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="fixed md:bottom-8 bottom-24 right-4 md:right-8 z-[60] flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 text-white shadow-[0_0_20px_rgba(0,0,0,0.8)] hover:border-coffee-medium hover:shadow-[0_0_25px_rgba(202,160,82,0.4)] hover:scale-110 transition-all duration-300 group"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            whileHover={{ y: -5 }}
+            className="fixed md:bottom-8 bottom-24 right-4 md:right-8 z-[60] flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 border border-white/10 text-white shadow-[0_0_20px_rgba(0,0,0,0.8)] hover:border-coffee-medium hover:shadow-[0_0_25px_rgba(202,160,82,0.4)] hover:scale-110 hover:-translate-y-1 transition-all duration-300 group"
         >
-            <motion.div
-                className="absolute inset-0 rounded-full bg-coffee-medium opacity-20 blur-sm mix-blend-overlay"
-                animate={{
-                    scale: [1, 1.5, 1],
-                    opacity: [0.5, 0, 0.5]
-                }}
-                transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-            />
+            {/* Pulse ring — CSS only, GPU composited */}
+            <div className="pulse-ring absolute inset-0 rounded-full bg-coffee-medium opacity-20 blur-sm mix-blend-overlay" />
             
             <svg 
                 viewBox="0 0 24 24" 
@@ -43,6 +28,7 @@ export default function WhatsAppButton() {
                 ¿Tienes dudas? ¡Chátanos ahora!
                 <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-[#111]"></div>
             </span>
-        </motion.a>
+        </a>
     );
 }
+

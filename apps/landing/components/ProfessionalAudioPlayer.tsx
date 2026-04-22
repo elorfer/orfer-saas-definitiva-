@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 
 interface AudioPlayerProps {
     src: string;
@@ -79,25 +78,10 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                     alt={title}
                     fill
                     className={`object-cover transition-opacity duration-300 ${isPlaying ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`}
-                    sizes="(max-width: 768px) 50vw, 160px"
-                    priority
+                    sizes="(max-width: 768px) 40vw, 160px"
                 />
                 
-                {/* Visualizer Overlay */}
-                {isPlaying && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-none z-10">
-                        <div className="flex items-end gap-1 h-8">
-                            {[1, 2, 3, 4, 3, 2, 1].map((h, i) => (
-                                <motion.div
-                                    key={i}
-                                    className="w-1 bg-coffee-medium rounded-full"
-                                    animate={{ height: [`${h * 20}%`, `${h * 80}%`, `${h * 20}%`] }}
-                                    transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.1 }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
+                {/* Overlay removed for better aesthetic */}
             </div>
 
             {/* INFO & CONTROLS */}
@@ -108,11 +92,15 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                             {title}
                         </h3>
                         {isPlaying && (
-                            <motion.div 
-                                initial={{ opacity: 0, scale: 0 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="w-2 h-2 rounded-full bg-coffee-medium shadow-[0_0_10px_#CAA052]"
-                            />
+                            <div className="flex items-end gap-0.5 h-3 md:h-4 ml-2 mb-1">
+                                {[1, 2, 3, 2].map((h, i) => (
+                                    <div
+                                        key={i}
+                                        className="visualizer-bar w-0.5 md:w-1 bg-coffee-medium rounded-full"
+                                        style={{ height: `${h * 25}%` }}
+                                    />
+                                ))}
+                            </div>
                         )}
                     </div>
                     <p className="text-xs md:text-base text-gray-400 font-medium truncate tracking-wide">
@@ -121,7 +109,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                 </div>
                 
                 <div className="flex items-center gap-3 md:gap-5">
-                    {/* Play Button - Premium Neumorphism/Glass style */}
+                    {/* Play Button */}
                     <button 
                         onClick={togglePlay}
                         className={`w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 shadow-xl group/btn ${isPlaying ? 'bg-white text-black scale-110 shadow-coffee-medium/40 border-2 border-white' : 'bg-coffee-medium text-white hover:bg-coffee-light active:scale-95 border-2 border-transparent'}`}
@@ -148,10 +136,9 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                                 }
                             }}
                         >
-                            <motion.div 
-                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-coffee-medium via-coffee-light to-coffee-medium bg-[length:200%_100%] rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(202,160,82,0.4)]"
-                                animate={isPlaying ? { backgroundPosition: ['0% 0%', '200% 0%'] } : {}}
-                                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                            {/* Progress bar — CSS shimmer instead of Framer Motion */}
+                            <div 
+                                className={`absolute top-0 left-0 h-full bg-gradient-to-r from-coffee-medium via-coffee-light to-coffee-medium rounded-full transition-[width] duration-100 ease-linear shadow-[0_0_15px_rgba(202,160,82,0.4)] ${isPlaying ? 'progress-shimmer' : ''}`}
                                 style={{ width: `${progress}%` }}
                             />
                         </div>
@@ -169,17 +156,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                 onPause={() => setIsPlaying(false)}
                 onPlay={() => setIsPlaying(true)}
             />
-
-            <style jsx global>{`
-                @keyframes shimmer {
-                    100% {
-                        transform: translateX(100%);
-                    }
-                }
-                .animate-shimmer {
-                    animation: shimmer 1.5s infinite;
-                }
-            `}</style>
         </div>
     );
 }
+

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Star } from 'lucide-react';
+import { Star, ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface HeroProps {
@@ -41,9 +41,8 @@ export default function Hero({ t, lang }: HeroProps) {
                     src="/hero-bg.png"
                     alt="Music Studio"
                     fill
-                    className="object-cover opacity-40 scale-110"
+                    className="object-cover opacity-40"
                     priority
-                    quality={100}
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-dark-bg/20 via-dark-bg/60 to-dark-bg"></div>
             </div>
@@ -116,9 +115,9 @@ export default function Hero({ t, lang }: HeroProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.6, duration: 0.5 }}
-                    className="mt-20 animate-float"
+                    className="mt-20 animate-float flex justify-center"
                 >
-                    <div className="w-1 h-12 rounded-full bg-gradient-to-b from-coffee-medium/80 to-transparent mx-auto"></div>
+                    <ChevronDown className="w-8 h-8 text-coffee-medium/80" />
                 </motion.div>
             </div>
         </section>

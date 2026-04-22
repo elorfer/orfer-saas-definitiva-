@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react';
 import { Check, Star, Zap, Crown, Video } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 interface PricingTableProps {
     onSelectPlan: (plan: string, price: number) => void;
@@ -77,11 +76,9 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                     className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 pt-8 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
                 >
                     {plans.map((plan) => (
-                        <motion.div
+                        <div
                             key={plan.id}
-                            whileHover={{ y: -10 }}
-                            initial={{ opacity: 1 }} // Remove initial 0 to prevent flickers on mount/scroll
-                            className={`relative glass-morphism rounded-3xl p-6 border ${
+                            className={`relative glass-morphism rounded-3xl p-6 border transition-all duration-300 hover:-translate-y-2 ${
                                 plan.highlight 
                                 ? 'border-coffee-medium shadow-[0_0_40px_rgba(202,160,82,0.15)] ring-1 ring-coffee-medium/50' 
                                 : 'border-white/5'
@@ -114,7 +111,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 {plan.features.map((feature: string, i: number) => (
                                     <li key={i} className={`flex items-start gap-3 text-sm ${feature.includes('OBSEQUIO') ? 'text-coffee-light font-bold' : 'text-gray-400'}`}>
                                         {feature.includes('Video Letra') ? (
-                                            <Video className="w-5 h-5 shrink-0 text-coffee-medium animate-pulse" />
+                                            <Video className="w-5 h-5 shrink-0 text-coffee-medium" />
                                         ) : (
                                             <Check className={`w-5 h-5 shrink-0 ${plan.highlight ? 'text-coffee-light' : 'text-coffee-medium'}`} />
                                         )}
@@ -136,7 +133,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                             >
                                 {plan.cta}
                             </button>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 

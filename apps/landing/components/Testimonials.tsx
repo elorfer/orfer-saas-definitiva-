@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react';
 import { Star, Quote } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function Testimonials({ t }: { t: any }) {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -28,10 +27,10 @@ export default function Testimonials({ t }: { t: any }) {
     ];
 
     const list = [
-        { text: t.t1, author: t.t1_a, img: "https://randomuser.me/api/portraits/men/32.jpg", initials: "JM" },
-        { text: t.t2_t, author: t.t2_a, img: "https://randomuser.me/api/portraits/women/44.jpg", initials: "SL" },
-        { text: t.t3_t, author: t.t3_a, img: "https://randomuser.me/api/portraits/men/67.jpg", initials: "CR" },
-        { text: t.t4_t, author: t.t4_a, img: "https://randomuser.me/api/portraits/women/89.jpg", initials: "AM" }
+        { text: t.t1, author: t.t1_a, img: "https://images.unsplash.com/photo-1552058544-f2b08422138a?auto=format&fit=crop&q=80&w=300&h=300", initials: "JM" },
+        { text: t.t2_t, author: t.t2_a, img: "/images/artist_latina_2_v2.png", initials: "SL" },
+        { text: t.t3_t, author: t.t3_a, img: "/images/artist_latino_1_v2.png", initials: "CR" },
+        { text: t.t4_t, author: t.t4_a, img: "/images/artist_latina_4_v2.png", initials: "AM" }
     ];
 
     return (
@@ -50,9 +49,8 @@ export default function Testimonials({ t }: { t: any }) {
                     className="flex md:grid md:grid-cols-2 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
                 >
                     {list.map((item, i) => (
-                        <motion.div 
+                        <div 
                             key={i}
-                            initial={{ opacity: 1 }} // Prevent flicker on mount/scroll
                             className="card-dark p-8 relative flex flex-col justify-between hover:bg-white/[0.04] transition-all border-white/5 flex-shrink-0 w-[85%] md:w-auto snap-center"
                         >
                             <Quote className="absolute top-6 right-8 w-10 h-10 text-coffee-medium/10 rotate-180" />
@@ -87,7 +85,7 @@ export default function Testimonials({ t }: { t: any }) {
                                     <span className="text-xs text-coffee-light uppercase tracking-widest font-bold">Artista Verificado</span>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 

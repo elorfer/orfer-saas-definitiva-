@@ -43,9 +43,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 } else if (rand < 0.2) { // 20% probabilidad de subir
                     return prev < 12 ? prev + 1 : 11;
                 }
-                return prev; 
+                return prev;
             });
-        }, 6000); 
+        }, 6000);
 
         return () => clearInterval(interval);
     }, []);
@@ -93,8 +93,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     // Sync external plan selection internally
     useEffect(() => {
         if (initialPlan && initialPlan !== formData.plan) {
-            setFormData(prev => ({ 
-                ...prev, 
+            setFormData(prev => ({
+                ...prev,
                 plan: initialPlan,
                 price: initialPlan === 'Elite Studio' ? 147 : initialPlan === 'Pro Master' ? 97 : 50
             }));
@@ -170,7 +170,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Meta Pixel: Initiate Checkout
         if (typeof window !== 'undefined' && (window as any).fbq) {
             (window as any).fbq('track', 'InitiateCheckout', {
@@ -221,10 +221,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 const newCount = genCount + 1;
                 setGenCount(newCount);
                 localStorage.setItem('struky_ai_gen_count', newCount.toString());
-                
+
                 setFormData({ ...formData, lyrics: data.lyrics });
                 setShowAiInput(false);
-                
+
                 // Efecto de celebración
                 triggerSuccessConfetti();
                 setNotification(lang === 'es' ? '¡Tu letra ha sido compuesta con éxito! ✨' : 'Your lyrics have been composed successfully! ✨');
@@ -241,7 +241,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         if (planScrollRef.current) {
             const scrollPosition = planScrollRef.current.scrollLeft;
             const containerWidth = planScrollRef.current.offsetWidth;
-            const cardWidth = Math.min(containerWidth * 0.85 + 16, 400); 
+            const cardWidth = Math.min(containerWidth * 0.85 + 16, 400);
             const index = Math.round(scrollPosition / cardWidth);
             if (index !== planActiveIndex) {
                 setPlanActiveIndex(index);
@@ -260,14 +260,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                         {[1, 2, 3, 4].map((s, index) => (
                             <div key={s} className="flex items-center flex-1">
                                 <div className="flex flex-col items-center flex-1">
-                                    <div 
-                                        className={`h-2 relative w-full rounded-full transition-all duration-300 mb-2 ${
-                                            s <= step ? 'bg-gradient-to-r from-coffee-medium to-coffee-light shadow-[0_0_10px_rgba(202,160,82,0.5)]' : 'bg-white/10'
-                                        }`}
+                                    <div
+                                        className={`h-2 relative w-full rounded-full transition-all duration-300 mb-2 ${s <= step ? 'bg-gradient-to-r from-coffee-medium to-coffee-light shadow-[0_0_10px_rgba(202,160,82,0.5)]' : 'bg-white/10'
+                                            }`}
                                     />
                                     <span className={`text-[9px] font-bold uppercase tracking-wider transition-colors duration-200 ${s <= step ? 'text-coffee-light' : 'text-gray-600'}`}>
-                                        {lang === 'es' 
-                                            ? (s === 1 ? 'Estilo' : s === 2 ? 'Letra' : s === 3 ? 'Plan' : 'Confirmar') 
+                                        {lang === 'es'
+                                            ? (s === 1 ? 'Estilo' : s === 2 ? 'Letra' : s === 3 ? 'Plan' : 'Confirmar')
                                             : (s === 1 ? 'Style' : s === 2 ? 'Lyrics' : s === 3 ? 'Plan' : 'Confirm')}
                                     </span>
                                 </div>
@@ -294,7 +293,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
                     <AnimatePresence mode="wait">
                         {step === 1 && (
-                            <motion.div 
+                            <motion.div
                                 key="step1"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -305,11 +304,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Género' : 'Genre'}</label>
-                                        <select 
+                                        <select
                                             className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
                                             style={{ colorScheme: 'dark' }}
                                             value={formData.genre}
-                                            onChange={e => setFormData({...formData, genre: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, genre: e.target.value })}
                                         >
                                             <option value="Pop" className="bg-[#1a1a1a]">Pop</option>
                                             <option value="Reggaetón" className="bg-[#1a1a1a]">Reggaetón</option>
@@ -325,11 +324,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Voz' : 'Vocalist'}</label>
-                                        <select 
+                                        <select
                                             className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
                                             style={{ colorScheme: 'dark' }}
                                             value={formData.vocalist}
-                                            onChange={e => setFormData({...formData, vocalist: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, vocalist: e.target.value })}
                                         >
                                             <option value="Masculina" className="bg-[#1a1a1a]">Masculina</option>
                                             <option value="Femenina" className="bg-[#1a1a1a]">Femenina</option>
@@ -338,7 +337,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </select>
                                     </div>
                                 </div>
-                                
+
                                 {formData.genre === 'Otro' && (
                                     <motion.div
                                         initial={{ opacity: 0, y: -10 }}
@@ -349,23 +348,23 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         <label className="block text-[10px] font-black text-coffee-light mb-2 uppercase tracking-widest">
                                             {lang === 'es' ? 'Especifica tu género personalizado' : 'Specify your custom genre'}
                                         </label>
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder={lang === 'es' ? 'Ej: Bolero, Rock, Jazz...' : 'Ex: Bolero, Rock, Jazz...'}
                                             className="w-full bg-transparent border-b border-white/20 py-2 outline-none focus:border-coffee-light transition-all text-sm"
-                                            onChange={e => setFormData({...formData, notes: `Género deseado: ${e.target.value}. ${formData.notes}`})}
+                                            onChange={e => setFormData({ ...formData, notes: `Género deseado: ${e.target.value}. ${formData.notes}` })}
                                             required
                                         />
                                     </motion.div>
                                 )}
                                 <div>
                                     <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Tu Nombre / Artista' : 'Artist Name'}</label>
-                                    <input 
+                                    <input
                                         type="text"
                                         placeholder="Ej: David Ruiz"
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                         value={formData.name}
-                                        onChange={e => setFormData({...formData, name: e.target.value})}
+                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         required
                                     />
                                 </div>
@@ -373,7 +372,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                         )}
 
                         {step === 2 && (
-                            <motion.div 
+                            <motion.div
                                 key="step2"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -384,7 +383,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 <div>
                                     <div className="flex items-center justify-between mb-4">
                                         <label className="block text-sm font-bold text-gray-400 uppercase tracking-widest">{lang === 'es' ? 'Tu Letra' : 'Your Lyrics'}</label>
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={() => setShowAiInput(!showAiInput)}
                                             className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#9c88ff] to-[#8c7ae6] text-white flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-purple-500/20"
@@ -395,7 +394,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     </div>
 
                                     {showAiInput && (
-                                        <motion.div 
+                                        <motion.div
                                             initial={{ opacity: 0, height: 0 }}
                                             animate={{ opacity: 1, height: 'auto' }}
                                             transition={{ duration: 0.2 }}
@@ -407,8 +406,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                         {lang === 'es' ? 'Límite de demos alcanzado' : 'Demo limit reached'}
                                                     </p>
                                                     <p className="text-[10px] text-gray-400 leading-relaxed">
-                                                        {lang === 'es' 
-                                                            ? '¡Has creado rimas increíbles! Pide tu canción ahora para que nuestros productores le den vida a esta letra.' 
+                                                        {lang === 'es'
+                                                            ? '¡Has creado rimas increíbles! Pide tu canción ahora para que nuestros productores le den vida a esta letra.'
                                                             : 'You created amazing rhymes! Order your song now so our producers can bring these lyrics to life.'}
                                                     </p>
                                                 </div>
@@ -418,7 +417,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                         {lang === 'es' ? `Describe tu idea (Intento ${genCount + 1}/3)` : `Describe your idea (Attempt ${genCount + 1}/3)`}
                                                     </p>
                                                     <div className="flex gap-2">
-                                                        <input 
+                                                        <input
                                                             type="text"
                                                             placeholder={t.form.labels.aiIdeaPlaceholder}
                                                             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-purple-500/50 transition-all text-white"
@@ -426,7 +425,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                             onChange={e => setAiIdea(e.target.value)}
                                                             onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleGenerateLyrics())}
                                                         />
-                                                        <button 
+                                                        <button
                                                             type="button"
                                                             disabled={isGenerating || !aiIdea}
                                                             onClick={handleGenerateLyrics}
@@ -441,12 +440,12 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     )}
 
                                     <div className="relative group/textarea">
-                                        <textarea 
+                                        <textarea
                                             rows={4}
                                             style={{ minHeight: lyricsExpanded ? '400px' : '120px' }}
                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-[border-color] outline-none resize-none sm:resize-y text-white placeholder:text-gray-600 text-base sm:text-sm max-h-[60vh] pb-10 overflow-y-auto"
                                             value={formData.lyrics}
-                                            onChange={e => setFormData({...formData, lyrics: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, lyrics: e.target.value })}
                                             onInput={e => {
                                                 // Auto-expand solo en móvil (< 640px)
                                                 if (window.innerWidth < 640) {
@@ -465,8 +464,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             className="absolute bottom-5 right-5 items-center gap-2 text-gray-500 hover:text-coffee-light transition-colors hidden sm:flex cursor-pointer z-10 group/expand"
                                         >
                                             <span className="text-[9px] font-bold uppercase tracking-wider group-hover/expand:text-coffee-medium">
-                                                {lyricsExpanded 
-                                                    ? (lang === 'es' ? 'Contraer' : 'Collapse') 
+                                                {lyricsExpanded
+                                                    ? (lang === 'es' ? 'Contraer' : 'Collapse')
                                                     : (lang === 'es' ? 'Expandir' : 'Expand')}
                                             </span>
                                             <div className="w-6 h-6 rounded-md bg-white/5 border border-white/10 flex items-center justify-center group-hover/expand:bg-coffee-medium/20 group-hover/expand:border-coffee-medium/30 transition-all">
@@ -485,8 +484,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 {lang === 'es' ? '¿Tienes una melodía propia?' : 'Do you have your own melody?'}
                                             </p>
                                             <p className="text-[10px] text-gray-300 leading-normal uppercase tracking-widest font-medium">
-                                                {lang === 'es' 
-                                                    ? 'Para conservar tu melodía, envíanos tu audio por WhatsApp tras el pago junto con el comprobante.' 
+                                                {lang === 'es'
+                                                    ? 'Para conservar tu melodía, envíanos tu audio por WhatsApp tras el pago junto con el comprobante.'
                                                     : 'To keep your melody, send your audio via WhatsApp after payment along with the receipt.'}
                                             </p>
                                         </div>
@@ -495,11 +494,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Estado de Ánimo' : 'Mood'}</label>
-                                        <select 
+                                        <select
                                             className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
                                             style={{ colorScheme: 'dark' }}
                                             value={formData.mood}
-                                            onChange={e => setFormData({...formData, mood: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, mood: e.target.value })}
                                         >
                                             <option value="Feliz" className="bg-[#1a1a1a]">Feliz / Alegre</option>
                                             <option value="Romántico" className="bg-[#1a1a1a]">Romántico / Enamorado</option>
@@ -548,24 +547,24 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 )}
                                             </div>
 
-                                            <input 
+                                            <input
                                                 type="tel"
                                                 placeholder="..."
                                                 className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                                 value={formData.phone}
-                                                onChange={e => setFormData({...formData, phone: e.target.value})}
+                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                                 required
                                             />
                                         </div>
                                     </div>
                                     <div className="md:col-span-2">
                                         <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">Email</label>
-                                        <input 
+                                        <input
                                             type="email"
                                             placeholder="tu@email.com"
                                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                             value={formData.email}
-                                            onChange={e => setFormData({...formData, email: e.target.value})}
+                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
                                             required
                                         />
                                     </div>
@@ -574,7 +573,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                         )}
 
                         {step === 3 && (
-                            <motion.div 
+                            <motion.div
                                 key="step3"
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -585,17 +584,17 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     <h4 className="text-xl font-bold text-coffee-light">{lang === 'es' ? 'Selecciona el nivel de acabado' : 'Select production level'}</h4>
                                     <p className="text-gray-500 text-sm">{lang === 'es' ? '¿Qué tan lejos quieres llevar tu canción?' : 'How far do you want to take your song?'}</p>
                                 </div>
-                                <div 
+                                <div
                                     ref={planScrollRef}
                                     onScroll={handlePlanScroll}
                                     className="relative flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
                                 >
                                     {[
 
-                                        { 
-                                            id: 'Starter', 
-                                            price: 50, 
-                                            icon: Zap, 
+                                        {
+                                            id: 'Starter',
+                                            price: 50,
+                                            icon: Zap,
                                             desc: 'Ideal para Guía',
                                             features: [
                                                 'Producción básica',
@@ -603,11 +602,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 'Entrega en 48-72h'
                                             ]
                                         },
-                                        { 
-                                            id: 'Pro Master', 
-                                            price: 97, 
-                                            icon: Star, 
-                                            desc: 'Calidad Radio / Spotify', 
+                                        {
+                                            id: 'Pro Master',
+                                            price: 97,
+                                            icon: Star,
+                                            desc: 'Calidad Radio / Spotify',
                                             hot: true,
                                             features: [
                                                 'Producción Completa Premium',
@@ -616,10 +615,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 'Derechos comerciales'
                                             ]
                                         },
-                                        { 
-                                            id: 'Elite Studio', 
-                                            price: 147, 
-                                            icon: Crown, 
+                                        {
+                                            id: 'Elite Studio',
+                                            price: 147,
+                                            icon: Crown,
                                             desc: 'Fidelidad Máxima',
                                             features: [
                                                 'Mezcla y Master de élite',
@@ -637,11 +636,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 triggerSuccessConfetti();
                                                 nextStep();
                                             }}
-                                            className={`relative p-8 rounded-3xl border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[85%] lg:w-full snap-center ${
-                                                formData.plan === plan.id 
-                                                ? 'border-coffee-medium bg-coffee-medium/10 shadow-[0_0_30px_rgba(202,160,82,0.15)] scale-[1.02] lg:scale-105 z-10' 
+                                            className={`relative p-8 rounded-3xl border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[85%] lg:w-full snap-center ${formData.plan === plan.id
+                                                ? 'border-coffee-medium bg-coffee-medium/10 shadow-[0_0_30px_rgba(202,160,82,0.15)] scale-[1.02] lg:scale-105 z-10'
                                                 : 'border-white/10 bg-white/5 hover:border-white/20'
-                                            }`}
+                                                }`}
                                         >
                                             {plan.hot && (
                                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-coffee-medium text-black text-[10px] font-black uppercase px-4 py-1.5 rounded-full whitespace-nowrap z-10 shadow-lg">
@@ -652,7 +650,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             <h4 className="font-black text-base mb-1 uppercase tracking-tight">{plan.id}</h4>
                                             <div className="text-4xl font-black mb-3 text-white">${plan.price}<span className="text-xs text-gray-500 ml-1">USD</span></div>
                                             <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{plan.desc}</p>
-                                            
+
                                             <ul className="space-y-3 w-full pt-6 border-t border-white/5 text-left">
                                                 {plan.features.map(f => (
                                                     <li key={f} className="text-[11px] text-gray-400 flex items-start gap-3">
@@ -673,7 +671,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                         )}
 
                         {step === 4 && (
-                            <motion.div 
+                            <motion.div
                                 key="step4"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -781,8 +779,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </h4>
                                         <div className="text-3xl font-bold text-gray-600 line-through mb-4">~$500 USD</div>
                                         <p className="text-xs text-gray-500 leading-relaxed">
-                                            {lang === 'es' 
-                                                ? 'Músicos, tiempo de estudio, ingeniero y vocalistas.' 
+                                            {lang === 'es'
+                                                ? 'Músicos, tiempo de estudio, ingeniero y vocalistas.'
                                                 : 'Musicians, studio time, engineer and vocalists.'}
                                         </p>
                                     </div>
@@ -794,8 +792,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </h4>
                                         <div className="text-4xl font-black text-white mb-4 animate-pulse">${formData.price} USD</div>
                                         <p className="text-xs text-gray-300 leading-relaxed font-bold">
-                                            {lang === 'es' 
-                                                ? 'Entrega garantizada, derechos totales y calidad radio.' 
+                                            {lang === 'es'
+                                                ? 'Entrega garantizada, derechos totales y calidad radio.'
                                                 : 'Guaranteed delivery, total rights and radio quality.'}
                                         </p>
                                     </div>
@@ -863,7 +861,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
                     <div className="flex flex-col-reverse md:flex-row gap-4 mt-10">
                         {step > 1 && (
-                            <button 
+                            <button
                                 type="button"
                                 onClick={prevStep}
                                 className="btn-secondary w-full md:flex-1"
@@ -871,7 +869,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 {lang === 'es' ? 'Atrás' : 'Back'}
                             </button>
                         )}
-                        <button 
+                        <button
                             type="submit"
                             disabled={isLoading}
                             className={`btn-primary w-full md:flex-1 ${step === 4 ? 'bg-[#A67C37] !py-4 shadow-[0_0_30px_rgba(166,124,55,0.4)] hover:bg-[#B88C45]' : ''}`}

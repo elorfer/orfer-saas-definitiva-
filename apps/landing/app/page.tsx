@@ -1,24 +1,26 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import ProfessionalAudioPlayer from '../components/ProfessionalAudioPlayer';
-import ComposersSection from '../components/ComposersSection';
-import StudioShowcase from '../components/StudioShowcase';
-import OrderForm from '../components/OrderForm';
-import Footer from '../components/Footer';
-import Benefits from '../components/Benefits';
-import HowItWorks from '../components/HowItWorks';
-import Testimonials from '../components/Testimonials';
-import FAQ from '../components/FAQ';
-import PricingTable from '../components/PricingTable';
 import PlatformLogos from '../components/PlatformLogos';
 import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
 import { Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
+
+// Lazy-load below-the-fold components (code-split into separate chunks)
+const Benefits = dynamic(() => import('../components/Benefits'));
+const HowItWorks = dynamic(() => import('../components/HowItWorks'));
+const StudioShowcase = dynamic(() => import('../components/StudioShowcase'));
+const ComposersSection = dynamic(() => import('../components/ComposersSection'));
+const Testimonials = dynamic(() => import('../components/Testimonials'));
+const PricingTable = dynamic(() => import('../components/PricingTable'));
+const OrderForm = dynamic(() => import('../components/OrderForm'));
+const FAQ = dynamic(() => import('../components/FAQ'));
+const Footer = dynamic(() => import('../components/Footer'));
 
 function HomeContent() {
     const searchParams = useSearchParams();
@@ -102,14 +104,16 @@ function HomeContent() {
         }
     ];
 
-    const handleSelectPlan = (planId: string, price: number) => {
+    const handleSelectPlan = async (planId: string, price: number) => {
         const planMapping: Record<string, string> = {
             'starter': 'Starter',
             'pro': 'Pro Master',
             'elite': 'Elite Studio'
         };
         setSelectedPlanFromTable(planMapping[planId] || 'Starter');
-        // Efecto de Confetti Premium (Colores Struky)
+        
+        // Dynamically import confetti only when needed (saves ~29KB from initial bundle)
+        const confetti = (await import('canvas-confetti')).default;
         const duration = 2 * 1000;
         const animationEnd = Date.now() + duration;
         const colors = ['#CAA052', '#8B6A35', '#ffffff'];
@@ -149,58 +153,30 @@ function HomeContent() {
 
             {/* EXAMPLES SECTION */}
             <section id="examples" className="section-padding bg-dark-bg relative overflow-hidden">
-                {/* Background Decor - Animated Orbs */}
-                <motion.div 
-                    animate={{ 
-                        scale: [1, 1.2, 1],
-                        x: [0, 50, 0],
-                        y: [0, 30, 0] 
-                    }}
-                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                    className="absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none"
-                />
-                <motion.div 
-                    animate={{ 
-                        scale: [1, 1.3, 1],
-                        x: [0, -40, 0],
-                        y: [0, -50, 0] 
-                    }}
-                    transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-                    className="absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none"
-                />
+                {/* Background Decor - CSS-only animated orbs (GPU composited) */}
+                <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none" />
+                <div className="bg-orb-2 absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none" />
                 
                 <div className="max-w-7xl mx-auto relative z-10">
-                    <motion.div 
-                        initial={{ opacity: 0, y: 40 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4 }}
-                        className="text-center mb-16"
-                    >
+                    <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">
                             {t.examples.title.split(' ')[0]} <span className="text-gradient">{t.examples.title.split(' ').slice(1).join(' ')}</span>
                         </h2>
                         <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto">
                             {t.examples.subtitle}
                         </p>
-                    </motion.div>
+                    </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
                         {examples.map((example, i) => (
-                            <motion.div
-                                key={i}
-                                initial={{ opacity: 0, y: 30 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ duration: 0.3, delay: i * 0.05 }}
-                            >
+                            <div key={i}>
                                 <ProfessionalAudioPlayer 
                                     src={example.src}
                                     title={example.title}
                                     description={example.desc}
                                     cover={example.cover}
                                 />
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -235,7 +211,7 @@ function HomeContent() {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                        className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg/95 via-dark-bg/90 to-transparent z-[50] md:hidden pointer-events-none backdrop-blur-sm"
+                        className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg via-dark-bg/95 to-transparent z-[50] md:hidden pointer-events-none"
                     >
                         <button 
                             onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}

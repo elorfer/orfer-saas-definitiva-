@@ -1,7 +1,6 @@
 'use client';
 
 import { ShieldCheck, Zap, Music2 } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function Benefits({ t }: { t: any }) {
     const icons = [<Music2 key="1" />, <ShieldCheck key="2" />, <Zap key="3" />];
@@ -20,12 +19,8 @@ export default function Benefits({ t }: { t: any }) {
 
                 <div className="grid md:grid-cols-3 gap-8">
                     {data.map((item, i) => (
-                        <motion.div 
+                        <div 
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: i * 0.1 }}
                             className="card-dark p-8 flex flex-col items-center text-center group"
                         >
                             <div className="w-16 h-16 rounded-2xl bg-coffee-medium/10 flex items-center justify-center text-coffee-medium mb-6 group-hover:bg-coffee-medium group-hover:text-white transition-all duration-500">
@@ -33,7 +28,7 @@ export default function Benefits({ t }: { t: any }) {
                             </div>
                             <h3 className="text-xl font-bold mb-4">{item.title}</h3>
                             <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             </div>

@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 
 export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -25,19 +24,19 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
             name: "Marco 'The Ghost' Ruiz",
             role: lang === 'es' ? "Especialista en Mix Urbano" : "Urban Mix Specialist",
             description: lang === 'es' ? "12 años esculpiendo el sonido del trap y reggaetón comercial." : "12 years shaping the sound of commercial trap and reggaeton.",
-            image: "/images/producer_1.png"
+            image: "/images/producer_1_v2.png"
         },
         {
             name: "Elena Santacruz",
             role: lang === 'es' ? "Compositora de Estructuras Pop" : "Pop Structure Composer",
             description: lang === 'es' ? "Experta en hooks memorables y armonías vocales de alta gama." : "Expert in memorable hooks and high-end vocal harmonies.",
-            image: "/images/producer_2.png"
+            image: "/images/producer_2_v2.png"
         },
         {
             name: "Julian Master",
             role: lang === 'es' ? "Ingeniero de Mastering Analógico" : "Analog Mastering Engineer",
             description: lang === 'es' ? "El guardián de los LUFS exactos para Spotify y Apple Music." : "The guardian of exact LUFS for Spotify and Apple Music.",
-            image: "/images/producer_3.png"
+            image: "/images/artist_latino_3_v2.png"
         }
     ];
 
@@ -63,10 +62,9 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                     className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
                 >
                     {composers.map((composer, i) => (
-                        <motion.div 
+                        <div 
                             key={i}
-                            initial={{ opacity: 1 }} // Prevent flicker on mount/scroll
-                            className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[85%] md:w-auto snap-center"
+                            className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[85%] md:w-auto snap-center hover:bg-white/[0.02] transition-colors duration-300"
                         >
                             <div className="relative w-32 h-32 rounded-full border-2 border-coffee-medium/30 p-1 mb-6 overflow-hidden">
                                 <Image 
@@ -79,7 +77,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                             <h3 className="text-xl font-bold mb-1">{composer.name}</h3>
                             <p className="text-coffee-light text-xs font-bold uppercase tracking-widest mb-4">{composer.role}</p>
                             <p className="text-sm text-gray-400 italic">"{composer.description}"</p>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 

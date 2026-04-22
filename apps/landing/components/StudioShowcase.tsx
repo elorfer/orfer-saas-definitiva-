@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 
 export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
     return (
@@ -9,12 +8,7 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
             <div className="absolute top-1/2 left-0 w-1/2 h-1/2 bg-coffee-dark/10 blur-[150px] rounded-full translate-y(-50%)"></div>
             
             <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center relative z-10">
-                <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8 }}
-                >
+                <div>
                     <h2 className="text-3xl md:text-5xl font-bold mb-6 font-heading">
                         {lang === 'es' ? 'Bienvenido a' : 'Welcome to'} <br/>
                         <span className="text-gradient tracking-tight">Struky Studios</span>
@@ -40,23 +34,17 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
                             </li>
                         ))}
                     </ul>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-white/10"
-                >
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-white/10 group">
                     <Image
                         src="/images/studio_main.png"
                         alt="Struky Studios Professional Console"
                         fill
-                        className="object-cover hover:scale-105 transition-transform duration-700"
+                        className="object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                </motion.div>
+                </div>
             </div>
         </section>
     );

@@ -12,7 +12,7 @@ export default function Footer({ lang }: FooterProps) {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="py-20 border-t border-white/5 bg-black/60 backdrop-blur-3xl">
+        <footer className="py-20 border-t border-white/5 bg-black/80">
             <div className="max-w-7xl mx-auto px-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 lg:gap-24">
                     {/* Brand Section */}
@@ -89,7 +89,7 @@ export default function Footer({ lang }: FooterProps) {
                     </p>
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
                             <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Server: Latin-1 North</span>
                         </div>
                     </div>
