@@ -15,7 +15,7 @@ export default function FAQ({ t }: { t: any }) {
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
     return (
-        <section className="section-padding bg-dark-card/10">
+        <section id="faq" className="section-padding bg-dark-card/10">
             <div className="max-w-3xl mx-auto">
                 <div className="text-center mb-16">
                     <div className="inline-flex p-3 rounded-2xl bg-coffee-medium/10 text-coffee-medium mb-4">

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Check, Star, Zap, Crown, Video } from 'lucide-react';
+import { Check, Video } from 'lucide-react';
+import { PLANS } from '../lib/plans';
 
 interface PricingTableProps {
     onSelectPlan: (plan: string, price: number) => void;
@@ -16,7 +17,6 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
         if (scrollRef.current) {
             const scrollPosition = scrollRef.current.scrollLeft;
             const containerWidth = scrollRef.current.offsetWidth;
-            // 80% is the card width on mobile, plus the gap
             const cardWidth = containerWidth * 0.8 + 24; 
             const index = Math.round(scrollPosition / cardWidth);
             if (index !== activeIndex) {
@@ -25,41 +25,16 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
         }
     };
 
-    const plans = [
-        {
-            id: 'starter',
-            name: t.plans.starter.name,
-            price: 50,
-            description: t.plans.starter.desc,
-            features: t.plans.starter.features,
-            icon: Zap,
-            highlight: false,
-            cta: t.plans.starter.cta
-        },
-        {
-            id: 'pro',
-            name: t.plans.pro.name,
-            price: 97,
-            description: t.plans.pro.desc,
-            features: t.plans.pro.features,
-            icon: Star,
-            highlight: true,
-            cta: t.plans.pro.cta
-        },
-        {
-            id: 'elite',
-            name: t.plans.elite.name,
-            price: 147,
-            description: t.plans.elite.desc,
-            features: t.plans.elite.features,
-            icon: Crown,
-            highlight: false,
-            cta: t.plans.elite.cta
-        }
-    ];
+    const plans = PLANS.map(plan => ({
+        ...plan,
+        name: t.plans[plan.id].name,
+        description: t.plans[plan.id].desc,
+        features: t.plans[plan.id].features,
+        cta: t.plans[plan.id].cta
+    }));
 
     return (
-        <section className="section-padding bg-dark-bg/50 relative overflow-hidden">
+        <section id="pricing" className="section-padding bg-dark-bg/50 relative overflow-hidden">
             <div className="max-w-6xl mx-auto px-6">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">

@@ -15,7 +15,7 @@ export default function Hero({ t, lang }: HeroProps) {
 
     useEffect(() => {
         const delay = setTimeout(() => {
-            const target = 200;
+            const target = 10000;
             const duration = 1500;
             const steps = 50;
             const increment = target / steps;
@@ -92,7 +92,7 @@ export default function Hero({ t, lang }: HeroProps) {
                         <div className="flex flex-col items-center gap-3 mt-4">
                             <div className="flex items-end gap-1.5 leading-none">
                                 <span className="text-6xl md:text-7xl font-black text-gradient tabular-nums">
-                                    {count}
+                                    {count.toLocaleString(lang === 'es' ? 'es-ES' : 'en-US')}
                                 </span>
                                 <span className="text-3xl md:text-4xl font-black text-coffee-medium mb-1.5">+</span>
                             </div>

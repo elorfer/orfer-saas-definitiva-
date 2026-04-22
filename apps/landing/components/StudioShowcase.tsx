@@ -38,7 +38,7 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
 
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-white/10 group">
                     <Image
-                        src="/images/studio_main.png"
+                        src="/images/studio_main.webp"
                         alt="Struky Studios Professional Console"
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-700"

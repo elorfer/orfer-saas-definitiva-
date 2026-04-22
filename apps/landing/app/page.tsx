@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import ProfessionalAudioPlayer from '../components/ProfessionalAudioPlayer';
@@ -20,6 +21,7 @@ const Testimonials = dynamic(() => import('../components/Testimonials'));
 const PricingTable = dynamic(() => import('../components/PricingTable'));
 const OrderForm = dynamic(() => import('../components/OrderForm'));
 const FAQ = dynamic(() => import('../components/FAQ'));
+const MerchSection = dynamic(() => import('../components/MerchSection'));
 const Footer = dynamic(() => import('../components/Footer'));
 
 function HomeContent() {
@@ -76,19 +78,19 @@ function HomeContent() {
             title: "Un día",
             desc: lang === 'es' ? "Vallenato Sentimental • 3:45" : "Sentimental Vallenato • 3:45",
             src: "/examples/un-dia.mp3",
-            cover: "/examples/cover_un_dia.png"
+            cover: "/images/UNDIA.webp"
         },
         {
             title: "Señora",
             desc: lang === 'es' ? "Ranchera Romántica • 3:12" : "Romantic Ranchera • 3:12",
             src: "/examples/ejemplo2.mp3",
-            cover: "/examples/cover_senora.png"
+            cover: "/images/señoravip.webp"
         },
         {
             title: "Me Gustas",
             desc: lang === 'es' ? "Salsa Romántica • 2:58" : "Romantic Salsa • 2:58",
             src: "/examples/ejemplo3.mp3",
-            cover: "/examples/cover_me_gustas.png"
+            cover: "/examples/MEGUSTASSALSA.webp"
         },
         {
             title: "Mi Amor Bonito",
@@ -100,17 +102,12 @@ function HomeContent() {
             title: "Bailame Suave",
             desc: lang === 'es' ? "Urbano • 3:12" : "Urban • 3:12",
             src: "/examples/bailame-suave.mp3",
-            cover: "/examples/cover_bailame_suave.png"
+            cover: "/examples/bailame suave.webp"
         }
     ];
 
     const handleSelectPlan = async (planId: string, price: number) => {
-        const planMapping: Record<string, string> = {
-            'starter': 'Starter',
-            'pro': 'Pro Master',
-            'elite': 'Elite Studio'
-        };
-        setSelectedPlanFromTable(planMapping[planId] || 'Starter');
+        setSelectedPlanFromTable(planId);
         
         // Dynamically import confetti only when needed (saves ~29KB from initial bundle)
         const confetti = (await import('canvas-confetti')).default;
@@ -198,6 +195,22 @@ function HomeContent() {
             />
 
             <OrderForm lang={lang} initialPlan={selectedPlanFromTable} />
+
+            <MerchSection lang={lang} />
+
+            {/* Testimonials Banner Image */}
+            <section className="section-padding bg-dark-bg relative overflow-hidden">
+                <div className="max-w-7xl mx-auto px-4 relative z-10">
+                    <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/80 group">
+                        <img 
+                            src="/images/TESTIMONIOS.webp"
+                            alt="Struky Studios Testimonials"
+                            className="w-full h-auto block transition-transform duration-1000 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none"></div>
+                    </div>
+                </div>
+            </section>
 
             <FAQ t={t.faq} />
 

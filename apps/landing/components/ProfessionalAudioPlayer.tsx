@@ -77,7 +77,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                     src={cover} 
                     alt={title}
                     fill
-                    className={`object-cover transition-opacity duration-300 ${isPlaying ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'}`}
+                    className="object-cover transition-opacity duration-300 opacity-100"
                     sizes="(max-width: 768px) 40vw, 160px"
                 />
                 

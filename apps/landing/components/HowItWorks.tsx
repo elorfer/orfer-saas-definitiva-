@@ -10,7 +10,7 @@ export default function HowItWorks({ t }: { t: any }) {
     ];
 
     return (
-        <section className="section-padding bg-dark-card/20">
+        <section id="how-it-works" className="section-padding bg-dark-card/20">
             <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-20">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4">{t.title}</h2>

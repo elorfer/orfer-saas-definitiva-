@@ -24,19 +24,19 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
             name: "Marco 'The Ghost' Ruiz",
             role: lang === 'es' ? "Especialista en Mix Urbano" : "Urban Mix Specialist",
             description: lang === 'es' ? "12 años esculpiendo el sonido del trap y reggaetón comercial." : "12 years shaping the sound of commercial trap and reggaeton.",
-            image: "/images/producer_1_v2.png"
+            image: "/images/producermarcos.webp"
         },
         {
             name: "Elena Santacruz",
             role: lang === 'es' ? "Ingeniera de Arreglos Vocales" : "Vocal Arrangement Engineer",
             description: lang === 'es' ? "Experta en crear armonías y capas vocales que envuelven al oyente." : "Expert in creating vocal harmonies and layers that surround the listener.",
-            image: "/images/producer_2_v2.png"
+            image: "/images/elena.webp"
         },
         {
             name: "Julian Master",
             role: lang === 'es' ? "Ingeniero de Mastering Analógico" : "Analog Mastering Engineer",
             description: lang === 'es' ? "El guardián de los LUFS exactos para Spotify y Apple Music." : "The guardian of exact LUFS for Spotify and Apple Music.",
-            image: "/images/artist_latino_3_v2.png"
+            image: "/images/julian master.webp"
         }
     ];
 

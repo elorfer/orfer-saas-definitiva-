@@ -1,26 +1,57 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
 export default function WhatsAppButton() {
+    const [showBubble, setShowBubble] = useState(false);
     const phoneNumber = "573009012217";
     const message = encodeURIComponent("Hola STRUKY, me gustaría obtener más información sobre sus servicios de producción musical.");
     
+    useEffect(() => {
+        // Aparece después de 7 segundos
+        const showTimer = setTimeout(() => {
+            setShowBubble(true);
+        }, 7000);
+
+        // Desaparece después de 17 segundos en total (10 segundos visible)
+        const hideTimer = setTimeout(() => {
+            setShowBubble(false);
+        }, 17000);
+
+        return () => {
+            clearTimeout(showTimer);
+            clearTimeout(hideTimer);
+        };
+    }, []);
+
     return (
         <div className="fixed md:bottom-8 bottom-24 right-4 md:right-8 z-[60] flex flex-col items-end gap-4 pointer-events-none">
             {/* Persuasive Bubble */}
-            <div className="bg-black/80 backdrop-blur-md border border-coffee-medium/30 px-4 py-2.5 rounded-2xl rounded-br-none shadow-[0_10px_30px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-right-4 duration-500 delay-1000 fill-mode-both pointer-events-auto">
-                <p className="text-[10px] font-black text-white uppercase tracking-widest leading-tight">
-                    ¿Dudas con tu letra?
-                </p>
-                <p className="text-[9px] text-coffee-light font-bold uppercase tracking-wider">
-                    Habla con un productor en vivo
-                </p>
-            </div>
+            <AnimatePresence>
+                {showBubble && (
+                    <motion.div 
+                        initial={{ opacity: 0, x: 20, scale: 0.8 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, x: 20, scale: 0.8 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className="bg-black/80 backdrop-blur-md border border-coffee-medium/30 px-4 py-2.5 rounded-2xl rounded-br-none shadow-[0_10px_30px_rgba(0,0,0,0.5)] pointer-events-auto"
+                    >
+                        <p className="text-[10px] font-black text-white uppercase tracking-widest leading-tight">
+                            ¿Dudas de cómo funciona?
+                        </p>
+                        <p className="text-[9px] text-coffee-light font-bold uppercase tracking-wider">
+                            Habla con un productor en vivo
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <a
                 href={`https://wa.me/${phoneNumber}?text=${message}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 border border-white/10 text-white shadow-[0_0_20px_rgba(0,0,0,0.8)] hover:border-coffee-medium hover:shadow-[0_0_25px_rgba(202,160,82,0.4)] hover:scale-110 transition-all duration-300 group pointer-events-auto"
+                className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full bg-black/60 border border-white/10 text-white shadow-[0_0_20px_rgba(0,0,0,0.8)] hover:border-coffee-medium hover:shadow-[0_0_25px_rgba(202,160,82,0.4)] hover:scale-110 transition-all duration-300 group pointer-events-auto relative"
             >
                 {/* Pulse ring — CSS only, GPU composited */}
                 <div className="pulse-ring absolute inset-0 rounded-full bg-coffee-medium opacity-20 blur-sm mix-blend-overlay" />

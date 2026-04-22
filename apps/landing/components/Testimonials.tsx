@@ -27,7 +27,7 @@ export default function Testimonials({ t }: { t: any }) {
     ];
 
     const list = [
-        { text: t.t1, author: t.t1_a, img: "https://images.unsplash.com/photo-1552058544-f2b08422138a?auto=format&fit=crop&q=80&w=300&h=300", initials: "JM" },
+        { text: t.t1, author: t.t1_a, img: "/images/producer_3_v2.png", initials: "JM" },
         { text: t.t2_t, author: t.t2_a, img: "/images/artist_latina_2_v2.png", initials: "SL" },
         { text: t.t3_t, author: t.t3_a, img: "/images/artist_latino_1_v2.png", initials: "CR" },
         { text: t.t4_t, author: t.t4_a, img: "/images/artist_latina_4_v2.png", initials: "AM" }
@@ -39,7 +39,7 @@ export default function Testimonials({ t }: { t: any }) {
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4">{t.title}</h2>
                     <p className="text-gray-500 max-w-2xl mx-auto">
-                        Más de 500 artistas han transformado su música con nosotros.
+                        Más de 10.000 canciones entregadas con éxito.
                     </p>
                 </div>
 

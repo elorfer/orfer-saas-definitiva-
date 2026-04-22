@@ -2,7 +2,7 @@ export const translations = {
   es: {
     hero: {
       tag: "Producción Musical Profesional",
-      title: "Da vida a tus composiciones.",
+      title: "Convierte tu letra en una canción profesional",
       subtitle: "Tus letras hechas canciones de estudio",
       description: "No dejes tus mejores letras guardadas en un cajón. Logra ese sonido profesional que buscan los artistas, trabajando con IA avanzada + productores humanos.",
       cta: "Crear mi canción ahora",
@@ -103,7 +103,7 @@ export const translations = {
   en: {
     hero: {
       tag: "Producción Musical Profesional",
-      title: "Bring your compositions to life.",
+      title: "Turn your lyrics into a professional song",
       subtitle: "Your lyrics turned into studio songs",
       description: "Don't leave your best lyrics in a drawer. Get that professional sound artists look for, working with advanced AI + human producers.",
       cta: "Create my song now",

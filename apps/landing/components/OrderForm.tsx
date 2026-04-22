@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { translations } from '../lib/translations';
-import { Check, Star, Zap, Crown, Video, ChevronDown, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard } from 'lucide-react';
+import { PLANS, PLAN_IDS } from '../lib/plans';
+import { Check, Video, ChevronDown, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard, Zap } from 'lucide-react';
 
 const COUNTRIES = [
     { name: 'Estados Unidos', code: '+1', flag: '🇺🇸' },
@@ -77,8 +78,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         lyrics: '',
         notes: '',
         phone: '',
-        plan: 'Starter',
-        price: 50
+        plan: PLAN_IDS.PRO, // Default to Pro
+        price: 97
     });
 
     const [isGenerating, setIsGenerating] = useState(false);
@@ -93,11 +94,14 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     // Sync external plan selection internally
     useEffect(() => {
         if (initialPlan && initialPlan !== formData.plan) {
-            setFormData(prev => ({
-                ...prev,
-                plan: initialPlan,
-                price: initialPlan === 'Elite Studio' ? 147 : initialPlan === 'Pro Master' ? 97 : 50
-            }));
+            const planData = PLANS.find(p => p.id === initialPlan);
+            if (planData) {
+                setFormData(prev => ({
+                    ...prev,
+                    plan: initialPlan,
+                    price: planData.price
+                }));
+            }
         }
     }, [initialPlan]);
 
@@ -147,8 +151,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     // Usa polling porque AnimatePresence puede tardar en montar el contenedor
     useEffect(() => {
         if (step === 3 && formData.plan) {
-            const plans = ['Starter', 'Pro Master', 'Elite Studio'];
-            const idx = plans.indexOf(formData.plan);
+            const idx = PLANS.findIndex(p => p.id === formData.plan);
             if (idx >= 0) {
                 setPlanActiveIndex(idx);
                 let attempts = 0;
@@ -209,6 +212,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
+                    plan: t.pricing.plans[formData.plan]?.name || formData.plan,
                     phone: `${selectedCountry.code} ${formData.phone}`,
                     metaEventId: eventID
                 }),
@@ -610,45 +614,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     onScroll={handlePlanScroll}
                                     className="relative flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
                                 >
-                                    {[
-
-                                        {
-                                            id: 'Starter',
-                                            price: 50,
-                                            icon: Zap,
-                                            desc: 'Ideal para Guía',
-                                            features: [
-                                                'Producción básica',
-                                                'Calidad Maqueta profesional',
-                                                'Entrega en 48-72h'
-                                            ]
-                                        },
-                                        {
-                                            id: 'Pro Master',
-                                            price: 97,
-                                            icon: Star,
-                                            desc: 'Calidad Radio / Spotify',
-                                            hot: true,
-                                            features: [
-                                                'Producción Completa Premium',
-                                                'Video Obsequio incluido',
-                                                'Entrega Prioritaria (24-48h)',
-                                                'Derechos comerciales'
-                                            ]
-                                        },
-                                        {
-                                            id: 'Elite Studio',
-                                            price: 147,
-                                            icon: Crown,
-                                            desc: 'Fidelidad Máxima',
-                                            features: [
-                                                'Mezcla y Master de élite',
-                                                'Multitracks / STEMS incluidos',
-                                                'Video Obsequio Pro',
-                                                'Soporte directo con productor'
-                                            ]
-                                        }
-                                    ].map((plan) => (
+                                    {PLANS.map((plan) => (
                                         <button
                                             key={plan.id}
                                             type="button"
@@ -670,18 +636,18 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 : 'border-white/10 bg-white/5 hover:border-white/20'
                                                 }`}
                                         >
-                                            {plan.hot && (
+                                            {plan.highlight && (
                                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-coffee-medium text-black text-[10px] font-black uppercase px-4 py-1.5 rounded-full whitespace-nowrap z-10 shadow-lg">
-                                                    Más Popular
+                                                    {t.pricing.popular}
                                                 </div>
                                             )}
                                             <plan.icon className={`w-12 h-12 mb-5 transition-transform group-hover/card:scale-110 ${formData.plan === plan.id ? 'text-coffee-light' : 'text-coffee-medium'}`} />
-                                            <h4 className="font-black text-base mb-1 uppercase tracking-tight">{plan.id}</h4>
+                                            <h4 className="font-black text-base mb-1 uppercase tracking-tight">{t.pricing.plans[plan.id].name}</h4>
                                             <div className="text-4xl font-black mb-3 text-white">${plan.price}<span className="text-xs text-gray-500 ml-1">USD</span></div>
-                                            <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{plan.desc}</p>
+                                            <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{t.pricing.plans[plan.id].desc}</p>
 
                                             <ul className="space-y-3 w-full pt-6 border-t border-white/5 text-left">
-                                                {plan.features.map(f => (
+                                                {t.pricing.plans[plan.id].features.map((f: string) => (
                                                     <li key={f} className="text-[11px] text-gray-400 flex items-start gap-3">
                                                         <Check className="w-3.5 h-3.5 text-coffee-medium shrink-0 mt-0.5" />
                                                         <span className="leading-tight">{f}</span>
@@ -717,7 +683,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 {lang === 'es' ? 'Resumen del Pedido' : 'Order Summary'}
                                             </h3>
                                             <p className="text-[10px] text-coffee-light font-bold uppercase tracking-[0.3em]">
-                                                {formData.plan} Edition
+                                                {t.pricing.plans[formData.plan]?.name || formData.plan} Edition
                                             </p>
                                         </div>
                                         <div className="text-right">
