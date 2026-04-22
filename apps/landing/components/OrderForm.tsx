@@ -186,9 +186,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const eventID = `ic_${Date.now()}_${formData.email.split('@')[0]}`;
+        if (step < 4) return nextStep();
 
-        // Meta Pixel: Initiate Checkout (Browser side with deduplication)
+        setIsLoading(true);
+        
+        // --- META CAPI & Pixel: InitiateCheckout (Now fired only when definitively proceeding to checkout) ---
+        const eventID = `ic_${Date.now()}_${formData.email.split('@')[0]}`;
+        
         if (typeof window !== 'undefined' && (window as any).fbq) {
             (window as any).fbq('track', 'InitiateCheckout', {
                 value: formData.price,
@@ -198,10 +202,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 eventID: eventID 
             });
         }
-
-        if (step < 4) return nextStep();
-
-        setIsLoading(true);
+        
         try {
             const response = await fetch('/api/checkout', {
                 method: 'POST',
@@ -209,7 +210,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 body: JSON.stringify({
                     ...formData,
                     phone: `${selectedCountry.code} ${formData.phone}`,
-                    metaEventId: eventID // Pasamos el ID al servidor para deduplicar
+                    metaEventId: eventID
                 }),
             });
             const data = await response.json();
