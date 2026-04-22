@@ -122,6 +122,14 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
 
                             <button
                                 onClick={() => {
+                                    const eventID = `pt_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+                                    if (typeof window !== 'undefined' && (window as any).fbq) {
+                                        (window as any).fbq('track', 'InitiateCheckout', {
+                                            value: plan.price,
+                                            currency: 'USD',
+                                            content_name: plan.id
+                                        }, { eventID });
+                                    }
                                     onSelectPlan(plan.id, plan.price);
                                     document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
                                 }}

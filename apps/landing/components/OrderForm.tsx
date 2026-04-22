@@ -653,6 +653,14 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             key={plan.id}
                                             type="button"
                                             onClick={() => {
+                                                const eventID = `ic_step3_${Date.now()}`;
+                                                if (typeof window !== 'undefined' && (window as any).fbq) {
+                                                    (window as any).fbq('track', 'InitiateCheckout', {
+                                                        value: plan.price,
+                                                        currency: 'USD',
+                                                        content_name: plan.id
+                                                    }, { eventID });
+                                                }
                                                 setFormData(prev => ({ ...prev, plan: plan.id, price: plan.price }));
                                                 triggerSuccessConfetti();
                                                 nextStep();

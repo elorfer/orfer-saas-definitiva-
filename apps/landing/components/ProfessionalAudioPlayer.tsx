@@ -147,15 +147,23 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
             </div>
             
             <audio 
+                key={src}
                 ref={audioRef}
-                src={src}
                 preload="metadata"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onDurationChange={handleLoadedMetadata}
                 onPause={() => setIsPlaying(false)}
                 onPlay={() => setIsPlaying(true)}
-            />
+                onError={(e) => {
+                    console.error("Audio Load Error:", e);
+                    // Resetear estado si hay error
+                    setIsPlaying(false);
+                }}
+            >
+                <source src={src} type="audio/mpeg" />
+                Tu navegador no soporta el elemento de audio.
+            </audio>
         </div>
     );
 }
