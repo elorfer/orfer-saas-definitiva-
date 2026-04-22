@@ -28,8 +28,8 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
         },
         {
             name: "Elena Santacruz",
-            role: lang === 'es' ? "Compositora de Estructuras Pop" : "Pop Structure Composer",
-            description: lang === 'es' ? "Experta en hooks memorables y armonías vocales de alta gama." : "Expert in memorable hooks and high-end vocal harmonies.",
+            role: lang === 'es' ? "Ingeniera de Arreglos Vocales" : "Vocal Arrangement Engineer",
+            description: lang === 'es' ? "Experta en crear armonías y capas vocales que envuelven al oyente." : "Expert in creating vocal harmonies and layers that surround the listener.",
             image: "/images/producer_2_v2.png"
         },
         {
@@ -47,12 +47,12 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
             <div className="max-w-6xl mx-auto relative z-10">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4 font-heading">
-                        {lang === 'es' ? 'Nuestros Maestros de' : 'Our Production'} <span className="text-gradient">{lang === 'es' ? 'Producción' : 'Masters'}</span>
+                        {lang === 'es' ? 'Tu Equipo de' : 'Your Elite'} <span className="text-gradient">{lang === 'es' ? 'Élite Musical' : 'Production Team'}</span>
                     </h2>
                     <p className="text-gray-400 max-w-2xl mx-auto">
                         {lang === 'es' 
-                            ? 'Humanizamos la tecnología. El toque final de tu canción pasa por los mejores oídos de la industria.' 
-                            : 'We humanize technology. The final touch of your song goes through the best ears in the industry.'}
+                            ? 'Tú pones la letra y el alma. Nosotros ponemos los mejores oídos y tecnología de la industria para que suenes como un profesional.' 
+                            : 'You provide the lyrics and the soul. We provide the industry\'s best ears and technology so you sound like a professional.'}
                     </p>
                 </div>
 

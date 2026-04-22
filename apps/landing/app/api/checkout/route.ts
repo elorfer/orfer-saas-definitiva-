@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import Stripe from 'stripe';
+import { sendMetaEvent } from '@/lib/meta-capi';
 
 // Forzamos a Next.js a no intentar pre-renderizar esta ruta en Vercel
 export const dynamic = 'force-dynamic';
@@ -15,6 +17,37 @@ export async function POST(req: Request) {
         });
         
         const body = await req.json();
+        
+        // --- META CAPI: InitiateCheckout ---
+        const userAgent = req.headers.get('user-agent') || '';
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || '';
+        
+        // Extraer cookies de Meta
+        const cookieStore = await cookies();
+        const fbp = cookieStore.get('_fbp')?.value;
+        const fbc = cookieStore.get('_fbc')?.value;
+        
+        // Enviamos el evento de forma asíncrona para no retrasar a Stripe
+        sendMetaEvent({
+            eventName: 'InitiateCheckout',
+            eventID: body.metaEventId,
+            userData: {
+                email: body.email,
+                phone: body.phone,
+                fbp,
+                fbc,
+                clientIpAddress: ip,
+                clientUserAgent: userAgent
+            },
+            customData: {
+                value: Number(body.price) || 50,
+                currency: 'USD',
+                content_name: `Plan ${body.plan || 'Starter'}`,
+                content_category: 'Music Production'
+            },
+            sourceUrl: 'https://www.struky.com/checkout'
+        }).catch(err => console.error('Error in background CAPI call:', err));
+        // ------------------------------------
         
         // Parse the origin from the request to set valid success/cancel URLs
         const origin = req.headers.get('origin') || 'http://localhost:3000';
@@ -41,6 +74,8 @@ export async function POST(req: Request) {
             notes: String(body.notes || '').substring(0, 500),
             phone: String(body.phone || '').substring(0, 500),
             plan: String(body.plan || 'Starter').substring(0, 500),
+            fbp: String(fbp || '').substring(0, 500),
+            fbc: String(fbc || '').substring(0, 500),
             ...lyricsMetadata
         };
 

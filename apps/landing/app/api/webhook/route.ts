@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { Resend } from 'resend';
-import crypto from 'crypto';
+import { sendMetaEvent } from '@/lib/meta-capi';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
     apiVersion: '2026-03-25.dahlia',
@@ -9,60 +9,32 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
 
-// Función para cifrar datos para Meta (SHA-256)
-function hashData(data: string) {
-    if (!data) return '';
-    return crypto.createHash('sha256').update(data.trim().toLowerCase()).digest('hex');
-}
-
-async function sendMetaConversionEvent(session: Stripe.Checkout.Session) {
-    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || '1445433937281922';
-    const accessToken = process.env.META_ACCESS_TOKEN;
-
-    if (!accessToken) {
-        console.warn('META_ACCESS_TOKEN not configured. Skipping CAPI event.');
-        return;
-    }
-
+async function triggerMetaPurchase(session: Stripe.Checkout.Session) {
     const metadata = session.metadata || {};
     const email = metadata.email || session.customer_details?.email || '';
     const phone = metadata.phone || session.customer_details?.phone || '';
+    const fbp = metadata.fbp || '';
+    const fbc = metadata.fbc || '';
     
-    const payload = {
-        data: [
-            {
-                event_name: 'Purchase',
-                event_time: Math.floor(Date.now() / 1000),
-                event_id: session.id,
-                event_source_url: 'https://www.struky.com/success',
-                action_source: 'website',
-                user_data: {
-                    em: [hashData(email)],
-                    ph: [hashData(phone)],
-                    client_ip_address: session.customer_details?.address?.country || '',
-                    client_user_agent: 'StrukyServer/1.0'
-                },
-                custom_data: {
-                    value: (session.amount_total || 0) / 100,
-                    currency: 'USD',
-                    content_name: `Plan ${metadata.plan || 'Starter'}`,
-                    content_category: 'Music Production'
-                }
-            }
-        ]
-    };
-
-    try {
-        const response = await fetch(`https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${accessToken}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        console.log('Meta CAPI Response:', result);
-    } catch (err) {
-        console.error('Error sending Meta CAPI event:', err);
-    }
+    return sendMetaEvent({
+        eventName: 'Purchase',
+        eventID: session.id,
+        userData: {
+            email: email,
+            phone: phone,
+            fbp,
+            fbc,
+            clientIpAddress: session.customer_details?.address?.country || '',
+            clientUserAgent: 'StrukyServer/1.0'
+        },
+        customData: {
+            value: (session.amount_total || 0) / 100,
+            currency: 'USD',
+            content_name: `Plan ${metadata.plan || 'Starter'}`,
+            content_category: 'Music Production'
+        },
+        sourceUrl: 'https://www.struky.com/success'
+    });
 }
 
 export async function POST(req: Request) {
@@ -87,7 +59,7 @@ export async function POST(req: Request) {
         
         // Ejecutar envío a Meta CAPI
         // Lo hacemos de forma asíncrona para no bloquear la respuesta a Stripe
-        sendMetaConversionEvent(session).catch(console.error);
+        triggerMetaPurchase(session).catch(console.error);
 
         const metadata = session.metadata || {};
 

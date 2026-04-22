@@ -107,8 +107,23 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         if (saved) setGenCount(parseInt(saved));
     }, []);
 
-    const nextStep = () => setStep(s => Math.min(s + 1, 4));
-    const prevStep = () => setStep(s => Math.max(s - 1, 1));
+    const nextStep = () => {
+        // Si ya hay un plan seleccionado (desde la tabla externa) y estamos en el paso 2, 
+        // saltamos el paso 3 (que es volver a elegir plan) e ir directo al 4 (confirmar).
+        if (step === 2 && formData.plan && initialPlan) {
+            setStep(4);
+        } else {
+            setStep(s => Math.min(s + 1, 4));
+        }
+    };
+    const prevStep = () => {
+        // Al volver atrás, si saltamos el paso 3, debemos regresar al 2
+        if (step === 4 && initialPlan) {
+            setStep(2);
+        } else {
+            setStep(s => Math.max(s - 1, 1));
+        }
+    };
 
     // Efecto de Confetti Premium (Colores Struky)
     const triggerSuccessConfetti = () => {
@@ -171,12 +186,16 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Meta Pixel: Initiate Checkout
+        const eventID = `ic_${Date.now()}_${formData.email.split('@')[0]}`;
+
+        // Meta Pixel: Initiate Checkout (Browser side with deduplication)
         if (typeof window !== 'undefined' && (window as any).fbq) {
             (window as any).fbq('track', 'InitiateCheckout', {
                 value: formData.price,
                 currency: 'USD',
                 content_name: formData.plan
+            }, { 
+                eventID: eventID 
             });
         }
 
@@ -189,7 +208,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
-                    phone: `${selectedCountry.code} ${formData.phone}`
+                    phone: `${selectedCountry.code} ${formData.phone}`,
+                    metaEventId: eventID // Pasamos el ID al servidor para deduplicar
                 }),
             });
             const data = await response.json();
