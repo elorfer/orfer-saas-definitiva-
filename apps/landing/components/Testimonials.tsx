@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Star, Quote } from 'lucide-react';
+import { Star, Quote, BadgeCheck } from 'lucide-react';
 
 export default function Testimonials({ t }: { t: any }) {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -81,7 +81,10 @@ export default function Testimonials({ t }: { t: any }) {
                                     />
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="font-bold text-white">{item.author}</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="font-bold text-white">{item.author}</span>
+                                        <BadgeCheck className="w-4 h-4 text-[#3897f0] fill-[#3897f0]/10" />
+                                    </div>
                                     <span className="text-xs text-coffee-light uppercase tracking-widest font-bold">Artista Verificado</span>
                                 </div>
                             </div>

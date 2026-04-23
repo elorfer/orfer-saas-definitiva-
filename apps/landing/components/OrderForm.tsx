@@ -121,12 +121,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         }
     };
     const prevStep = () => {
-        // Al volver atrás, si saltamos el paso 3, debemos regresar al 2
-        if (step === 4 && initialPlan) {
-            setStep(2);
-        } else {
-            setStep(s => Math.max(s - 1, 1));
-        }
+        setStep(s => Math.max(s - 1, 1));
     };
 
     // Efecto de Confetti Premium (Colores Struky)
@@ -454,7 +449,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                             type="button"
                                                             disabled={isGenerating || !aiIdea}
                                                             onClick={handleGenerateLyrics}
-                                                            className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 rounded-xl transition-all flex items-center justify-center min-w-[44px]"
+                                                            className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 rounded-xl transition-all flex items-center justify-center min-w-[44px] shadow-[0_0_15px_rgba(124,58,237,0.3)] hover:shadow-[0_0_25px_rgba(124,58,237,0.5)]"
                                                         >
                                                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                                                         </button>
@@ -629,7 +624,6 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 }
                                                 setFormData(prev => ({ ...prev, plan: plan.id, price: plan.price }));
                                                 triggerSuccessConfetti();
-                                                nextStep();
                                             }}
                                             className={`relative p-8 rounded-3xl border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[85%] lg:w-full snap-center ${formData.plan === plan.id
                                                 ? 'border-coffee-medium bg-coffee-medium/10 shadow-[0_0_30px_rgba(202,160,82,0.15)] scale-[1.02] lg:scale-105 z-10'
@@ -641,7 +635,18 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                     {t.pricing.popular}
                                                 </div>
                                             )}
-                                            <plan.icon className={`w-12 h-12 mb-5 transition-transform group-hover/card:scale-110 ${formData.plan === plan.id ? 'text-coffee-light' : 'text-coffee-medium'}`} />
+                                            <div className="relative">
+                                                <plan.icon className={`w-12 h-12 mb-5 transition-transform group-hover/card:scale-110 ${formData.plan === plan.id ? 'text-coffee-light' : 'text-coffee-medium'}`} />
+                                                {formData.plan === plan.id && (
+                                                    <motion.div 
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        className="absolute -top-2 -right-2 bg-coffee-medium rounded-full p-1 shadow-lg"
+                                                    >
+                                                        <Check className="w-3 h-3 text-black" />
+                                                    </motion.div>
+                                                )}
+                                            </div>
                                             <h4 className="font-black text-base mb-1 uppercase tracking-tight">{t.pricing.plans[plan.id].name}</h4>
                                             <div className="text-4xl font-black mb-3 text-white">${plan.price}<span className="text-xs text-gray-500 ml-1">USD</span></div>
                                             <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{t.pricing.plans[plan.id].desc}</p>
@@ -682,9 +687,18 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             <h3 className="text-xl font-black text-white uppercase tracking-tight mb-1">
                                                 {lang === 'es' ? 'Resumen del Pedido' : 'Order Summary'}
                                             </h3>
-                                            <p className="text-[10px] text-coffee-light font-bold uppercase tracking-[0.3em]">
-                                                {t.pricing.plans[formData.plan]?.name || formData.plan} Edition
-                                            </p>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-[10px] text-coffee-light font-bold uppercase tracking-[0.3em]">
+                                                    {t.pricing.plans[formData.plan]?.name || formData.plan} Edition
+                                                </p>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setStep(3)}
+                                                    className="text-[9px] text-gray-500 hover:text-coffee-light border border-white/10 hover:border-coffee-medium/30 px-2 py-0.5 rounded transition-all uppercase font-black"
+                                                >
+                                                    {lang === 'es' ? 'Cambiar' : 'Change'}
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="text-right">
                                             <span className="text-3xl font-black text-white">${formData.price}</span>

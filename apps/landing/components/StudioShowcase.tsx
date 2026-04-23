@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { BadgeCheck } from 'lucide-react';
 
 export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
     return (
@@ -11,7 +12,10 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
                 <div>
                     <h2 className="text-3xl md:text-5xl font-bold mb-6 font-heading">
                         {lang === 'es' ? 'Bienvenido a' : 'Welcome to'} <br/>
-                        <span className="text-gradient tracking-tight">Struky Studios</span>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="text-gradient tracking-tight">Struky Studios</span>
+                            <BadgeCheck className="w-8 h-8 md:w-10 md:h-10 text-[#3897f0] fill-[#3897f0]/10" />
+                        </div>
                     </h2>
                     
                     <p className="text-gray-400 text-lg mb-8 leading-relaxed">

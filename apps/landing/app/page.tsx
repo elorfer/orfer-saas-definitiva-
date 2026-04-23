@@ -151,8 +151,9 @@ function HomeContent() {
             {/* EXAMPLES SECTION */}
             <section id="examples" className="section-padding bg-dark-bg relative overflow-hidden">
                 {/* Background Decor - CSS-only animated orbs (GPU composited) */}
-                <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none" />
-                <div className="bg-orb-2 absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/10 rounded-full blur-[120px] pointer-events-none" />
+                <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
+                <div className="bg-orb-2 absolute bottom-1/4 -right-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
+                <div className="bg-orb-coffee absolute top-1/2 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-[150px] pointer-events-none opacity-30" />
                 
                 <div className="max-w-7xl mx-auto relative z-10">
                     <div className="text-center mb-16">

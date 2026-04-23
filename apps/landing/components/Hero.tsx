@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Star, ChevronDown } from 'lucide-react';
+import { Star, ChevronDown, BadgeCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface HeroProps {
@@ -45,6 +45,11 @@ export default function Hero({ t, lang }: HeroProps) {
                     priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-dark-bg/20 via-dark-bg/60 to-dark-bg"></div>
+                
+                {/* Accent Orbs */}
+                <div className="bg-orb-1 absolute -top-20 -left-20 w-96 h-96 blur-[120px] pointer-events-none opacity-40"></div>
+                <div className="bg-orb-2 absolute top-1/3 -right-20 w-80 h-80 blur-[120px] pointer-events-none opacity-30"></div>
+                <div className="bg-orb-coffee absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] blur-[150px] pointer-events-none opacity-20"></div>
             </div>
 
             <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
@@ -103,6 +108,7 @@ export default function Hero({ t, lang }: HeroProps) {
                                     ))}
                                 </div>
                                 <div className="w-px h-3 bg-white/10 mx-1"></div>
+                                <BadgeCheck className="w-3.5 h-3.5 text-[#3897f0] fill-[#3897f0]/10" />
                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] whitespace-nowrap">
                                     {lang === 'en' ? 'songs delivered' : 'canciones entregadas'}
                                 </span>

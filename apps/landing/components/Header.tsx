@@ -121,20 +121,38 @@ export default function Header({ lang, setLang }: HeaderProps) {
                         transition={{ duration: 0.3, ease: 'easeOut' }}
                         className="fixed inset-0 z-40 lg:hidden bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center pt-20"
                     >
-                        <nav className="flex flex-col items-center gap-8 mb-12">
+                        <motion.nav 
+                            className="flex flex-col items-center gap-8 mb-12"
+                            initial="closed"
+                            animate="open"
+                            exit="closed"
+                            variants={{
+                                open: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
+                                closed: { transition: { staggerChildren: 0.05, staggerDirection: -1 } }
+                            }}
+                        >
                             {navLinks.map((link) => (
-                                <a
+                                <motion.a
                                     key={link.href}
                                     href={link.href}
                                     onClick={(e) => handleNavClick(e, link.href)}
                                     className="text-2xl font-black text-white hover:text-coffee-medium transition-colors tracking-tighter"
+                                    variants={{
+                                        open: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } },
+                                        closed: { y: 20, opacity: 0 }
+                                    }}
                                 >
                                     {link.name}
-                                </a>
+                                </motion.a>
                             ))}
-                        </nav>
+                        </motion.nav>
                         
-                        <div className="flex flex-col items-center gap-6">
+                        <motion.div 
+                            className="flex flex-col items-center gap-6"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.4, duration: 0.3 }}
+                        >
                             <button 
                                 onClick={() => {
                                     setLang(lang === 'es' ? 'en' : 'es');
@@ -153,7 +171,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
                             >
                                 {lang === 'es' ? 'Empezar ahora' : 'Start now'}
                             </a>
-                        </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

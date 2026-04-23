@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { BadgeCheck } from 'lucide-react';
 
 export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -74,7 +75,10 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                                     className="rounded-full object-cover transition-transform duration-500 hover:scale-110"
                                 />
                             </div>
-                            <h3 className="text-xl font-bold mb-1">{composer.name}</h3>
+                            <h3 className="text-xl font-bold mb-1 flex items-center gap-1.5">
+                                {composer.name}
+                                <BadgeCheck className="w-5 h-5 text-[#3897f0] fill-[#3897f0]/10" />
+                            </h3>
                             <p className="text-coffee-light text-xs font-bold uppercase tracking-widest mb-4">{composer.role}</p>
                             <p className="text-sm text-gray-400 italic">"{composer.description}"</p>
                         </div>
