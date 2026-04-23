@@ -78,7 +78,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         lyrics: '',
         notes: '',
         phone: '',
-        plan: PLAN_IDS.PRO, // Default to Pro
+        plan: PLAN_IDS.PRO as string, // Default to Pro
         price: 97
     });
 
@@ -207,7 +207,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
-                    plan: t.pricing.plans[formData.plan]?.name || formData.plan,
+                    plan: t.pricing.plans[formData.plan as keyof typeof t.pricing.plans]?.name || formData.plan,
                     phone: `${selectedCountry.code} ${formData.phone}`,
                     metaEventId: eventID
                 }),
@@ -689,7 +689,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             </h3>
                                             <div className="flex items-center gap-3">
                                                 <p className="text-[10px] text-coffee-light font-bold uppercase tracking-[0.3em]">
-                                                    {t.pricing.plans[formData.plan]?.name || formData.plan} Edition
+                                                    {t.pricing.plans[formData.plan as keyof typeof t.pricing.plans]?.name || formData.plan} Edition
                                                 </p>
                                                 <button 
                                                     type="button"
