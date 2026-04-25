@@ -76,6 +76,7 @@ export async function POST(req: Request) {
             plan: String(body.plan || 'Starter').substring(0, 500),
             fbp: String(fbp || '').substring(0, 500),
             fbc: String(fbc || '').substring(0, 500),
+            clientIp: String(ip || '').substring(0, 500),
             ...lyricsMetadata
         };
 
