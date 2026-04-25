@@ -8,45 +8,8 @@ export default function WhatsAppButton() {
     const phoneNumber = "573009012217";
     const message = encodeURIComponent("Hola STRUKY, me gustaría obtener más información sobre sus servicios de producción musical.");
     
-    useEffect(() => {
-        // Aparece después de 7 segundos
-        const showTimer = setTimeout(() => {
-            setShowBubble(true);
-        }, 7000);
-
-        // Desaparece después de 17 segundos en total (10 segundos visible)
-        const hideTimer = setTimeout(() => {
-            setShowBubble(false);
-        }, 17000);
-
-        return () => {
-            clearTimeout(showTimer);
-            clearTimeout(hideTimer);
-        };
-    }, []);
-
     return (
         <div className="fixed md:bottom-8 bottom-24 right-4 md:right-8 z-[60] flex flex-col items-end gap-4 pointer-events-none">
-            {/* Persuasive Bubble */}
-            <AnimatePresence>
-                {showBubble && (
-                    <motion.div 
-                        initial={{ opacity: 0, x: 20, scale: 0.8 }}
-                        animate={{ opacity: 1, x: 0, scale: 1 }}
-                        exit={{ opacity: 0, x: 20, scale: 0.8 }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
-                        className="bg-black/80 backdrop-blur-md border border-coffee-medium/30 px-4 py-2.5 rounded-2xl rounded-br-none shadow-[0_10px_30px_rgba(0,0,0,0.5)] pointer-events-auto"
-                    >
-                        <p className="text-[10px] font-black text-white uppercase tracking-widest leading-tight">
-                            ¿Dudas de cómo funciona?
-                        </p>
-                        <p className="text-[9px] text-coffee-light font-bold uppercase tracking-wider">
-                            Habla con un productor en vivo
-                        </p>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             <a
                 href={`https://wa.me/${phoneNumber}?text=${message}`}
                 target="_blank"
