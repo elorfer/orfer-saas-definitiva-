@@ -45,7 +45,7 @@ export async function POST(req: Request) {
                 content_name: `Plan ${body.plan || 'Starter'}`,
                 content_category: 'Music Production'
             },
-            sourceUrl: 'https://www.struky.com/checkout'
+            sourceUrl: req.headers.get('referer') || 'https://www.struky.com/'
         }).catch(err => console.error('Error in background CAPI call:', err));
         // ------------------------------------
         

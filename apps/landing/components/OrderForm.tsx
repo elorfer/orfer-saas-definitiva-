@@ -192,6 +192,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         const eventID = `ic_${Date.now()}_${formData.email.split('@')[0]}`;
         
         if (typeof window !== 'undefined' && (window as any).fbq) {
+            // Inicializar con datos de usuario para Coincidencia Avanzada (Advanced Matching)
+            const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1445433937281922";
+            (window as any).fbq('init', pixelId, {
+                em: formData.email.toLowerCase().trim(),
+                ph: `${selectedCountry.code}${formData.phone}`.replace(/\D/g, '')
+            });
+            
             (window as any).fbq('track', 'InitiateCheckout', {
                 value: formData.price,
                 currency: 'USD',
