@@ -33,7 +33,7 @@ export default function OfficialShowcase({ lang }: OfficialShowcaseProps) {
                     className="relative w-full aspect-video rounded-2xl md:rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/80 mb-12 bg-black"
                 >
                     <iframe 
-                        src="https://player.vimeo.com/video/1186457597?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479&amp;autoplay=1&amp;loop=1&amp;title=0&amp;byline=0&amp;portrait=0" 
+                        src="https://player.vimeo.com/video/1186457597?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479&amp;title=0&amp;byline=0&amp;portrait=0" 
                         frameBorder="0" 
                         allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
                         className="absolute top-0 left-0 w-full h-full"
@@ -67,6 +67,7 @@ export default function OfficialShowcase({ lang }: OfficialShowcaseProps) {
                         title="Canción Oficial de Struky"
                         description="Tu música merece ser escuchada 🔥"
                         cover="/images/cancion oficial.webp"
+                        priority={true}
                     />
                 </motion.div>
             </div>

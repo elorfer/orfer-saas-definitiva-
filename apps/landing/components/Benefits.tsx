@@ -18,17 +18,12 @@ export default function Benefits({ t }: { t: any }) {
     const scrollToItem = (index: number) => {
         if (scrollRef.current) {
             const container = scrollRef.current;
-            const scrollAmount = container.offsetWidth * 0.85 + 24; // card width + gap
+            const scrollAmount = container.offsetWidth * 0.8 + 24;
             container.scrollTo({
                 left: index * scrollAmount,
                 behavior: 'smooth'
             });
             setActiveIndex(index);
-
-            // Siempre volver a la parte principal al navegar
-            if (sectionRef.current) {
-                sectionRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
         }
     };
 

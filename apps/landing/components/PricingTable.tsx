@@ -35,10 +35,6 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                 behavior: 'smooth'
             });
             setActiveIndex(index);
-
-            if (sectionRef.current) {
-                sectionRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
         }
     };
 
@@ -82,68 +78,72 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                     <div 
                         ref={scrollRef}
                         onScroll={handleScroll}
-                        className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                        className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pt-8 pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
                     >
                         {plans.map((plan) => (
                             <div
                                 key={plan.id}
-                                className={`relative glass-morphism rounded-3xl p-6 border transition-all duration-300 hover:-translate-y-2 ${
+                                className={`relative glass-morphism rounded-[2rem] p-6 md:p-10 border transition-all duration-300 hover:-translate-y-2 ${
                                     plan.id === 'elite'
-                                    ? 'border-accent-purple shadow-[0_0_40px_rgba(76,29,149,0.25)] ring-1 ring-accent-purple/50'
+                                    ? 'border-accent-purple shadow-[0_0_50px_rgba(76,29,149,0.3)] ring-1 ring-accent-purple/50 bg-accent-purple/[0.03]'
                                     : plan.highlight 
-                                    ? 'border-coffee-medium shadow-[0_0_40px_rgba(202,160,82,0.15)] ring-1 ring-coffee-medium/50' 
-                                    : 'border-white/5'
-                                } flex flex-col flex-shrink-0 w-[80%] md:w-auto snap-center`}
+                                    ? 'border-coffee-medium shadow-[0_0_50px_rgba(202,160,82,0.2)] ring-1 ring-coffee-medium/50 bg-coffee-medium/[0.03]' 
+                                    : 'border-white/5 bg-white/[0.01]'
+                                } flex flex-col flex-shrink-0 w-[85%] md:w-auto snap-center`}
                             >
                                 {plan.id === 'elite' && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-accent-purple to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg z-10 border border-white/10">
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-accent-purple to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-2xl z-10 border border-white/20 whitespace-nowrap">
                                         Experiencia Definitiva
                                     </div>
                                 )}
 
                                 {plan.highlight && plan.id !== 'elite' && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-coffee-medium to-coffee-light text-black text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg z-10">
-                                        Más Popular
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-coffee-medium to-coffee-light text-black text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-2xl z-10 border border-white/10 whitespace-nowrap">
+                                        Elección Recomendada
                                     </div>
                                 )}
 
-                                <div className="mb-8">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 ${
-                                        plan.id === 'elite' ? 'bg-accent-purple text-white shadow-[0_0_15px_rgba(76,29,149,0.4)]' : plan.highlight ? 'bg-coffee-medium text-black' : 'bg-white/5 text-coffee-light'
+                                <div className="mb-6 md:mb-10">
+                                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center mb-6 md:mb-8 ${
+                                        plan.id === 'elite' ? 'bg-accent-purple text-white shadow-[0_0_20px_rgba(76,29,149,0.5)]' : plan.highlight ? 'bg-coffee-medium text-black shadow-[0_0_20px_rgba(202,160,82,0.4)]' : 'bg-white/5 text-coffee-light'
                                     }`}>
-                                        <plan.icon className="w-6 h-6" />
+                                        <plan.icon className="w-6 h-6 md:w-7 md:h-7" />
                                     </div>
-                                    <h3 className="text-2xl font-black mb-2">{plan.name}</h3>
-                                    <p className="text-gray-500 text-sm">{plan.description}</p>
+                                    <h3 className="text-2xl md:text-4xl font-black mb-2 md:mb-3 tracking-tighter">{plan.name}</h3>
+                                    <p className="text-gray-400 text-xs md:text-base font-medium leading-relaxed">{plan.description}</p>
                                 </div>
 
-                                <div className="mb-8">
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-5xl font-black text-white">${plan.price}</span>
-                                        <span className="text-gray-500 font-bold uppercase text-xs tracking-widest">USD</span>
+                                <div className="mb-6 md:mb-10">
+                                    <div className="flex items-baseline gap-1 md:gap-2">
+                                        <span className="text-5xl md:text-7xl font-black text-white tracking-tighter">${plan.price}</span>
+                                        <span className="text-gray-500 font-bold uppercase text-[9px] md:text-xs tracking-[0.2em] md:tracking-[0.3em]">USD</span>
                                     </div>
                                 </div>
 
-                                <ul className="space-y-4 mb-10 flex-1">
+                                <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-6 md:mb-10"></div>
+
+                                <ul className="space-y-3 md:space-y-5 mb-8 md:mb-12 flex-1">
                                     {plan.features.map((feature: string, i: number) => (
-                                        <li key={i} className={`flex items-start gap-3 text-sm ${feature.includes('OBSEQUIO') || feature.includes('GIFT') ? 'text-coffee-light font-bold' : 'text-gray-400'}`}>
-                                            {feature.includes('Video') || feature.includes('TikTok') ? (
-                                                <Video className="w-5 h-5 shrink-0 text-coffee-medium" />
-                                            ) : (
-                                                <Check className="w-5 h-5 shrink-0 text-coffee-medium" />
-                                            )}
-                                            {feature}
+                                        <li key={i} className={`flex items-start gap-3 md:gap-4 text-[13px] md:text-base ${feature.includes('OBSEQUIO') || feature.includes('GIFT') || feature.includes('VIP') ? 'text-coffee-light font-bold' : 'text-gray-400'}`}>
+                                            <div className={`mt-0.5 md:mt-1 p-0.5 rounded-full ${plan.id === 'elite' ? 'bg-accent-purple/20 text-accent-purple' : 'bg-coffee-medium/20 text-coffee-medium'}`}>
+                                                {feature.includes('Video') || feature.includes('TikTok') || feature.includes('Visual') ? (
+                                                    <Video className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
+                                                ) : (
+                                                    <Check className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
+                                                )}
+                                            </div>
+                                            <span className="leading-tight">{feature}</span>
                                         </li>
                                     ))}
                                 </ul>
 
                                 <button 
                                     onClick={() => onSelectPlan(plan.id, plan.price)}
-                                    className={`w-full py-4 rounded-xl font-black uppercase tracking-widest text-sm transition-all duration-300 ${
+                                    className={`w-full py-4 md:py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] md:text-xs transition-all duration-500 hover:scale-[1.02] active:scale-95 ${
                                         plan.id === 'elite'
-                                        ? 'bg-accent-purple text-white hover:bg-accent-purple/90 shadow-lg shadow-accent-purple/20'
+                                        ? 'bg-accent-purple text-white hover:bg-accent-purple/90 shadow-[0_15px_30px_rgba(76,29,149,0.3)]'
                                         : plan.highlight 
-                                        ? 'bg-coffee-medium text-black hover:bg-coffee-light shadow-lg shadow-coffee-medium/20' 
+                                        ? 'bg-coffee-medium text-black hover:bg-coffee-light shadow-[0_15px_30px_rgba(202,160,82,0.3)]' 
                                         : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
                                     }`}
                                 >

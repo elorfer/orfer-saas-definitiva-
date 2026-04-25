@@ -62,6 +62,7 @@ function HomeContent() {
     const [lang, setLang] = useState<'es' | 'en'>('es');
     const [showStickyCTA, setShowStickyCTA] = useState(false);
     const [isFormVisible, setIsFormVisible] = useState(false);
+    const [isPricingVisible, setIsPricingVisible] = useState(false);
     const [selectedPlanFromTable, setSelectedPlanFromTable] = useState<string | null>(null);
     const t = translations[lang];
 
@@ -89,13 +90,25 @@ function HomeContent() {
             { threshold: 0.1 }
         );
 
+        // Observador para la sección de precios
+        const pricingObserver = new IntersectionObserver(
+            ([entry]) => {
+                setIsPricingVisible(entry.isIntersecting);
+            },
+            { threshold: 0.1 }
+        );
+
         const formElement = document.getElementById('order-form');
+        const pricingElement = document.getElementById('pricing');
+
         if (formElement) observer.observe(formElement);
+        if (pricingElement) pricingObserver.observe(pricingElement);
 
         window.addEventListener('scroll', handleScroll);
         return () => {
             window.removeEventListener('scroll', handleScroll);
             if (formElement) observer.unobserve(formElement);
+            if (pricingElement) pricingObserver.unobserve(pricingElement);
         };
     }, [searchParams]);
 
@@ -289,13 +302,13 @@ function HomeContent() {
 
             {/* Sticky Mobile CTA with Animation */}
             <AnimatePresence>
-                {showStickyCTA && !isFormVisible && (
+                {showStickyCTA && !isFormVisible && !isPricingVisible && (
                     <motion.div 
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                        className="fixed bottom-0 left-0 right-0 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-dark-bg via-dark-bg/95 to-transparent z-[50] md:hidden pointer-events-none"
+                        className="fixed bottom-0 left-0 right-0 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-transparent z-[50] md:hidden pointer-events-none"
                     >
                         <button 
                             onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}

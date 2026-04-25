@@ -8,9 +8,10 @@ interface AudioPlayerProps {
     title: string;
     description: string;
     cover: string;
+    priority?: boolean;
 }
 
-export default function ProfessionalAudioPlayer({ src, title, description, cover }: AudioPlayerProps) {
+export default function ProfessionalAudioPlayer({ src, title, description, cover, priority }: AudioPlayerProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [currentTime, setCurrentTime] = useState('0:00');
@@ -77,6 +78,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                     src={cover} 
                     alt={title}
                     fill
+                    priority={priority}
                     className="object-cover transition-opacity duration-300 opacity-100"
                     sizes="(max-width: 768px) 40vw, 160px"
                 />

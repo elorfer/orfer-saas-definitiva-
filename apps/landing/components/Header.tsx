@@ -60,6 +60,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
                                 src="/logo.svg"
                                 alt="Struky Logo Icon"
                                 fill
+                                priority
                                 className="object-contain brightness-125"
                             />
                         </div>

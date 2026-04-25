@@ -23,11 +23,6 @@ export default function HowItWorks({ t }: { t: any }) {
                 behavior: 'smooth'
             });
             setActiveIndex(index);
-
-            // Siempre volver a la parte principal de la sección al navegar
-            if (sectionRef.current) {
-                sectionRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
         }
     };
 
@@ -50,8 +45,8 @@ export default function HowItWorks({ t }: { t: any }) {
     return (
         <section ref={sectionRef} id="how-it-works" className="section-padding bg-dark-card/20 scroll-mt-20">
             <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-20">
-                    <h2 className="text-3xl md:text-5xl font-bold mb-4">{t.title}</h2>
+                <div className="text-center mb-12 md:mb-20">
+                    <h2 className="text-3xl md:text-5xl font-black mb-4 tracking-tighter">{t.title}</h2>
                 </div>
 
                 <div className="relative">
@@ -65,16 +60,20 @@ export default function HowItWorks({ t }: { t: any }) {
                         {steps.map((step, i) => (
                             <div 
                                 key={i}
-                                className="relative z-10 flex flex-col items-center text-center min-w-[80%] md:min-w-0 snap-center"
+                                className="relative z-10 flex flex-col items-center text-center min-w-[85%] md:min-w-0 snap-center px-6 py-8 rounded-3xl bg-white/[0.02] border border-white/5 md:bg-transparent md:border-none"
                             >
-                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full glass-morphism flex items-center justify-center text-coffee-light mb-6 md:mb-8 relative border-2 border-coffee-medium/40">
-                                    <span className="absolute -top-1 -right-1 w-6 h-6 md:w-8 md:h-8 rounded-full bg-coffee-medium text-white text-[10px] md:text-xs font-bold flex items-center justify-center shadow-lg">
+                                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full glass-morphism flex items-center justify-center text-coffee-light mb-6 md:mb-8 relative border-2 border-coffee-medium/40 shadow-[0_0_30px_rgba(202,160,82,0.1)]">
+                                    <span className="absolute -top-1 -right-1 w-7 h-7 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-coffee-medium to-coffee-dark text-white text-[10px] md:text-sm font-black flex items-center justify-center shadow-xl border border-white/10">
                                         {i + 1}
                                     </span>
-                                    {step.icon}
+                                    <div className="scale-[1.2] md:scale-[1.8]">
+                                        {step.icon}
+                                    </div>
                                 </div>
-                                <h3 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">{step.title}</h3>
-                                <p className="text-gray-400 text-sm md:text-base max-w-xs mx-auto">{step.desc}</p>
+                                <h3 className="text-xl md:text-3xl font-black mb-3 tracking-tight">{step.title}</h3>
+                                <p className="text-gray-400 text-xs md:text-lg max-w-xs mx-auto leading-relaxed">
+                                    {step.desc}
+                                </p>
                             </div>
                         ))}
                     </div>

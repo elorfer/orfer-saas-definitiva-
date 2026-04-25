@@ -30,10 +30,6 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                 behavior: 'smooth'
             });
             setActiveIndex(index);
-
-            if (sectionRef.current) {
-                sectionRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
         }
     };
 
