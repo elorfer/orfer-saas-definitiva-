@@ -28,25 +28,33 @@ export async function POST(req: Request) {
         const fbc = cookieStore.get('_fbc')?.value;
         
         // Esperamos el evento para asegurar que Vercel no mate el proceso antes de enviarlo
-        await sendMetaEvent({
-            eventName: 'InitiateCheckout',
-            eventID: body.metaEventId,
-            userData: {
-                email: body.email,
-                phone: body.phone,
-                fbp,
-                fbc,
-                clientIpAddress: ip,
-                clientUserAgent: userAgent
-            },
-            customData: {
-                value: Number(body.price) || 50,
-                currency: 'USD',
-                content_name: `Plan ${body.plan || 'Starter'}`,
-                content_category: 'Music Production'
-            },
-            sourceUrl: req.headers.get('referer') || 'https://www.struky.com/'
-        }).catch(err => console.error('Error in background CAPI call:', err));
+        let capiResult: any = null;
+        let capiError: string | null = null;
+        try {
+            capiResult = await sendMetaEvent({
+                eventName: 'InitiateCheckout',
+                eventID: body.metaEventId,
+                userData: {
+                    email: body.email,
+                    phone: body.phone,
+                    fbp,
+                    fbc,
+                    clientIpAddress: ip,
+                    clientUserAgent: userAgent
+                },
+                customData: {
+                    value: Number(body.price) || 50,
+                    currency: 'USD',
+                    content_name: `Plan ${body.plan || 'Starter'}`,
+                    content_category: 'Music Production'
+                },
+                sourceUrl: req.headers.get('referer') || 'https://www.struky.com/'
+            });
+            console.log('✅ CAPI InitiateCheckout result:', JSON.stringify(capiResult));
+        } catch (err: any) {
+            capiError = err.message;
+            console.error('❌ CAPI InitiateCheckout error:', err);
+        }
         // ------------------------------------
         
         // Parse the origin from the request to set valid success/cancel URLs
@@ -107,7 +115,7 @@ export async function POST(req: Request) {
             }
         });
 
-        return NextResponse.json({ url: session.url });
+        return NextResponse.json({ url: session.url, _capiDebug: { result: capiResult, error: capiError, eventId: body.metaEventId } });
     } catch (err: any) {
         console.error('Error creating Stripe session:', err);
         return NextResponse.json(
