@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Header from '../components/Header';
@@ -9,7 +9,7 @@ import ProfessionalAudioPlayer from '../components/ProfessionalAudioPlayer';
 import PlatformLogos from '../components/PlatformLogos';
 import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
-import { Music } from 'lucide-react';
+import { Music, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Lazy-load below-the-fold components (code-split into separate chunks)
@@ -23,8 +23,41 @@ const OrderForm = dynamic(() => import('../components/OrderForm'));
 const FAQ = dynamic(() => import('../components/FAQ'));
 const MerchSection = dynamic(() => import('../components/MerchSection'));
 const Footer = dynamic(() => import('../components/Footer'));
+const OfficialShowcase = dynamic(() => import('../components/OfficialShowcase'));
 
 function HomeContent() {
+    const [activeExampleIndex, setActiveExampleIndex] = useState(0);
+    const examplesScrollRef = useRef<HTMLDivElement>(null);
+    const examplesSectionRef = useRef<HTMLElement>(null);
+
+    const scrollToExample = (index: number) => {
+        if (examplesScrollRef.current) {
+            const container = examplesScrollRef.current;
+            const scrollAmount = container.offsetWidth * 0.85 + 16;
+            container.scrollTo({
+                left: index * scrollAmount,
+                behavior: 'smooth'
+            });
+            setActiveExampleIndex(index);
+
+            if (examplesSectionRef.current) {
+                examplesSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    };
+
+    const handleExamplesScroll = () => {
+        if (examplesScrollRef.current) {
+            const scrollPosition = examplesScrollRef.current.scrollLeft;
+            const containerWidth = examplesScrollRef.current.offsetWidth;
+            const cardWidth = containerWidth * 0.85 + 16; 
+            const index = Math.round(scrollPosition / cardWidth);
+            if (index !== activeExampleIndex) {
+                setActiveExampleIndex(index);
+            }
+        }
+    };
+
     const searchParams = useSearchParams();
     const [lang, setLang] = useState<'es' | 'en'>('es');
     const [showStickyCTA, setShowStickyCTA] = useState(false);
@@ -148,15 +181,17 @@ function HomeContent() {
 
             <PlatformLogos lang={lang} />
 
+            <OfficialShowcase lang={lang} />
+
             {/* EXAMPLES SECTION */}
-            <section id="examples" className="section-padding bg-dark-bg relative overflow-hidden">
+            <section ref={examplesSectionRef} id="examples" className="section-padding bg-dark-bg relative overflow-hidden scroll-mt-20">
                 {/* Background Decor - CSS-only animated orbs (GPU composited) */}
                 <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
                 <div className="bg-orb-2 absolute bottom-1/4 -right-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
                 <div className="bg-orb-coffee absolute top-1/2 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-[150px] pointer-events-none opacity-30" />
                 
                 <div className="max-w-7xl mx-auto relative z-10">
-                    <div className="text-center mb-16">
+                    <div className="text-center mb-16 px-4">
                         <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">
                             {t.examples.title.split(' ')[0]} <span className="text-gradient">{t.examples.title.split(' ').slice(1).join(' ')}</span>
                         </h2>
@@ -165,17 +200,52 @@ function HomeContent() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
-                        {examples.map((example, i) => (
-                            <div key={i}>
-                                <ProfessionalAudioPlayer 
-                                    src={example.src}
-                                    title={example.title}
-                                    description={example.desc}
-                                    cover={example.cover}
-                                />
+                    <div className="relative">
+                        <div 
+                            ref={examplesScrollRef}
+                            onScroll={handleExamplesScroll}
+                            className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible pb-8 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                        >
+                            {examples.map((example, i) => (
+                                <div 
+                                    key={i}
+                                    className="flex-shrink-0 w-[85%] md:w-auto snap-center"
+                                >
+                                    <ProfessionalAudioPlayer 
+                                        src={example.src}
+                                        title={example.title}
+                                        description={example.desc}
+                                        cover={example.cover}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Navigation for Mobile */}
+                        <div className="flex md:hidden items-center justify-center gap-6 mt-6">
+                            <button 
+                                onClick={() => scrollToExample(activeExampleIndex > 0 ? activeExampleIndex - 1 : examples.length - 1)}
+                                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            
+                            <div className="flex gap-2">
+                                {examples.map((_, i) => (
+                                    <div 
+                                        key={i} 
+                                        className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeExampleIndex === i ? 'w-4 bg-coffee-medium' : 'bg-white/20'}`} 
+                                    />
+                                ))}
                             </div>
-                        ))}
+
+                            <button 
+                                onClick={() => scrollToExample(activeExampleIndex < examples.length - 1 ? activeExampleIndex + 1 : 0)}
+                                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -225,11 +295,11 @@ function HomeContent() {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                        className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-dark-bg via-dark-bg/95 to-transparent z-[50] md:hidden pointer-events-none"
+                        className="fixed bottom-0 left-0 right-0 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-dark-bg via-dark-bg/95 to-transparent z-[50] md:hidden pointer-events-none"
                     >
                         <button 
                             onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] mb-2 flex items-center justify-center gap-2"
+                            className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] flex items-center justify-center gap-2"
                         >
                             <Music className="w-5 h-5" />
                             {t.hero.stickyCTA}

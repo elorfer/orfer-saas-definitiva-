@@ -73,14 +73,21 @@ export default function Footer({ lang }: FooterProps) {
                     </div>
                 </div>
 
-                <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
-                        © {currentYear} Struky Music AI. ALL RIGHTS RESERVED.
+                <div className="mt-20 pt-8 border-t border-white/5">
+                    <p className="text-gray-500 text-[11px] italic mb-8 leading-relaxed max-w-4xl">
+                        {lang === 'es' 
+                            ? 'Aviso de Transparencia: Todo el contenido mostrado en Struky.com (incluyendo música de ejemplo, arte visual y testimonios representativos) ha sido creado por personas reales y artistas profesionales, potenciado y optimizado mediante nuestra tecnología de Inteligencia Artificial avanzada para garantizar los más altos estándares de calidad y eficiencia en la industria musical.' 
+                            : 'Transparency Notice: All content displayed on Struky.com (including example music, visual art, and representative testimonials) has been created by real people and professional artists, powered and optimized through our advanced Artificial Intelligence technology to ensure the highest quality and efficiency standards in the music industry.'}
                     </p>
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                            <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Server: Latin-1 North</span>
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">
+                            © {currentYear} Struky Music AI. ALL RIGHTS RESERVED.
+                        </p>
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Server: Latin-1 North</span>
+                            </div>
                         </div>
                     </div>
                 </div>

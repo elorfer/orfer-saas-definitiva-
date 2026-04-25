@@ -81,9 +81,9 @@ export const translations = {
       plans: {
         starter: {
           name: "Starter",
-          desc: "La semilla de tu hit.",
+          desc: "Tu entrada al mundo profesional.",
           cta: "Empezar con Starter",
-          features: ["Producción estándar (48-72h)", "1 revisión musical", "Uso personal / Maqueta", "Calidad MP3 Alta Calidad"]
+          features: ["Producción Profesional (48-72h)", "1 Revisión Detallada", "Licencia de Uso Estándar", "Audio Optimizado para Redes"]
         },
         pro: {
           name: "Pro Master",
@@ -95,7 +95,7 @@ export const translations = {
           name: "Elite Studio",
           desc: "Producción VIP Completa.",
           cta: "Elegir Plan Elite",
-          features: ["Prioridad Máxima en Estudio", "Revisiones Ilimitadas", "Entrega de Multitracks (Stems)", "Mezcla y Master Analógica", "OBSEQUIO: Video Letra HD"]
+          features: ["Entrega Express VIP (<24h)", "Revisiones Ilimitadas (Perfecto)", "Pistas Separadas (Stems) para Shows", "Masterización Analógica (Nivel Industria)", "OBSEQUIO: Video 4K + Reels/TikTok"]
         }
       }
     }
@@ -182,9 +182,9 @@ export const translations = {
       plans: {
         starter: {
           name: "Starter",
-          desc: "The seed of your hit.",
+          desc: "Your entry into the professional world.",
           cta: "Start with Starter",
-          features: ["Standard production (48-72h)", "1 musical revision", "Personal use / Demo", "High Quality MP3"]
+          features: ["Professional Production (48-72h)", "1 Detailed Revision", "Standard Use License", "Optimized Audio for Social Media"]
         },
         pro: {
           name: "Pro Master",
@@ -194,9 +194,9 @@ export const translations = {
         },
         elite: {
           name: "Elite Studio",
-          desc: "Full VIP Production.",
+          desc: "Complete VIP Production.",
           cta: "Choose Elite Plan",
-          features: ["Maximum Studio Priority", "Unlimited Revisions", "Multitracks (Stems) Delivery", "Analog Mix & Master", "GIFT: HD Lyric Video"]
+          features: ["VIP Express Delivery (<24h)", "Unlimited Revisions (Until Perfect)", "Separate Tracks (Stems) for Live Shows", "Analog Mastering (Industry Standard)", "GIFT: 4K Video + TikTok/Reels Format"]
         }
       }
     }

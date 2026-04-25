@@ -2,21 +2,54 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { BadgeCheck } from 'lucide-react';
+import { BadgeCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
     const [activeIndex, setActiveIndex] = useState(0);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const sectionRef = useRef<HTMLElement>(null);
 
     const handleScroll = () => {
         if (scrollRef.current) {
             const scrollPosition = scrollRef.current.scrollLeft;
             const containerWidth = scrollRef.current.offsetWidth;
-            const cardWidth = containerWidth * 0.8 + 24; 
+            const cardWidth = containerWidth * 0.85 + 24; 
             const index = Math.round(scrollPosition / cardWidth);
             if (index !== activeIndex) {
                 setActiveIndex(index);
             }
+        }
+    };
+
+    const scrollToItem = (index: number) => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const scrollAmount = container.offsetWidth * 0.85 + 24;
+            container.scrollTo({
+                left: index * scrollAmount,
+                behavior: 'smooth'
+            });
+            setActiveIndex(index);
+
+            if (sectionRef.current) {
+                sectionRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    };
+
+    const next = () => {
+        if (activeIndex < composers.length - 1) {
+            scrollToItem(activeIndex + 1);
+        } else {
+            scrollToItem(0);
+        }
+    };
+
+    const prev = () => {
+        if (activeIndex > 0) {
+            scrollToItem(activeIndex - 1);
+        } else {
+            scrollToItem(composers.length - 1);
         }
     };
 
@@ -42,7 +75,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
     ];
 
     return (
-        <section className="section-padding bg-dark-bg/50 relative overflow-hidden">
+        <section ref={sectionRef} className="section-padding bg-dark-bg/50 relative overflow-hidden scroll-mt-20">
             <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-coffee-medium/5 blur-[120px] rounded-full"></div>
             
             <div className="max-w-6xl mx-auto relative z-10">
@@ -57,44 +90,60 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                     </p>
                 </div>
 
-                <div 
-                    ref={scrollRef}
-                    onScroll={handleScroll}
-                    className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
-                >
-                    {composers.map((composer, i) => (
-                        <div 
-                            key={i}
-                            className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[85%] md:w-auto snap-center hover:bg-white/[0.02] transition-colors duration-300"
-                        >
-                            <div className="relative w-32 h-32 rounded-full border-2 border-coffee-medium/30 p-1 mb-6 overflow-hidden">
-                                <Image 
-                                    src={composer.image} 
-                                    alt={composer.name}
-                                    fill
-                                    className="rounded-full object-cover transition-transform duration-500 hover:scale-110"
-                                />
+                <div className="relative">
+                    <div 
+                        ref={scrollRef}
+                        onScroll={handleScroll}
+                        className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                    >
+                        {composers.map((composer, i) => (
+                            <div 
+                                key={i}
+                                className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[85%] md:w-auto snap-center hover:bg-white/[0.02] transition-colors duration-300"
+                            >
+                                <div className="relative w-32 h-32 rounded-full border-2 border-coffee-medium/30 p-1 mb-6 overflow-hidden">
+                                    <Image 
+                                        src={composer.image} 
+                                        alt={composer.name}
+                                        fill
+                                        className="rounded-full object-cover transition-transform duration-500 hover:scale-110"
+                                    />
+                                </div>
+                                <h3 className="text-xl font-bold mb-1 flex items-center gap-1.5">
+                                    {composer.name}
+                                    <BadgeCheck className="w-5 h-5 text-[#3897f0] fill-[#3897f0]/10" />
+                                </h3>
+                                <p className="text-coffee-light text-xs font-bold uppercase tracking-widest mb-4">{composer.role}</p>
+                                <p className="text-sm text-gray-400 italic">"{composer.description}"</p>
                             </div>
-                            <h3 className="text-xl font-bold mb-1 flex items-center gap-1.5">
-                                {composer.name}
-                                <BadgeCheck className="w-5 h-5 text-[#3897f0] fill-[#3897f0]/10" />
-                            </h3>
-                            <p className="text-coffee-light text-xs font-bold uppercase tracking-widest mb-4">{composer.role}</p>
-                            <p className="text-sm text-gray-400 italic">"{composer.description}"</p>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
 
-                {/* Mobile Indicators */}
-                <div className="flex justify-center gap-2 mt-8 md:hidden">
-                    {composers.map((_, i) => (
-                        <div 
-                            key={i}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${
-                                activeIndex === i ? 'w-6 bg-coffee-medium' : 'w-1.5 bg-white/10'
-                            }`}
-                        ></div>
-                    ))}
+                    {/* Mobile Navigation */}
+                    <div className="flex md:hidden items-center justify-center gap-6 mt-6">
+                        <button 
+                            onClick={prev}
+                            className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="flex gap-2">
+                            {composers.map((_, i) => (
+                                <div 
+                                    key={i} 
+                                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeIndex === i ? 'w-4 bg-coffee-medium' : 'bg-white/20'}`} 
+                                />
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={next}
+                            className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
+                        >
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>

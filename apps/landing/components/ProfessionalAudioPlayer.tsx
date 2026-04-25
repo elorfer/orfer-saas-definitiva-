@@ -67,12 +67,12 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
     };
 
     return (
-        <div className={`card-dark group p-4 md:p-7 border transition-all duration-300 overflow-hidden relative flex flex-col sm:flex-row h-full ${isPlaying ? 'border-coffee-medium/50 shadow-[0_0_30px_rgba(202,160,82,0.15)] bg-white/5' : 'border-white/5 hover:border-white/20'}`}>
+        <div className={`card-dark group p-3 md:p-7 border transition-all duration-300 overflow-hidden relative flex flex-row items-center h-full ${isPlaying ? 'border-coffee-medium/50 shadow-[0_0_30px_rgba(202,160,82,0.15)] bg-white/5' : 'border-white/5 hover:border-white/20'}`}>
             {/* Shimmer Effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none z-20"></div>
 
             {/* COVER IMAGE */}
-            <div className="relative w-full sm:w-32 md:w-40 aspect-square shrink-0 overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-black/40 group-hover:scale-[1.03] transition-transform duration-300">
+            <div className="relative w-20 sm:w-32 md:w-40 aspect-square shrink-0 overflow-hidden rounded-xl md:rounded-2xl border border-white/10 shadow-2xl bg-black/40 group-hover:scale-[1.03] transition-transform duration-300">
                 <Image 
                     src={cover} 
                     alt={title}
@@ -85,10 +85,10 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
             </div>
 
             {/* INFO & CONTROLS */}
-            <div className="flex-1 min-w-0 flex flex-col mt-4 sm:mt-0 sm:ml-8 justify-center">
-                <div className="mb-5">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <h3 className={`text-base md:text-2xl font-black leading-tight truncate transition-colors duration-300 ${isPlaying ? 'text-coffee-light' : 'text-white'}`}>
+            <div className="flex-1 min-w-0 flex flex-col ml-4 sm:ml-8 justify-center">
+                <div className="mb-2 md:mb-5">
+                    <div className="flex items-center gap-2 mb-1">
+                        <h3 className={`text-sm sm:text-base md:text-2xl font-black leading-tight truncate transition-colors duration-300 ${isPlaying ? 'text-coffee-light' : 'text-white'}`}>
                             {title}
                         </h3>
                         {isPlaying && (
