@@ -406,6 +406,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         <button
                                             type="button"
                                             onClick={() => setShowAiInput(!showAiInput)}
+                                            data-fb-ignore="true"
+                                            fb-pii="ignore"
                                             className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#9c88ff] to-[#8c7ae6] text-white flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-purple-500/20"
                                         >
                                             <Sparkles className="w-3 h-3" />
@@ -449,6 +451,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                             type="button"
                                                             disabled={isGenerating || !aiIdea}
                                                             onClick={handleGenerateLyrics}
+                                                            data-fb-ignore="true"
+                                                            fb-pii="ignore"
                                                             className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white px-4 rounded-xl transition-all flex items-center justify-center min-w-[44px] shadow-[0_0_15px_rgba(124,58,237,0.3)] hover:shadow-[0_0_25px_rgba(124,58,237,0.5)]"
                                                         >
                                                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
