@@ -27,8 +27,8 @@ export async function POST(req: Request) {
         const fbp = cookieStore.get('_fbp')?.value;
         const fbc = cookieStore.get('_fbc')?.value;
         
-        // Enviamos el evento de forma asíncrona para no retrasar a Stripe
-        sendMetaEvent({
+        // Esperamos el evento para asegurar que Vercel no mate el proceso antes de enviarlo
+        await sendMetaEvent({
             eventName: 'InitiateCheckout',
             eventID: body.metaEventId,
             userData: {
