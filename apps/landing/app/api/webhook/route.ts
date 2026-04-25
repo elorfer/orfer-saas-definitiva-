@@ -68,8 +68,12 @@ export async function POST(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         
         // Ejecutar envío a Meta CAPI
-        // Lo hacemos de forma asíncrona para no bloquear la respuesta a Stripe
-        triggerMetaPurchase(session).catch(console.error);
+        // Esperamos la promesa para que Vercel no mate el proceso
+        try {
+            await triggerMetaPurchase(session);
+        } catch (err) {
+            console.error('Error sending Meta Purchase:', err);
+        }
 
         const metadata = session.metadata || {};
 
