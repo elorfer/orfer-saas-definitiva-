@@ -661,12 +661,12 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                     </motion.div>
                                                 )}
                                             </div>
-                                            <h4 className="font-black text-base mb-1 uppercase tracking-tight">{t.pricing.plans[plan.id].name}</h4>
+                                            <h4 className="font-black text-base mb-1 uppercase tracking-tight">{t.pricing.plans[plan.id as keyof typeof t.pricing.plans].name}</h4>
                                             <div className="text-4xl font-black mb-3 text-white">${plan.price}<span className="text-xs text-gray-500 ml-1">USD</span></div>
-                                            <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{t.pricing.plans[plan.id].desc}</p>
+                                            <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{t.pricing.plans[plan.id as keyof typeof t.pricing.plans].desc}</p>
 
                                             <ul className="space-y-3 w-full pt-6 border-t border-white/5 text-left">
-                                                {t.pricing.plans[plan.id].features.map((f: string) => (
+                                                {t.pricing.plans[plan.id as keyof typeof t.pricing.plans].features.map((f: string) => (
                                                     <li key={f} className="text-[11px] text-gray-400 flex items-start gap-3">
                                                         <Check className="w-3.5 h-3.5 text-coffee-medium shrink-0 mt-0.5" />
                                                         <span className="leading-tight">{f}</span>
