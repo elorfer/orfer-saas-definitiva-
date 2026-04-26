@@ -91,10 +91,21 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const [notification, setNotification] = useState<string | null>(null);
     const planScrollRef = useRef<HTMLDivElement>(null);
 
+    // Test mode: struky.com/?test=1 adds a $0.50 plan for Purchase event testing
+    const [isTestMode, setIsTestMode] = useState(false);
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        setIsTestMode(params.get('test') === '1');
+    }, []);
+
+    const activePlans = isTestMode
+        ? [{ id: 'test' as any, price: 0.5, icon: Zap, highlight: false }, ...PLANS]
+        : PLANS;
+
     // Sync external plan selection internally
     useEffect(() => {
         if (initialPlan && initialPlan !== formData.plan) {
-            const planData = PLANS.find(p => p.id === initialPlan);
+            const planData = activePlans.find(p => p.id === initialPlan);
             if (planData) {
                 setFormData(prev => ({
                     ...prev,
@@ -146,7 +157,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     // Usa polling porque AnimatePresence puede tardar en montar el contenedor
     useEffect(() => {
         if (step === 3 && formData.plan) {
-            const idx = PLANS.findIndex(p => p.id === formData.plan);
+            const idx = activePlans.findIndex(p => p.id === formData.plan);
             if (idx >= 0) {
                 setPlanActiveIndex(idx);
                 let attempts = 0;
@@ -620,7 +631,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     onScroll={handlePlanScroll}
                                     className="relative flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
                                 >
-                                    {PLANS.map((plan) => (
+                                    {activePlans.map((plan) => (
                                         <button
                                             key={plan.id}
                                             type="button"
@@ -666,9 +677,12 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     ))}
                                 </div>
                                 <div className="flex justify-center gap-2 mt-4 lg:hidden">
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
+                                    {activePlans.map((_, i) => (
+                                        <div 
+                                            key={i}
+                                            className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === i ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}
+                                        ></div>
+                                    ))}
                                 </div>
                             </motion.div>
                         )}
