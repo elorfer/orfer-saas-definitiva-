@@ -40,14 +40,17 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
                     </ul>
                 </div>
 
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl shadow-black/80 border border-white/10 group">
-                    <Image
-                        src="/images/studio_main.webp"
-                        alt="Struky Studios Professional Console"
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/10 border border-white/10 group">
+                    <video 
+                        autoPlay 
+                        loop 
+                        muted 
+                        playsInline 
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    >
+                        <source src="/examples/IMG_3963.webm" type="video/webm" />
+                    </video>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
                 </div>
             </div>
         </section>
