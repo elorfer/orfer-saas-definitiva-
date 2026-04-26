@@ -96,12 +96,6 @@ export const translations = {
           desc: "Producción VIP Completa.",
           cta: "Elegir Plan Elite",
           features: ["Entrega Express VIP (<24h)", "Revisiones Ilimitadas (Perfecto)", "Pistas Separadas (Stems) para Shows", "Masterización Analógica (Nivel Industria)", "Asesoría de Lanzamiento Directa", "OBSEQUIO: Video 4K + Reels/TikTok"]
-        },
-        test: {
-          name: "Test Mode",
-          desc: "Plan de prueba de 50 centavos.",
-          cta: "Probar Pago",
-          features: ["Prueba de Compra Real", "Deduplicación CAPI", "Match de Evento"]
         }
       }
     }
@@ -203,12 +197,6 @@ export const translations = {
           desc: "Complete VIP Production.",
           cta: "Choose Elite Plan",
           features: ["VIP Express Delivery (<24h)", "Unlimited Revisions (Until Perfect)", "Separate Tracks (Stems) for Live Shows", "Analog Mastering (Industry Standard)", "Direct Launch Advisory", "GIFT: 4K Video + TikTok/Reels Format"]
-        },
-        test: {
-          name: "Test Mode",
-          desc: "50-cent test plan.",
-          cta: "Test Payment",
-          features: ["Real Purchase Test", "CAPI Deduplication", "Event Matching"]
         }
       }
     }

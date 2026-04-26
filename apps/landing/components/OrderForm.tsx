@@ -91,21 +91,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const [notification, setNotification] = useState<string | null>(null);
     const planScrollRef = useRef<HTMLDivElement>(null);
 
-    // Test mode: struky.com/?test=1 adds a $0.50 plan for Purchase event testing
-    const [isTestMode, setIsTestMode] = useState(false);
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        setIsTestMode(params.get('test') === '1');
-    }, []);
-
-    const activePlans = isTestMode
-        ? [{ id: 'test' as any, price: 0.5, icon: Zap, highlight: false }, ...PLANS]
-        : PLANS;
-
     // Sync external plan selection internally
     useEffect(() => {
         if (initialPlan && initialPlan !== formData.plan) {
-            const planData = activePlans.find(p => p.id === initialPlan);
+            const planData = PLANS.find(p => p.id === initialPlan);
             if (planData) {
                 setFormData(prev => ({
                     ...prev,
@@ -157,7 +146,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     // Usa polling porque AnimatePresence puede tardar en montar el contenedor
     useEffect(() => {
         if (step === 3 && formData.plan) {
-            const idx = activePlans.findIndex(p => p.id === formData.plan);
+            const idx = PLANS.findIndex(p => p.id === formData.plan);
             if (idx >= 0) {
                 setPlanActiveIndex(idx);
                 let attempts = 0;
@@ -631,7 +620,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     onScroll={handlePlanScroll}
                                     className="relative flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
                                 >
-                                    {activePlans.map((plan) => (
+                                    {PLANS.map((plan) => (
                                         <button
                                             key={plan.id}
                                             type="button"
@@ -661,12 +650,12 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                     </motion.div>
                                                 )}
                                             </div>
-                                            <h4 className="font-black text-base mb-1 uppercase tracking-tight">{t.pricing.plans[plan.id as keyof typeof t.pricing.plans].name}</h4>
+                                            <h4 className="font-black text-base mb-1 uppercase tracking-tight">{t.pricing.plans[plan.id].name}</h4>
                                             <div className="text-4xl font-black mb-3 text-white">${plan.price}<span className="text-xs text-gray-500 ml-1">USD</span></div>
-                                            <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{t.pricing.plans[plan.id as keyof typeof t.pricing.plans].desc}</p>
+                                            <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{t.pricing.plans[plan.id].desc}</p>
 
                                             <ul className="space-y-3 w-full pt-6 border-t border-white/5 text-left">
-                                                {t.pricing.plans[plan.id as keyof typeof t.pricing.plans].features.map((f: string) => (
+                                                {t.pricing.plans[plan.id].features.map((f: string) => (
                                                     <li key={f} className="text-[11px] text-gray-400 flex items-start gap-3">
                                                         <Check className="w-3.5 h-3.5 text-coffee-medium shrink-0 mt-0.5" />
                                                         <span className="leading-tight">{f}</span>
@@ -677,12 +666,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     ))}
                                 </div>
                                 <div className="flex justify-center gap-2 mt-4 lg:hidden">
-                                    {activePlans.map((_, i) => (
-                                        <div 
-                                            key={i}
-                                            className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === i ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}
-                                        ></div>
-                                    ))}
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
+                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
                                 </div>
                             </motion.div>
                         )}
@@ -706,7 +692,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             </h3>
                                             <div className="flex items-center gap-3">
                                                 <p className="text-[10px] text-coffee-light font-bold uppercase tracking-[0.3em]">
-                                                    {t.pricing.plans[formData.plan as keyof typeof t.pricing.plans]?.name || formData.plan} Edition
+                                                    {t.pricing.plans[formData.plan]?.name || formData.plan} Edition
                                                 </p>
                                                 <button 
                                                     type="button"
