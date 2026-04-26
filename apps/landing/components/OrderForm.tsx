@@ -692,7 +692,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             </h3>
                                             <div className="flex items-center gap-3">
                                                 <p className="text-[10px] text-coffee-light font-bold uppercase tracking-[0.3em]">
-                                                    {t.pricing.plans[formData.plan]?.name || formData.plan} Edition
+                                                    {t.pricing.plans[formData.plan as keyof typeof t.pricing.plans]?.name || formData.plan} Edition
                                                 </p>
                                                 <button 
                                                     type="button"
