@@ -14,24 +14,27 @@ export default function Hero({ t, lang }: HeroProps) {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
+        let timer: ReturnType<typeof setInterval> | null = null;
         const delay = setTimeout(() => {
             const target = 10000;
             const duration = 1500;
             const steps = 50;
             const increment = target / steps;
             let current = 0;
-            const timer = setInterval(() => {
+            timer = setInterval(() => {
                 current += increment;
                 if (current >= target) {
                     setCount(target);
-                    clearInterval(timer);
+                    if (timer) clearInterval(timer);
                 } else {
                     setCount(Math.floor(current));
                 }
             }, duration / steps);
-            return () => clearInterval(timer);
         }, 900);
-        return () => clearTimeout(delay);
+        return () => {
+            clearTimeout(delay);
+            if (timer) clearInterval(timer);
+        };
     }, []);
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
