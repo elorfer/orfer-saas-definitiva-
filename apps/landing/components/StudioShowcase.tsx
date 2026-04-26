@@ -1,20 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import Image from 'next/image';
 import { BadgeCheck } from 'lucide-react';
 
 export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    useEffect(() => {
-        if (videoRef.current) {
-            videoRef.current.play().catch(error => {
-                console.error("Video play error:", error);
-            });
-        }
-    }, []);
-
     return (
         <section className="section-padding bg-dark-bg relative overflow-hidden border-t border-b border-white/5">
             <div className="absolute top-1/2 left-0 w-1/2 h-1/2 bg-coffee-dark/10 blur-[150px] rounded-full translate-y(-50%)"></div>
@@ -51,15 +39,14 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
                     </ul>
                 </div>
 
-                <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/10 border border-white/10 group">
+                <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/10 border border-white/10 bg-black/40 group">
                     <video 
-                        ref={videoRef}
+                        key="studio-video"
                         autoPlay 
                         loop 
                         muted 
                         playsInline 
-                        preload="auto"
-                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        className="absolute inset-0 w-full h-full object-cover"
                     >
                         <source src="/examples/IMG_3963.webm" type="video/webm" />
                     </video>
