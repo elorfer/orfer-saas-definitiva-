@@ -8,14 +8,24 @@ Tu base de datos ahora tiene usuarios de prueba. Puedes usar cualquiera de estas
 
 ## 🔐 Usuarios creados:
 
-### 1️⃣ Usuario Administrador ✅ (CREADO)
+### 1️⃣ Usuario Administrador Maestro ✅ (NUEVO)
+```
+Email: master@struky.com
+Username: struky_master
+Password: StrukyAdmin2026!
+Rol: Admin
+```
+**Este es el acceso principal recomendado para producción.**
+
+### 2️⃣ Usuario Administrador Secundario
 ```
 Email: admin@struky.com
 Username: adminstruky
 Password: admin123
 Rol: Admin
 ```
-**Usa estas credenciales para acceder al panel de administración**
+**Acceso alternativo.**
+
 
 ### 2️⃣ Usuario de Prueba
 ```
