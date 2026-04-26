@@ -220,11 +220,6 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 }),
             });
             const data = await response.json();
-            // DEBUG: Ver respuesta de CAPI antes de redirigir
-            if (data._capiDebug) {
-                console.log('🔍 CAPI DEBUG:', JSON.stringify(data._capiDebug, null, 2));
-                alert('CAPI Debug: ' + JSON.stringify(data._capiDebug));
-            }
             if (data.url) window.location.href = data.url;
         } catch (error) {
             console.error('Error:', error);

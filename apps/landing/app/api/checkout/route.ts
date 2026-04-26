@@ -115,7 +115,7 @@ export async function POST(req: Request) {
             }
         });
 
-        return NextResponse.json({ url: session.url, _capiDebug: { result: capiResult, error: capiError, eventId: body.metaEventId } });
+        return NextResponse.json({ url: session.url });
     } catch (err: any) {
         console.error('Error creating Stripe session:', err);
         return NextResponse.json(
