@@ -73,7 +73,6 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         Selecciona el nivel de acabado que tu música merece. Calidad internacional para el mercado global.
                     </p>
                 </div>
-
                 <div className="relative">
                     <div 
                         ref={scrollRef}
@@ -83,68 +82,52 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         {plans.map((plan) => (
                             <div
                                 key={plan.id}
-                                className={`relative bg-[#0A0A0A] rounded-[2rem] p-6 md:p-10 border transition-all duration-500 hover:border-white/20 ${
+                                className={`relative bg-[#0A0A0A] rounded-[2rem] p-6 md:p-10 border transition-all duration-500 hover:border-white/10 ${
                                     plan.id === 'elite'
-                                    ? 'border-purple-600/50 shadow-[0_0_40px_rgba(147,51,234,0.05)]'
+                                    ? 'border-purple-600/30 bg-purple-600/5'
                                     : plan.highlight 
-                                    ? 'border-coffee-medium/50 shadow-[0_0_40px_rgba(202,160,82,0.05)]' 
-                                    : 'border-white/5'
+                                    ? 'border-coffee-medium/30 bg-coffee-medium/5' 
+                                    : 'border-white/5 bg-[#111]'
                                 } flex flex-col flex-shrink-0 w-[85%] md:w-auto snap-center`}
                             >
                                 {plan.id === 'elite' && (
-                                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-[9px] font-black uppercase tracking-[0.2em] px-5 py-1.5 rounded-full shadow-2xl z-10 border border-white/20 whitespace-nowrap">
+                                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-[9px] font-black italic uppercase tracking-tighter px-6 py-2 rounded-full shadow-2xl z-10 border border-white/20 whitespace-nowrap">
                                         Experiencia Definitiva
                                     </div>
                                 )}
 
                                 {plan.highlight && plan.id !== 'elite' && (
-                                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-coffee-medium text-black text-[9px] font-black uppercase tracking-[0.2em] px-5 py-1.5 rounded-full shadow-2xl z-10 border border-white/10 whitespace-nowrap">
-                                        Elección Recomendada
+                                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-coffee-medium text-black text-[9px] font-black italic uppercase tracking-tighter px-6 py-2 rounded-full shadow-2xl z-10 border border-white/10 whitespace-nowrap">
+                                        {t.popular}
                                     </div>
                                 )}
 
-                                <div className="mb-8 text-center md:text-left">
-                                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center mb-6 mx-auto md:mx-0 ${
-                                        plan.id === 'elite' ? 'bg-purple-600 text-white' : plan.highlight ? 'bg-coffee-medium text-black' : 'bg-white/5 text-coffee-light'
-                                    }`}>
-                                        <plan.icon className="w-6 h-6 md:w-7 md:h-7" />
-                                    </div>
-                                    <h3 className="text-2xl md:text-3xl font-black mb-3 tracking-tighter text-white">{plan.name}</h3>
-                                    <p className="text-gray-300 text-[13px] md:text-[15px] font-semibold leading-relaxed opacity-80">{plan.description}</p>
-                                </div>
-
                                 <div className="mb-8">
-                                    <div className="flex items-baseline justify-center md:justify-start gap-1.5">
-                                        <span className="text-5xl md:text-6xl font-black text-white tracking-tighter">${plan.price}</span>
-                                        <span className="text-gray-600 font-black uppercase text-[10px] md:text-xs tracking-[0.2em]">USD</span>
+                                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-white mb-2">{plan.name}</h3>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-4xl md:text-5xl font-black text-white">${plan.price}</span>
+                                        <span className="text-[10px] font-black italic uppercase text-gray-500 tracking-widest ml-1">USD</span>
                                     </div>
+                                    <p className="text-gray-500 text-xs mt-4 font-bold leading-relaxed">{plan.description}</p>
                                 </div>
 
-                                <div className="w-full h-px bg-white/5 mb-8"></div>
-
-                                <ul className="space-y-3.5 md:space-y-4 mb-10 flex-1">
+                                <ul className="space-y-4 mb-10 flex-grow">
                                     {plan.features.map((feature: string, i: number) => (
-                                        <li key={i} className={`flex items-start gap-3 text-xs md:text-base ${feature.includes('OBSEQUIO') || feature.includes('GIFT') || feature.includes('VIP') ? 'text-coffee-light font-black' : 'text-gray-400 font-medium'}`}>
-                                            <div className={`mt-0.5 md:mt-1 p-0.5 rounded-full ${plan.id === 'elite' ? 'bg-purple-600/20 text-purple-400' : 'bg-coffee-medium/20 text-coffee-medium'}`}>
-                                                {feature.includes('Video') || feature.includes('TikTok') || feature.includes('Visual') ? (
-                                                    <Video className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-                                                ) : (
-                                                    <Check className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-                                                )}
-                                            </div>
+                                        <li key={i} className="flex items-start gap-3 text-[11px] text-gray-400 font-medium">
+                                            <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.id === 'elite' ? 'text-purple-500' : 'text-coffee-medium'}`} />
                                             <span className="leading-tight">{feature}</span>
                                         </li>
                                     ))}
                                 </ul>
 
-                                <button 
+                                <button
                                     onClick={() => onSelectPlan(plan.id, plan.price)}
-                                    className={`w-full py-4 md:py-5 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] md:text-xs transition-all duration-300 active:scale-95 ${
+                                    className={`w-full py-5 rounded-2xl text-[11px] font-black italic uppercase tracking-widest transition-all active:scale-[0.98] ${
                                         plan.id === 'elite'
-                                        ? 'bg-purple-600 text-white hover:bg-purple-500'
-                                        : plan.highlight 
-                                        ? 'bg-coffee-medium text-black hover:bg-coffee-light' 
-                                        : 'bg-white/5 text-white hover:bg-white/10 border border-white/5'
+                                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20 hover:bg-purple-500'
+                                        : plan.highlight
+                                        ? 'bg-[#8B6A5A] text-black shadow-lg shadow-[#8B6A5A]/10 hover:bg-[#9E7B6B]'
+                                        : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
                                     }`}
                                 >
                                     {plan.cta}
@@ -153,29 +136,29 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         ))}
                     </div>
 
-                    {/* Mobile Navigation */}
-                    <div className="flex md:hidden items-center justify-center gap-6 mt-4">
+                    {/* Mobile Navigation Arrows */}
+                    <div className="flex justify-center items-center gap-10 mt-8 md:hidden">
                         <button 
                             onClick={prev}
-                            className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
+                            className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
                         >
-                            <ChevronLeft className="w-5 h-5 text-white" />
+                            <ChevronLeft className="w-6 h-6 text-white" />
                         </button>
                         
-                        <div className="flex gap-2">
+                        <div className="flex gap-3">
                             {plans.map((_, i) => (
                                 <div 
-                                    key={i} 
-                                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeIndex === i ? 'w-6 bg-coffee-medium' : 'bg-white/10'}`} 
-                                />
+                                    key={i}
+                                    className={`h-2 rounded-full transition-all duration-300 ${activeIndex === i ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}
+                                ></div>
                             ))}
                         </div>
 
                         <button 
                             onClick={next}
-                            className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
+                            className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
                         >
-                            <ChevronRight className="w-5 h-5 text-white" />
+                            <ChevronRight className="w-6 h-6 text-white" />
                         </button>
                     </div>
                 </div>

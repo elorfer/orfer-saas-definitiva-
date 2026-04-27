@@ -681,21 +681,21 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     <button 
                                         type="button"
                                         onClick={prevPlan}
-                                        className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-coffee-medium transition-all"
+                                        className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
                                     >
                                         <ChevronLeft className="w-6 h-6 text-white" />
                                     </button>
                                     
                                     <div className="flex gap-3">
-                                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-8 bg-coffee-medium' : 'bg-white/10'}`}></div>
-                                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-8 bg-coffee-medium' : 'bg-white/10'}`}></div>
-                                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-8 bg-coffee-medium' : 'bg-white/10'}`}></div>
+                                        <div className={`h-2 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}></div>
+                                        <div className={`h-2 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}></div>
+                                        <div className={`h-2 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}></div>
                                     </div>
 
                                     <button 
                                         type="button"
                                         onClick={nextPlan}
-                                        className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-coffee-medium transition-all"
+                                        className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
                                     >
                                         <ChevronRight className="w-6 h-6 text-white" />
                                     </button>

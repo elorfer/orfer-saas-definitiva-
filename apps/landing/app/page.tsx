@@ -24,6 +24,7 @@ const FAQ = dynamic(() => import('../components/FAQ'));
 const MerchSection = dynamic(() => import('../components/MerchSection'));
 const Footer = dynamic(() => import('../components/Footer'));
 const OfficialShowcase = dynamic(() => import('../components/OfficialShowcase'));
+const AudioComparison = dynamic(() => import('../components/AudioComparison'));
 
 function HomeContent() {
     const [activeExampleIndex, setActiveExampleIndex] = useState(0);
@@ -48,12 +49,31 @@ function HomeContent() {
 
     const handleExamplesScroll = () => {
         if (examplesScrollRef.current) {
-            const scrollPosition = examplesScrollRef.current.scrollLeft;
-            const containerWidth = examplesScrollRef.current.offsetWidth;
-            const cardWidth = containerWidth * 0.85 + 16; 
-            const index = Math.round(scrollPosition / cardWidth);
-            if (index !== activeExampleIndex) {
-                setActiveExampleIndex(index);
+            const container = examplesScrollRef.current;
+            const scrollPosition = container.scrollLeft;
+            const containerWidth = container.offsetWidth;
+            
+            // Get all card elements
+            const cards = Array.from(container.children) as HTMLElement[];
+            if (cards.length === 0) return;
+
+            // Find which card is closest to the center of the container
+            const containerCenter = scrollPosition + containerWidth / 2;
+            
+            let closestIndex = 0;
+            let minDistance = Infinity;
+
+            cards.forEach((card, i) => {
+                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+                const distance = Math.abs(containerCenter - cardCenter);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestIndex = i;
+                }
+            });
+
+            if (closestIndex !== activeExampleIndex) {
+                setActiveExampleIndex(closestIndex);
             }
         }
     };
@@ -63,6 +83,7 @@ function HomeContent() {
     const [showStickyCTA, setShowStickyCTA] = useState(false);
     const [isFormVisible, setIsFormVisible] = useState(false);
     const [isPricingVisible, setIsPricingVisible] = useState(false);
+    const [isComparisonVisible, setIsComparisonVisible] = useState(false);
     const [selectedPlanFromTable, setSelectedPlanFromTable] = useState<string | null>(null);
     const t = translations[lang];
 
@@ -100,15 +121,26 @@ function HomeContent() {
 
         const formElement = document.getElementById('order-form');
         const pricingElement = document.getElementById('pricing');
+        const comparisonElement = document.getElementById('audio-comparison');
 
         if (formElement) observer.observe(formElement);
         if (pricingElement) pricingObserver.observe(pricingElement);
+        
+        // Observador para la sección de comparación
+        const comparisonObserver = new IntersectionObserver(
+            ([entry]) => {
+                setIsComparisonVisible(entry.isIntersecting);
+            },
+            { threshold: 0.2 }
+        );
+        if (comparisonElement) comparisonObserver.observe(comparisonElement);
 
         window.addEventListener('scroll', handleScroll);
         return () => {
             window.removeEventListener('scroll', handleScroll);
             if (formElement) observer.unobserve(formElement);
             if (pricingElement) pricingObserver.unobserve(pricingElement);
+            if (comparisonElement) comparisonObserver.unobserve(comparisonElement);
         };
     }, [searchParams]);
 
@@ -269,6 +301,8 @@ function HomeContent() {
 
             <StudioShowcase lang={lang} />
 
+            <AudioComparison lang={lang} />
+
             <ComposersSection lang={lang} />
 
             <Testimonials t={t.testimonials} />
@@ -315,7 +349,10 @@ function HomeContent() {
                             className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] flex items-center justify-center gap-2"
                         >
                             <Music className="w-5 h-5" />
-                            {t.hero.stickyCTA}
+                            {isComparisonVisible 
+                                ? (lang === 'es' ? 'Quiero mi producción así' : 'I want my production like this')
+                                : t.hero.stickyCTA
+                            }
                         </button>
                     </motion.div>
                 )}
