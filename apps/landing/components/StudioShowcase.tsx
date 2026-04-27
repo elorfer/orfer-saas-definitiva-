@@ -46,8 +46,10 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
                         loop 
                         muted 
                         playsInline 
+                        preload="auto"
                         className="absolute inset-0 w-full h-full object-cover"
                     >
+                        <source src="/examples/IMG_3967.mp4" type="video/mp4" />
                         <source src="/examples/IMG_3963.webm" type="video/webm" />
                     </video>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none"></div>
