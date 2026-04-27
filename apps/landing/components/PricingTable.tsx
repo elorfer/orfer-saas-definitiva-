@@ -67,7 +67,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
             <div className="max-w-6xl mx-auto px-6 relative z-10">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter text-white">
-                        Planes de <span className="text-coffee-medium">Producción</span>
+                        Planes de <span className="text-gradient">Producción</span>
                     </h2>
                     <p className="text-gray-400 text-base md:text-xl max-w-xl mx-auto font-medium leading-relaxed">
                         Selecciona el nivel de acabado que tu música merece. Calidad internacional para el mercado global.

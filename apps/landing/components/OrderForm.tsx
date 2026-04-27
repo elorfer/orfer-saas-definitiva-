@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { translations } from '../lib/translations';
 import { PLANS, PLAN_IDS } from '../lib/plans';
-import { Check, Video, ChevronDown, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard, Zap } from 'lucide-react';
+import { Check, Video, ChevronDown, ChevronLeft, ChevronRight, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard, Zap } from 'lucide-react';
 
 const COUNTRIES = [
     { name: 'Estados Unidos', code: '+1', flag: '🇺🇸' },
@@ -122,6 +122,28 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     };
     const prevStep = () => {
         setStep(s => Math.max(s - 1, 1));
+    };
+
+    const nextPlan = () => {
+        if (planActiveIndex < PLANS.length - 1) {
+            const container = planScrollRef.current;
+            if (container) {
+                const card = container.children[planActiveIndex + 1] as HTMLElement;
+                const scrollAmount = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
+                container.scrollTo({ left: scrollAmount, behavior: 'smooth' });
+            }
+        }
+    };
+
+    const prevPlan = () => {
+        if (planActiveIndex > 0) {
+            const container = planScrollRef.current;
+            if (container) {
+                const card = container.children[planActiveIndex - 1] as HTMLElement;
+                const scrollAmount = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
+                container.scrollTo({ left: scrollAmount, behavior: 'smooth' });
+            }
+        }
     };
 
     // Efecto de Confetti Premium (Colores Struky)
@@ -618,7 +640,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 <div
                                     ref={planScrollRef}
                                     onScroll={handlePlanScroll}
-                                    className="relative flex lg:grid lg:grid-cols-3 gap-4 lg:gap-6 overflow-x-auto lg:overflow-visible pt-6 lg:pt-0 pb-8 lg:pb-0 px-1 snap-x snap-mandatory custom-scrollbar-hide"
+                                    className="relative flex lg:grid lg:grid-cols-3 gap-6 overflow-x-auto lg:overflow-visible pt-10 pb-12 lg:pb-0 px-2 snap-x snap-mandatory custom-scrollbar-hide"
                                 >
                                     {PLANS.map((plan) => (
                                         <button
@@ -628,36 +650,26 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 setFormData(prev => ({ ...prev, plan: plan.id, price: plan.price }));
                                                 triggerSuccessConfetti();
                                             }}
-                                            className={`relative p-8 rounded-3xl border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[85%] lg:w-full snap-center ${formData.plan === plan.id
-                                                ? 'border-coffee-medium bg-coffee-medium/10 shadow-[0_0_30px_rgba(202,160,82,0.15)] scale-[1.02] lg:scale-105 z-10'
-                                                : 'border-white/10 bg-white/5 hover:border-white/20'
+                                            className={`relative p-8 rounded-[2rem] border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[85%] lg:w-full snap-center ${formData.plan === plan.id
+                                                ? (plan.id === 'elite' ? 'border-purple-600 bg-purple-600/5' : 'border-coffee-medium bg-coffee-medium/5')
+                                                : 'border-white/5 bg-[#111]'
                                                 }`}
                                         >
                                             {plan.highlight && (
-                                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-coffee-medium text-black text-[10px] font-black uppercase px-4 py-1.5 rounded-full whitespace-nowrap z-10 shadow-lg">
+                                                <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 text-white text-[9px] font-black uppercase px-6 py-1.5 rounded-full z-10 border whitespace-nowrap shadow-xl ${plan.id === 'elite' ? 'bg-purple-600 border-white/20' : 'bg-coffee-medium text-black border-white/10'}`}>
                                                     {t.pricing.popular}
                                                 </div>
                                             )}
-                                            <div className="relative">
-                                                <plan.icon className={`w-12 h-12 mb-5 transition-transform group-hover/card:scale-110 ${formData.plan === plan.id ? 'text-coffee-light' : 'text-coffee-medium'}`} />
-                                                {formData.plan === plan.id && (
-                                                    <motion.div 
-                                                        initial={{ scale: 0 }}
-                                                        animate={{ scale: 1 }}
-                                                        className="absolute -top-2 -right-2 bg-coffee-medium rounded-full p-1 shadow-lg"
-                                                    >
-                                                        <Check className="w-3 h-3 text-black" />
-                                                    </motion.div>
-                                                )}
+                                            <div className="relative mb-6">
+                                                <plan.icon className={`w-12 h-12 transition-all ${formData.plan === plan.id ? (plan.id === 'elite' ? 'text-purple-400' : 'text-coffee-light') : 'text-gray-600'}`} />
                                             </div>
-                                            <h4 className="font-black text-base mb-1 uppercase tracking-tight">{t.pricing.plans[plan.id].name}</h4>
-                                            <div className="text-4xl font-black mb-3 text-white">${plan.price}<span className="text-xs text-gray-500 ml-1">USD</span></div>
-                                            <p className="text-[11px] text-coffee-light font-bold mb-6 uppercase tracking-widest">{t.pricing.plans[plan.id].desc}</p>
-
-                                            <ul className="space-y-3 w-full pt-6 border-t border-white/5 text-left">
+                                            <h4 className="font-black text-lg mb-2 uppercase tracking-tight text-white">{t.pricing.plans[plan.id].name}</h4>
+                                            <div className="text-4xl font-black mb-4 text-white">${plan.price}<span className="text-[10px] text-gray-600 ml-1 uppercase tracking-widest font-black">USD</span></div>
+                                            
+                                            <ul className="space-y-4 w-full pt-8 border-t border-white/5 text-left">
                                                 {t.pricing.plans[plan.id].features.map((f: string) => (
-                                                    <li key={f} className="text-[11px] text-gray-400 flex items-start gap-3">
-                                                        <Check className="w-3.5 h-3.5 text-coffee-medium shrink-0 mt-0.5" />
+                                                    <li key={f} className="text-[11px] text-gray-400 font-medium flex items-start gap-3">
+                                                        <Check className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${plan.id === 'elite' ? 'text-purple-500' : 'text-coffee-medium'}`} />
                                                         <span className="leading-tight">{f}</span>
                                                     </li>
                                                 ))}
@@ -665,10 +677,28 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </button>
                                     ))}
                                 </div>
-                                <div className="flex justify-center gap-2 mt-4 lg:hidden">
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
-                                    <div className={`h-1.5 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-6 bg-coffee-light' : 'w-1.5 bg-white/10'}`}></div>
+                                <div className="flex justify-center items-center gap-8 lg:hidden">
+                                    <button 
+                                        type="button"
+                                        onClick={prevPlan}
+                                        className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-coffee-medium transition-all"
+                                    >
+                                        <ChevronLeft className="w-6 h-6 text-white" />
+                                    </button>
+                                    
+                                    <div className="flex gap-3">
+                                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-8 bg-coffee-medium' : 'bg-white/10'}`}></div>
+                                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-8 bg-coffee-medium' : 'bg-white/10'}`}></div>
+                                        <div className={`w-2 h-2 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-8 bg-coffee-medium' : 'bg-white/10'}`}></div>
+                                    </div>
+
+                                    <button 
+                                        type="button"
+                                        onClick={nextPlan}
+                                        className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-coffee-medium transition-all"
+                                    >
+                                        <ChevronRight className="w-6 h-6 text-white" />
+                                    </button>
                                 </div>
                             </motion.div>
                         )}

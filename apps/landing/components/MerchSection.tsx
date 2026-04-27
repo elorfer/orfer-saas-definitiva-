@@ -60,102 +60,139 @@ export default function MerchSection({ lang }: { lang: 'es' | 'en' }) {
         }
     };
 
+    const [activeProduct, setActiveProduct] = useState<'hoodie' | 'cap'>('hoodie');
+
     return (
-        <section className="section-padding bg-dark-bg relative overflow-hidden border-t border-white/5">
-            {/* Background Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-coffee-medium/5 blur-[150px] rounded-full pointer-events-none"></div>
+        <section className="section-padding bg-[#050505] relative overflow-hidden border-t border-white/5">
+            <div className="max-w-4xl mx-auto px-4 relative z-10">
+                
+                {/* 1. MIDDLE - PRODUCT GALLERY */}
+                <div className="relative flex flex-col items-center mb-12">
+                    {/* Main Display Container */}
+                    <div className="relative w-full">
+                        <motion.div 
+                            key={activeProduct}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            onClick={() => setIsLightboxOpen(true)}
+                            className="relative w-full aspect-square md:aspect-[4/3] rounded-[2.5rem] overflow-hidden bg-[#111] border border-white/5 cursor-zoom-in group"
+                        >
+                            <Image 
+                                src={activeProduct === 'hoodie' ? "/images/sudadera.webp" : "/examples/gorra-pronto.webp"}
+                                alt={activeProduct === 'hoodie' ? "Official Struky Hoodie" : "Official Struky Cap"}
+                                fill
+                                className="object-cover"
+                            />
 
-            <div className="max-w-7xl mx-auto px-4 relative z-10">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
-                    
-                    {/* Image Side */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: -50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8 }}
-                        onClick={() => setIsLightboxOpen(true)}
-                        className="relative aspect-square rounded-3xl overflow-hidden group shadow-2xl shadow-black/50 border border-white/10 cursor-zoom-in"
-                    >
-                        <Image 
-                            src="/images/sudadera.webp"
-                            alt="Official Struky Hoodie"
-                            fill
-                            className="object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                        
-                        {/* Price Tag Overlay */}
-                        <div className="absolute bottom-6 left-6 bg-black/80 backdrop-blur-md border border-coffee-medium/30 px-4 py-2 rounded-full">
-                            <span className="text-coffee-light font-black text-xl">{content.price} {content.currency}</span>
-                        </div>
-                    </motion.div>
-
-                    {/* Content Side */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: 50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                        className="text-center lg:text-left flex flex-col items-center lg:items-start"
-                    >
-                        <div className="flex items-center gap-2 text-coffee-light mb-4 bg-coffee-medium/10 px-3 py-1 rounded-full border border-coffee-medium/20">
-                            <ShoppingBag className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Official Merch</span>
-                        </div>
-
-                        <h2 className="text-3xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight">
-                            {content.title} <br className="hidden md:block" />
-                            <span className="text-gradient">{content.highlight}</span>
-                        </h2>
-
-                        <p className="text-gray-400 text-base md:text-lg mb-8 leading-relaxed max-w-xl">
-                            {content.description}
-                        </p>
-
-                        <div className="flex items-center gap-3 text-gray-300 mb-10 bg-white/5 w-fit px-4 py-2 rounded-lg border border-white/10">
-                            <Globe className="w-4 h-4 text-coffee-medium" />
-                            <span className="text-xs md:text-sm font-medium">{content.shipping}</span>
-                        </div>
-
-                        {/* Order Form */}
-                        <div className="w-full max-w-md">
-                            {status === 'success' ? (
-                                <motion.div 
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 font-medium flex items-center justify-center lg:justify-start gap-3"
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                                        <Send className="w-4 h-4" />
+                            {/* Floating Price Tag */}
+                            <div className="absolute top-6 left-6 bg-black/60 backdrop-blur-md px-5 py-2 rounded-full border border-white/10 z-20">
+                                <span className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tighter">
+                                    {content.price}<span className="text-white/80 text-xs md:text-sm ml-[3px] not-italic font-black">{content.currency}</span>
+                                </span>
+                            </div>
+                            
+                            {activeProduct === 'cap' && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                    <div className="bg-purple-600 text-white px-8 py-3 rounded-full text-sm md:text-lg font-black italic uppercase tracking-tighter shadow-2xl border border-white/20">
+                                        {lang === 'es' ? 'Próximamente' : 'Coming Soon'}
                                     </div>
-                                    {content.success}
-                                </motion.div>
-                            ) : (
-                                <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 w-full">
+                                </div>
+                            )}
+
+                            <div className="absolute bottom-16 right-8 bg-black/60 backdrop-blur-md p-4 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                            </div>
+                        </motion.div>
+
+                        {/* Thumbnails Switcher (Half-In, Half-Out) */}
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 flex gap-4 p-2 bg-[#111] border border-white/10 rounded-2xl shadow-2xl z-30">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setActiveProduct('hoodie'); }}
+                                className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${activeProduct === 'hoodie' ? 'border-coffee-medium scale-110' : 'border-transparent opacity-40 hover:opacity-100'}`}
+                            >
+                                <Image src="/images/sudadera.webp" alt="Hoodie" fill className="object-cover" />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setActiveProduct('cap'); }}
+                                className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${activeProduct === 'cap' ? 'border-purple-500 scale-110' : 'border-transparent opacity-40 hover:opacity-100'}`}
+                            >
+                                <Image src="/examples/gorra-pronto.webp" alt="Cap" fill className="object-cover" />
+                                <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-black text-white uppercase italic">Soon</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. MIDDLE - HEADER (MOVED BELOW PRODUCT) */}
+                <div className="flex flex-col items-center text-center mt-20 mb-16">
+                    <div className="flex items-center gap-2 text-coffee-light mb-8 bg-white/5 px-6 py-2 rounded-full border border-white/10 w-fit">
+                        <ShoppingBag className="w-4 h-4" />
+                        <span className="text-[11px] font-black italic uppercase tracking-tighter">Official Collection</span>
+                    </div>
+
+                    <h2 className="text-5xl md:text-7xl font-black mb-8 leading-[0.95] tracking-tighter text-white">
+                        {content.title} <br />
+                        <span className="text-gradient">{content.highlight}</span>
+                    </h2>
+
+                    <p className="text-gray-500 text-lg md:text-xl leading-relaxed max-w-2xl font-bold">
+                        {content.description}
+                    </p>
+                </div>
+
+                {/* 3. BOTTOM - CALL TO ACTION & PRICE */}
+
+                {/* 3. BOTTOM - CALL TO ACTION & PRICE */}
+                <div className="w-full max-w-xl mx-auto flex flex-col items-center">
+                    <div className="w-full space-y-8 bg-[#0A0A0A] border border-white/5 p-8 md:p-12 rounded-[2.5rem] shadow-2xl mb-12">
+                        <div className="flex flex-wrap items-center justify-between gap-6">
+                            <div className="text-5xl font-black text-white tracking-tighter">
+                                {content.price}<span className="text-white/60 text-lg ml-[3px]">{content.currency}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-500 text-[10px] md:text-xs uppercase font-black tracking-[0.2em] bg-white/5 px-4 py-2 rounded-lg border border-white/5">
+                                <Globe className="w-4 h-4" />
+                                {content.shipping}
+                            </div>
+                        </div>
+
+                        {status === 'success' ? (
+                            <div className="p-6 bg-green-500/10 border border-green-500/20 rounded-2xl text-green-400 font-bold text-center">
+                                {content.success}
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                                <div className="relative">
                                     <input 
                                         type="email" 
                                         placeholder={content.placeholder}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="flex-grow bg-white/5 border border-white/10 rounded-xl py-4 px-5 outline-none focus:border-coffee-medium/50 transition-all text-white placeholder:text-gray-600 text-sm"
+                                        className="w-full bg-[#111] border border-white/10 rounded-2xl py-6 px-8 outline-none focus:border-coffee-medium transition-all text-white placeholder:text-gray-700 font-medium text-lg"
                                     />
-                                    <button 
-                                        type="submit"
-                                        disabled={status === 'loading'}
-                                        className="btn-primary py-4 px-8 text-black font-black uppercase text-xs tracking-widest rounded-xl transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
-                                    >
-                                        {status === 'loading' ? '...' : content.cta}
-                                    </button>
-                                </form>
-                            )}
-                            <p className="text-[9px] text-gray-500 mt-4 px-2 uppercase tracking-widest">
-                                Al suscribirte aceptas recibir noticias sobre lanzamientos de merch.
-                            </p>
-                        </div>
-                    </motion.div>
+                                </div>
+                                <button 
+                                    type="submit"
+                                    disabled={status === 'loading'}
+                                    className="w-full bg-[#8B6A5A] hover:bg-[#9E7B6B] text-black font-black uppercase text-lg tracking-[0.2em] py-6 rounded-2xl transition-all active:scale-[0.98]"
+                                >
+                                    {status === 'loading' ? '...' : content.cta}
+                                </button>
+                            </form>
+                        )}
+                    </div>
 
+                    {/* Final Footer Decor */}
+                    <div className="grid grid-cols-2 gap-8 w-full">
+                        <div className="text-center">
+                            <div className="text-coffee-light font-black text-2xl italic uppercase">Ultra Limited</div>
+                            <div className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.3em]">50 Units per Drop</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-white font-black text-2xl italic uppercase">Struky Quality</div>
+                            <div className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.3em]">Premium Finishes</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -173,8 +210,8 @@ export default function MerchSection({ lang }: { lang: 'es' | 'en' }) {
                         className="relative w-full max-w-5xl aspect-square"
                     >
                         <Image 
-                            src="/images/sudadera.webp"
-                            alt="Official Struky Hoodie Full View"
+                            src={activeProduct === 'hoodie' ? "/images/sudadera.webp" : "/examples/gorra-pronto.webp"}
+                            alt={activeProduct === 'hoodie' ? "Official Struky Hoodie Full View" : "Official Struky Cap Full View"}
                             fill
                             className="object-contain"
                         />

@@ -63,7 +63,7 @@ export default function Hero({ t, lang }: HeroProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
                 >
-                    <span className="inline-block px-4 py-1.5 rounded-full bg-coffee-medium/20 text-coffee-light text-sm font-bold mb-8 border border-coffee-medium/30">
+                    <span className="inline-block px-6 py-2 rounded-full bg-coffee-medium/20 text-coffee-light text-[11px] font-black italic uppercase tracking-tighter mb-8 border border-coffee-medium/30">
                         {t.tag}
                     </span>
                     
@@ -114,7 +114,7 @@ export default function Hero({ t, lang }: HeroProps) {
                                 </div>
                                 <div className="w-px h-3 bg-white/10 mx-1"></div>
                                 <BadgeCheck className="w-3.5 h-3.5 text-[#3897f0] fill-[#3897f0]/10" />
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] whitespace-nowrap">
+                                <span className="text-[10px] font-black italic text-gray-400 uppercase tracking-tighter whitespace-nowrap">
                                     {lang === 'en' ? 'songs delivered' : 'canciones entregadas'}
                                 </span>
                             </div>
