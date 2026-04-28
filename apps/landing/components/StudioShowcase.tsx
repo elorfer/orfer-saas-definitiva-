@@ -1,8 +1,35 @@
 'use client';
 
 import { BadgeCheck } from 'lucide-react';
+import { useRef, useEffect } from 'react';
 
 export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && videoRef.current) {
+                    // Solo intenta reproducir si está visible
+                    videoRef.current.play().catch(e => console.log('Autoplay prevented:', e));
+                } else if (!entry.isIntersecting && videoRef.current) {
+                    // Pausa si sale de la vista para ahorrar recursos
+                    videoRef.current.pause();
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '200px' });
+
+        if (videoRef.current) {
+            observer.observe(videoRef.current);
+        }
+
+        return () => {
+            if (videoRef.current) {
+                observer.unobserve(videoRef.current);
+            }
+        };
+    }, []);
+
     return (
         <section className="section-padding bg-dark-bg relative overflow-hidden border-t border-b border-white/5">
             <div className="absolute top-1/2 left-0 w-1/2 h-1/2 bg-coffee-dark/10 blur-[150px] rounded-full translate-y(-50%)"></div>
@@ -41,12 +68,12 @@ export default function StudioShowcase({ lang }: { lang: 'es' | 'en' }) {
 
                 <div className="relative aspect-video rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/10 border border-white/10 bg-black/40 group">
                     <video 
+                        ref={videoRef}
                         key="studio-video"
-                        autoPlay 
                         loop 
                         muted 
                         playsInline 
-                        preload="auto"
+                        preload="none"
                         className="absolute inset-0 w-full h-full object-cover"
                     >
                         <source src="/examples/IMG_3967.mp4" type="video/mp4" />

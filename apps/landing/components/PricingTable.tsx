@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Check, Video, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, Video, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { PLANS } from '../lib/plans';
 
 interface PricingTableProps {
@@ -132,6 +132,14 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 >
                                     {plan.cta}
                                 </button>
+
+                                {/* Refund Guarantee */}
+                                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-white/5">
+                                    <ShieldCheck className={`w-4 h-4 shrink-0 ${plan.id === 'elite' ? 'text-purple-400' : 'text-green-400'}`} />
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-tight">
+                                        {t.guarantee || 'Garantía de satisfacción o revisamos gratis'}
+                                    </span>
+                                </div>
                             </div>
                         ))}
                     </div>

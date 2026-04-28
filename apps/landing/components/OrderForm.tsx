@@ -30,26 +30,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const t = translations[lang];
     const [step, setStep] = React.useState(1);
     const [isLoading, setIsLoading] = React.useState(false);
-    const [slots, setSlots] = useState(8); // Iniciar siempre en 8 para ver el descenso
     const [showCountrySelect, setShowCountrySelect] = React.useState(false);
     const [selectedCountry, setSelectedCountry] = React.useState(COUNTRIES[0]);
-
-    // Efecto para simular actividad (FOMO)
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setSlots(prev => {
-                const rand = Math.random();
-                if (rand > 0.4) { // 60% probabilidad de bajar
-                    return prev > 5 ? prev - 1 : 5; // Nunca baja de 5 cupos
-                } else if (rand < 0.2) { // 20% probabilidad de subir
-                    return prev < 12 ? prev + 1 : 11;
-                }
-                return prev;
-            });
-        }, 6000);
-
-        return () => clearInterval(interval);
-    }, []);
 
     const isInitialRender = useRef(true);
 
@@ -819,7 +801,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         <h4 className="text-red-500/80 font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
                                             {lang === 'es' ? 'Estudio Tradicional' : 'Traditional Studio'} <span className="text-lg">×</span>
                                         </h4>
-                                        <div className="text-3xl font-bold text-gray-600 line-through mb-4">~$500 USD</div>
+                                        <div className="text-3xl font-bold text-gray-600 line-through mb-4">~$5,000 USD</div>
                                         <p className="text-xs text-gray-500 leading-relaxed">
                                             {lang === 'es'
                                                 ? 'Músicos, tiempo de estudio, ingeniero y vocalistas.'
@@ -830,7 +812,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     {/* SEGUNDA COLUMNA: EL VALOR DE STRUKY */}
                                     <div className="comparison-col bg-coffee-medium/[0.03]">
                                         <h4 className="text-coffee-medium font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-                                            {lang === 'es' ? 'Solo hoy con Struky' : 'Only today with Struky'} <span className="text-lg">✓</span>
+                                            {lang === 'es' ? 'Tu inversión con Struky' : 'Your investment with Struky'} <span className="text-lg">✓</span>
                                         </h4>
                                         <div className="text-4xl font-black text-white mb-4 animate-pulse">${formData.price} USD</div>
                                         <p className="text-xs text-gray-300 leading-relaxed font-bold">
@@ -841,28 +823,6 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     </div>
                                 </div>
 
-                                {/* DYNAMIC SLOTS BANNER (FOMO) */}
-                                <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-2">
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative">
-                                            <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping absolute inset-0"></div>
-                                            <div className="w-2.5 h-2.5 bg-red-500 rounded-full relative"></div>
-                                        </div>
-                                        <div>
-                                            <p className="text-[11px] font-black text-white uppercase tracking-tight">
-                                                {lang === 'es' ? '¡Actividad reciente detectada!' : 'Recent activity detected!'}
-                                            </p>
-                                            <p className="text-[9px] text-gray-400 uppercase tracking-widest">
-                                                {lang === 'es' ? 'Otros productores revisando ahora' : 'Other producers reviewing now'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="bg-red-500/20 px-3 py-1 rounded-lg border border-red-500/30">
-                                        <span className="text-sm font-black text-red-400 tabular-nums transition-all duration-300 inline-block scale-110">
-                                            {slots} {lang === 'es' ? (slots === 1 ? 'CUPO RESTANTE' : 'CUPOS RESTANTES') : (slots === 1 ? 'SLOT LEFT' : 'SLOTS LEFT')}
-                                        </span>
-                                    </div>
-                                </div>
 
                                 {/* TRUST GUARANTEE PIE */}
                                 <div className="flex flex-col items-center gap-6 py-6 border-t border-white/5 mt-8">

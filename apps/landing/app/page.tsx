@@ -224,11 +224,11 @@ function HomeContent() {
             
             <Hero t={t.hero} lang={lang} />
 
-            <PlatformLogos lang={lang} />
+            {/* === CONVERSION PATH: Lo que convence y vende === */}
 
             <OfficialShowcase lang={lang} />
 
-            {/* EXAMPLES SECTION */}
+            {/* EXAMPLES SECTION — Audio real = la mejor prueba */}
             <section ref={examplesSectionRef} id="examples" className="section-padding bg-dark-bg relative overflow-hidden scroll-mt-20">
                 {/* Background Decor - CSS-only animated orbs (GPU composited) */}
                 <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
@@ -295,17 +295,15 @@ function HomeContent() {
                 </div>
             </section>
 
-            <Benefits t={t.benefits} />
-
-            <HowItWorks t={t.howItWorks} />
+            <AudioComparison lang={lang} />
 
             <StudioShowcase lang={lang} />
 
-            <AudioComparison lang={lang} />
-
-            <ComposersSection lang={lang} />
+            <Benefits t={t.benefits} />
 
             <Testimonials t={t.testimonials} />
+
+            <HowItWorks t={t.howItWorks} />
 
             <PricingTable 
                 t={t.pricing} 
@@ -314,23 +312,32 @@ function HomeContent() {
 
             <OrderForm lang={lang} initialPlan={selectedPlanFromTable} />
 
+            <FAQ t={t.faq} />
+
+            {/* === POST-CONVERSION: Contenido secundario para los que siguen explorando === */}
+
+            <PlatformLogos lang={lang} />
+
+            <ComposersSection lang={lang} />
+
             <MerchSection lang={lang} />
 
             {/* Testimonials Banner Image */}
             <section className="section-padding bg-dark-bg relative overflow-hidden">
                 <div className="max-w-7xl mx-auto px-4 relative z-10">
                     <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/80 group">
-                        <img 
+                        <Image 
                             src="/images/TESTIMONIOS.webp"
                             alt="Struky Studios Testimonials"
-                            className="w-full h-auto block transition-transform duration-1000 group-hover:scale-105"
+                            width={1200}
+                            height={450}
+                            className="w-full h-auto transition-transform duration-1000 group-hover:scale-105"
+                            sizes="(max-width: 768px) 100vw, 1200px"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none"></div>
                     </div>
                 </div>
             </section>
-
-            <FAQ t={t.faq} />
 
             <Footer lang={lang} />
 

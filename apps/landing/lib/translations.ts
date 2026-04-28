@@ -1,12 +1,12 @@
 export const translations = {
   es: {
     hero: {
-      tag: "Producción Musical Profesional",
-      title: "Convierte tu letra en una canción profesional",
-      subtitle: "Tus letras hechas canciones de estudio",
-      description: "No dejes tus mejores letras guardadas en un cajón. Logra ese sonido profesional que buscan los artistas, trabajando con IA avanzada + productores humanos.",
-      cta: "Crear mi canción ahora",
-      listen: "Escuchar Ejemplos",
+      tag: "El estudio que cabe en tu bolsillo",
+      title: "Esas letras en tu celular merecen sonar en Spotify",
+      subtitle: "Las convertimos en hits de radio en 48h",
+      description: "Tú pones el alma y la letra. Nosotros ponemos productores reales + IA de última generación para que tu canción suene como si hubieras pagado $5,000 en un estudio. Desde $50 USD.",
+      cta: "Quiero mi canción profesional",
+      listen: "Escuchar Ejemplos Reales",
       stickyCTA: "Crear Mi Canción"
     },
     features: {
@@ -78,6 +78,7 @@ export const translations = {
       title: "Planes de Producción",
       subtitle: "Selecciona el nivel de acabado que tu música merece. Calidad internacional para el mercado global.",
       popular: "Más Popular",
+      guarantee: "Garantía de satisfacción o revisamos gratis",
       plans: {
         starter: {
           name: "Starter",
@@ -102,12 +103,12 @@ export const translations = {
   },
   en: {
     hero: {
-      tag: "Producción Musical Profesional",
-      title: "Turn your lyrics into a professional song",
-      subtitle: "Your lyrics turned into studio songs",
-      description: "Don't leave your best lyrics in a drawer. Get that professional sound artists look for, working with advanced AI + human producers.",
-      cta: "Create my song now",
-      listen: "Listen to Examples",
+      tag: "The studio that fits in your pocket",
+      title: "Those lyrics on your phone deserve to be on Spotify",
+      subtitle: "We turn them into radio hits in 48h",
+      description: "You bring the soul and the lyrics. We bring real producers + cutting-edge AI so your song sounds like you spent $5,000 in a studio. Starting at $50 USD.",
+      cta: "I want my professional song",
+      listen: "Listen to Real Examples",
       stickyCTA: "Create My Song"
     },
     features: {
@@ -179,6 +180,7 @@ export const translations = {
       title: "Production Plans",
       subtitle: "Select the finish level your music deserves. International quality for the global market.",
       popular: "Most Popular",
+      guarantee: "Satisfaction guaranteed or we revise for free",
       plans: {
         starter: {
           name: "Starter",

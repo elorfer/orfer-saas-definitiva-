@@ -31,12 +31,12 @@ export const metadata: Metadata = {
     metadataBase: new URL('https://www.struky.com'),
     icons: {
         icon: [
-            { url: '/logo.svg', sizes: 'any', type: 'image/svg+xml' },
-            { url: '/logo.svg', sizes: '32x32', type: 'image/svg+xml' },
+            { url: '/examples/logoblanco web p25).webp', sizes: 'any', type: 'image/webp' },
+            { url: '/examples/logoblanco web p25).webp', sizes: '32x32', type: 'image/webp' },
         ],
-        shortcut: '/logo.svg',
+        shortcut: '/examples/logoblanco web p25).webp',
         apple: [
-            { url: '/logo.svg', sizes: '180x180', type: 'image/svg+xml' },
+            { url: '/examples/logoblanco web p25).webp', sizes: '180x180', type: 'image/webp' },
         ],
     },
     openGraph: {
@@ -72,7 +72,7 @@ export default function RootLayout({
         <html lang="es" className={`${inter.variable} ${montserrat.variable} ${outfit.variable}`} suppressHydrationWarning>
             <body className={inter.className} suppressHydrationWarning>
                 {/* Meta Pixel Script */}
-                <Script id="fb-pixel" strategy="afterInteractive">
+                <Script id="fb-pixel" strategy="lazyOnload">
                     {`
                         !function(f,b,e,v,n,t,s)
                         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -99,7 +99,7 @@ export default function RootLayout({
 
                 <Script
                     src="https://app.lemonsqueezy.com/js/lemon.js"
-                    strategy="afterInteractive"
+                    strategy="lazyOnload"
                 />
                 {children}
                 <WhatsAppButton />

@@ -57,7 +57,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
                     <div className="flex items-center gap-3 cursor-pointer group z-[60]" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                         <div className="relative w-10 h-10 md:w-12 md:h-12 transition-transform duration-300 group-hover:scale-110">
                             <Image
-                                src="/logo.svg"
+                                src="/examples/logoblanco web p25).webp"
                                 alt="Struky Logo Icon"
                                 fill
                                 priority
