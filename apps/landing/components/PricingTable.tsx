@@ -147,6 +147,35 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         ))}
                     </div>
 
+
+                    {/* Mobile Navigation Arrows */}
+                    <div className="flex justify-center items-center gap-10 mt-8 md:hidden">
+                        <button 
+                            onClick={prev}
+                            className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
+                        >
+                            <ChevronLeft className="w-6 h-6 text-white" />
+                        </button>
+                        
+                        <div className="flex gap-3">
+                            {plans.map((_, i) => (
+                                <div 
+                                    key={i}
+                                    className={`h-2 rounded-full transition-all duration-300 ${
+                                        i === activeIndex ? 'w-8 bg-purple-600' : 'w-2 bg-white/20'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={next}
+                            className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
+                        >
+                            <ChevronRight className="w-6 h-6 text-white" />
+                        </button>
+                    </div>
+
                     {/* MASSIVE GUARANTEE BADGE */}
                     <div className="max-w-4xl mx-auto mt-16 md:mt-24">
                         <div className="bg-gradient-to-b from-coffee-medium/10 to-transparent border border-coffee-medium/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
@@ -163,32 +192,6 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 Nuestra misión es crear el hit que tienes en la cabeza. Si al recibir tu canción sientes que no tiene calidad de industria, <strong className="text-white">la rehacemos junto contigo hasta que te encante</strong>, o te devolvemos tu dinero. Sin letras pequeñas.
                             </p>
                         </div>
-                    </div>
-
-                    {/* Mobile Navigation Arrows */}
-                    <div className="flex justify-center items-center gap-10 mt-8 md:hidden">
-                        <button 
-                            onClick={prev}
-                            className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
-                        >
-                            <ChevronLeft className="w-6 h-6 text-white" />
-                        </button>
-                        
-                        <div className="flex gap-3">
-                            {plans.map((_, i) => (
-                                <div 
-                                    key={i}
-                                    className={`h-2 rounded-full transition-all duration-300 ${activeIndex === i ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}
-                                ></div>
-                            ))}
-                        </div>
-
-                        <button 
-                            onClick={next}
-                            className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center bg-[#111] active:bg-purple-600 transition-all"
-                        >
-                            <ChevronRight className="w-6 h-6 text-white" />
-                        </button>
                     </div>
                 </div>
             </div>
