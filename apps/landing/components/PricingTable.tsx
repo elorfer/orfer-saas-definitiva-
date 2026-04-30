@@ -18,7 +18,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
         if (scrollRef.current) {
             const scrollPosition = scrollRef.current.scrollLeft;
             const containerWidth = scrollRef.current.offsetWidth;
-            const cardWidth = containerWidth * 0.8 + 24; 
+            const cardWidth = containerWidth * 0.85 + 24; // matches w-[85%] and gap-6
             const index = Math.round(scrollPosition / cardWidth);
             if (index !== activeIndex) {
                 setActiveIndex(index);
@@ -73,6 +73,17 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         Selecciona el nivel de acabado que tu música merece. Calidad internacional para el mercado global.
                     </p>
                 </div>
+                {/* Scarcity Banner */}
+                <div className="max-w-3xl mx-auto mb-10 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 md:p-6 text-center shadow-[0_0_30px_rgba(239,68,68,0.1)]">
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-3">
+                        <span className="text-red-500 animate-pulse text-2xl">⚠️</span>
+                        <div>
+                            <h4 className="text-white font-black uppercase tracking-tighter mb-1 text-sm md:text-base">Atención: Capacidad Limitada</h4>
+                            <p className="text-red-400/80 text-xs md:text-sm font-medium">Debido al trabajo humano y detallado que requiere cada canción, solo aceptamos <strong className="text-red-400">50 proyectos por semana</strong>. <strong className="text-white font-black uppercase text-xs tracking-widest bg-red-500/80 px-2 py-0.5 rounded ml-1 animate-pulse">Cupos limitados</strong></p>
+                        </div>
+                    </div>
+                </div>
+
                 <div className="relative">
                     <div 
                         ref={scrollRef}
@@ -132,16 +143,26 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 >
                                     {plan.cta}
                                 </button>
-
-                                {/* Refund Guarantee */}
-                                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-white/5">
-                                    <ShieldCheck className={`w-4 h-4 shrink-0 ${plan.id === 'elite' ? 'text-purple-400' : 'text-green-400'}`} />
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-tight">
-                                        {t.guarantee || 'Garantía de satisfacción o revisamos gratis'}
-                                    </span>
-                                </div>
                             </div>
                         ))}
+                    </div>
+
+                    {/* MASSIVE GUARANTEE BADGE */}
+                    <div className="max-w-4xl mx-auto mt-16 md:mt-24">
+                        <div className="bg-gradient-to-b from-coffee-medium/10 to-transparent border border-coffee-medium/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] md:w-full h-px bg-gradient-to-r from-transparent via-coffee-medium to-transparent opacity-50"></div>
+                            
+                            <div className="w-20 h-20 md:w-24 md:h-24 mx-auto bg-coffee-medium/10 rounded-full flex items-center justify-center mb-6 border border-coffee-medium/30 shadow-[0_0_50px_rgba(202,160,82,0.2)]">
+                                <ShieldCheck className="w-10 h-10 md:w-12 md:h-12 text-coffee-medium" />
+                            </div>
+                            
+                            <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter mb-4 italic">
+                                Garantía 100% <span className="text-coffee-medium">Anti-Riesgo</span>
+                            </h3>
+                            <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+                                Nuestra misión es crear el hit que tienes en la cabeza. Si al recibir tu canción sientes que no tiene calidad de industria, <strong className="text-white">la rehacemos junto contigo hasta que te encante</strong>, o te devolvemos tu dinero. Sin letras pequeñas.
+                            </p>
+                        </div>
                     </div>
 
                     {/* Mobile Navigation Arrows */}

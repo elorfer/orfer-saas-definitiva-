@@ -25,6 +25,9 @@ const MerchSection = dynamic(() => import('../components/MerchSection'));
 const Footer = dynamic(() => import('../components/Footer'));
 const OfficialShowcase = dynamic(() => import('../components/OfficialShowcase'));
 const AudioComparison = dynamic(() => import('../components/AudioComparison'));
+const ComparisonSection = dynamic(() => import('../components/ComparisonSection'));
+const RecentActivity = dynamic(() => import('../components/RecentActivity'));
+const GlobalImpact = dynamic(() => import('../components/GlobalImpact'));
 
 function HomeContent() {
     const [activeExampleIndex, setActiveExampleIndex] = useState(0);
@@ -299,11 +302,15 @@ function HomeContent() {
 
             <StudioShowcase lang={lang} />
 
+            <GlobalImpact t={t.global} />
+
             <Benefits t={t.benefits} />
 
             <Testimonials t={t.testimonials} />
 
             <HowItWorks t={t.howItWorks} />
+
+            <ComparisonSection lang={lang} />
 
             <PricingTable 
                 t={t.pricing} 
@@ -340,6 +347,8 @@ function HomeContent() {
             </section>
 
             <Footer lang={lang} />
+
+            <RecentActivity lang={lang} />
 
             {/* Sticky Mobile CTA with Animation */}
             <AnimatePresence>

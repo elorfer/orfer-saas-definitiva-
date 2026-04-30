@@ -4,8 +4,8 @@ export const translations = {
       tag: "El estudio que cabe en tu bolsillo",
       title: "Esas letras en tu celular merecen sonar en Spotify",
       subtitle: "Las convertimos en hits de radio en 48h",
-      description: "Tú pones el alma y la letra. Nosotros ponemos productores reales + IA de última generación para que tu canción suene como si hubieras pagado $5,000 en un estudio. Desde $50 USD.",
-      cta: "Quiero mi canción profesional",
+      description: "Tú pones el alma y la letra. Nosotros ponemos productores reales + IA para que tu canción suene a hit mundial. 100% de los derechos de autor son tuyos legalmente. Desde $50 USD.",
+      cta: "Quiero mi canción (Derechos 100% míos)",
       listen: "Escuchar Ejemplos Reales",
       stickyCTA: "Crear Mi Canción"
     },
@@ -36,12 +36,12 @@ export const translations = {
     },
     benefits: {
       title: "¿Por qué elegir Struky?",
-      q1: "Calidad de Estudio",
-      a1: "Sonido profesional radio-ready optimizado para Spotify y Apple Music.",
-      q2: "100% Tus Derechos",
-      a2: "Eres dueño total de la propiedad intelectual de tu canción para siempre.",
-      q3: "Entrega Rápida",
-      a3: "Tu canción terminada y masterizada en menos de 48 horas."
+      q1: "Calidad de Hit Mundial",
+      a1: "No son demos. Son producciones finales con la pegada y claridad de los temas que escuchas en el Top 50 de Spotify.",
+      q2: "Propiedad 100% Legal",
+      a2: "Recibes un contrato de cesión de derechos que certifica que eres el dueño total de la obra. El 100% de las regalías son para ti.",
+      q3: "Tu Tiempo es Oro",
+      a3: "Lanzar música hoy requiere velocidad. Entregamos tu canción masterizada en menos de 48 horas, lista para el mundo."
     },
     howItWorks: {
       title: "Tu Hit en 3 Pasos",
@@ -54,21 +54,21 @@ export const translations = {
     },
     testimonials: {
       title: "Lo que dicen nuestros artistas",
-      t1: "Struky le dio vida a un poema que le escribí a mi madre. La calidad es increíble.",
+      t1: "Struky convirtió una idea de mi bloc de notas en una producción que me hizo llorar. Calidad de estudio internacional desde mi casa.",
       t1_a: "David R., Cantautor",
-      t2_t: "Pasé de tener notas en mi móvil a sonar en Spotify en 2 días. Brutal.",
+      t2_t: "Lo mejor es la seguridad legal. Sé que mi canción es mía al 100% y puedo subirla a Spotify sin miedos ni pagos extras.",
       t2_a: "Marta S., Compositora",
-      t3_t: "El sonido es profesional de verdad. No parece hecho por una máquina, tiene alma.",
+      t3_t: "He probado otros servicios, pero Struky es diferente porque hay productores reales refinando el sonido. Tiene alma de verdad.",
       t3_a: "Juan P., Productor Independiente",
-      t4_t: "Ideal para maquetar ideas rápido o lanzar hits sin gastar miles en estudio.",
+      t4_t: "Pasé de ser un amateur con miedo a lanzar, a tener un máster profesional en 48h. Mi carrera cambió gracias a este equipo.",
       t4_a: "Sofía L., Artista Urbana"
     },
     faq: {
       title: "Dudas Frecuentes",
-      q1: "¿Quién es el dueño de la canción?",
-      a1: "Tú. Tienes los derechos de autor al 100%.",
+      q1: "¿Quién es el dueño legal de la canción?",
+      a1: "Tú eres el único titular. Struky actúa como tu servicio de producción, pero todos los derechos de autor (copyright), explotación y regalías te pertenecen al 100%. Puedes subirla a Spotify, venderla o usarla en películas sin pagarnos nada extra nunca.",
       q2: "¿Puedo pedir cambios?",
-      a2: "Sí, todos nuestros planes incluyen una ronda de refinamiento gratuito.",
+      a2: "Sí, todos nuestros planes incluyen una ronda de refinamiento gratuito para asegurar que el resultado sea exactamente lo que buscabas.",
       q3: "¿Qué formato recibo?",
       a3: "Recibirás un archivo WAV y MP3 de alta calidad (320kbps).",
       q4: "¿La canción la hace la IA o un productor humano?",
@@ -78,7 +78,7 @@ export const translations = {
       title: "Planes de Producción",
       subtitle: "Selecciona el nivel de acabado que tu música merece. Calidad internacional para el mercado global.",
       popular: "Más Popular",
-      guarantee: "Garantía de satisfacción o revisamos gratis",
+      guarantee: "Propiedad Intelectual 100% Garantizada por Escrito",
       plans: {
         starter: {
           name: "Starter",
@@ -99,6 +99,13 @@ export const translations = {
           features: ["Entrega Express VIP (<24h)", "Revisiones Ilimitadas (Perfecto)", "Pistas Separadas (Stems) para Shows", "Masterización Analógica (Nivel Industria)", "Asesoría de Lanzamiento Directa", "OBSEQUIO: Video 4K + Reels/TikTok"]
         }
       }
+    },
+    global: {
+      title: "Impacto Global",
+      subtitle: "Una red de más de 50 estudios de élite y productores en todo el mundo trabajando para ti.",
+      stat1: "50+ Estudios Aliados",
+      stat2: "15+ Países",
+      stat3: "Soporte 24/7"
     }
   },
   en: {
@@ -138,12 +145,12 @@ export const translations = {
     },
     benefits: {
       title: "Why choose Struky?",
-      q1: "Studio Quality",
-      a1: "Professional radio-ready sound optimized for Spotify and Apple Music.",
-      q2: "100% Yours",
-      a2: "You are the full owner of your song's intellectual property forever.",
-      q3: "Fast Delivery",
-      a3: "Your song finished and mastered in less than 48 hours."
+      q1: "World-Class Hit Quality",
+      a1: "These aren't demos. They are final productions with the punch and clarity of the songs you hear on Spotify's Top 50.",
+      q2: "100% Legal Ownership",
+      a2: "You receive a rights assignment contract certifying that you are the full owner. 100% of the royalties are yours.",
+      q3: "Your Time is Gold",
+      a3: "Releasing music today requires speed. We deliver your mastered song in less than 48 hours, ready for the world."
     },
     howItWorks: {
       title: "Your Hit in 3 Steps",
@@ -156,13 +163,13 @@ export const translations = {
     },
     testimonials: {
       title: "What our artists say",
-      t1: "Struky brought to life a poem I wrote for my mother. The quality is incredible.",
+      t1: "Struky turned a notepad idea into a production that moved me to tears. International studio quality from my home.",
       t1_a: "David R., Songwriter",
-      t2_t: "I went from having notes on my phone to playing on Spotify in 2 days. Amazing.",
+      t2_t: "The best part is the legal security. I know my song is 100% mine and I can upload it to Spotify without fear or extra fees.",
       t2_a: "Marta S., Composer",
-      t3_t: "The sound is truly professional. It doesn't feel machine-made, it has soul.",
+      t3_t: "I've tried other services, but Struky is different because there are real producers refining the sound. It has real soul.",
       t3_a: "Juan P., Independent Producer",
-      t4_t: "Perfect for fast-tracking ideas or releasing hits without spending thousands on a studio.",
+      t4_t: "I went from being an amateur afraid to release, to having a professional master in 48h. My career changed thanks to this team.",
       t4_a: "Sofía L., Urban Artist"
     },
     faq: {
@@ -201,6 +208,13 @@ export const translations = {
           features: ["VIP Express Delivery (<24h)", "Unlimited Revisions (Until Perfect)", "Separate Tracks (Stems) for Live Shows", "Analog Mastering (Industry Standard)", "Direct Launch Advisory", "GIFT: 4K Video + TikTok/Reels Format"]
         }
       }
+    },
+    global: {
+      title: "Global Impact",
+      subtitle: "A network of over 50 elite studios and producers worldwide working for you.",
+      stat1: "50+ Allied Studios",
+      stat2: "15+ Countries",
+      stat3: "24/7 Support"
     }
   }
 };

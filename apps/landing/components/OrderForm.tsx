@@ -272,7 +272,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         if (planScrollRef.current) {
             const scrollPosition = planScrollRef.current.scrollLeft;
             const containerWidth = planScrollRef.current.offsetWidth;
-            const cardWidth = Math.min(containerWidth * 0.85 + 16, 400);
+            const cardWidth = Math.min(containerWidth * 0.85 + 24, 400); // matches w-[85%] and gap-6
             const index = Math.round(scrollPosition / cardWidth);
             if (index !== planActiveIndex) {
                 setPlanActiveIndex(index);
@@ -783,9 +783,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     <div className="flex flex-wrap gap-4 justify-center">
                                         {[
                                             'Producción por Humanos + IA',
-                                            'Derechos de Autoría 100%',
+                                            'Derechos de Autoría 100% (Legal)',
                                             formData.plan !== 'Starter' ? 'Video Obsequio Incluido' : 'Audio en Alta Calidad',
-                                            formData.plan === 'Elite Studio' ? 'Multitracks / STEMS' : 'Masterización Profesional'
+                                            'Certificado de Propiedad'
                                         ].map(check => (
                                             <div key={check} className="flex items-center gap-2 text-[10px] text-gray-300 font-bold uppercase">
                                                 <Check className="w-3 h-3 text-coffee-medium" />
@@ -861,7 +861,17 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                         )}
                     </AnimatePresence>
 
-                    <div className="flex flex-col-reverse md:flex-row gap-4 mt-10">
+                    {step === 4 && (
+                        <div className="text-center mt-8 mb-2 animate-pulse">
+                            <p className="text-[10px] md:text-xs font-black text-red-400 uppercase tracking-[0.2em]">
+                                {lang === 'es' 
+                                    ? '🔥 Cupos limitados por atención humana real' 
+                                    : '🔥 Limited spots due to real human attention'}
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col-reverse md:flex-row gap-4 mt-6">
                         {step > 1 && (
                             <button
                                 type="button"

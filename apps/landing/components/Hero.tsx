@@ -67,30 +67,40 @@ export default function Hero({ t, lang }: HeroProps) {
                         {t.tag}
                     </span>
                     
-                    <h1 className="text-5xl md:text-8xl font-black mb-6 leading-tight tracking-tight">
+                    <h1 className="text-4xl md:text-8xl font-black mb-6 leading-tight tracking-tight">
                         {t.title}<br />
                         <span className="text-gradient hover:glow-text transition-all duration-300">
                             {t.subtitle}
                         </span>
                     </h1>
 
-                    <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
+                    <p className="text-lg md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed px-4 sm:px-0">
                         {t.description}
                     </p>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
                         <button 
                             onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="btn-primary text-xl px-12 py-5"
+                            className="btn-primary text-lg md:text-xl px-8 md:px-12 py-4 md:py-5 w-full sm:w-auto leading-tight"
                         >
                             {t.cta}
                         </button>
                         <a 
                             href="#examples" 
-                            className="btn-secondary text-xl px-10 py-5"
+                            className="btn-secondary text-lg md:text-xl px-8 md:px-10 py-4 md:py-5 w-full sm:w-auto"
                         >
                             {t.listen}
                         </a>
+                    </div>
+
+                    {/* Legal Ownership Badge */}
+                    <div className="mt-8 flex items-center justify-center">
+                        <div className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/20 max-w-[280px] sm:max-w-none">
+                            <BadgeCheck className="w-4 h-4 text-green-500 shrink-0" />
+                            <span className="text-[9px] md:text-xs font-black uppercase tracking-widest text-green-400 text-center leading-tight">
+                                {lang === 'es' ? 'Propiedad Intelectual 100% tuya por contrato' : '100% Intellectual Property yours by contract'}
+                            </span>
+                        </div>
                     </div>
 
                     <motion.div 

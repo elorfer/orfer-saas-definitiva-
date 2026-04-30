@@ -93,12 +93,12 @@ export default function Testimonials({ t }: { t: any }) {
                                     <div className="flex gap-1 text-coffee-medium mb-4">
                                         {[1, 2, 3, 4, 5].map(star => <Star key={star} className="w-4 h-4 fill-current" />)}
                                     </div>
-                                    <p className="text-lg text-gray-300 italic leading-relaxed">
+                                    <p className="text-lg text-gray-300 italic leading-relaxed text-center md:text-left">
                                         "{item.text}"
                                     </p>
                                 </div>
 
-                                <div className="flex items-center gap-4 mt-auto">
+                                <div className="flex items-center justify-center md:justify-start gap-4 mt-auto">
                                     <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-coffee-medium/40 shrink-0">
                                         <img 
                                             src={item.img} 
@@ -114,7 +114,7 @@ export default function Testimonials({ t }: { t: any }) {
                                             }}
                                         />
                                     </div>
-                                    <div className="flex flex-col">
+                                    <div className="flex flex-col items-start">
                                         <div className="flex items-center gap-1.5">
                                             <span className="font-bold text-white">{item.author}</span>
                                             <BadgeCheck className="w-4 h-4 text-[#3897f0] fill-[#3897f0]/10" />

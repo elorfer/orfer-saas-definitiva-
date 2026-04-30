@@ -14,10 +14,22 @@ export default function HowItWorks({ t }: { t: any }) {
         { icon: <Download />, title: t.s3_t, desc: t.s3_d }
     ];
 
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const scrollPosition = scrollRef.current.scrollLeft;
+            const containerWidth = scrollRef.current.offsetWidth;
+            const cardWidth = containerWidth * 0.85 + 32; // card width + gap
+            const index = Math.round(scrollPosition / cardWidth);
+            if (index !== activeIndex) {
+                setActiveIndex(index);
+            }
+        }
+    };
+
     const scrollToStep = (index: number) => {
         if (scrollRef.current) {
             const container = scrollRef.current;
-            const scrollAmount = container.offsetWidth * 0.8 + 32; // card width + gap
+            const scrollAmount = container.offsetWidth * 0.85 + 32; // card width + gap
             container.scrollTo({
                 left: index * scrollAmount,
                 behavior: 'smooth'
@@ -52,6 +64,7 @@ export default function HowItWorks({ t }: { t: any }) {
                 <div className="relative">
                     <div 
                         ref={scrollRef}
+                        onScroll={handleScroll}
                         className="flex md:grid md:grid-cols-3 gap-8 md:gap-12 relative overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
                     >
                         {/* Connection Line (Desktop) */}
