@@ -9,10 +9,10 @@ export default function Testimonials({ t }: { t: any }) {
 
     const sectionRef = useRef<HTMLElement>(null);
     const list = [
-        { text: t.t1, author: t.t1_a, img: "/images/producer_3_v2.png", initials: "JM" },
-        { text: t.t2_t, author: t.t2_a, img: "/images/artist_latina_2_v2.png", initials: "SL" },
-        { text: t.t3_t, author: t.t3_a, img: "/images/artist_latino_1_v2.png", initials: "CR" },
-        { text: t.t4_t, author: t.t4_a, img: "/images/artist_latina_4_v2.png", initials: "AM" }
+        { text: t.t1, author: t.t1_a, img: "/images/testimonio_mateo.png", initials: "MR" },
+        { text: t.t2_t, author: t.t2_a, img: "/images/testimonio_valeria.png", initials: "VS" },
+        { text: t.t3_t, author: t.t3_a, img: "/images/testimonio_julian.png", initials: "JP" },
+        { text: t.t4_t, author: t.t4_a, img: "/images/testimonio_sofia.png", initials: "SL" }
     ];
 
     const avatarColors = [

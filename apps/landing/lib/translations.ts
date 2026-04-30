@@ -54,13 +54,13 @@ export const translations = {
     },
     testimonials: {
       title: "Lo que dicen nuestros artistas",
-      t1: "Struky convirtió una idea de mi bloc de notas en una producción que me hizo llorar. Calidad de estudio internacional desde mi casa.",
-      t1_a: "David R., Cantautor",
-      t2_t: "Lo mejor es la seguridad legal. Sé que mi canción es mía al 100% y puedo subirla a Spotify sin miedos ni pagos extras.",
-      t2_a: "Marta S., Compositora",
-      t3_t: "He probado otros servicios, pero Struky es diferente porque hay productores reales refinando el sonido. Tiene alma de verdad.",
-      t3_a: "Juan P., Productor Independiente",
-      t4_t: "Pasé de ser un amateur con miedo a lanzar, a tener un máster profesional en 48h. Mi carrera cambió gracias a este equipo.",
+      t1: "Gasté $1,500 en un estudio local y el resultado fue mediocre. Con Struky, por una fracción del precio, logré un sonido que por fin me atrevo a mandar a curadores de Spotify. El bajo suena increíble.",
+      t1_a: "Mateo R., Artista Independiente",
+      t2_t: "Tenía la letra de una balada guardada por 2 años porque no sabía producir. La IA hizo el boceto, pero el ingeniero de Struky le dio ese color analógico que la hizo sonar gigante. Ya superó las 10k escuchas.",
+      t2_a: "Valeria S., Cantautora",
+      t3_t: "Yo mismo soy productor, pero delegar aquí mis demos me ahorra semanas de trabajo. Ellos arman la base y me entregan los 'stems' súper limpios. Es como tener un equipo de élite en mi laptop.",
+      t3_a: "Julián P., Productor",
+      t4_t: "Lo que más destaco es que conservo el 100% de mis derechos. Lanzar mi EP de reggaetón me hubiera costado una fortuna; con el plan Pro Master lo tuve en una semana y suena nivel industria.",
       t4_a: "Sofía L., Artista Urbana"
     },
     faq: {
