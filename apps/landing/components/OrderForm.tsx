@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { translations } from '../lib/translations';
@@ -282,9 +283,54 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
     return (
         <section id="order-form" className="section-padding bg-dark-card/30 scroll-mt-24 md:scroll-mt-32">
-            <div className="max-w-3xl mx-auto">
-                <div className="text-center mb-12">
-                    <h2 className="text-3xl md:text-5xl font-bold mb-4">
+            <div className="max-w-3xl mx-auto relative">
+                
+                {/* Checkout Mascot - DESKTOP (Floating Corner) */}
+                <motion.div 
+                    className="hidden md:block absolute -top-24 -right-16 lg:-right-32 z-0 w-56 h-56 lg:w-72 lg:h-72 drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)] pointer-events-none"
+                    animate={{ 
+                        y: [0, -10, 0],
+                        rotate: [2, -1, 2],
+                        scale: [1, 1.01, 1]
+                    }}
+                    transition={{ 
+                        duration: 5, 
+                        repeat: Infinity, 
+                        ease: "easeInOut" 
+                    }}
+                >
+                    <Image 
+                        src="/images/mascot-checkout.webp" 
+                        alt="Struky Mascot Checkout" 
+                        fill
+                        className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.2)]"
+                        unoptimized
+                    />
+                </motion.div>
+
+                <div className="text-center mb-12 relative z-10 flex flex-col items-center">
+                    {/* Checkout Mascot - MOBILE (Centered Header) */}
+                    <motion.div 
+                        className="md:hidden relative w-64 h-64 mb-2 drop-shadow-xl pointer-events-none"
+                        animate={{ 
+                            y: [0, -8, 0],
+                        }}
+                        transition={{ 
+                            duration: 4, 
+                            repeat: Infinity, 
+                            ease: "easeInOut" 
+                        }}
+                    >
+                        <Image 
+                            src="/images/mascot-checkout.webp" 
+                            alt="Struky Mascot Checkout" 
+                            fill
+                            className="object-contain drop-shadow-[0_0_10px_rgba(202,160,82,0.3)]"
+                            unoptimized
+                        />
+                    </motion.div>
+
+                    <h2 className="text-3xl md:text-5xl font-bold mb-4 w-full">
                         {lang === 'es' ? 'Crea tu' : 'Create your'} <span className="text-gradient">{lang === 'es' ? 'canción ahora' : 'song now'}</span>
                     </h2>
                     <div className="flex justify-center items-center gap-2 mt-8 max-w-lg mx-auto">

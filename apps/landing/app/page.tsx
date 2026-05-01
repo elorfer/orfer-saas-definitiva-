@@ -226,6 +226,8 @@ function HomeContent() {
             <Header lang={lang} setLang={setLang} />
             
             <Hero t={t.hero} lang={lang} />
+            
+            <PlatformLogos lang={lang} />
 
             {/* === CONVERSION PATH: Lo que convence y vende === */}
 
@@ -239,6 +241,49 @@ function HomeContent() {
                 <div className="bg-orb-coffee absolute top-1/2 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-[150px] pointer-events-none opacity-30" />
                 
                 <div className="max-w-7xl mx-auto relative z-10">
+                    {/* The Mascot (The Grandpa) */}
+                    <motion.div 
+                        className="hidden md:block absolute -top-16 right-0 lg:right-12 z-20 w-56 h-56 lg:w-72 lg:h-72 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] pointer-events-none"
+                        animate={{ 
+                            y: [0, -15, 0],
+                            rotate: [-1, 2, -1],
+                            scale: [1, 1.02, 1]
+                        }}
+                        transition={{ 
+                            duration: 4, 
+                            repeat: Infinity, 
+                            ease: "easeInOut" 
+                        }}
+                    >
+                        <Image 
+                            src="/images/mascot.webp" 
+                            alt="Mascota Struky Productor" 
+                            fill
+                            className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.3)]"
+                            unoptimized
+                        />
+                    </motion.div>
+                    
+                    {/* Mascot Mobile (Smaller, different placement to not block text) */}
+                    <motion.div 
+                        className="md:hidden mx-auto mb-6 w-64 h-64 relative drop-shadow-2xl pointer-events-none"
+                        animate={{ 
+                            y: [0, -10, 0],
+                        }}
+                        transition={{ 
+                            duration: 3, 
+                            repeat: Infinity, 
+                            ease: "easeInOut" 
+                        }}
+                    >
+                        <Image 
+                            src="/images/mascot.webp" 
+                            alt="Mascota Struky Productor" 
+                            fill
+                            className="object-contain"
+                            unoptimized
+                        />
+                    </motion.div>
                     <div className="text-center mb-16 px-4">
                         <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">
                             {t.examples.title.split(' ')[0]} <span className="text-gradient">{t.examples.title.split(' ').slice(1).join(' ')}</span>
@@ -322,8 +367,6 @@ function HomeContent() {
             <FAQ t={t.faq} />
 
             {/* === POST-CONVERSION: Contenido secundario para los que siguen explorando === */}
-
-            <PlatformLogos lang={lang} />
 
             <ComposersSection lang={lang} />
 

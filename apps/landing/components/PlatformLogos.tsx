@@ -47,28 +47,44 @@ const platforms = [
     },
 ];
 
+import { motion } from 'framer-motion';
+
 export default function PlatformLogos({ lang }: PlatformLogosProps) {
+    // Duplicate the platforms array to create a seamless loop
+    const tickerItems = [...platforms, ...platforms, ...platforms, ...platforms];
+
     return (
-        <section className="py-12 md:py-16 bg-dark-bg/50 border-y border-white/5">
-            <div className="max-w-5xl mx-auto px-6">
-                <p className="text-center text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-8">
-                    {lang === 'es' ? 'Tu canción en las principales plataformas' : 'Your song on major platforms'}
+        <section className="py-12 md:py-16 bg-dark-bg/50 border-y border-white/5 overflow-hidden">
+            <div className="max-w-full mx-auto">
+                <p className="text-center text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-8 px-6">
+                    {lang === 'es' ? 'Distribución Premium Garantizada en' : 'Premium Distribution Guaranteed on'}
                 </p>
 
-                <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10">
-                    {platforms.map((platform) => (
-                        <div
-                            key={platform.name}
-                            className="flex items-center gap-2 text-gray-500 hover:text-coffee-light transition-colors duration-300 group cursor-default"
-                        >
-                            <span className="opacity-60 group-hover:opacity-100 transition-opacity">
-                                {platform.svg}
-                            </span>
-                            <span className="text-xs md:text-sm font-bold tracking-wider hidden sm:block">
-                                {platform.name}
-                            </span>
-                        </div>
-                    ))}
+                <div className="relative flex overflow-hidden group">
+                    {/* Left and Right Fade Masks */}
+                    <div className="absolute left-0 top-0 bottom-0 w-20 md:w-40 bg-gradient-to-r from-[#050505] to-transparent z-10 pointer-events-none"></div>
+                    <div className="absolute right-0 top-0 bottom-0 w-20 md:w-40 bg-gradient-to-l from-[#050505] to-transparent z-10 pointer-events-none"></div>
+
+                    {/* Scrolling Container */}
+                    <motion.div
+                        className="flex items-center gap-12 md:gap-20 whitespace-nowrap"
+                        animate={{ x: ["0%", "-50%"] }}
+                        transition={{ repeat: Infinity, ease: "linear", duration: 25 }}
+                    >
+                        {tickerItems.map((platform, i) => (
+                            <div
+                                key={`${platform.name}-${i}`}
+                                className="flex items-center gap-3 text-gray-500 hover:text-white transition-colors duration-300 group/logo cursor-default"
+                            >
+                                <span className="opacity-50 group-hover/logo:opacity-100 transition-opacity drop-shadow-[0_0_15px_rgba(255,255,255,0)] group-hover/logo:drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                    {platform.svg}
+                                </span>
+                                <span className="text-sm md:text-base font-black tracking-widest uppercase">
+                                    {platform.name}
+                                </span>
+                            </div>
+                        ))}
+                    </motion.div>
                 </div>
             </div>
         </section>
