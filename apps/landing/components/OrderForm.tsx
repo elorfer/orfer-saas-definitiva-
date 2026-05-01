@@ -864,7 +864,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
                     {step === 4 && (
                         <div className="text-center mt-8 mb-2 animate-pulse">
-                            <p className="text-[10px] md:text-xs font-black text-red-400 uppercase tracking-[0.2em]">
+                            <p className="text-[10px] md:text-xs font-black text-coffee-medium uppercase tracking-[0.2em]">
                                 {lang === 'es' 
                                     ? '🔥 Cupos limitados por atención humana real' 
                                     : '🔥 Limited spots due to real human attention'}
