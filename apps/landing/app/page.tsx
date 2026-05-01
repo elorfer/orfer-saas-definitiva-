@@ -389,7 +389,7 @@ function HomeContent() {
 
             <Footer lang={lang} />
 
-            <RecentActivity lang={lang} />
+            {/* <RecentActivity lang={lang} /> - Desactivado por petición del usuario (estorbaban) */}
 
             {/* Sticky Mobile CTA with Animation */}
             <AnimatePresence>
