@@ -94,14 +94,8 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                             {title}
                         </h3>
                         {isPlaying && (
-                            <div className="flex items-end gap-0.5 h-3 md:h-4 ml-2 mb-1">
-                                {[1, 2, 3, 2].map((h, i) => (
-                                    <div
-                                        key={i}
-                                        className="visualizer-bar w-0.5 md:w-1 bg-coffee-medium rounded-full"
-                                        style={{ height: `${h * 25}%` }}
-                                    />
-                                ))}
+                            <div className="flex items-center ml-2 mb-1">
+                                <div className="w-2 h-2 rounded-full bg-coffee-medium animate-pulse shadow-[0_0_8px_rgba(202,160,82,0.8)]" />
                             </div>
                         )}
                     </div>

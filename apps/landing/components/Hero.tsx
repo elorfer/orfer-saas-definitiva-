@@ -56,30 +56,7 @@ export default function Hero({ t, lang }: HeroProps) {
                 <div className="bg-orb-2 absolute top-1/3 -right-20 w-80 h-80 blur-[120px] pointer-events-none opacity-30"></div>
                 <div className="bg-orb-coffee absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] blur-[150px] pointer-events-none opacity-20"></div>
 
-                {/* Floating Soundwaves (Background Visualizer) */}
-                <div className="absolute bottom-0 left-0 w-full h-[50vh] flex items-end justify-between px-[-10%] opacity-20 pointer-events-none overflow-hidden z-0" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
-                    {[...Array(40)].map((_, i) => (
-                        <motion.div
-                            key={`wave-${i}`}
-                            className="w-1.5 md:w-2.5 bg-gradient-to-t from-coffee-medium via-coffee-light/50 to-transparent rounded-t-full"
-                            animate={{
-                                height: [
-                                    `${15 + (i % 3) * 10}%`,
-                                    `${40 + (i % 5) * 10}%`,
-                                    `${20 + (i % 4) * 10}%`,
-                                    `${60 + (i % 7) * 5}%`,
-                                    `${15 + (i % 3) * 10}%`,
-                                ],
-                            }}
-                            transition={{
-                                duration: 3 + (i % 4) * 0.5,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                                delay: i * 0.05,
-                            }}
-                        />
-                    ))}
-                </div>
+                {/* Los soundwaves fueron removidos para un diseño más limpio y premium */}
             </div>
 
             <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
