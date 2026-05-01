@@ -73,13 +73,17 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         Selecciona el nivel de acabado que tu música merece. Calidad internacional para el mercado global.
                     </p>
                 </div>
-                {/* Scarcity Banner */}
-                <div className="max-w-3xl mx-auto mb-10 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 md:p-6 text-center shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-3">
-                        <span className="text-red-500 animate-pulse text-2xl">⚠️</span>
-                        <div>
-                            <h4 className="text-white font-black uppercase tracking-tighter mb-1 text-sm md:text-base">Atención: Capacidad Limitada</h4>
-                            <p className="text-red-400/80 text-xs md:text-sm font-medium">Debido al trabajo humano y detallado que requiere cada canción, solo aceptamos <strong className="text-red-400">50 proyectos por semana</strong>. <strong className="text-white font-black uppercase text-xs tracking-widest bg-red-500/80 px-2 py-0.5 rounded ml-1 animate-pulse">Cupos limitados</strong></p>
+                {/* VIP Scarcity Banner */}
+                <div className="max-w-3xl mx-auto mb-10 bg-gradient-to-r from-transparent via-coffee-medium/10 to-transparent border-y border-coffee-medium/20 py-5 px-4 text-center">
+                    <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-coffee-medium/20 text-coffee-medium shadow-[0_0_15px_rgba(202,160,82,0.3)] animate-pulse shrink-0">
+                            <span className="text-lg">⏳</span>
+                        </div>
+                        <div className="text-center md:text-left">
+                            <h4 className="text-coffee-medium font-black uppercase tracking-widest mb-1 text-xs md:text-sm">Alta Demanda • Cupos Limitados</h4>
+                            <p className="text-gray-400 text-xs md:text-sm font-medium leading-relaxed">
+                                Debido al alto nivel de detalle que exige cada hit, <strong className="text-white">solo podemos aceptar 50 proyectos nuevos por semana</strong>.
+                            </p>
                         </div>
                     </div>
                 </div>
