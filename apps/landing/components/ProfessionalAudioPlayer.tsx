@@ -151,7 +151,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
             <audio 
                 key={src}
                 ref={audioRef}
-                preload="metadata"
+                preload="none"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 onDurationChange={handleLoadedMetadata}

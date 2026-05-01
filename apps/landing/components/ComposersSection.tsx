@@ -94,7 +94,6 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                         alt="Struky Mascot" 
                         fill
                         className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.2)]"
-                        unoptimized
                     />
                 </motion.div>
                 <div className="text-center mb-16">

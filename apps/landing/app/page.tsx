@@ -152,37 +152,37 @@ function HomeContent() {
         {
             title: "Por eso tomo",
             desc: lang === 'es' ? "Música Popular • 3:20" : "Popular Music • 3:20",
-            src: "/examples/por-eso-tomo.mp3",
+            src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/por-eso-tomo.mp3",
             cover: "/examples/cover_por_eso_tomo.png"
         },
         {
             title: "Un día",
             desc: lang === 'es' ? "Vallenato Sentimental • 3:45" : "Sentimental Vallenato • 3:45",
-            src: "/examples/un-dia.mp3",
+            src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/un-dia.mp3",
             cover: "/images/UNDIA.webp"
         },
         {
             title: "Señora",
             desc: lang === 'es' ? "Ranchera Romántica • 3:12" : "Romantic Ranchera • 3:12",
-            src: "/examples/ejemplo2.mp3",
+            src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/ejemplo2.mp3",
             cover: "/images/señoravip.webp"
         },
         {
             title: "Me Gustas",
             desc: lang === 'es' ? "Salsa Romántica • 2:58" : "Romantic Salsa • 2:58",
-            src: "/examples/ejemplo3.mp3",
+            src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/ejemplo3.mp3",
             cover: "/examples/MEGUSTASSALSA.webp"
         },
         {
             title: "Mi Amor Bonito",
             desc: lang === 'es' ? "Pop Romántico • 4:15" : "Romantic Pop • 4:15",
-            src: "/examples/mi-amor-bonito.mp3",
+            src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/mi-amor-bonito.mp3",
             cover: "/examples/cover_mi_amor_bonito.png"
         },
         {
             title: "Bailame Suave",
             desc: lang === 'es' ? "Urbano • 3:12" : "Urban • 3:12",
-            src: "/examples/bailame-suave.mp3",
+            src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/bailame-suave.mp3",
             cover: "/examples/bailame suave.webp"
         }
     ];
@@ -260,7 +260,6 @@ function HomeContent() {
                             alt="Mascota Struky Productor" 
                             fill
                             className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.3)]"
-                            unoptimized
                         />
                     </motion.div>
                     
@@ -281,7 +280,6 @@ function HomeContent() {
                             alt="Mascota Struky Productor" 
                             fill
                             className="object-contain"
-                            unoptimized
                         />
                     </motion.div>
                     <div className="text-center mb-16 px-4">

@@ -30,7 +30,7 @@ export default function AudioComparison({ lang }: { lang: 'es' | 'en' }) {
                         </div>
                         <div className="h-full rounded-xl overflow-hidden border border-white/5 bg-[#0A0A0A] transition-all group-hover:border-white/10">
                             <ProfessionalAudioPlayer 
-                                src="/examples/acapela.mp3"
+                                src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/acapela.mp3"
                                 title={lang === 'es' ? "Referencia Original" : "Original Reference"}
                                 description={lang === 'es' ? "Grabación sin procesos" : "Raw recording"}
                                 cover="/examples/before-cover.png" 
@@ -51,7 +51,7 @@ export default function AudioComparison({ lang }: { lang: 'es' | 'en' }) {
                         </div>
                         <div className="h-full rounded-xl overflow-hidden border border-[#7C75FF]/30 bg-[#0A0A0A] shadow-[0_0_50px_rgba(124,117,255,0.05)] transition-all group-hover:border-[#7C75FF]/50">
                             <ProfessionalAudioPlayer 
-                                src="/examples/jardin-rosita-final.mp3"
+                                src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/jardin-rosita-final.mp3"
                                 title="Jardín de Rosita"
                                 description={lang === 'es' ? "Producción Struky Completa" : "Full Struky Production"}
                                 cover="/examples/after-cover.png" 

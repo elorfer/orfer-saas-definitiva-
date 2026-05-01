@@ -63,7 +63,7 @@ export default function OfficialShowcase({ lang }: OfficialShowcaseProps) {
                     className="max-w-2xl mx-auto"
                 >
                     <ProfessionalAudioPlayer 
-                        src="/examples/Canciones en Silencio.mp3" 
+                        src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/Canciones%20en%20Silencio.mp3"
                         title="Canción Oficial de Struky"
                         description="Tu música merece ser escuchada 🔥"
                         cover="/images/cancion oficial.webp"
