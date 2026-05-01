@@ -227,11 +227,13 @@ function HomeContent() {
             
             <Hero t={t.hero} lang={lang} />
             
+            <OfficialShowcase lang={lang} />
+
             <PlatformLogos lang={lang} />
 
             {/* === CONVERSION PATH: Lo que convence y vende === */}
 
-            <OfficialShowcase lang={lang} />
+            <Benefits t={t.benefits} />
 
             {/* EXAMPLES SECTION — Audio real = la mejor prueba */}
             <section ref={examplesSectionRef} id="examples" className="section-padding bg-dark-bg relative overflow-hidden scroll-mt-20">
@@ -341,19 +343,7 @@ function HomeContent() {
                 </div>
             </section>
 
-            <AudioComparison lang={lang} />
-
-            <StudioShowcase lang={lang} />
-
-            <GlobalImpact t={t.global} />
-
-            <Benefits t={t.benefits} />
-
             <Testimonials t={t.testimonials} />
-
-            <HowItWorks t={t.howItWorks} />
-
-            <ComparisonSection lang={lang} />
 
             <PricingTable 
                 t={t.pricing} 
@@ -361,6 +351,18 @@ function HomeContent() {
             />
 
             <OrderForm lang={lang} initialPlan={selectedPlanFromTable} />
+
+            {/* === CONTENIDO SECUNDARIO === */}
+
+            <AudioComparison lang={lang} />
+
+            <StudioShowcase lang={lang} />
+
+            <GlobalImpact t={t.global} />
+
+            <HowItWorks t={t.howItWorks} />
+
+            <ComparisonSection lang={lang} />
 
             <FAQ t={t.faq} />
 
