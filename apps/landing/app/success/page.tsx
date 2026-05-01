@@ -2,12 +2,6 @@ import Link from 'next/link';
 import Script from 'next/script';
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
-import crypto from 'crypto';
-
-function hashData(data: string) {
-    if (!data) return '';
-    return crypto.createHash('sha256').update(data.trim().toLowerCase()).digest('hex');
-}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
     apiVersion: '2026-03-25.dahlia',
