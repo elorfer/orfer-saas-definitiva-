@@ -37,6 +37,7 @@ export async function POST(req: Request) {
                 userData: {
                     email: body.email,
                     phone: body.phone,
+                    firstName: body.name,
                     fbp,
                     fbc,
                     clientIpAddress: ip,

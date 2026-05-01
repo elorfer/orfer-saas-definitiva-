@@ -32,6 +32,7 @@ async function triggerMetaPurchase(session: Stripe.Checkout.Session) {
         userData: {
             email: email,
             phone: phone,
+            firstName: metadata.name || '',
             fbp,
             fbc,
             clientIpAddress: clientIp,

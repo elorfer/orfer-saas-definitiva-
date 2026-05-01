@@ -141,7 +141,7 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                     <Script id="fb-purchase" strategy="afterInteractive">
                         {`
                             // Advanced Matching
-                            fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1445433937281922"}', {
+                            fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}', {
                                 em: '${email}',
                                 ph: '${phone.replace(/\D/g, '')}'
                             });

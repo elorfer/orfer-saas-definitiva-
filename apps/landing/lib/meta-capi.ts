@@ -17,6 +17,7 @@ export async function sendMetaEvent({
     userData: {
         email?: string;
         phone?: string;
+        firstName?: string;
         fbp?: string;
         fbc?: string;
         clientIpAddress?: string;
@@ -28,7 +29,7 @@ export async function sendMetaEvent({
     sourceUrl?: string;
     testEventCode?: string;
 }) {
-    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || '1445433937281922';
+    const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || '1681899642811715';
     const accessToken = process.env.META_ACCESS_TOKEN;
 
     if (!accessToken) {
@@ -47,6 +48,7 @@ export async function sendMetaEvent({
                 user_data: {
                     em: userData.email ? [hashData(userData.email)] : [],
                     ph: userData.phone ? [hashData(userData.phone)] : [],
+                    fn: userData.firstName ? [hashData(userData.firstName)] : [],
                     fbp: userData.fbp,
                     fbc: userData.fbc,
                     client_ip_address: userData.clientIpAddress || '',

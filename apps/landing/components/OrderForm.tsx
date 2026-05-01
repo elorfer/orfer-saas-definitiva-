@@ -198,7 +198,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         
         if (typeof window !== 'undefined' && (window as any).fbq) {
             // Inicializar con datos de usuario para Coincidencia Avanzada (Advanced Matching)
-            const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1445433937281922";
+            const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715";
             (window as any).fbq('init', pixelId, {
                 em: formData.email.toLowerCase().trim(),
                 ph: `${selectedCountry.code}${formData.phone}`.replace(/\D/g, '')
