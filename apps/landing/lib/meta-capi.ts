@@ -10,7 +10,8 @@ export async function sendMetaEvent({
     userData,
     customData,
     eventID,
-    sourceUrl
+    sourceUrl,
+    testEventCode
 }: {
     eventName: 'InitiateCheckout' | 'Purchase' | 'Lead' | 'AddToCart';
     userData: {
