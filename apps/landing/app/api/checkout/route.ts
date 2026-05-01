@@ -85,6 +85,7 @@ export async function POST(req: Request) {
             fbp: String(fbp || '').substring(0, 500),
             fbc: String(fbc || '').substring(0, 500),
             clientIp: String(ip || '').substring(0, 500),
+            userAgent: String(userAgent || '').substring(0, 500),
             ...lyricsMetadata
         };
 

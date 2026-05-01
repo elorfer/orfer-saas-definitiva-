@@ -15,7 +15,8 @@ async function triggerMetaPurchase(session: Stripe.Checkout.Session) {
     const phone = metadata.phone || session.customer_details?.phone || '';
     const fbp = metadata.fbp || '';
     const fbc = metadata.fbc || '';
-    const clientIp = metadata.clientIp || session.customer_details?.address?.country || '';
+    const clientIp = metadata.clientIp || '';
+    const userAgent = metadata.userAgent || 'StrukyServer/1.0';
     
     // Obtener ID de cliente de Stripe para usarlo como external_id en Meta
     let externalId = '';
@@ -34,7 +35,7 @@ async function triggerMetaPurchase(session: Stripe.Checkout.Session) {
             fbp,
             fbc,
             clientIpAddress: clientIp,
-            clientUserAgent: 'StrukyServer/1.0',
+            clientUserAgent: userAgent,
             externalId: externalId
         },
         customData: {

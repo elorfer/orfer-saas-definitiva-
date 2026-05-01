@@ -35,9 +35,6 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
     const email = session.customer_details?.email || '';
     const phone = session.metadata?.phone || '';
 
-    const hashedEmail = hashData(email);
-    const hashedPhone = hashData(phone);
-
     return (
         <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-dark-bg relative overflow-hidden">
             {/* Background effects */}
@@ -151,8 +148,8 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                         {`
                             // Advanced Matching
                             fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1445433937281922"}', {
-                                em: '${hashedEmail}',
-                                ph: '${hashedPhone}'
+                                em: '${email}',
+                                ph: '${phone.replace(/\D/g, '')}'
                             });
                             
                             fbq('track', 'Purchase', {
