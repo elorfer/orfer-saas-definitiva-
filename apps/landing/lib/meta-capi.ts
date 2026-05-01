@@ -25,6 +25,7 @@ export async function sendMetaEvent({
     customData?: any;
     eventID?: string;
     sourceUrl?: string;
+    testEventCode?: string;
 }) {
     const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || '1445433937281922';
     const accessToken = process.env.META_ACCESS_TOKEN;
@@ -53,7 +54,8 @@ export async function sendMetaEvent({
                 },
                 custom_data: customData
             }
-        ]
+        ],
+        ...(testEventCode ? { test_event_code: testEventCode } : {})
     };
 
     try {

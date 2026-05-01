@@ -15,18 +15,18 @@ export async function POST(req: Request) {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
             apiVersion: '2026-03-25.dahlia',
         });
-        
+
         const body = await req.json();
-        
+
         // --- META CAPI: InitiateCheckout ---
         const userAgent = req.headers.get('user-agent') || '';
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || '';
-        
+
         // Extraer cookies de Meta
         const cookieStore = await cookies();
         const fbp = cookieStore.get('_fbp')?.value;
         const fbc = cookieStore.get('_fbc')?.value;
-        
+
         // Esperamos el evento para asegurar que Vercel no mate el proceso antes de enviarlo
         let capiResult: any = null;
         let capiError: string | null = null;
@@ -56,13 +56,13 @@ export async function POST(req: Request) {
             console.error('❌ CAPI InitiateCheckout error:', err);
         }
         // ------------------------------------
-        
+
         // Parse the origin from the request to set valid success/cancel URLs
         const origin = req.headers.get('origin') || 'http://localhost:3000';
 
         const lyricsRaw = String(body.lyrics || '');
         const lyricsMetadata: Record<string, string> = {};
-        
+
         // Stripe limita cada campo de metadatos a 500 caracteres.
         // Cortamos la letra en fragmentos de 450 y la guardamos en lyrics_part_1, lyrics_part_2...
         const chunkSize = 450;
