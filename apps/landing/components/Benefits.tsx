@@ -67,14 +67,12 @@ export default function Benefits({ t }: { t: any }) {
 
                 <div className="relative">
                     <div 
-                        ref={scrollRef}
-                        onScroll={handleScroll}
-                        className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-8 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                        className="flex flex-col md:grid md:grid-cols-3 gap-6 px-4 md:px-0"
                     >
                         {data.map((item, i) => (
                             <div 
                                 key={i}
-                                className="card-dark p-8 md:p-10 flex flex-col items-center text-center group min-w-[85%] md:min-w-0 snap-center border-white/5 hover:border-coffee-medium/20 transition-all duration-500"
+                                className="card-dark p-8 md:p-10 flex flex-col items-center text-center group border-white/5 hover:border-coffee-medium/20 transition-all duration-500"
                             >
                                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-coffee-medium/10 flex items-center justify-center text-coffee-medium mb-4 md:mb-6 group-hover:bg-coffee-medium group-hover:text-white transition-all duration-500">
                                     {icons[i]}
@@ -83,32 +81,6 @@ export default function Benefits({ t }: { t: any }) {
                                 <p className="text-gray-400 text-xs md:text-sm leading-relaxed">{item.desc}</p>
                             </div>
                         ))}
-                    </div>
-
-                    {/* Navigation for Mobile */}
-                    <div className="flex md:hidden items-center justify-center gap-6 mt-6">
-                        <button 
-                            onClick={prev}
-                            className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium"
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        
-                        <div className="flex gap-2">
-                            {data.map((_, i) => (
-                                <div 
-                                    key={i} 
-                                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${activeIndex === i ? 'w-4 bg-coffee-medium' : 'bg-white/20'}`} 
-                                />
-                            ))}
-                        </div>
-
-                        <button 
-                            onClick={next}
-                            className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium"
-                        >
-                            <ChevronRight className="w-5 h-5" />
-                        </button>
                     </div>
                 </div>
             </div>
