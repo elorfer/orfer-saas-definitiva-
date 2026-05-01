@@ -46,7 +46,7 @@ export default function GlobalImpact({ t }: { t: any }) {
                 </div>
 
                 {/* The Map Container */}
-                <div className="relative w-full max-w-5xl mx-auto mb-20 md:mb-32 group aspect-[2/1] cursor-default">
+                <div className="relative w-full max-w-5xl mx-auto mb-20 md:mb-32 group aspect-[2/1] cursor-default" style={{ WebkitMaskImage: 'radial-gradient(ellipse at center, black 40%, transparent 100%)', maskImage: 'radial-gradient(ellipse at center, black 40%, transparent 100%)' }}>
                     {/* Professional Dotted World Map Image */}
                     <div className="absolute inset-0 opacity-40 grayscale group-hover:grayscale-0 transition-all duration-1000">
                         <img 
@@ -54,6 +54,32 @@ export default function GlobalImpact({ t }: { t: any }) {
                             alt="Global Network" 
                             className="w-full h-full object-contain mix-blend-screen"
                         />
+                    </div>
+
+                    {/* Animated Connecting Lines (The "WOW" Factor) */}
+                    <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
+                        <svg viewBox="0 0 1000 500" className="w-full h-full" style={{ filter: 'drop-shadow(0 0 5px rgba(202,160,82,0.5))' }}>
+                            {/* Miami to LA */}
+                            <motion.path d="M 240 175 Q 210 120 180 125" fill="none" stroke="url(#gradient)" strokeWidth="1" strokeDasharray="5 5" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 4, ease: "linear" }} vectorEffect="non-scaling-stroke" />
+                            {/* Miami to Madrid */}
+                            <motion.path d="M 240 175 Q 360 100 480 125" fill="none" stroke="url(#gradient)" strokeWidth="1.5" strokeDasharray="4 8" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 8, ease: "linear" }} vectorEffect="non-scaling-stroke" />
+                            {/* CDMX to Bogota */}
+                            <motion.path d="M 200 210 Q 240 250 280 275" fill="none" stroke="url(#gradient)" strokeWidth="1" strokeDasharray="3 6" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 5, ease: "linear" }} vectorEffect="non-scaling-stroke" />
+                            {/* Bogota to Madrid */}
+                            <motion.path d="M 280 275 Q 380 150 480 125" fill="none" stroke="url(#gradient)" strokeWidth="1" opacity="0.6" animate={{ strokeDasharray: ["0, 1000", "1000, 0"] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} vectorEffect="non-scaling-stroke" />
+                            {/* Madrid to London */}
+                            <motion.path d="M 480 125 Q 475 100 470 75" fill="none" stroke="url(#gradient)" strokeWidth="1" strokeDasharray="2 4" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }} vectorEffect="non-scaling-stroke" />
+                            {/* Bogota to Buenos Aires */}
+                            <motion.path d="M 280 275 Q 300 350 320 375" fill="none" stroke="url(#gradient)" strokeWidth="1" animate={{ strokeDasharray: ["0, 1000", "1000, 0"] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: 1 }} vectorEffect="non-scaling-stroke" />
+                            
+                            <defs>
+                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#CAA052" stopOpacity="0" />
+                                    <stop offset="50%" stopColor="#CAA052" stopOpacity="1" />
+                                    <stop offset="100%" stopColor="#CAA052" stopOpacity="0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
                     </div>
 
                     {/* Pulsing Studios */}
