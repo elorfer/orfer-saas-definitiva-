@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { ChevronDown, MessageCircleQuestion } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,13 +16,58 @@ export default function FAQ({ t }: { t: any }) {
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
     return (
-        <section id="faq" className="section-padding bg-dark-card/10">
-            <div className="max-w-3xl mx-auto">
-                <div className="text-center mb-16">
+        <section id="faq" className="section-padding bg-dark-card/10 overflow-hidden md:overflow-visible">
+            <div className="max-w-3xl mx-auto relative">
+                
+                {/* FAQ Mascot - DESKTOP (Floating Corner - Left Side) */}
+                <motion.div 
+                    className="hidden md:block absolute -top-24 -left-16 lg:-left-32 z-0 w-56 h-56 lg:w-72 lg:h-72 drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)] pointer-events-none"
+                    animate={{ 
+                        y: [0, -10, 0],
+                        rotate: [-2, 1, -2]
+                    }}
+                    transition={{ 
+                        duration: 5, 
+                        repeat: Infinity, 
+                        ease: "easeInOut" 
+                    }}
+                >
+                    <Image 
+                        src="/images/mascot-checkout.webp" 
+                        alt="Struky Mascot FAQ" 
+                        fill
+                        className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.2)]"
+                        unoptimized
+                    />
+                </motion.div>
+
+                <div className="text-center mb-16 relative z-10 flex flex-col items-center">
+                    
+                    {/* FAQ Mascot - MOBILE (Centered Header) */}
+                    <motion.div 
+                        className="md:hidden relative w-64 h-64 mb-2 drop-shadow-xl pointer-events-none"
+                        animate={{ 
+                            y: [0, -8, 0],
+                        }}
+                        transition={{ 
+                            duration: 4, 
+                            repeat: Infinity, 
+                            ease: "easeInOut" 
+                        }}
+                    >
+                        <Image 
+                            src="/images/mascot-checkout.webp" 
+                            alt="Struky Mascot FAQ" 
+                            fill
+                            className="object-contain drop-shadow-[0_0_10px_rgba(202,160,82,0.3)]"
+                            unoptimized
+                        />
+                    </motion.div>
+
                     <div className="inline-flex p-3 rounded-2xl bg-coffee-medium/10 text-coffee-medium mb-4">
                         <MessageCircleQuestion />
                     </div>
-                    <h2 className="text-3xl md:text-5xl font-bold mb-4">{t.title}</h2>
+                    <h2 className="text-3xl md:text-5xl font-bold mb-4 w-full">{t.title}</h2>
                 </div>
 
                 <div className="space-y-4">
