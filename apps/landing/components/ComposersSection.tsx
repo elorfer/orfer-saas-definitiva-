@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import { BadgeCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
@@ -75,6 +76,27 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
             <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-coffee-medium/5 blur-[120px] rounded-full"></div>
             
             <div className="max-w-6xl mx-auto relative z-10">
+                {/* Mascot - Centered Above Title */}
+                <motion.div 
+                    className="relative w-56 h-56 lg:w-72 lg:h-72 mx-auto mb-6 z-20 drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)] pointer-events-none"
+                    animate={{ 
+                        y: [0, -10, 0],
+                        rotate: [1, -1, 1]
+                    }}
+                    transition={{ 
+                        duration: 5, 
+                        repeat: Infinity, 
+                        ease: "easeInOut" 
+                    }}
+                >
+                    <Image 
+                        src="/images/mascot-checkout.webp" 
+                        alt="Struky Mascot" 
+                        fill
+                        className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.2)]"
+                        unoptimized
+                    />
+                </motion.div>
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4 font-heading">
                         {lang === 'es' ? 'Tu Equipo de' : 'Your Elite'} <span className="text-gradient">{lang === 'es' ? 'Élite Musical' : 'Production Team'}</span>
@@ -141,6 +163,8 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                         </button>
                     </div>
                 </div>
+
+
             </div>
         </section>
     );
