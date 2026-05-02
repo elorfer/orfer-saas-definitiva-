@@ -70,6 +70,16 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="es" className={`${inter.variable} ${montserrat.variable} ${outfit.variable}`} suppressHydrationWarning>
+            <head>
+                {/* Preconnect to external domains for faster handshakes */}
+                <link rel="preconnect" href="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev" />
+                <link rel="preconnect" href="https://player.vimeo.com" />
+                <link rel="preconnect" href="https://connect.facebook.net" />
+                <link rel="dns-prefetch" href="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev" />
+                
+                {/* Preload critical hero assets */}
+                <link rel="preload" as="image" href="/hero-bg.png" />
+            </head>
             <body className={inter.className} suppressHydrationWarning>
                 {/* Meta Pixel Script */}
                 <Script id="fb-pixel" strategy="lazyOnload">
