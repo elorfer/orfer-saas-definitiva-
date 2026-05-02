@@ -33,7 +33,7 @@ export default function AudioComparison({ lang }: { lang: 'es' | 'en' }) {
                                 src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/acapela.mp3"
                                 title={lang === 'es' ? "Referencia Original" : "Original Reference"}
                                 description={lang === 'es' ? "Grabación sin procesos" : "Raw recording"}
-                                cover="/examples/before-cover.png" 
+                                cover="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/before-cover.png" 
                             />
                         </div>
                     </div>
@@ -54,7 +54,7 @@ export default function AudioComparison({ lang }: { lang: 'es' | 'en' }) {
                                 src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/jardin-rosita-final.mp3"
                                 title="Jardín de Rosita"
                                 description={lang === 'es' ? "Producción Struky Completa" : "Full Struky Production"}
-                                cover="/examples/after-cover.png" 
+                                cover="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/after-cover.png" 
                             />
                         </div>
                     </div>
