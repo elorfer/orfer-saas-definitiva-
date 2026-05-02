@@ -46,7 +46,7 @@ export const metadata: Metadata = {
         siteName: 'Struky Music',
         images: [
             {
-                url: '/og-image.png',
+                url: '/examples/wat.webp',
                 width: 1200,
                 height: 630,
                 alt: 'Struky Music AI Social Card',
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: "Struky | Producción Musical Profesional con IA",
         description: "Tus letras, convertidas en música profesional con IA",
-        images: ['/og-image.png'],
+        images: ['/examples/wat.webp'],
     },
 };
 
