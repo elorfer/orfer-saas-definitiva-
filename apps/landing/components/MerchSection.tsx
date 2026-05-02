@@ -78,10 +78,12 @@ export default function MerchSection({ lang }: { lang: 'es' | 'en' }) {
                             className="relative w-full aspect-square md:aspect-[4/3] rounded-[2.5rem] overflow-hidden bg-[#111] border border-white/5 cursor-zoom-in group"
                         >
                             <Image 
-                                src={activeProduct === 'hoodie' ? "/images/sudadera.webp" : "/examples/gorra-pronto.webp"}
+                                src={activeProduct === 'hoodie' ? "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/sudadera.webp" : "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/gorra-pronto.webp"}
                                 alt={activeProduct === 'hoodie' ? "Official Struky Hoodie" : "Official Struky Cap"}
                                 fill
                                 className="object-cover"
+                                sizes="(max-width: 768px) 100vw, 800px"
+                                unoptimized
                             />
 
                             {/* Floating Price Tag */}
@@ -110,13 +112,13 @@ export default function MerchSection({ lang }: { lang: 'es' | 'en' }) {
                                 onClick={(e) => { e.stopPropagation(); setActiveProduct('hoodie'); }}
                                 className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${activeProduct === 'hoodie' ? 'border-coffee-medium scale-110' : 'border-transparent opacity-40 hover:opacity-100'}`}
                             >
-                                <Image src="/images/sudadera.webp" alt="Hoodie" fill className="object-cover" />
+                                <Image src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/sudadera.webp" alt="Hoodie" fill className="object-cover" sizes="64px" unoptimized />
                             </button>
                             <button 
                                 onClick={(e) => { e.stopPropagation(); setActiveProduct('cap'); }}
                                 className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${activeProduct === 'cap' ? 'border-purple-500 scale-110' : 'border-transparent opacity-40 hover:opacity-100'}`}
                             >
-                                <Image src="/examples/gorra-pronto.webp" alt="Cap" fill className="object-cover" />
+                                <Image src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/gorra-pronto.webp" alt="Cap" fill className="object-cover" sizes="64px" unoptimized />
                                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-black text-white uppercase italic">Soon</div>
                             </button>
                         </div>
@@ -210,10 +212,12 @@ export default function MerchSection({ lang }: { lang: 'es' | 'en' }) {
                         className="relative w-full max-w-5xl aspect-square"
                     >
                         <Image 
-                            src={activeProduct === 'hoodie' ? "/images/sudadera.webp" : "/examples/gorra-pronto.webp"}
+                            src={activeProduct === 'hoodie' ? "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/sudadera.webp" : "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/gorra-pronto.webp"}
                             alt={activeProduct === 'hoodie' ? "Official Struky Hoodie Full View" : "Official Struky Cap Full View"}
                             fill
                             className="object-contain"
+                            sizes="(max-width: 1200px) 100vw, 1200px"
+                            unoptimized
                         />
                     </motion.div>
                     <button 

@@ -55,19 +55,19 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
             name: "Marco 'The Ghost' Ruiz",
             role: lang === 'es' ? "Especialista en Mix Urbano" : "Urban Mix Specialist",
             description: lang === 'es' ? "12 años esculpiendo el sonido del trap y reggaetón comercial." : "12 years shaping the sound of commercial trap and reggaeton.",
-            image: "/images/producermarcos.webp"
+            image: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/producermarcos.webp"
         },
         {
             name: "Elena Santacruz",
             role: lang === 'es' ? "Ingeniera de Arreglos Vocales" : "Vocal Arrangement Engineer",
             description: lang === 'es' ? "Experta en crear armonías y capas vocales que envuelven al oyente." : "Expert in creating vocal harmonies and layers that surround the listener.",
-            image: "/images/elena.webp"
+            image: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/elena.webp"
         },
         {
             name: "Julian Master",
             role: lang === 'es' ? "Ingeniero de Mastering Analógico" : "Analog Mastering Engineer",
             description: lang === 'es' ? "El guardián de los LUFS exactos para Spotify y Apple Music." : "The guardian of exact LUFS for Spotify and Apple Music.",
-            image: "/images/julian master.webp"
+            image: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/julian%20master.webp"
         }
     ];
 
@@ -90,10 +90,12 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                     }}
                 >
                     <Image 
-                        src="/images/mascot-checkout.webp" 
+                        src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/mascot-checkout.webp" 
                         alt="Struky Mascot" 
                         fill
                         className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.2)]"
+                        sizes="(max-width: 768px) 224px, 288px"
+                        unoptimized
                     />
                 </motion.div>
                 <div className="text-center mb-16">
@@ -124,6 +126,8 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                                         alt={composer.name}
                                         fill
                                         className="rounded-full object-cover transition-transform duration-500 hover:scale-110"
+                                        sizes="128px"
+                                        unoptimized
                                     />
                                 </div>
                                 <h3 className="text-xl font-bold mb-1 flex items-center gap-1.5">

@@ -153,37 +153,37 @@ function HomeContent() {
             title: "Por eso tomo",
             desc: lang === 'es' ? "Música Popular • 3:20" : "Popular Music • 3:20",
             src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/por-eso-tomo.mp3",
-            cover: "/examples/cover_por_eso_tomo.png"
+            cover: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/cover_por_eso_tomo.png"
         },
         {
             title: "Un día",
             desc: lang === 'es' ? "Vallenato Sentimental • 3:45" : "Sentimental Vallenato • 3:45",
             src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/un-dia.mp3",
-            cover: "/images/UNDIA.webp"
+            cover: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/UNDIA.webp"
         },
         {
             title: "Señora",
             desc: lang === 'es' ? "Ranchera Romántica • 3:12" : "Romantic Ranchera • 3:12",
             src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/ejemplo2.mp3",
-            cover: "/images/señoravip.webp"
+            cover: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/señoravip.webp"
         },
         {
             title: "Me Gustas",
             desc: lang === 'es' ? "Salsa Romántica • 2:58" : "Romantic Salsa • 2:58",
             src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/ejemplo3.mp3",
-            cover: "/examples/MEGUSTASSALSA.webp"
+            cover: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/MEGUSTASSALSA.webp"
         },
         {
             title: "Mi Amor Bonito",
             desc: lang === 'es' ? "Pop Romántico • 4:15" : "Romantic Pop • 4:15",
             src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/mi-amor-bonito.mp3",
-            cover: "/examples/cover_mi_amor_bonito.png"
+            cover: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/cover_mi_amor_bonito.png"
         },
         {
             title: "Bailame Suave",
             desc: lang === 'es' ? "Urbano • 3:12" : "Urban • 3:12",
             src: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/bailame-suave.mp3",
-            cover: "/examples/bailame suave.webp"
+            cover: "https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/bailame%20suave.webp"
         }
     ];
 
@@ -258,10 +258,12 @@ function HomeContent() {
                         }}
                     >
                         <Image 
-                            src="/images/mascot.webp" 
+                            src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/mascot.webp" 
                             alt="Mascota Struky Productor" 
                             fill
                             className="object-contain drop-shadow-[0_0_20px_rgba(202,160,82,0.3)]"
+                            sizes="(max-width: 1024px) 224px, 288px"
+                            unoptimized
                         />
                     </motion.div>
                     
@@ -278,10 +280,12 @@ function HomeContent() {
                         }}
                     >
                         <Image 
-                            src="/images/mascot.webp" 
+                            src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/mascot.webp" 
                             alt="Mascota Struky Productor" 
                             fill
                             className="object-contain"
+                            sizes="256px"
+                            unoptimized
                         />
                     </motion.div>
                     <div className="text-center mb-16 px-4">
@@ -377,12 +381,13 @@ function HomeContent() {
                 <div className="max-w-7xl mx-auto px-4 relative z-10">
                     <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/80 group">
                         <Image 
-                            src="/images/TESTIMONIOS.webp"
+                            src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/TESTIMONIOS.webp"
                             alt="Struky Studios Testimonials"
                             width={1200}
                             height={450}
                             className="w-full h-auto transition-transform duration-1000 group-hover:scale-105"
                             sizes="(max-width: 768px) 100vw, 1200px"
+                            unoptimized
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none"></div>
                     </div>

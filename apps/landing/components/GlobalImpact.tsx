@@ -50,7 +50,7 @@ export default function GlobalImpact({ t }: { t: any }) {
                     {/* Professional Dotted World Map Image */}
                     <div className="absolute inset-0 opacity-40 grayscale group-hover:grayscale-0 transition-all duration-1000">
                         <img 
-                            src="/examples/world-map.png" 
+                            src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/world-map.png" 
                             alt="Global Network" 
                             className="w-full h-full object-contain mix-blend-screen"
                         />

@@ -43,12 +43,13 @@ export default function Hero({ t, lang }: HeroProps) {
             {/* Background */}
             <div className="absolute inset-0 z-0">
                 <Image
-                    src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/hero-bg.png"
+                    src="/hero-bg.png"
                     alt="Music Studio"
                     fill
                     className="object-cover opacity-40"
                     priority
                     quality={85}
+                    sizes="100vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-dark-bg/20 via-dark-bg/60 to-dark-bg"></div>
                 

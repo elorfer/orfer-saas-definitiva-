@@ -31,12 +31,12 @@ export const metadata: Metadata = {
     metadataBase: new URL('https://www.struky.com'),
     icons: {
         icon: [
-            { url: '/examples/logoblanco web p25).webp', sizes: 'any', type: 'image/webp' },
-            { url: '/examples/logoblanco web p25).webp', sizes: '32x32', type: 'image/webp' },
+            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: 'any', type: 'image/webp' },
+            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: '32x32', type: 'image/webp' },
         ],
-        shortcut: '/examples/logoblanco web p25).webp',
+        shortcut: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp',
         apple: [
-            { url: '/examples/logoblanco web p25).webp', sizes: '180x180', type: 'image/webp' },
+            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: '180x180', type: 'image/webp' },
         ],
     },
     openGraph: {
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
         siteName: 'Struky Music',
         images: [
             {
-                url: '/examples/wat.webp',
+                url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/wat.webp',
                 width: 1200,
                 height: 630,
                 alt: 'Struky Music AI Social Card',
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: "Struky | Producción Musical Profesional con IA",
         description: "Tus letras, convertidas en música profesional con IA",
-        images: ['/examples/wat.webp'],
+        images: ['https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/wat.webp'],
     },
 };
 

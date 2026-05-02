@@ -19,11 +19,12 @@ export default function Footer({ lang }: FooterProps) {
                     <div className="md:col-span-2">
                         <div className="flex items-center gap-2 mb-6">
                             <Image
-                                src="/examples/logoblanco web p25).webp"
+                                src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp"
                                 alt="Struky Logo"
                                 width={120}
                                 height={30}
                                 className="w-auto h-14 brightness-125"
+                                unoptimized
                             />
                         </div>
                         <p className="text-gray-400 text-sm leading-relaxed max-w-sm mb-8">

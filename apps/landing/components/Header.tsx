@@ -57,11 +57,12 @@ export default function Header({ lang, setLang }: HeaderProps) {
                     <div className="flex items-center gap-3 cursor-pointer group z-[60]" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                         <div className="relative w-10 h-10 md:w-12 md:h-12 transition-transform duration-300 group-hover:scale-110">
                             <Image
-                                src="/examples/logoblanco web p25).webp"
+                                src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp"
                                 alt="Struky Logo Icon"
                                 fill
                                 priority
                                 className="object-contain brightness-125"
+                                unoptimized
                             />
                         </div>
                         <span className="text-2xl md:text-3xl font-black tracking-tighter text-gradient leading-none font-heading mt-1">
