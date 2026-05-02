@@ -180,23 +180,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         </button>
                     </div>
 
-                    {/* MASSIVE GUARANTEE BADGE */}
-                    <div className="max-w-4xl mx-auto mt-16 md:mt-24">
-                        <div className="bg-gradient-to-b from-coffee-medium/10 to-transparent border border-coffee-medium/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] md:w-full h-px bg-gradient-to-r from-transparent via-coffee-medium to-transparent opacity-50"></div>
-                            
-                            <div className="w-20 h-20 md:w-24 md:h-24 mx-auto bg-coffee-medium/10 rounded-full flex items-center justify-center mb-6 border border-coffee-medium/30 shadow-[0_0_50px_rgba(202,160,82,0.2)]">
-                                <ShieldCheck className="w-10 h-10 md:w-12 md:h-12 text-coffee-medium" />
-                            </div>
-                            
-                            <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter mb-4 italic">
-                                Garantía 100% <span className="text-coffee-medium">Anti-Riesgo</span>
-                            </h3>
-                            <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
-                                Nuestra misión es crear el hit que tienes en la cabeza. Si al recibir tu canción sientes que no tiene calidad de industria, <strong className="text-white">la rehacemos junto contigo hasta que te encante</strong>, o te devolvemos tu dinero. Sin letras pequeñas.
-                            </p>
-                        </div>
-                    </div>
+
                 </div>
             </div>
         </section>
