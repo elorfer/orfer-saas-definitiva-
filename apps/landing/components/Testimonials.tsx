@@ -106,6 +106,8 @@ export default function Testimonials({ t }: { t: any }) {
                                             alt={item.author} 
                                             fill
                                             className="object-cover"
+                                            quality={75}
+                                            sizes="48px"
                                             onError={(e) => {
                                                 const target = e.currentTarget as any;
                                                 target.style.display = 'none';

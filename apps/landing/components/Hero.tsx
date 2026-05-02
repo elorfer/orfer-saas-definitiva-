@@ -48,6 +48,7 @@ export default function Hero({ t, lang }: HeroProps) {
                     fill
                     className="object-cover opacity-40"
                     priority
+                    quality={85}
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-dark-bg/20 via-dark-bg/60 to-dark-bg"></div>
                 

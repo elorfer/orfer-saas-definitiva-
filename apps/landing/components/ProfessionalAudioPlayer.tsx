@@ -81,6 +81,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
                     priority={priority}
                     className="object-cover transition-opacity duration-300 opacity-100"
                     sizes="(max-width: 768px) 40vw, 160px"
+                    quality={75}
                 />
                 
                 {/* Overlay removed for better aesthetic */}
