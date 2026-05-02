@@ -141,7 +141,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                     </div>
 
                     {/* Mobile Navigation */}
-                    <div className="flex md:hidden items-center justify-center gap-6 mt-6">
+                    <div className="flex md:hidden items-center justify-center gap-6 mt-8 relative z-[60]">
                         <button 
                             onClick={prev}
                             className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"

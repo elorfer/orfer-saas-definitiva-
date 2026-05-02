@@ -44,10 +44,6 @@ export default function Testimonials({ t }: { t: any }) {
                 behavior: 'smooth'
             });
             setActiveIndex(index);
-
-            if (sectionRef.current) {
-                sectionRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
         }
     };
 
@@ -131,7 +127,7 @@ export default function Testimonials({ t }: { t: any }) {
                     </div>
 
                     {/* Navigation for Mobile */}
-                    <div className="flex md:hidden items-center justify-center gap-6 mt-6">
+                    <div className="flex md:hidden items-center justify-center gap-6 mt-8 relative z-[60]">
                         <button 
                             onClick={prev}
                             className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
