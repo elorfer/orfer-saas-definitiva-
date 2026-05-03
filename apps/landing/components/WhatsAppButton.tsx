@@ -9,7 +9,7 @@ export default function WhatsAppButton() {
     const message = encodeURIComponent("Hola STRUKY, me gustaría obtener más información sobre sus servicios de producción musical.");
     
     return (
-        <div className="fixed md:bottom-8 bottom-24 right-4 md:right-8 z-[60] flex flex-col items-end gap-4 pointer-events-none">
+        <div className="fixed md:bottom-8 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 md:right-8 z-[60] flex flex-col items-end gap-4 pointer-events-none">
             <a
                 href={`https://wa.me/${phoneNumber}?text=${message}`}
                 target="_blank"
