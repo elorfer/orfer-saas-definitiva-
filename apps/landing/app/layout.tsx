@@ -36,16 +36,6 @@ export const metadata: Metadata = {
     description: "Tus letras, convertidas en música profesional con IA. Producción musical experta supervisada por humanos.",
     keywords: "producción musical, IA, inteligencia artificial, música, letras, canciones, reggaetón, trap, pop",
     metadataBase: new URL('https://www.struky.com'),
-    icons: {
-        icon: [
-            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: 'any', type: 'image/webp' },
-            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: '32x32', type: 'image/webp' },
-        ],
-        shortcut: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp',
-        apple: [
-            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: '180x180', type: 'image/webp' },
-        ],
-    },
     openGraph: {
         title: "Struky | Producción Musical Profesional con IA",
         description: "Tus letras, convertidas en música profesional con IA",
@@ -68,6 +58,16 @@ export const metadata: Metadata = {
         title: "Struky | Producción Musical Profesional con IA",
         description: "Tus letras, convertidas en música profesional con IA",
         images: ['https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/social-card.png'],
+    },
+    icons: {
+        icon: [
+            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: 'any', type: 'image/webp' },
+            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: '32x32', type: 'image/webp' },
+        ],
+        shortcut: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp',
+        apple: [
+            { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: '180x180', type: 'image/webp' },
+        ],
     },
 };
 
