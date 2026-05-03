@@ -62,7 +62,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         notes: '',
         phone: '',
         plan: PLAN_IDS.PRO as string, // Default to Pro
-        price: 97
+        price: 50
     });
 
     const [isGenerating, setIsGenerating] = useState(false);
@@ -107,26 +107,24 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         setStep(s => Math.max(s - 1, 1));
     };
 
-    const nextPlan = () => {
-        if (planActiveIndex < PLANS.length - 1) {
-            const container = planScrollRef.current;
-            if (container) {
-                const card = container.children[planActiveIndex + 1] as HTMLElement;
-                const scrollAmount = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
-                container.scrollTo({ left: scrollAmount, behavior: 'smooth' });
-            }
+    const scrollToPlanIndex = (index: number) => {
+        const container = planScrollRef.current;
+        if (container && container.children[index]) {
+            const card = container.children[index] as HTMLElement;
+            const scrollAmount = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
+            container.scrollTo({ left: scrollAmount, behavior: 'smooth' });
+            setPlanActiveIndex(index);
         }
     };
 
+    const nextPlan = () => {
+        const next = planActiveIndex < PLANS.length - 1 ? planActiveIndex + 1 : 0;
+        scrollToPlanIndex(next);
+    };
+
     const prevPlan = () => {
-        if (planActiveIndex > 0) {
-            const container = planScrollRef.current;
-            if (container) {
-                const card = container.children[planActiveIndex - 1] as HTMLElement;
-                const scrollAmount = card.offsetLeft - (container.clientWidth / 2) + (card.clientWidth / 2);
-                container.scrollTo({ left: scrollAmount, behavior: 'smooth' });
-            }
-        }
+        const prev = planActiveIndex > 0 ? planActiveIndex - 1 : PLANS.length - 1;
+        scrollToPlanIndex(prev);
     };
 
     // Efecto de Confetti Premium (Colores Struky)
@@ -271,19 +269,31 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
     const handlePlanScroll = () => {
         if (planScrollRef.current) {
-            const scrollPosition = planScrollRef.current.scrollLeft;
-            const containerWidth = planScrollRef.current.offsetWidth;
-            const cardWidth = Math.min(containerWidth * 0.85 + 24, 400); // matches w-[85%] and gap-6
-            const index = Math.round(scrollPosition / cardWidth);
-            if (index !== planActiveIndex) {
-                setPlanActiveIndex(index);
+            const container = planScrollRef.current;
+            const scrollLeft = container.scrollLeft;
+            const containerWidth = container.offsetWidth;
+            // Find the closest card to center
+            let closestIndex = 0;
+            let closestDist = Infinity;
+            for (let i = 0; i < container.children.length; i++) {
+                const card = container.children[i] as HTMLElement;
+                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+                const viewCenter = scrollLeft + containerWidth / 2;
+                const dist = Math.abs(cardCenter - viewCenter);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestIndex = i;
+                }
+            }
+            if (closestIndex !== planActiveIndex) {
+                setPlanActiveIndex(closestIndex);
             }
         }
     };
 
     return (
         <section id="order-form" className="section-padding bg-dark-card/30 scroll-mt-24 md:scroll-mt-32">
-            <div className="max-w-3xl mx-auto relative">
+            <div className={`mx-auto relative transition-all duration-500 ${step === 3 ? 'max-w-7xl' : 'max-w-3xl'}`}>
                 <div className="text-center mb-12 relative z-10 flex flex-col items-center">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4 w-full">
                         {lang === 'es' ? 'Crea tu' : 'Create your'} <span className="text-gradient">{lang === 'es' ? 'canción ahora' : 'song now'}</span>
@@ -623,7 +633,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 <div
                                     ref={planScrollRef}
                                     onScroll={handlePlanScroll}
-                                    className="relative flex lg:grid lg:grid-cols-3 gap-6 overflow-x-auto lg:overflow-visible pt-10 pb-12 lg:pb-0 px-2 snap-x snap-mandatory custom-scrollbar-hide"
+                                    className="relative flex lg:grid lg:grid-cols-4 gap-4 overflow-x-auto lg:overflow-visible pt-10 pb-12 lg:pb-0 px-2 snap-x snap-mandatory custom-scrollbar-hide"
                                 >
                                     {PLANS.map((plan) => (
                                         <button
@@ -633,8 +643,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 setFormData(prev => ({ ...prev, plan: plan.id, price: plan.price }));
                                                 triggerSuccessConfetti();
                                             }}
-                                            className={`relative p-8 rounded-[2rem] border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[85%] lg:w-full snap-center ${formData.plan === plan.id
-                                                ? (plan.id === 'elite' ? 'border-purple-600 bg-purple-600/5' : 'border-coffee-medium bg-coffee-medium/5')
+                                            className={`relative p-6 rounded-[2rem] border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[75%] lg:w-full snap-center ${formData.plan === plan.id
+                                                ? (plan.id === 'elite' ? 'border-purple-600 bg-purple-600/5' : plan.id === 'premium' ? 'border-emerald-500 bg-emerald-500/5' : 'border-coffee-medium bg-coffee-medium/5')
                                                 : 'border-white/5 bg-[#111]'
                                                 }`}
                                         >
@@ -647,12 +657,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 <plan.icon className={`w-12 h-12 transition-all ${formData.plan === plan.id ? (plan.id === 'elite' ? 'text-purple-400' : 'text-coffee-light') : 'text-gray-600'}`} />
                                             </div>
                                             <h4 className="font-black text-lg mb-2 uppercase tracking-tight text-white">{t.pricing.plans[plan.id].name}</h4>
-                                            <div className="text-4xl font-black mb-4 text-white">${plan.price}<span className="text-[10px] text-gray-600 ml-1 uppercase tracking-widest font-black">USD</span></div>
+                                            <div className="text-4xl font-black mb-2 text-white">${plan.price}<span className="text-[10px] text-gray-600 ml-1 uppercase tracking-widest font-black">USD</span></div>
+                                            <p className="text-gray-200 text-sm font-bold mb-4">{t.pricing.plans[plan.id].desc}</p>
                                             
                                             <ul className="space-y-4 w-full pt-8 border-t border-white/5 text-left">
                                                 {t.pricing.plans[plan.id].features.map((f: string) => (
                                                     <li key={f} className="text-[11px] text-gray-400 font-medium flex items-start gap-3">
-                                                        <Check className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${plan.id === 'elite' ? 'text-purple-500' : 'text-coffee-medium'}`} />
+                                                        <Check className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${plan.id === 'elite' ? 'text-purple-500' : plan.id === 'premium' ? 'text-emerald-500' : 'text-coffee-medium'}`} />
                                                         <span className="leading-tight">{f}</span>
                                                     </li>
                                                 ))}
@@ -670,9 +681,14 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     </button>
                                     
                                     <div className="flex gap-3">
-                                        <div className={`h-2 rounded-full transition-all duration-300 ${planActiveIndex === 0 ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}></div>
-                                        <div className={`h-2 rounded-full transition-all duration-300 ${planActiveIndex === 1 ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}></div>
-                                        <div className={`h-2 rounded-full transition-all duration-300 ${planActiveIndex === 2 ? 'w-8 bg-purple-600' : 'w-2 bg-white/10'}`}></div>
+                                        {PLANS.map((_, i) => (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                onClick={() => scrollToPlanIndex(i)}
+                                                className={`h-2 rounded-full transition-all duration-300 ${planActiveIndex === i ? 'w-8 bg-purple-600' : 'w-2 bg-white/10 hover:bg-white/20'}`}
+                                            />
+                                        ))}
                                     </div>
 
                                     <button 

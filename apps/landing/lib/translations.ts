@@ -82,21 +82,27 @@ export const translations = {
       plans: {
         starter: {
           name: "Starter",
-          desc: "Tu entrada al mundo profesional.",
-          cta: "Empezar con Starter",
-          features: ["Producción Profesional (48-72h)", "1 Revisión Detallada", "Licencia de Uso Estándar", "Audio Optimizado para Redes", "Soporte vía Email"]
+          desc: "Ideal para demos y artistas emergentes.",
+          cta: "Probar con Starter",
+          features: ["Producción Profesional (72h)", "1 Revisión Incluida", "Licencia para Redes Sociales", "Sonido Optimizado Profesionalmente", "Soporte vía Email"]
         },
         pro: {
           name: "Pro Master",
-          desc: "Calidad Radio y Spotify.",
-          cta: "Elegir Plan Pro",
-          features: ["Entrega Rápida (24h)", "3 revisiones musicales", "Derechos Comerciales 100%", "Calidad WAV Profesional", "Mezcla Vocal Avanzada", "OBSEQUIO: Video Letra HD"]
+          desc: "La mejor opción para lanzamientos oficiales.",
+          cta: "Quiero Lanzar Mi Canción 🚀",
+          features: ["Entrega Rápida (24-48h)", "3 Revisiones Musicales", "Derechos Comerciales 100% Tuyos", "Calidad WAV Profesional", "Mezcla Vocal Avanzada", "OBSEQUIO: Video Letra HD"]
+        },
+        premium: {
+          name: "Premium",
+          desc: "Sonido competitivo de industria real.",
+          cta: "Llevar Mi Música al Siguiente Nivel",
+          features: ["Entrega Prioritaria (24h)", "5 Revisiones hasta la Perfección", "Derechos Comerciales 100% Tuyos", "Sonido Listo para Spotify y Plataformas", "Mezcla Premium Nivel Industria", "OBSEQUIO: Video Letra HD + Portada Profesional"]
         },
         elite: {
           name: "Elite Studio",
           desc: "Producción VIP Completa.",
           cta: "Elegir Plan Elite",
-          features: ["Entrega Express VIP (<24h)", "Revisiones Ilimitadas (Perfecto)", "Pistas Separadas (Stems) para Shows", "Masterización Analógica (Nivel Industria)", "Asesoría de Lanzamiento Directa", "OBSEQUIO: Video 4K + Reels/TikTok"]
+          features: ["Entrega Express VIP (<24h)", "Revisiones Ilimitadas (Hasta que Ames tu Canción)", "Pistas Separadas (Stems) para Shows", "Masterización Analógica (Nivel Industria)", "Asesoría de Lanzamiento Directa", "OBSEQUIO: Video 4K + Reels/TikTok"]
         }
       }
     },
@@ -191,21 +197,27 @@ export const translations = {
       plans: {
         starter: {
           name: "Starter",
-          desc: "Your entry into the professional world.",
-          cta: "Start with Starter",
-          features: ["Professional Production (48-72h)", "1 Detailed Revision", "Standard Use License", "Optimized Audio for Social Media", "Email Support"]
+          desc: "Perfect for demos and emerging artists.",
+          cta: "Try Starter",
+          features: ["Professional Production (72h)", "1 Revision Included", "Social Media License", "Professionally Optimized Sound", "Email Support"]
         },
         pro: {
           name: "Pro Master",
-          desc: "Radio and Spotify Quality.",
-          cta: "Choose Pro Plan",
-          features: ["Fast Delivery (24h)", "3 musical revisions", "100% Commercial Rights", "Professional WAV Quality", "Advanced Vocal Mixing", "GIFT: HD Lyric Video"]
+          desc: "The best choice for official releases.",
+          cta: "I Want to Launch My Song 🚀",
+          features: ["Fast Delivery (24-48h)", "3 Musical Revisions", "100% Commercial Rights (Yours Forever)", "Professional WAV Quality", "Advanced Vocal Mixing", "GIFT: HD Lyric Video"]
+        },
+        premium: {
+          name: "Premium",
+          desc: "Competitive industry-level sound.",
+          cta: "Take My Music to the Next Level",
+          features: ["Priority Delivery (24h)", "5 Revisions Until Perfection", "100% Commercial Rights (Yours Forever)", "Spotify-Ready & Platform-Optimized Sound", "Industry-Level Premium Mixing", "GIFT: HD Lyric Video + Professional Cover Art"]
         },
         elite: {
           name: "Elite Studio",
           desc: "Complete VIP Production.",
           cta: "Choose Elite Plan",
-          features: ["VIP Express Delivery (<24h)", "Unlimited Revisions (Until Perfect)", "Separate Tracks (Stems) for Live Shows", "Analog Mastering (Industry Standard)", "Direct Launch Advisory", "GIFT: 4K Video + TikTok/Reels Format"]
+          features: ["VIP Express Delivery (<24h)", "Unlimited Revisions (Until You Love It)", "Separate Tracks (Stems) for Live Shows", "Analog Mastering (Industry Standard)", "Direct Launch Advisory", "GIFT: 4K Video + TikTok/Reels Format"]
         }
       }
     },

@@ -90,7 +90,7 @@ export async function POST(req: Request) {
             ...lyricsMetadata
         };
 
-        const finalPrice = [50, 97, 147].includes(Number(body.price)) ? Number(body.price) : 50;
+        const finalPrice = [37, 50, 97, 147].includes(Number(body.price)) ? Number(body.price) : 37;
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
