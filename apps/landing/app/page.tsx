@@ -34,7 +34,14 @@ function HomeContent() {
     const examplesScrollRef = useRef<HTMLDivElement>(null);
     const examplesSectionRef = useRef<HTMLElement>(null);
 
+    const playTick = () => {
+        const audio = new Audio('https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3');
+        audio.volume = 0.4;
+        audio.play().catch(() => {});
+    };
+
     const scrollToExample = (index: number) => {
+        playTick();
         if (examplesScrollRef.current) {
             const container = examplesScrollRef.current;
             const scrollAmount = container.offsetWidth * 0.85 + 16;
@@ -183,7 +190,14 @@ function HomeContent() {
         }
     ];
 
+    const playSuccess = () => {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
+        audio.volume = 0.3;
+        audio.play().catch(() => {});
+    };
+
     const handleSelectPlan = async (planId: string, price: number) => {
+        playSuccess();
         setSelectedPlanFromTable(planId);
         
         // Dynamically import confetti only when needed (saves ~29KB from initial bundle)
@@ -314,8 +328,13 @@ function HomeContent() {
                             ))}
                         </div>
 
+                        <div className="text-center md:hidden mt-4 mb-2">
+                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black animate-pulse">
+                                {lang === 'es' ? '👈 Desliza o usa las flechas 👉' : '👈 Slide or use arrows 👉'}
+                            </p>
+                        </div>
                         {/* Navigation for Mobile */}
-                        <div className="flex md:hidden items-center justify-center gap-6 mt-8 relative z-[60]">
+                        <div className="flex md:hidden items-center justify-center gap-6 mt-2 relative z-[60]">
                             <button 
                                 onClick={() => scrollToExample(activeExampleIndex > 0 ? activeExampleIndex - 1 : examples.length - 1)}
                                 className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
@@ -405,7 +424,10 @@ function HomeContent() {
                         className="fixed bottom-4 left-4 right-4 z-[50] md:hidden pointer-events-none pb-[env(safe-area-inset-bottom)]"
                     >
                         <button 
-                            onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
+                            onClick={() => {
+                                playSuccess();
+                                document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
                             className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] flex items-center justify-center gap-2"
                         >
                             <Music className="w-5 h-5" />

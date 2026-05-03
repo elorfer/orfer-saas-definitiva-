@@ -37,7 +37,14 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
         }
     };
 
+    const playTick = () => {
+        const audio = new Audio('https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3');
+        audio.volume = 0.4;
+        audio.play().catch(() => {});
+    };
+
     const scrollToPlan = (index: number) => {
+        playTick();
         if (scrollRef.current) {
             const container = scrollRef.current;
             const card = container.children[index] as HTMLElement;
