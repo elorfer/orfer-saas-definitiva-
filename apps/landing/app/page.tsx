@@ -402,7 +402,7 @@ function HomeContent() {
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                        className="fixed bottom-6 left-4 right-4 z-[50] md:hidden pointer-events-none"
+                        className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-[50] md:hidden pointer-events-none transform-gpu"
                     >
                         <button 
                             onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
