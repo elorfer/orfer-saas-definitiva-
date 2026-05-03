@@ -83,14 +83,14 @@ export default function Hero({ t, lang }: HeroProps) {
                         {t.tag}
                     </span>
                     
-                    <h1 className="text-4xl md:text-8xl font-black mb-6 leading-tight tracking-tight">
+                    <h1 className="text-4xl md:text-7xl font-black mb-6 leading-[1.15] tracking-tight text-white uppercase">
                         {t.title}<br />
                         <span className="text-gradient hover:glow-text transition-all duration-300">
                             {t.subtitle}
                         </span>
                     </h1>
 
-                    <p className="text-lg md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed px-4 sm:px-0">
+                    <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed px-4 sm:px-0 font-medium">
                         {t.description}
                     </p>
 

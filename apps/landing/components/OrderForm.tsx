@@ -387,7 +387,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
                                             style={{ colorScheme: 'dark' }}
                                             value={formData.genre}
-                                            onChange={e => setFormData({ ...formData, genre: e.target.value })}
+                                            onChange={e => {
+                                                playTick();
+                                                setFormData({ ...formData, genre: e.target.value });
+                                            }}
                                         >
                                             <option value="Pop" className="bg-[#1a1a1a]">Pop</option>
                                             <option value="Reggaetón" className="bg-[#1a1a1a]">Reggaetón</option>
@@ -407,7 +410,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
                                             style={{ colorScheme: 'dark' }}
                                             value={formData.vocalist}
-                                            onChange={e => setFormData({ ...formData, vocalist: e.target.value })}
+                                            onChange={e => {
+                                                playTick();
+                                                setFormData({ ...formData, vocalist: e.target.value });
+                                            }}
                                         >
                                             <option value="Masculina" className="bg-[#1a1a1a]">Masculina</option>
                                             <option value="Femenina" className="bg-[#1a1a1a]">Femenina</option>
@@ -443,7 +449,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         placeholder="Ej: David Ruiz"
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                         value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                        onChange={e => {
+                                            // playTick(); // Demasiado ruido en cada tecla, mejor dejarlo para selects
+                                            setFormData({ ...formData, name: e.target.value });
+                                        }}
                                         required
                                     />
                                 </div>
@@ -628,7 +637,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
                                             style={{ colorScheme: 'dark' }}
                                             value={formData.mood}
-                                            onChange={e => setFormData({ ...formData, mood: e.target.value })}
+                                            onChange={e => {
+                                                playTick();
+                                                setFormData({ ...formData, mood: e.target.value });
+                                            }}
                                         >
                                             <option value="Feliz" className="bg-[#1a1a1a]">Feliz / Alegre</option>
                                             <option value="Romántico" className="bg-[#1a1a1a]">Romántico / Enamorado</option>
@@ -682,7 +694,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 placeholder="..."
                                                 className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                                 value={formData.phone}
-                                                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                                onChange={e => {
+                                                    // playTick(); 
+                                                    setFormData({ ...formData, phone: e.target.value });
+                                                }}
                                                 required
                                             />
                                         </div>

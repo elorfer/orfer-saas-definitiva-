@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat, Outfit } from "next/font/google";
+import { Inter, Montserrat, Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import WhatsAppButton from "../components/WhatsAppButton";
@@ -21,6 +21,13 @@ const outfit = Outfit({
     subsets: ["latin"],
     weight: ['400', '500', '600', '700', '800', '900'],
     variable: '--font-outfit',
+    display: 'swap',
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+    subsets: ["latin"],
+    weight: ['400', '500', '600', '700', '800'],
+    variable: '--font-jakarta',
     display: 'swap',
 });
 
@@ -46,10 +53,10 @@ export const metadata: Metadata = {
         siteName: 'Struky Music',
         images: [
             {
-                url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/wat.jpg',
+                url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/wat.png',
                 width: 1200,
                 height: 630,
-                type: 'image/jpeg',
+                type: 'image/png',
                 alt: 'Struky Music AI Social Card',
             },
         ],
@@ -60,7 +67,7 @@ export const metadata: Metadata = {
         card: 'summary_large_image',
         title: "Struky | Producción Musical Profesional con IA",
         description: "Tus letras, convertidas en música profesional con IA",
-        images: ['https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/wat.jpg'],
+        images: ['https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/wat.png'],
     },
 };
 
@@ -70,7 +77,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="es" className={`${inter.variable} ${montserrat.variable} ${outfit.variable}`} suppressHydrationWarning>
+        <html lang="es" className={`${inter.variable} ${montserrat.variable} ${outfit.variable} ${plusJakartaSans.variable}`} suppressHydrationWarning>
             <head>
                 {/* Preconnect to external domains for faster handshakes */}
                 <link rel="preconnect" href="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev" />
