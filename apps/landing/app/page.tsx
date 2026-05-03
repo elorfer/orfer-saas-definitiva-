@@ -395,28 +395,30 @@ function HomeContent() {
             {/* <RecentActivity lang={lang} /> - Desactivado por petición del usuario (estorbaban) */}
 
             {/* Sticky Mobile CTA with Animation */}
-            <AnimatePresence>
-                {showStickyCTA && !isFormVisible && !isPricingVisible && (
-                    <motion.div 
-                        initial={{ y: 100, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 100, opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                        className="fixed bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-[50] md:hidden pointer-events-none transform-gpu"
-                    >
-                        <button 
-                            onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
-                            className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] flex items-center justify-center gap-2"
+            <div className="fixed inset-0 h-[100dvh] pointer-events-none z-[50] md:hidden">
+                <AnimatePresence>
+                    {showStickyCTA && !isFormVisible && !isPricingVisible && (
+                        <motion.div 
+                            initial={{ y: 100, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 100, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                            className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none transform-gpu"
                         >
-                            <Music className="w-5 h-5" />
-                            {isComparisonVisible 
-                                ? (lang === 'es' ? 'Quiero mi producción así' : 'I want my production like this')
-                                : t.hero.stickyCTA
-                            }
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                            <button 
+                                onClick={() => document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' })}
+                                className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] flex items-center justify-center gap-2"
+                            >
+                                <Music className="w-5 h-5" />
+                                {isComparisonVisible 
+                                    ? (lang === 'es' ? 'Quiero mi producción así' : 'I want my production like this')
+                                    : t.hero.stickyCTA
+                                }
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </main>
     );
 }
