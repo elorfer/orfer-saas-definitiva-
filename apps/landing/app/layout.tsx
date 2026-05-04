@@ -79,6 +79,13 @@ export default function RootLayout({
     return (
         <html lang="es" className={`${inter.variable} ${montserrat.variable} ${outfit.variable} ${plusJakartaSans.variable}`} suppressHydrationWarning>
             <head>
+                {/* === CRITICAL: Raw OG tags for WhatsApp (its crawler does NOT execute JS) === */}
+                <meta property="og:image" content="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/social-card.png" />
+                <meta property="og:image:width" content="1200" />
+                <meta property="og:image:height" content="630" />
+                <meta property="og:image:type" content="image/png" />
+                <meta name="twitter:image" content="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/social-card.png" />
+
                 {/* Preconnect to external domains for faster handshakes */}
                 <link rel="preconnect" href="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev" />
                 <link rel="preconnect" href="https://player.vimeo.com" />
