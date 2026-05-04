@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { Check, Video, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { PLANS } from '../lib/plans';
+import { playTick } from '../lib/soundEngine';
 
 interface PricingTableProps {
     onSelectPlan: (plan: string, price: number) => void;
@@ -37,11 +38,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
         }
     };
 
-    const playTick = () => {
-        const audio = new Audio('https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-    };
+
 
     const scrollToPlan = (index: number) => {
         playTick();

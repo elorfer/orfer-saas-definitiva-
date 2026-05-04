@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Star, ChevronDown, BadgeCheck } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { playWhoosh, playPop, initSoundEngine } from '@/lib/soundEngine';
 
 interface HeroProps {
     t: any;
@@ -15,17 +16,12 @@ interface HeroProps {
 export default function Hero({ t, lang }: HeroProps) {
     const [count, setCount] = useState(0);
 
-    const playWhoosh = () => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-    };
-
-    const playPop = () => {
-        const audio = new Audio('https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3');
-        audio.volume = 0.6;
-        audio.play().catch(() => {});
-    };
+    // Preload sounds on first user interaction
+    useEffect(() => {
+        const handler = () => { initSoundEngine(); window.removeEventListener('click', handler); };
+        window.addEventListener('click', handler, { once: true });
+        return () => window.removeEventListener('click', handler);
+    }, []);
 
     useEffect(() => {
         let timer: ReturnType<typeof setInterval> | null = null;

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Star, Quote, BadgeCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { playTick } from '../lib/soundEngine';
 
 export default function Testimonials({ t }: { t: any }) {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -35,11 +36,7 @@ export default function Testimonials({ t }: { t: any }) {
         }
     };
 
-    const playTick = () => {
-        const audio = new Audio('https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-    };
+
 
     const scrollToItem = (index: number) => {
         playTick();

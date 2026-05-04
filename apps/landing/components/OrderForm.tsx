@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti';
 import { translations } from '../lib/translations';
 import { PLANS, PLAN_IDS } from '../lib/plans';
 import { Check, Video, ChevronDown, ChevronLeft, ChevronRight, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard, Zap, MessageCircle } from 'lucide-react';
+import { playSuccess, playCashRegister, playWhoosh, playMagic, playTick } from '../lib/soundEngine';
 
 const COUNTRIES = [
     { name: 'Estados Unidos', code: '+1', flag: '🇺🇸' },
@@ -110,35 +111,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         setStep(s => Math.max(s - 1, 1));
     };
 
-    const playSuccess = () => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
-        audio.volume = 0.3;
-        audio.play().catch(() => {});
-    };
 
-    const playCashRegister = () => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2021/2021-preview.mp3');
-        audio.volume = 0.45;
-        audio.play().catch(() => {});
-    };
-
-    const playWhoosh = () => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3');
-        audio.volume = 0.2;
-        audio.play().catch(() => {});
-    };
-
-    const playMagic = () => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3');
-        audio.volume = 0.3;
-        audio.play().catch(() => {});
-    };
-
-    const playTick = () => {
-        const audio = new Audio('https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-    };
 
     const scrollToPlanIndex = (index: number) => {
         playTick();

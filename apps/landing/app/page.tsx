@@ -11,6 +11,7 @@ import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
 import { Music, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { playSuccess } from '../lib/soundEngine';
 
 // Lazy-load below-the-fold components (code-split into separate chunks)
 const Benefits = dynamic(() => import('../components/Benefits'));
@@ -190,11 +191,7 @@ function HomeContent() {
         }
     ];
 
-    const playSuccess = () => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
-        audio.volume = 0.3;
-        audio.play().catch(() => {});
-    };
+    // playSuccess is now imported from soundEngine (preloaded, zero-latency)
 
     const handleSelectPlan = async (planId: string, price: number) => {
         playSuccess();
