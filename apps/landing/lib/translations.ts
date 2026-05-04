@@ -86,7 +86,7 @@ export const translations = {
           name: "Starter",
           desc: "Ideal para demos y artistas emergentes.",
           cta: "Probar con Starter",
-          features: ["Producción Profesional (72h)", "1 Revisión Incluida", "Licencia para Redes Sociales", "Sonido Optimizado Profesionalmente", "Soporte vía Email"]
+          features: ["Entrega Rápida (24-48h)", "1 Revisión Incluida", "Licencia para Redes Sociales", "Sonido Optimizado Profesionalmente", "Soporte vía Email"]
         },
         pro: {
           name: "Pro Master",
@@ -201,7 +201,7 @@ export const translations = {
           name: "Starter",
           desc: "Perfect for demos and emerging artists.",
           cta: "Try Starter",
-          features: ["Professional Production (72h)", "1 Revision Included", "Social Media License", "Professionally Optimized Sound", "Email Support"]
+          features: ["Fast Delivery (24-48h)", "1 Revision Included", "Social Media License", "Professionally Optimized Sound", "Email Support"]
         },
         pro: {
           name: "Pro Master",

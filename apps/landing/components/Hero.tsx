@@ -106,14 +106,15 @@ export default function Hero({ t, lang }: HeroProps) {
                                 playPop();
                                 document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
                             }}
-                            className="btn-primary text-lg md:text-xl px-8 md:px-12 py-4 md:py-5 w-full sm:w-auto leading-tight"
+                            className="btn-primary flex flex-col items-center justify-center text-sm md:text-base lg:text-lg px-8 md:px-12 py-3 md:py-4 w-full sm:w-auto leading-tight uppercase tracking-wider font-black"
                         >
-                            {t.cta}
+                            <span>{t.cta.split('(')[0]}</span>
+                            {t.cta.includes('(') && <span className="text-[10px] md:text-xs opacity-80 mt-1">({t.cta.split('(')[1]}</span>}
                         </button>
                         <a 
                             href="#examples" 
                             onClick={() => playWhoosh()}
-                            className="btn-secondary text-lg md:text-xl px-8 md:px-10 py-4 md:py-5 w-full sm:w-auto"
+                            className="btn-secondary text-sm md:text-base lg:text-lg px-8 md:px-10 py-4 md:py-5 w-full sm:w-auto uppercase tracking-wider font-black"
                         >
                             {t.listen}
                         </a>

@@ -74,9 +74,9 @@ export default function PlatformLogos({ lang }: PlatformLogosProps) {
                         {tickerItems.map((platform, i) => (
                             <div
                                 key={`${platform.name}-${i}`}
-                                className="flex items-center gap-3 text-gray-500 hover:text-white transition-colors duration-300 group/logo cursor-default"
+                                className="flex items-center gap-3 text-gray-300 hover:text-white transition-colors duration-300 group/logo cursor-default"
                             >
-                                <span className="opacity-50 group-hover/logo:opacity-100 transition-opacity drop-shadow-[0_0_15px_rgba(255,255,255,0)] group-hover/logo:drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                <span className="opacity-80 group-hover/logo:opacity-100 transition-opacity drop-shadow-[0_0_15px_rgba(255,255,255,0)] group-hover/logo:drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                                     {platform.svg}
                                 </span>
                                 <span className="text-sm md:text-base font-black tracking-widest uppercase">

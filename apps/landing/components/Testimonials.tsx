@@ -119,11 +119,11 @@ export default function Testimonials({ t }: { t: any }) {
                                         />
                                     </div>
                                     <div className="flex flex-col items-start">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="font-bold text-white">{item.author}</span>
+                                        <span className="font-bold text-white text-left">{item.author}</span>
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <span className="text-xs text-coffee-light uppercase tracking-widest font-bold">Artista Verificado</span>
                                             <BadgeCheck className="w-4 h-4 text-[#3897f0] fill-[#3897f0]/10" />
                                         </div>
-                                        <span className="text-xs text-coffee-light uppercase tracking-widest font-bold">Artista Verificado</span>
                                     </div>
                                 </div>
                             </div>

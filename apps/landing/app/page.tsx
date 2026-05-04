@@ -11,7 +11,7 @@ import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
 import { Music, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { playSuccess } from '../lib/soundEngine';
+import { playSuccess, playWhoosh } from '../lib/soundEngine';
 
 // Lazy-load below-the-fold components (code-split into separate chunks)
 const Benefits = dynamic(() => import('../components/Benefits'));
@@ -243,7 +243,7 @@ function HomeContent() {
             <Benefits t={t.benefits} />
 
             {/* EXAMPLES SECTION — Audio real = la mejor prueba */}
-            <section ref={examplesSectionRef} id="examples" className="section-padding bg-dark-bg relative overflow-hidden scroll-mt-20">
+            <section ref={examplesSectionRef} id="examples" className="section-padding bg-dark-bg relative overflow-hidden scroll-mt-0 pb-32 md:pb-24">
                 {/* Background Decor - CSS-only animated orbs (GPU composited) */}
                 <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
                 <div className="bg-orb-2 absolute bottom-1/4 -right-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
@@ -308,7 +308,7 @@ function HomeContent() {
                         <div 
                             ref={examplesScrollRef}
                             onScroll={handleExamplesScroll}
-                            className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible pb-8 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                            className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible pb-4 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
                         >
                             {examples.map((example, i) => (
                                 <div 
@@ -325,13 +325,13 @@ function HomeContent() {
                             ))}
                         </div>
 
-                        <div className="text-center md:hidden mt-4 mb-2">
+                        <div className="text-center md:hidden mt-0 mb-3">
                             <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black animate-pulse">
                                 {lang === 'es' ? '👈 Desliza o usa las flechas 👉' : '👈 Slide or use arrows 👉'}
                             </p>
                         </div>
                         {/* Navigation for Mobile */}
-                        <div className="flex md:hidden items-center justify-center gap-6 mt-2 relative z-[60]">
+                        <div className="flex md:hidden items-center justify-center gap-6 relative z-[60]">
                             <button 
                                 onClick={() => scrollToExample(activeExampleIndex > 0 ? activeExampleIndex - 1 : examples.length - 1)}
                                 className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-white/5 active:bg-coffee-medium transition-all"
@@ -422,7 +422,7 @@ function HomeContent() {
                     >
                         <button 
                             onClick={() => {
-                                playSuccess();
+                                playWhoosh();
                                 document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
                             }}
                             className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] flex items-center justify-center gap-2"
