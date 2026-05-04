@@ -2,8 +2,10 @@ export const translations = {
   es: {
     hero: {
       tag: "El estudio que cabe en tu bolsillo",
-      title: "Esas letras en tu celular merecen sonar en Spotify",
-      subtitle: "Las convertimos en hits de radio en 48h",
+      title1: "Esas letras en tu celular merecen sonar en ",
+      titleHighlight: "Spotify",
+      subtitle1: "Las convertimos en hits de radio en ",
+      subtitleHighlight: "48h",
       description: "Tú pones el alma y la letra. Nosotros ponemos productores reales + IA para que tu canción suene a hit mundial. 100% de los derechos de autor son tuyos legalmente. Desde $50 USD.",
       cta: "Quiero mi canción (Derechos 100% míos)",
       listen: "Escuchar Ejemplos Reales",

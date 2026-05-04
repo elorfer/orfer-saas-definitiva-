@@ -4,8 +4,8 @@
 
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Star, ChevronDown, BadgeCheck } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Star, ChevronDown, BadgeCheck, Zap, Mic, BarChart3, Check } from 'lucide-react';
+import { useEffect } from 'react';
 import { playWhoosh, playPop, initSoundEngine } from '@/lib/soundEngine';
 
 interface HeroProps {
@@ -14,37 +14,11 @@ interface HeroProps {
 }
 
 export default function Hero({ t, lang }: HeroProps) {
-    const [count, setCount] = useState(0);
-
     // Preload sounds on first user interaction
     useEffect(() => {
         const handler = () => { initSoundEngine(); window.removeEventListener('click', handler); };
         window.addEventListener('click', handler, { once: true });
         return () => window.removeEventListener('click', handler);
-    }, []);
-
-    useEffect(() => {
-        let timer: ReturnType<typeof setInterval> | null = null;
-        const delay = setTimeout(() => {
-            const target = 10000;
-            const duration = 1500;
-            const steps = 50;
-            const increment = target / steps;
-            let current = 0;
-            timer = setInterval(() => {
-                current += increment;
-                if (current >= target) {
-                    setCount(target);
-                    if (timer) clearInterval(timer);
-                } else {
-                    setCount(Math.floor(current));
-                }
-            }, duration / steps);
-        }, 900);
-        return () => {
-            clearTimeout(delay);
-            if (timer) clearInterval(timer);
-        };
     }, []);
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -74,23 +48,33 @@ export default function Hero({ t, lang }: HeroProps) {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
+                    className="flex flex-col items-center"
                 >
                     <span className="inline-block px-6 py-2 rounded-full bg-coffee-medium/20 text-coffee-light text-[11px] font-black italic uppercase tracking-tighter mb-8 border border-coffee-medium/30">
                         {t.tag}
                     </span>
                     
-                    <h1 className="text-4xl md:text-7xl font-black mb-6 leading-[1.15] tracking-tight text-white uppercase">
-                        {t.title}<br />
-                        <span className="text-gradient hover:glow-text transition-all duration-300">
-                            {t.subtitle}
+                    {/* Main Headline */}
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 leading-[1.15] tracking-tight uppercase drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
+                        <span className="text-white">{t.title1}</span>
+                        <span className="text-[#1DB954] drop-shadow-[0_0_30px_rgba(29,185,84,0.3)]">
+                            {t.titleHighlight}
+                        </span>
+                        <br />
+                        <span className="text-coffee-light mt-2 inline-block">
+                            {t.subtitle1}
+                        </span>
+                        <span className="text-[#1DB954] drop-shadow-[0_0_30px_rgba(29,185,84,0.3)]">
+                            {t.subtitleHighlight}
                         </span>
                     </h1>
 
-                    <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed px-4 sm:px-0 font-medium">
+                    <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed px-4 sm:px-0 font-medium">
                         {t.description}
                     </p>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+                    {/* CTA Button */}
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mt-4 w-full">
                         <button 
                             onClick={() => {
                                 playPop();
@@ -109,29 +93,14 @@ export default function Hero({ t, lang }: HeroProps) {
                         </a>
                     </div>
 
-                    {/* Legal Ownership Badge */}
-                    <div className="mt-8 flex items-center justify-center">
-                        <div className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 border border-green-500/20 max-w-[280px] sm:max-w-none">
-                            <BadgeCheck className="w-4 h-4 text-green-500 shrink-0" />
-                            <span className="text-[9px] md:text-xs font-black uppercase tracking-widest text-green-400 text-center leading-tight">
-                                {lang === 'es' ? 'Propiedad Intelectual 100% tuya por contrato' : '100% Intellectual Property yours by contract'}
-                            </span>
-                        </div>
-                    </div>
-
+                    {/* Trust indicators below CTA */}
                     <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4, duration: 0.4 }}
-                        className="mt-10 flex flex-col items-center justify-center gap-3"
+                        className="mt-8 flex flex-col items-center justify-center gap-3"
                     >
-                        <div className="flex flex-col items-center gap-3 mt-4">
-                            <div className="flex items-end gap-1.5 leading-none">
-                                <span className="text-6xl md:text-7xl font-black text-gradient tabular-nums">
-                                    {count.toLocaleString(lang === 'es' ? 'es-ES' : 'en-US')}
-                                </span>
-                                <span className="text-3xl md:text-4xl font-black text-coffee-medium mb-1.5">+</span>
-                            </div>
+                        <div className="flex flex-col items-center gap-3">
                             <div className="flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm">
                                 <div className="flex gap-0.5">
                                     {[...Array(5)].map((_, i) => (
@@ -141,7 +110,7 @@ export default function Hero({ t, lang }: HeroProps) {
                                 <div className="w-px h-3 bg-white/10 mx-1"></div>
                                 <BadgeCheck className="w-3.5 h-3.5 text-[#3897f0] fill-[#3897f0]/10" />
                                 <span className="text-[10px] font-black italic text-gray-400 uppercase tracking-tighter whitespace-nowrap">
-                                    {lang === 'en' ? 'songs delivered' : 'canciones entregadas'}
+                                    {lang === 'en' ? 'verified client reviews' : 'reseñas de clientes verificadas'}
                                 </span>
                             </div>
                         </div>
