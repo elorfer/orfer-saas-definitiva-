@@ -1,10 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Copy, RotateCcw, Check, Sparkles, User, Bot, Layout, MessageSquare, ShieldCheck, Zap } from 'lucide-react';
 
 export default function AsistenteVentas() {
+  const [stats, setStats] = useState({ total: 0, count: 0 });
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(err => console.error(err));
+  }, []);
+
   const [input, setInput] = useState('');
   const [response, setResponse] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,20 +77,20 @@ export default function AsistenteVentas() {
       msg: `Tenemos 4 planes según lo que necesites 🎚️\n\n⭐ *Pro Master — $50 USD* _(el más elegido)_\n24-48h · 3 revisiones · Derechos 100% tuyos · Calidad WAV · Mezcla vocal avanzada\n🎁 Video letra HD de regalo\n\n🟢 *Starter — $37 USD*\n24-48h · 1 revisión · Licencia para redes sociales\n\n🔥 *Premium — $97 USD*\nPrioritario 24h · 5 revisiones · Mezcla nivel industria\n🎁 Video letra HD + Portada profesional\n\n👑 *Elite Studio — $147 USD*\nExpress <24h · Revisiones ilimitadas · Stems para shows · Asesoría de lanzamiento\n🎁 Video 4K + Reels/TikTok\n\nTodo eso por lo que en un estudio tradicional te cobrarían $2,000+ USD 💪\n\n¿Cuál se adapta mejor a lo que buscas? 😊`
     },
     caro: {
-      label: "💰 Objeción Precio",
-      msg: `Te entiendo, pero piénsalo así: en un estudio tradicional te cobran *$2,000+ USD* y te tienen esperando un mes. Aquí con Miguel tienes calidad de industria desde *$37 USD* en solo 48 horas ⚡\n\nY lo más importante: *si no te gusta, lo rehacemos*. Queremos que suenes gigante, no que pierdas tu dinero. ¿Te late si probamos con el plan Starter y ves la magia tú mismo?`
+      label: "💰 Si dice que es caro",
+      msg: `Te entiendo, a veces la vaina se ve costosa. Pero piénsalo así: en un estudio tradicional te sacan un ojo de la cara y te hacen esperar un mes. Aquí tienes calidad de industria desde *$37 USD* y en solo 48 horas ⚡\n\nY lo más importante: *si el resultado no te deja melo, lo rehacemos*. Queremos que suenes gigante. ¿Te animas a probar con el plan Starter y ves la magia tú mismo?`
     },
     hola: {
-      label: "👋 Saludo Humano",
-      msg: `¡Ey! Qué nota que nos escribas 🎵 Bienvenido a *Struky Studios*.\n\nAquí estamos liderados por Miguel Fernández y el equipo de ingenieros, listos para que tus letras dejen de estar guardadas y empiecen a sonar en Spotify. El 100% de los derechos son tuyos, nosotros solo ponemos el estudio y la magia profesional 🚀\n\nCuéntame un poco... ¿Ya tienes la letra lista o apenas estás aterrizando la idea?`
+      label: "👋 Saludo Melo",
+      msg: `¡Ey! Qué nota que nos escribas 🎵 Bienvenido a la familia *Struky*. Qué bueno que te hayas animado a hablarnos.\n\nAquí estamos el equipo de productores e ingenieros listos para que tus letras dejen de estar guardadas y se vuelvan un hit real en Spotify. El 100% de los derechos son tuyos, nosotros solo ponemos el estudio y todo el flow profesional 🚀\n\nCuéntame un poco... ¿Ya tienes la letra lista o apenas estás craneando la idea?`
     },
     proceso: {
-      label: "🔄 Explicar Proceso",
-      msg: `Mira, el proceso es súper sencillo y rápido, nada de vueltas largas de estudios viejos:\n\n1. Nos pasas tu letra y el género que te gusta ✍️\n2. Miguel y los productores entran al estudio con IA + equipo analógico 🎛️\n3. En menos de 48h tienes tu hit masterizado en el correo, listo para distribuir ✅\n\n¿Qué género tienes en mente para este tema?`
+      label: "🔄 Cómo es la vuelta",
+      msg: `Mira, la vuelta es súper sencilla y sin tanto enredo de estudio viejo:\n\n1. Nos pasas tu letra y el estilo que más te trama ✍️\n2. Los productores entran al estudio con IA + equipos de primera 🎛️\n3. En menos de 48h tienes tu hit masterizado en el correo, listo para romperla ✅\n\n¿Qué ritmo tienes en la cabeza para este tema?`
     },
     derechos: {
-      label: "📜 Derechos de Autor",
-      msg: `*100% tuyos por contrato* 📜\n\nAquí no hay letras chiquitas. Firmamos un documento donde dice que tú eres el único dueño de la obra. Todas las regalías de Spotify y YouTube van directo a tu bolsillo. Nosotros solo somos tus productores de confianza.\n\n¿Arrancamos con el registro?`
+      label: "📜 Los derechos",
+      msg: `*100% tuyos, sin vueltas* 📜\n\nAquí no hay enredos. Firmamos un contrato donde dice que tú eres el único dueño de la obra. Todas las regalías de Spotify y YouTube van directo para ti. Nosotros solo somos tus productores de confianza.\n\n¿Te late si arrancamos de una vez?`
     },
     tiempo: {
       label: "⏱️ Pregunta por tiempo de entrega",
@@ -167,9 +176,22 @@ export default function AsistenteVentas() {
       <main className="max-w-4xl mx-auto px-6 py-10">
         
         {/* Intro */}
-        <div className="mb-10">
-            <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Asistente de Ventas</h1>
-            <p className="text-slate-500 max-w-xl">Pega el mensaje de tu cliente y genera una respuesta optimizada para cerrar la venta en segundos.</p>
+        <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+                <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Asistente de Ventas</h1>
+                <p className="text-slate-500 max-w-xl">Pega el mensaje de tu cliente y genera una respuesta optimizada para cerrar la venta en segundos.</p>
+            </div>
+            
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Facturado</p>
+                    <p className="text-2xl font-black text-slate-900">${stats.total.toLocaleString()} <span className="text-sm font-medium text-slate-400">USD</span></p>
+                    <p className="text-[10px] text-emerald-600/60 font-bold uppercase">{stats.count} producciones exitosas</p>
+                </div>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
