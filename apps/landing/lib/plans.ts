@@ -1,7 +1,6 @@
 import { Zap, Star, Gem, Crown } from 'lucide-react';
 
 export const PLAN_IDS = {
-    TEST: 'test',
     STARTER: 'starter',
     PRO: 'pro',
     PREMIUM: 'premium',
@@ -19,12 +18,6 @@ export interface Plan {
 }
 
 export const PLANS: Plan[] = [
-    {
-        id: PLAN_IDS.TEST,
-        price: 1,
-        icon: Zap,
-        highlight: false
-    },
     {
         id: PLAN_IDS.STARTER,
         price: 37,

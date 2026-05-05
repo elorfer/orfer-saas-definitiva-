@@ -82,12 +82,6 @@ export const translations = {
       popular: "Más Popular",
       guarantee: "Propiedad Intelectual 100% Garantizada por Escrito",
       plans: {
-        test: {
-          name: "Test Tracking",
-          desc: "Plan de prueba para verificación técnica.",
-          cta: "Probar Tracking $1",
-          features: ["Verificación de Eventos", "Costo Mínimo"]
-        },
         starter: {
           name: "Starter",
           desc: "Ideal para demos y artistas emergentes.",
@@ -203,12 +197,6 @@ export const translations = {
       popular: "Most Popular",
       guarantee: "Satisfaction guaranteed or we revise for free",
       plans: {
-        test: {
-          name: "Test Tracking",
-          desc: "Test plan for technical verification.",
-          cta: "Test Tracking $1",
-          features: ["Event Verification", "Minimum Cost"]
-        },
         starter: {
           name: "Starter",
           desc: "Perfect for demos and emerging artists.",
