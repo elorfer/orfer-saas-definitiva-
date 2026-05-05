@@ -58,7 +58,8 @@ export default function AsistenteVentas() {
     "Tengo mi letra",
     "Déjame pensarlo",
     "¿Garantía?",
-    "¿Qué formato?"
+    "¿Qué formato?",
+    "Ver sitio web"
   ];
 
   const RESPUESTAS: any = {
@@ -112,7 +113,11 @@ export default function AsistenteVentas() {
     },
     general: {
       label: "💬 Consulta general",
-      msg: `¡Hola! Gracias por escribirle a *Struky Studios* 🎵\n\nSomos el estudio que convierte tus letras en canciones profesionales con IA + productores reales en menos de 48 horas, desde *$37 USD*, con el *100% de los derechos tuyos por contrato*.\n\nCuéntame un poco más sobre lo que buscas y con gusto te oriento 😊`
+      msg: `¡Hola! Gracias por escribirle a *Struky Studios* 🎵\n\nSomos el estudio liderado por Miguel Fernández que convierte tus letras en canciones profesionales con IA + ingenieros reales en menos de 48 horas, desde *$37 USD*, con el *100% de los derechos tuyos por contrato*.\n\nCuéntame un poco más sobre lo que buscas y con gusto te oriento 😊`
+    },
+    web: {
+      label: "🌐 Invitar a la Web",
+      msg: `¡Claro que sí! 🚀 Te invito a que visites nuestra web oficial donde podrás escuchar ejemplos reales, ver testimonios de otros artistas y conocer a fondo todo lo que Struky puede hacer por tu música:\n\n👉 *https://www.struky.com*\n\nAhí puedes ver todos los planes y ejemplos a detalle. ¿Te gustaría que te oriente sobre cuál plan le vendría mejor a tu estilo? 😊`
     }
   };
 
@@ -129,6 +134,7 @@ export default function AsistenteVentas() {
     if (/garantia|devuelv|reembolso|riesgo|segur|devolucion/.test(m)) return 'garantia';
     if (/letra|cancion|idea|escribi|tengo lista|ya tengo/.test(m)) return 'letra';
     if (/pens|duda|despues|luego|manana|espera|no se|insegur|pensarlo/.test(m)) return 'pensar';
+    if (/web|pagina|sitio|link|url|donde miro|enlace/.test(m)) return 'web';
     if (/hola|info|informacion|saber|contacto|buenas|buen dia|hey|buenos/.test(m)) return 'hola';
     return 'general';
   };
@@ -152,8 +158,8 @@ export default function AsistenteVentas() {
           <span className="font-bold text-slate-800 tracking-tight">Struky Sales Hub</span>
         </div>
         <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                Claude 3.5 Sonnet
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                GPT-4o
             </span>
         </div>
       </nav>

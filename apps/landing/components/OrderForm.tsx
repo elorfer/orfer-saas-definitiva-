@@ -419,7 +419,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Tu Nombre / Artista' : 'Artist Name'}</label>
                                     <input
                                         type="text"
-                                        placeholder="Ej: David Ruiz"
+                                        placeholder={lang === 'es' ? 'Ej: Tu nombre artístico' : 'Ex: Your stage name'}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                         value={formData.name}
                                         onChange={e => {
