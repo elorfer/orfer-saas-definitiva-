@@ -21,6 +21,11 @@ export async function POST(req: Request) {
         // --- META CAPI: InitiateCheckout ---
         const userAgent = req.headers.get('user-agent') || '';
         const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || '';
+        
+        // Vercel Geolocation Headers
+        const city = req.headers.get('x-vercel-ip-city') || '';
+        const country = req.headers.get('x-vercel-ip-country') || '';
+        const state = req.headers.get('x-vercel-ip-country-region') || '';
 
         // Extraer cookies de Meta
         const cookieStore = await cookies();
@@ -41,7 +46,10 @@ export async function POST(req: Request) {
                     fbp,
                     fbc,
                     clientIpAddress: ip,
-                    clientUserAgent: userAgent
+                    clientUserAgent: userAgent,
+                    city,
+                    state,
+                    country
                 },
                 customData: {
                     value: Number(body.price) || 50,
@@ -87,6 +95,9 @@ export async function POST(req: Request) {
             fbc: String(fbc || '').substring(0, 500),
             clientIp: String(ip || '').substring(0, 500),
             userAgent: String(userAgent || '').substring(0, 500),
+            city: String(city || '').substring(0, 500),
+            state: String(state || '').substring(0, 500),
+            country: String(country || '').substring(0, 500),
             ...lyricsMetadata
         };
 

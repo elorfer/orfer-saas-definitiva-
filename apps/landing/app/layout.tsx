@@ -110,6 +110,15 @@ export default function RootLayout({
                         fbq('set', 'autoConfig', false, '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}');
                         fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}');
                         fbq('track', 'PageView');
+
+                        // Capture fbclid for CAPI (fbc parameter)
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const fbclid = urlParams.get('fbclid');
+                        if (fbclid) {
+                            const now = Date.now();
+                            const fbc = 'fb.1.' + now + '.' + fbclid;
+                            document.cookie = '_fbc=' + fbc + '; path=/; max-age=' + (60 * 60 * 24 * 90) + '; SameSite=Lax';
+                        }
                     `}
                 </Script>
                 <noscript>

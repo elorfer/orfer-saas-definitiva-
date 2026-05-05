@@ -27,6 +27,9 @@ export async function sendMetaEvent({
         clientIpAddress?: string;
         clientUserAgent?: string;
         externalId?: string;
+        city?: string;
+        state?: string;
+        country?: string;
     };
     customData?: any;
     eventID?: string;
@@ -57,6 +60,9 @@ export async function sendMetaEvent({
                     fbc: userData.fbc,
                     client_ip_address: userData.clientIpAddress || '',
                     client_user_agent: userData.clientUserAgent || 'StrukyServer/1.0',
+                    ct: userData.city ? [hashData(userData.city)] : [],
+                    st: userData.state ? [hashData(userData.state)] : [],
+                    country: userData.country ? [hashData(userData.country)] : [],
                     ...(userData.externalId ? { external_id: [hashData(userData.externalId)] } : {})
                 },
                 custom_data: customData
