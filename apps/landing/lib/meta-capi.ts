@@ -1,8 +1,12 @@
 import crypto from 'crypto';
 
-function hashData(data: string) {
+function hashData(data: string, isPhone = false) {
     if (!data) return '';
-    return crypto.createHash('sha256').update(data.trim().toLowerCase()).digest('hex');
+    let processedData = data.trim().toLowerCase();
+    if (isPhone) {
+        processedData = processedData.replace(/\D/g, '');
+    }
+    return crypto.createHash('sha256').update(processedData).digest('hex');
 }
 
 export async function sendMetaEvent({
@@ -47,7 +51,7 @@ export async function sendMetaEvent({
                 action_source: 'website',
                 user_data: {
                     em: userData.email ? [hashData(userData.email)] : [],
-                    ph: userData.phone ? [hashData(userData.phone)] : [],
+                    ph: userData.phone ? [hashData(userData.phone, true)] : [],
                     fn: userData.firstName ? [hashData(userData.firstName)] : [],
                     fbp: userData.fbp,
                     fbc: userData.fbc,

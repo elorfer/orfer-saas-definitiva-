@@ -97,7 +97,7 @@ export default function RootLayout({
             </head>
             <body className={inter.className} suppressHydrationWarning>
                 {/* Meta Pixel Script */}
-                <Script id="fb-pixel" strategy="lazyOnload">
+                <Script id="fb-pixel" strategy="afterInteractive">
                     {`
                         !function(f,b,e,v,n,t,s)
                         {if(f.fbq)return;n=f.fbq=function(){n.callMethod?

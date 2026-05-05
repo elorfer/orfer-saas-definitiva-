@@ -140,20 +140,22 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                     {/* Meta Pixel Purchase Event with Deduplication & Advanced Matching */}
                     <Script id="fb-purchase" strategy="afterInteractive">
                         {`
-                            // Advanced Matching
-                            fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}', {
-                                em: '${email}',
-                                ph: '${phone.replace(/\D/g, '')}'
-                            });
-                            
-                            fbq('track', 'Purchase', {
-                                value: ${amount},
-                                currency: 'USD',
-                                content_name: 'Plan ${plan}',
-                                content_category: 'Music Production'
-                            }, { 
-                                eventID: '${sessionId}' 
-                            });
+                            if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
+                                // Advanced Matching
+                                window.fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}', {
+                                    em: '${email}',
+                                    ph: '${phone.replace(/\D/g, '')}'
+                                });
+                                
+                                window.fbq('track', 'Purchase', {
+                                    value: ${amount},
+                                    currency: 'USD',
+                                    content_name: 'Plan ${plan}',
+                                    content_category: 'Music Production'
+                                }, { 
+                                    eventID: '${sessionId}' 
+                                });
+                            }
                         `}
                     </Script>
 
