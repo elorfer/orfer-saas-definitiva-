@@ -47,7 +47,11 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                     {/* Premium Static Logo */}
                     <div className="relative mx-auto mb-8 w-32 h-32">
                         <div className="absolute inset-0 rounded-full border border-white/5 bg-[#050505] flex items-center justify-center shadow-[0_0_50px_rgba(202,160,82,0.1)]">
-                            <img src="/logo.svg" alt="Struky Logo" className="w-[65%] h-[65%] object-contain opacity-90" />
+                            <img 
+                                src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp" 
+                                alt="Struky Logo" 
+                                className="w-[60%] h-[60%] object-contain brightness-125" 
+                            />
                         </div>
                         {/* Status Check Badge Overlay */}
                         <div className="absolute 0-bottom-1 -right-1 bg-green-500 text-black w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#0a0a0a] text-xl shadow-[0_0_20px_rgba(34,197,94,0.3)] z-20">
