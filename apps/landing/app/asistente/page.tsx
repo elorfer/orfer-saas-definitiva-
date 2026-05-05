@@ -77,20 +77,20 @@ export default function AsistenteVentas() {
       msg: `Tenemos 4 planes según lo que necesites 🎚️\n\n⭐ *Pro Master — $50 USD* _(el más elegido)_\n24-48h · 3 revisiones · Derechos 100% tuyos · Calidad WAV · Mezcla vocal avanzada\n🎁 Video letra HD de regalo\n\n🟢 *Starter — $37 USD*\n24-48h · 1 revisión · Licencia para redes sociales\n\n🔥 *Premium — $97 USD*\nPrioritario 24h · 5 revisiones · Mezcla nivel industria\n🎁 Video letra HD + Portada profesional\n\n👑 *Elite Studio — $147 USD*\nExpress <24h · Revisiones ilimitadas · Stems para shows · Asesoría de lanzamiento\n🎁 Video 4K + Reels/TikTok\n\nTodo eso por lo que en un estudio tradicional te cobrarían $2,000+ USD 💪\n\n¿Cuál se adapta mejor a lo que buscas? 😊`
     },
     caro: {
-      label: "💰 Si dice que es caro",
-      msg: `Te entiendo, a veces la vaina se ve costosa. Pero piénsalo así: en un estudio tradicional te sacan un ojo de la cara y te hacen esperar un mes. Aquí tienes calidad de industria desde *$37 USD* y en solo 48 horas ⚡\n\nY lo más importante: *si el resultado no te deja melo, lo rehacemos*. Queremos que suenes gigante. ¿Te animas a probar con el plan Starter y ves la magia tú mismo?`
+      label: "💰 Objeción de precio",
+      msg: `Entiendo perfectamente tu punto. Sin embargo, piénsalo de esta manera: un estudio tradicional suele ser muy costoso y la espera es de semanas. En Struky tienes calidad de estándar internacional desde *$37 USD* y en solo 48 horas ⚡\n\nY lo más importante: *si el resultado no es lo que esperabas, lo revisamos hasta que estés conforme*. Queremos que tu música suene gigante. ¿Te gustaría iniciar con el plan Starter?`
     },
     hola: {
-      label: "👋 Saludo Melo",
-      msg: `¡Ey! Qué nota que nos escribas 🎵 Bienvenido a la familia *Struky*. Qué bueno que te hayas animado a hablarnos.\n\nAquí estamos el equipo de productores e ingenieros listos para que tus letras dejen de estar guardadas y se vuelvan un hit real en Spotify. El 100% de los derechos son tuyos, nosotros solo ponemos el estudio y todo el flow profesional 🚀\n\nCuéntame un poco... ¿Ya tienes la letra lista o apenas estás craneando la idea?`
+      label: "👋 Saludo Profesional",
+      msg: `¡Hola! Qué gusto que nos escribas 🎵 Bienvenido a la familia *Struky*. Es un placer saludarte.\n\nAquí estamos el equipo de producción e ingenieros listos para que tus letras dejen de estar guardadas y se conviertan en un lanzamiento real en Spotify. El 100% de los derechos son tuyos, nosotros ponemos el estudio y toda la experiencia profesional 🚀\n\nCuéntame un poco... ¿Ya tienes la letra lista o estás aterrizando la idea para tu próxima canción?`
     },
     proceso: {
-      label: "🔄 Cómo es la vuelta",
-      msg: `Mira, la vuelta es súper sencilla y sin tanto enredo de estudio viejo:\n\n1. Nos pasas tu letra y el estilo que más te trama ✍️\n2. Los productores entran al estudio con IA + equipos de primera 🎛️\n3. En menos de 48h tienes tu hit masterizado en el correo, listo para romperla ✅\n\n¿Qué ritmo tienes en la cabeza para este tema?`
+      label: "🔄 Explicar el proceso",
+      msg: `Mira, el proceso es muy sencillo y eficiente, diseñado para que no pierdas tiempo:\n\n1. Nos envías tu letra y el estilo que buscas ✍️\n2. Los productores entran al estudio combinando tecnología avanzada con ingenieros reales 🎛️\n3. En menos de 48h recibes tu hit masterizado en tu correo, listo para publicar ✅\n\n¿Qué género musical tienes en mente para este proyecto?`
     },
     derechos: {
-      label: "📜 Los derechos",
-      msg: `*100% tuyos, sin vueltas* 📜\n\nAquí no hay enredos. Firmamos un contrato donde dice que tú eres el único dueño de la obra. Todas las regalías de Spotify y YouTube van directo para ti. Nosotros solo somos tus productores de confianza.\n\n¿Te late si arrancamos de una vez?`
+      label: "📜 Derechos de autor",
+      msg: `*100% tuyos, garantizado por contrato* 📜\n\nAquí todo es transparente. Firmamos un documento legal donde se certifica que tú eres el único dueño de la obra. Todas las regalías de Spotify y YouTube te pertenecen íntegramente. Nosotros actuamos como tu equipo de producción de confianza.\n\n¿Te gustaría que comencemos con el registro de tu pedido?`
     },
     tiempo: {
       label: "⏱️ Pregunta por tiempo de entrega",
@@ -101,8 +101,8 @@ export default function AsistenteVentas() {
       msg: `¡Sí, y es exactamente para eso que producimos! 🎯\n\nTu canción queda lista para *Spotify, Apple Music, YouTube Music, Deezer y Tidal* — masterizada a los estándares de cada plataforma.\n\nY como los derechos son *100% tuyos*, todas las regalías que generes en streaming te las pagan directamente a ti 💰\n\nCon el plan *Elite Studio ($147 USD)* además incluimos *asesoría de lanzamiento directa* para que tu canción llegue al público correcto desde el primer día 🚀\n\n¿Te animas?`
     },
     ia: {
-      label: "🤖 IA vs productor humano",
-      msg: `¡Gran pregunta! Y ahí está exactamente nuestra diferencia 🎯\n\nEn Struky *no somos solo un algoritmo*. La IA genera la base musical, pero luego entra nuestro equipo de productores humanos con más de 12 años en la industria — especializados en trap, reggaetón, pop urbano y más — que afinan cada frecuencia con equipo analógico de primer nivel.\n\nEl resultado no suena "a IA" — suena a hit de radio 📻🔥\n\n¿Quieres escuchar ejemplos reales de canciones que hemos producido? Con gusto te los comparto 🎧`
+      label: "🤖 Sobre la tecnología",
+      msg: `¡Es una excelente pregunta! Mira, nuestro enfoque es híbrido. La tecnología nos ayuda a estructurar la base, pero el acabado final, la mezcla y la masterización la realizan nuestros ingenieros expertos. Esto asegura que la canción tenga alma y calidad de radio, no un sonido artificial.\n\nPor eso el resultado suena a hit profesional 📻🔥 ¿Te gustaría escuchar algún ejemplo?`
     },
     letra: {
       label: "✍️ Tiene letra lista",
