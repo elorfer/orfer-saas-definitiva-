@@ -416,10 +416,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     </motion.div>
                                 )}
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Tu Nombre / Artista' : 'Artist Name'}</label>
+                                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Compositor / Artista' : 'Songwriter / Artist'}</label>
                                     <input
                                         type="text"
-                                        placeholder={lang === 'es' ? 'Ej: Tu nombre artístico' : 'Ex: Your stage name'}
+                                        placeholder={lang === 'es' ? 'Ej: Nombre del autor' : 'Ex: Songwriter name'}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                         value={formData.name}
                                         onChange={e => {

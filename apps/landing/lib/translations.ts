@@ -26,7 +26,7 @@ export const translations = {
       step2: "Letras y Notas",
       step3: "Pago Seguro",
       labels: {
-        name: "Tu nombre",
+        name: "Compositor / Artista",
         email: "Tu email",
         genre: "Género musical",
         lyrics: "Tu letra",
