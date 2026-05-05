@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asistente de Ventas — Struky Studios</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px 48px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: #111;
+    margin-bottom: 2px;
+  }
+  .header p {
+    font-size: 13px;
+    color: #666;
+  }
+
+  /* Card */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e8e8e8;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #888;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 100px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #111;
+    background: #fafafa;
+    resize: vertical;
+    line-height: 1.6;
+    transition: border-color 0.15s;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: #555;
+    background: #fff;
+  }
+  textarea::placeholder { color: #aaa; }
+
+  /* Chips */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 16px;
+  }
+  .chips-label {
+    font-size: 12px;
+    color: #888;
+    width: 100%;
+    margin-bottom: 2px;
+  }
+  .chip {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .chip:hover {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+  }
+
+  /* Main button */
+  .btn-main {
+    width: 100%;
+    padding: 13px;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .btn-main:hover { opacity: 0.85; }
+  .btn-main:active { transform: scale(0.99); }
+
+  /* Result */
+  .result-card {
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e8e8e8;
+    overflow: hidden;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .result-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .intent-pill {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: #e8f4fd;
+    color: #1565c0;
+  }
+  .result-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-copy {
+    font-size: 12px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .btn-copy:hover { background: #f5f5f5; }
+  .btn-copy.ok { color: #1b7a4a; border-color: #1b7a4a; background: #f0faf5; }
+
+  .btn-clear {
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #666;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn-clear:hover { background: #f5f5f5; color: #111; }
+
+  .result-body {
+    padding: 16px 18px 18px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #111;
+    white-space: pre-wrap;
+    background: #fafafa;
+  }
+
+  /* Plans reference */
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .plan-item {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .plan-name { font-size: 12px; font-weight: 600; color: #444; }
+  .plan-price { font-size: 16px; font-weight: 700; color: #111; margin: 2px 0; }
+  .plan-desc { font-size: 11px; color: #888; line-height: 1.4; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 8px;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    body { padding: 16px 12px 48px; }
+    .plans-grid { grid-template-columns: 1fr 1fr; }
+    .card { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🎵</div>
+    <div>
+      <h1>Asistente de ventas — Struky Studios</h1>
+      <p>Pega el mensaje del cliente y obtén la respuesta exacta para WhatsApp</p>
+    </div>
+  </div>
+
+  <!-- Input card -->
+  <div class="card">
+    <div class="section-label">Mensaje del cliente</div>
+    <textarea id="input" placeholder="Pega aquí el mensaje que te escribió el cliente por WhatsApp..."></textarea>
+
+    <div class="chips">
+      <span class="chips-label">Ejemplos rápidos:</span>
+      <button class="chip" onclick="setEx('cuanto cuesta')">¿Cuánto cuesta?</button>
+      <button class="chip" onclick="setEx('hola quiero información')">Hola, info</button>
+      <button class="chip" onclick="setEx('como funciona el proceso')">¿Cómo funciona?</button>
+      <button class="chip" onclick="setEx('los derechos son mios')">¿Mis derechos?</button>
+      <button class="chip" onclick="setEx('esta muy caro no tengo tanto')">Está muy caro</button>
+      <button class="chip" onclick="setEx('cuanto tiempo tardan en entregar')">¿Cuánto tardan?</button>
+      <button class="chip" onclick="setEx('la hace la ia o un humano')">¿IA o humano?</button>
+      <button class="chip" onclick="setEx('puedo subirla a spotify')">¿Spotify?</button>
+      <button class="chip" onclick="setEx('ya tengo mi letra lista')">Tengo mi letra</button>
+      <button class="chip" onclick="setEx('dejame pensarlo')">Déjame pensarlo</button>
+      <button class="chip" onclick="setEx('tienen garantia')">¿Garantía?</button>
+      <button class="chip" onclick="setEx('que formatos me entregan')">¿Qué formato?</button>
+    </div>
+
+    <button class="btn-main" onclick="analizar()">⚡ Generar respuesta</button>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="result">
+    <div class="result-head">
+      <div class="intent-pill" id="intent"></div>
+      <div class="result-actions">
+        <button class="btn-copy" id="cpbtn" onclick="copiar()">Copiar mensaje</button>
+        <button class="btn-clear" onclick="limpiar()">Nueva consulta</button>
+      </div>
+    </div>
+    <div class="result-body" id="resp"></div>
+  </div>
+
+  <!-- Plans reference -->
+  <div class="card">
+    <div class="section-label">Referencia de planes</div>
+    <div class="plans-grid">
+      <div class="plan-item">
+        <div class="plan-name">🟢 Starter</div>
+        <div class="plan-price">$37 USD</div>
+        <div class="plan-desc">24-48h · 1 revisión · Redes sociales</div>
+      </div>
+      <div class="plan-item" style="border-color:#1565c0;">
+        <div class="plan-name" style="color:#1565c0;">⭐ Pro Master</div>
+        <div class="plan-price">$50 USD</div>
+        <div class="plan-desc">24-48h · 3 revisiones · WAV · Video letra HD</div>
+      </div>
+      <div class="plan-item">
+        <div class="plan-name">🔥 Premium</div>
+        <div class="plan-price">$97 USD</div>
+        <div class="plan-desc">24h · 5 revisiones · Portada profesional</div>
+      </div>
+      <div class="plan-item">
+        <div class="plan-name">👑 Elite Studio</div>
+        <div class="plan-price">$147 USD</div>
+        <div class="plan-desc">Express &lt;24h · Ilimitadas · Stems · 4K</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Struky Studios · Asistente interno de ventas · struky.com</div>
+
+</div>
+
+<script>
+const RESPUESTAS = {
+  precio: {
+    label: "💰 Pregunta por precios",
+    msg: `Tenemos 4 planes según lo que necesites 🎚️
+
+⭐ *Pro Master — $50 USD* _(el más elegido)_
+24-48h · 3 revisiones · Derechos 100% tuyos · Calidad WAV · Mezcla vocal avanzada
+🎁 Video letra HD de regalo
+
+🟢 *Starter — $37 USD*
+24-48h · 1 revisión · Licencia para redes sociales
+
+🔥 *Premium — $97 USD*
+Prioritario 24h · 5 revisiones · Mezcla nivel industria
+🎁 Video letra HD + Portada profesional
+
+👑 *Elite Studio — $147 USD*
+Express <24h · Revisiones ilimitadas · Stems para shows · Asesoría de lanzamiento
+🎁 Video 4K + Reels/TikTok
+
+Todo eso por lo que en un estudio tradicional te cobrarían $2,000+ USD 💪
+
+¿Cuál se adapta mejor a lo que buscas? 😊`
+  },
+
+  caro: {
+    label: "🤔 Objeción de precio",
+    msg: `Te entiendo perfectamente 🙌
+
+Piénsalo así: en un estudio tradicional pagarías *$2,000+ USD* y esperarías de 3 a 6 semanas. Con Struky obtienes el mismo nivel de calidad desde *$37 USD* en menos de 48 horas.
+
+Y si no queda como lo imaginas, *lo rehacemos contigo o te devolvemos el dinero* — así de seguros estamos del resultado 💪
+
+¿Empezamos con el plan Starter y lo compruebas tú mismo? 🎵`
+  },
+
+  hola: {
+    label: "👋 Primer contacto",
+    msg: `¡Hola! 🎵 Bienvenido a *Struky Studios*.
+
+Convertimos tus letras en canciones profesionales con IA + productores reales, listas para Spotify en menos de 48 horas. Y lo mejor: el *100% de los derechos son tuyos por contrato* ✅
+
+Para ayudarte mejor dime:
+🎤 ¿Ya tienes tu letra lista?
+🎶 ¿Qué género te imaginas? (reggaetón, pop, vallenato, trap, salsa…)
+
+¡Estamos aquí para hacer que suenes! 🚀`
+  },
+
+  proceso: {
+    label: "🔄 Pregunta por el proceso",
+    msg: `¡El proceso es muy sencillo! Solo 3 pasos 👇
+
+*1. Tú nos envías tu letra y el género* ✍️
+Reggaetón, pop, vallenato, trap, salsa, ranchera… lo que sientas.
+
+*2. Productores reales + IA entran en acción* 🎛️
+La IA genera la base y nuestros ingenieros la perfeccionan frecuencia por frecuencia con equipo analógico de primer nivel.
+
+*3. Recibes tu canción en menos de 48h* 🎧
+Masterizada y lista para Spotify, Apple Music, YouTube Music, Deezer y Tidal. Con el *100% de los derechos tuyos por contrato* 📜
+
+¿Empezamos? Envíame tu letra cuando quieras 🚀`
+  },
+
+  derechos: {
+    label: "📜 Pregunta por derechos",
+    msg: `*100% tuyos* — sin excepción 📜
+
+Struky firma contigo un *contrato de cesión de derechos* que certifica legalmente que eres el único dueño de la obra. Nosotros no nos quedamos con nada.
+
+Cada stream en Spotify, Apple Music o YouTube te lo pagan directamente a ti. Es tu música, tu esfuerzo, tu dinero 💰🎤
+
+¿Te gustaría arrancar con algún plan? 😊`
+  },
+
+  tiempo: {
+    label: "⏱️ Pregunta por tiempo de entrega",
+    msg: `¡Somos de los más rápidos de la industria! ⚡
+
+🟢 *Starter y Pro Master:* entrega en *24 a 48 horas*
+🔥 *Premium:* entrega prioritaria en *24 horas*
+👑 *Elite Studio:* entrega express en *menos de 24 horas*
+
+Mientras un estudio tradicional tarda de 3 a 6 semanas, con Struky tu canción llega masterizada y lista para publicar en cuestión de horas 🚀
+
+¿Con cuál plan quieres arrancar?`
+  },
+
+  spotify: {
+    label: "🌎 Pregunta por plataformas",
+    msg: `¡Sí, y es exactamente para eso que producimos! 🎯
+
+Tu canción queda lista para *Spotify, Apple Music, YouTube Music, Deezer y Tidal* — masterizada a los estándares de cada plataforma.
+
+Y como los derechos son *100% tuyos*, todas las regalías que generes en streaming te las pagan directamente a ti 💰
+
+Con el plan *Elite Studio ($147 USD)* además incluimos *asesoría de lanzamiento directa* para que tu canción llegue al público correcto desde el primer día 🚀
+
+¿Te animas?`
+  },
+
+  ia: {
+    label: "🤖 IA vs productor humano",
+    msg: `¡Gran pregunta! Y ahí está exactamente nuestra diferencia 🎯
+
+En Struky *no somos solo un algoritmo*. La IA genera la base musical, pero luego entra nuestro equipo de productores humanos con más de 12 años en la industria — especializados en trap, reggaetón, pop urbano y más — que afinan cada frecuencia con equipo analógico de primer nivel.
+
+El resultado no suena "a IA" — suena a hit de radio 📻🔥
+
+¿Quieres escuchar ejemplos reales de canciones que hemos producido? Con gusto te los comparto 🎧`
+  },
+
+  letra: {
+    label: "✍️ Tiene letra lista",
+    msg: `¡Perfecto, ya podemos arrancar! 🎶
+
+Envíame tu letra por aquí. También dime:
+🎵 ¿Qué género quieres? (reggaetón, pop, vallenato, trap, salsa, ranchera…)
+🎤 ¿Prefieres voz masculina, femenina o sin preferencia?
+🎯 ¿Tienes alguna canción de referencia con el estilo que buscas?
+
+Con eso nuestros productores empiezan a construir tu hit 🔥
+
+Entregamos en *menos de 48h* con el *100% de los derechos tuyos* ✅`
+  },
+
+  pensar: {
+    label: "🕐 Cliente indeciso",
+    msg: `¡Claro, sin ninguna presión! 😊
+
+Solo te cuento que manejamos *50 cupos por semana* — cuando estés listo, escríbeme y verifico si hay disponibilidad.
+
+Si surge alguna duda mientras lo piensas, aquí estoy para lo que necesites 🎵`
+  },
+
+  garantia: {
+    label: "🛡️ Pregunta por garantía",
+    msg: `Tenemos una garantía *100% anti-riesgo* 🛡️
+
+Si al recibir tu canción sientes que no tiene calidad de industria, la *rehacemos contigo hasta que te encante* — o te devolvemos tu dinero. Sin letras pequeñas, sin excusas.
+
+Llevamos más de *10.000 canciones entregadas* y esa es nuestra promesa con cada artista 💪
+
+¿Empezamos? 🚀`
+  },
+
+  formato: {
+    label: "📁 Pregunta por formato de entrega",
+    msg: `Depende del plan que elijas 👇
+
+🟢 *Starter:* Audio optimizado para redes sociales
+⭐ *Pro Master:* Archivo *WAV profesional* + Video letra HD
+🔥 *Premium:* WAV · Mezcla nivel industria · Video letra HD + Portada profesional
+👑 *Elite:* Todo lo anterior + *Stems/pistas separadas* para shows + Video 4K + contenido para Reels y TikTok
+
+Todo te llega directo a tu email, listo para usar 📩🎧
+
+¿Cuál plan te interesa?`
+  },
+
+  general: {
+    label: "💬 Consulta general",
+    msg: `¡Hola! Gracias por escribirle a *Struky Studios* 🎵
+
+Somos el estudio que convierte tus letras en canciones profesionales con IA + productores reales en menos de 48 horas, desde *$37 USD*, con el *100% de los derechos tuyos por contrato*.
+
+Cuéntame un poco más sobre lo que buscas y con gusto te oriento 😊`
+  }
+};
+
+function detectar(msg) {
+  const m = msg.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/precio|cuesta|cuanto|costo|plan|pagar|vale|valor|cobran/.test(m)) return 'precio';
+  if (/caro|expensivo|barato|descuento|presupuesto|poco dinero|no tengo tanto|muy caro/.test(m)) return 'caro';
+  if (/derecho|dueno|mio|mia|royalt|regal|copyright|propied|autor/.test(m)) return 'derechos';
+  if (/tiempo|demoran|rapido|rapida|48|horas|entrega|cuando|tarda|demora/.test(m)) return 'tiempo';
+  if (/spotify|apple music|plataforma|distribu|stream|deezer|tidal|youtube music/.test(m)) return 'spotify';
+  if (/ia|robot|artificial|humano|real|productor|algoritmo|maquina/.test(m)) return 'ia';
+  if (/funciona|proceso|como|paso|trabaj|metodo/.test(m)) return 'proceso';
+  if (/formato|archivo|wav|mp3|stems|pistas|separad/.test(m)) return 'formato';
+  if (/garantia|devuelv|reembolso|riesgo|segur|devolucion/.test(m)) return 'garantia';
+  if (/letra|cancion|idea|escribi|tengo lista|ya tengo/.test(m)) return 'letra';
+  if (/pens|duda|despues|luego|manana|espera|no se|insegur|pensarlo/.test(m)) return 'pensar';
+  if (/hola|info|informacion|saber|contacto|buenas|buen dia|hey|buenos/.test(m)) return 'hola';
+  return 'general';
+}
+
+function setEx(txt) {
+  document.getElementById('input').value = txt;
+  document.getElementById('input').focus();
+}
+
+function analizar() {
+  const msg = document.getElementById('input').value.trim();
+  if (!msg) { alert('Pega el mensaje del cliente primero'); return; }
+  const key = detectar(msg);
+  const data = RESPUESTAS[key];
+  document.getElementById('intent').textContent = data.label;
+  document.getElementById('resp').textContent = data.msg;
+  const r = document.getElementById('result');
+  r.style.display = 'block';
+  r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('cpbtn').textContent = 'Copiar mensaje';
+  document.getElementById('cpbtn').classList.remove('ok');
+}
+
+function copiar() {
+  const txt = document.getElementById('resp').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const b = document.getElementById('cpbtn');
+    b.textContent = '✓ Copiado';
+    b.classList.add('ok');
+    setTimeout(() => { b.textContent = 'Copiar mensaje'; b.classList.remove('ok'); }, 2500);
+  }).catch(() => {
+    const r = document.getElementById('resp');
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(r);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    const b = document.getElementById('cpbtn');
+    b.textContent = '✓ Copiado';
+    b.classList.add('ok');
+    setTimeout(() => { b.textContent = 'Copiar mensaje'; b.classList.remove('ok'); }, 2500);
+  });
+}
+
+function limpiar() {
+  document.getElementById('input').value = '';
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('input').focus();
+}
+
+document.getElementById('input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) analizar();
+});
+</script>
+
+</body>
+</html>
