@@ -68,20 +68,20 @@ export default function AsistenteVentas() {
       msg: `Tenemos 4 planes según lo que necesites 🎚️\n\n⭐ *Pro Master — $50 USD* _(el más elegido)_\n24-48h · 3 revisiones · Derechos 100% tuyos · Calidad WAV · Mezcla vocal avanzada\n🎁 Video letra HD de regalo\n\n🟢 *Starter — $37 USD*\n24-48h · 1 revisión · Licencia para redes sociales\n\n🔥 *Premium — $97 USD*\nPrioritario 24h · 5 revisiones · Mezcla nivel industria\n🎁 Video letra HD + Portada profesional\n\n👑 *Elite Studio — $147 USD*\nExpress <24h · Revisiones ilimitadas · Stems para shows · Asesoría de lanzamiento\n🎁 Video 4K + Reels/TikTok\n\nTodo eso por lo que en un estudio tradicional te cobrarían $2,000+ USD 💪\n\n¿Cuál se adapta mejor a lo que buscas? 😊`
     },
     caro: {
-      label: "🤔 Objeción de precio",
-      msg: `Te entiendo perfectamente 🙌\n\nPiénsalo así: en un estudio tradicional pagarías *$2,000+ USD* y esperarías de 3 a 6 semanas. Con Miguel Fernández y el equipo de Struky obtienes calidad de industria desde *$37 USD* en menos de 48 horas.\n\nY si no queda como lo imaginas, *Miguel lo rehace contigo o te devolvemos el dinero* — así de seguros estamos del resultado 💪\n\n¿Empezamos con el plan Starter y lo compruebas tú mismo? 🎵`
+      label: "💰 Objeción Precio",
+      msg: `Te entiendo, pero piénsalo así: en un estudio tradicional te cobran *$2,000+ USD* y te tienen esperando un mes. Aquí con Miguel tienes calidad de industria desde *$37 USD* en solo 48 horas ⚡\n\nY lo más importante: *si no te gusta, lo rehacemos*. Queremos que suenes gigante, no que pierdas tu dinero. ¿Te late si probamos con el plan Starter y ves la magia tú mismo?`
     },
     hola: {
-      label: "👋 Primer contacto",
-      msg: `¡Hola! 🎵 Bienvenido a *Struky Studios*.\n\nSomos el estudio liderado por el productor *Miguel Fernández*. Convertimos tus letras en canciones profesionales con IA + ingenieros reales, listas para Spotify en menos de 48 horas. Y lo mejor: el *100% de los derechos son tuyos por contrato* ✅\n\nPara ayudarte mejor dime:\n🎤 ¿Ya tienes tu letra lista?\n🎶 ¿Qué género te imaginas? (reggaetón, pop, vallenato, trap, salsa…)\n\n¡Estamos aquí para hacer que suenes! 🚀`
+      label: "👋 Saludo Humano",
+      msg: `¡Ey! Qué nota que nos escribas 🎵 Bienvenido a *Struky Studios*.\n\nAquí estamos liderados por Miguel Fernández y el equipo de ingenieros, listos para que tus letras dejen de estar guardadas y empiecen a sonar en Spotify. El 100% de los derechos son tuyos, nosotros solo ponemos el estudio y la magia profesional 🚀\n\nCuéntame un poco... ¿Ya tienes la letra lista o apenas estás aterrizando la idea?`
     },
     proceso: {
-      label: "🔄 Pregunta por el proceso",
-      msg: `¡El proceso es muy sencillo! Solo 3 pasos 👇\n\n*1. Tú nos envías tu letra y el género* ✍️\nReggaetón, pop, vallenato, trap, salsa, ranchera… lo que sientas.\n\n*2. Productores reales + IA entran en acción* 🎛️\nLa IA genera la base y nuestros ingenieros la perfeccionan frecuencia por frecuencia con equipo analógico de primer nivel.\n\n*3. Recibes tu canción en menos de 48h* 🎧\nMasterizada y lista para Spotify, Apple Music, YouTube Music, Deezer y Tidal. Con el *100% de los derechos tuyos por contrato* 📜\n\n¿Empezamos? Envíame tu letra cuando quieras 🚀`
+      label: "🔄 Explicar Proceso",
+      msg: `Mira, el proceso es súper sencillo y rápido, nada de vueltas largas de estudios viejos:\n\n1. Nos pasas tu letra y el género que te gusta ✍️\n2. Miguel y los productores entran al estudio con IA + equipo analógico 🎛️\n3. En menos de 48h tienes tu hit masterizado en el correo, listo para distribuir ✅\n\n¿Qué género tienes en mente para este tema?`
     },
     derechos: {
-      label: "📜 Pregunta por derechos",
-      msg: `*100% tuyos* — sin excepción 📜\n\nStruky firma contigo un *contrato de cesión de derechos* que certifica legalmente que eres el único dueño de la obra. Nosotros no nos quedamos con nada.\n\nCada stream en Spotify, Apple Music o YouTube te lo pagan directamente a ti. Es tu música, tu esfuerzo, tu dinero 💰🎤\n\n¿Te gustaría arrancar con algún plan? 😊`
+      label: "📜 Derechos de Autor",
+      msg: `*100% tuyos por contrato* 📜\n\nAquí no hay letras chiquitas. Firmamos un documento donde dice que tú eres el único dueño de la obra. Todas las regalías de Spotify y YouTube van directo a tu bolsillo. Nosotros solo somos tus productores de confianza.\n\n¿Arrancamos con el registro?`
     },
     tiempo: {
       label: "⏱️ Pregunta por tiempo de entrega",
