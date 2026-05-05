@@ -17,6 +17,7 @@ export async function POST(req: Request) {
         });
 
         const body = await req.json();
+        const phoneClean = String(body.phone || '').replace(/\D/g, '');
 
         // --- META CAPI: InitiateCheckout ---
         const userAgent = req.headers.get('user-agent') || '';
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
                 eventID: body.metaEventId,
                 userData: {
                     email: body.email,
-                    phone: body.phone,
+                    phone: phoneClean,
                     firstName: body.name,
                     fbp,
                     fbc,
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
             mood: String(body.mood || '').substring(0, 500),
             referenceTrack: String(body.referenceTrack || '').substring(0, 500),
             notes: String(body.notes || '').substring(0, 500),
-            phone: String(body.phone || '').substring(0, 500),
+            phone: phoneClean.substring(0, 500),
             plan: String(body.plan || 'Starter').substring(0, 500),
             fbp: String(fbp || '').substring(0, 500),
             fbc: String(fbc || '').substring(0, 500),
