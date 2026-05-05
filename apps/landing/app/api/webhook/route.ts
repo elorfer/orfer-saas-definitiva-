@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 import { sendMetaEvent } from '@/lib/meta-capi';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
-    apiVersion: '2026-03-25.dahlia',
+    apiVersion: '2026-01-28.clover',
 });
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
