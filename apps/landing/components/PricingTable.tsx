@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Check, Video, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { PLANS } from '../lib/plans';
 import { playTick } from '../lib/soundEngine';
@@ -11,7 +11,7 @@ interface PricingTableProps {
 }
 
 export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(1);
     const scrollRef = useRef<HTMLDivElement>(null);
     const sectionRef = useRef<HTMLElement>(null);
 
@@ -57,6 +57,16 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
         const nextIdx = activeIndex < plans.length - 1 ? activeIndex + 1 : 0;
         scrollToPlan(nextIdx);
     };
+
+    // Auto-scroll al Pro Master al cargar en móvil
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (window.innerWidth < 768) {
+                scrollToPlan(1); // Index 1 es Pro Master
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, []);
 
     const prev = () => {
         const prevIdx = activeIndex > 0 ? activeIndex - 1 : plans.length - 1;
@@ -129,7 +139,14 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 )}
 
                                 <div className="mb-8">
-                                    <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tighter text-white mb-2">{plan.name}</h3>
+                                    <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tighter text-white mb-1">{plan.name}</h3>
+                                    {plan.id === 'pro' && (
+                                        <div className="mb-3 flex items-center gap-1">
+                                            <span className="text-[10px] text-coffee-medium font-black uppercase tracking-widest animate-pulse">
+                                                78% de artistas lo eligen
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-3xl md:text-4xl font-black text-white">${plan.price}</span>
                                         <span className="text-[10px] font-black italic uppercase text-gray-500 tracking-widest ml-1">USD</span>

@@ -57,7 +57,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         name: '',
         email: '',
         genre: 'Pop',
-        vocalist: 'Sin preferencia',
+        vocalist: 'Me sorprendes tú',
         mood: 'Feliz',
         lyrics: '',
         notes: '',
@@ -98,12 +98,12 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
     const nextStep = () => {
         playWhoosh();
-        // Si ya hay un plan seleccionado (desde la tabla externa) y estamos en el paso 2, 
-        // saltamos el paso 3 (que es volver a elegir plan) e ir directo al 4 (confirmar).
-        if (step === 2 && formData.plan && initialPlan) {
-            setStep(4);
+        // Si ya hay un plan seleccionado (desde la tabla externa) y estamos en el paso 1, 
+        // saltamos el paso 2 (que es volver a elegir plan) e ir directo al 3 (confirmar).
+        if (step === 1 && formData.plan && initialPlan) {
+            setStep(3);
         } else {
-            setStep(s => Math.min(s + 1, 4));
+            setStep(s => Math.min(s + 1, 3));
         }
     };
     const prevStep = () => {
@@ -156,7 +156,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     // Auto-scroll al entrar en Paso 3 o cambiar plan
     // Usa polling porque AnimatePresence puede tardar en montar el contenedor
     useEffect(() => {
-        if (step === 3 && formData.plan) {
+        if (step === 2 && formData.plan) {
             const idx = PLANS.findIndex(p => p.id === formData.plan);
             if (idx >= 0) {
                 setPlanActiveIndex(idx);
@@ -189,13 +189,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const selectPlan = (plan: string, price: number) => {
         setFormData(prev => ({ ...prev, plan, price }));
         triggerSuccessConfetti();
-        setStep(2);
+        setStep(1);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (step < 4) return nextStep();
+        if (step < 3) return nextStep();
 
         playCashRegister();
         setIsLoading(true);
@@ -303,13 +303,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
     return (
         <section id="order-form" className="section-padding bg-dark-card/30 scroll-mt-24 md:scroll-mt-32">
-            <div className={`mx-auto relative transition-all duration-500 ${step === 3 ? 'max-w-7xl' : 'max-w-3xl'}`}>
+            <div className={`mx-auto relative transition-all duration-500 ${step === 2 ? 'max-w-7xl' : 'max-w-3xl'}`}>
                 <div className="text-center mb-12 relative z-10 flex flex-col items-center">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4 w-full">
                         {lang === 'es' ? 'Crea tu' : 'Create your'} <span className="text-gradient">{lang === 'es' ? 'canción ahora' : 'song now'}</span>
                     </h2>
                     <div className="flex justify-center items-center gap-2 mt-8 max-w-lg mx-auto">
-                        {[1, 2, 3, 4].map((s, index) => (
+                        {[1, 2, 3].map((s, index) => (
                             <div key={s} className="flex items-center flex-1">
                                 <div className="flex flex-col items-center flex-1">
                                     <div
@@ -318,8 +318,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     />
                                     <span className={`text-[9px] font-bold uppercase tracking-wider transition-colors duration-200 ${s <= step ? 'text-coffee-light' : 'text-gray-600'}`}>
                                         {lang === 'es'
-                                            ? (s === 1 ? 'Estilo' : s === 2 ? 'Letra' : s === 3 ? 'Plan' : 'Confirmar')
-                                            : (s === 1 ? 'Style' : s === 2 ? 'Lyrics' : s === 3 ? 'Plan' : 'Confirm')}
+                                            ? (s === 1 ? 'Canción' : s === 2 ? 'Plan' : 'Pago')
+                                            : (s === 1 ? 'Song' : s === 2 ? 'Plan' : 'Payment')}
                                     </span>
                                 </div>
                             </div>
@@ -376,6 +376,26 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             <option value="Merengue" className="bg-[#1a1a1a]">Merengue</option>
                                             <option value="Otro" className="bg-[#1a1a1a]">{lang === 'es' ? 'Otro (Escribir...)' : 'Other (Write...)'}</option>
                                         </select>
+
+                                        {formData.genre === 'Otro' && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="bg-white/5 p-4 rounded-xl border border-coffee-medium/30 mt-4"
+                                            >
+                                                <label className="block text-[10px] font-black text-coffee-light mb-2 uppercase tracking-widest">
+                                                    {lang === 'es' ? 'Especifica tu género personalizado' : 'Specify your custom genre'}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    placeholder={lang === 'es' ? 'Ej: Bolero, Rock, Jazz...' : 'Ex: Bolero, Rock, Jazz...'}
+                                                    className="w-full bg-transparent border-b border-white/20 py-2 outline-none focus:border-coffee-light transition-all text-sm"
+                                                    onChange={e => setFormData({ ...formData, notes: `Género deseado: ${e.target.value}. ${formData.notes}` })}
+                                                    required
+                                                />
+                                            </motion.div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Voz' : 'Vocalist'}</label>
@@ -388,71 +408,81 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 setFormData({ ...formData, vocalist: e.target.value });
                                             }}
                                         >
-                                            <option value="Masculina" className="bg-[#1a1a1a]">Masculina</option>
-                                            <option value="Femenina" className="bg-[#1a1a1a]">Femenina</option>
-                                            <option value="Mixta" className="bg-[#1a1a1a]">Mixta (Dúo)</option>
-                                            <option value="Sin preferencia" className="bg-[#1a1a1a]">Sin preferencia</option>
+                                            <option value="Voz masculina" className="bg-[#1a1a1a]">{lang === 'es' ? 'Voz masculina' : 'Male voice'}</option>
+                                            <option value="Voz femenina" className="bg-[#1a1a1a]">{lang === 'es' ? 'Voz femenina' : 'Female voice'}</option>
+                                            <option value="Mixta" className="bg-[#1a1a1a]">{lang === 'es' ? 'Mixta (Dúo)' : 'Mixed (Duet)'}</option>
+                                            <option value="Me sorprendes tú" className="bg-[#1a1a1a]">{lang === 'es' ? 'Me sorprendes tú' : 'Surprise me'}</option>
                                         </select>
                                     </div>
                                 </div>
 
-                                {formData.genre === 'Otro' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="bg-white/5 p-4 rounded-xl border border-coffee-medium/30"
-                                    >
-                                        <label className="block text-[10px] font-black text-coffee-light mb-2 uppercase tracking-widest">
-                                            {lang === 'es' ? 'Especifica tu género personalizado' : 'Specify your custom genre'}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder={lang === 'es' ? 'Ej: Bolero, Rock, Jazz...' : 'Ex: Bolero, Rock, Jazz...'}
-                                            className="w-full bg-transparent border-b border-white/20 py-2 outline-none focus:border-coffee-light transition-all text-sm"
-                                            onChange={e => setFormData({ ...formData, notes: `Género deseado: ${e.target.value}. ${formData.notes}` })}
-                                            required
-                                        />
-                                    </motion.div>
-                                )}
+
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Compositor / Artista' : 'Songwriter / Artist'}</label>
+                                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? '¿Cómo quieres aparecer en los créditos?' : 'How do you want to appear in the credits?'}</label>
                                     <input
                                         type="text"
-                                        placeholder={lang === 'es' ? 'Ej: Nombre del autor' : 'Ex: Songwriter name'}
+                                        placeholder={lang === 'es' ? 'Ej: Tu nombre o seudónimo' : 'Ex: Your name or pseudonym'}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
                                         value={formData.name}
                                         onChange={e => {
-                                            // playTick(); // Demasiado ruido en cada tecla, mejor dejarlo para selects
                                             setFormData({ ...formData, name: e.target.value });
                                         }}
                                         required
                                     />
                                 </div>
-                            </motion.div>
-                        )}
 
-                        {step === 2 && (
-                            <motion.div
-                                key="step2"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.25 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                className="space-y-6"
-                            >
-                                <div>
+                                <div className="pt-4 border-t border-white/5">
                                     <div className="flex items-center justify-between mb-4">
                                         <label className="block text-sm font-bold text-gray-400 uppercase tracking-widest">{lang === 'es' ? 'Tu Letra' : 'Your Lyrics'}</label>
                                         <button
                                             type="button"
-                                            onClick={() => setShowAiInput(!showAiInput)}
+                                            onClick={() => {
+                                                setShowAiInput(!showAiInput);
+                                                setSendLater(false); // Asegurar que el textarea se vea si usa la IA
+                                            }}
                                             data-fb-ignore="true"
                                             fb-pii="ignore"
                                             className="text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#9c88ff] to-[#8c7ae6] text-white flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-purple-500/20"
                                         >
                                             <Sparkles className="w-3 h-3" />
                                             {t.form.labels.aiButton}
+                                        </button>
+                                    </div>
+
+                                    {/* OPCIÓN: ENVIAR DESPUÉS (MÁS PROMINENTE) */}
+                                    <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                playTick();
+                                                setSendLater(false);
+                                                setFormData({ ...formData, lyrics: '' });
+                                            }}
+                                            className={`p-3 sm:p-4 rounded-2xl border transition-all flex flex-col items-center text-center gap-2 ${!sendLater ? 'bg-white/10 border-coffee-medium shadow-[0_0_20px_rgba(202,160,82,0.15)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                        >
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${!sendLater ? 'bg-coffee-medium text-black' : 'bg-white/10 text-gray-400'}`}>
+                                                <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            </div>
+                                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-white">
+                                                {lang === 'es' ? 'Escribir ahora' : 'Write now'}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                playTick();
+                                                setSendLater(true);
+                                                setFormData({ ...formData, lyrics: lang === 'es' ? 'Enviaré la letra/audio por WhatsApp después del pago.' : 'I will send the lyrics/audio via WhatsApp after payment.' });
+                                            }}
+                                            className={`p-3 sm:p-4 rounded-2xl border transition-all flex flex-col items-center text-center gap-2 ${sendLater ? 'bg-[#25D366]/20 border-[#25D366] shadow-[0_0_20px_rgba(37,211,102,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                        >
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${sendLater ? 'bg-[#25D366] text-white shadow-lg shadow-[#25D366]/50' : 'bg-white/10 text-gray-400'}`}>
+                                                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            </div>
+                                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-white">
+                                                {lang === 'es' ? 'Enviar después' : 'Send later'}
+                                            </span>
                                         </button>
                                     </div>
 
@@ -513,7 +543,6 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 value={formData.lyrics}
                                                 onChange={e => setFormData({ ...formData, lyrics: e.target.value })}
                                                 onInput={e => {
-                                                    // Auto-expand solo en móvil (< 640px)
                                                     if (window.innerWidth < 640) {
                                                         const el = e.currentTarget;
                                                         el.style.height = 'auto';
@@ -521,10 +550,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                     }
                                                 }}
                                                 required={!sendLater}
-                                                placeholder={lang === 'es' ? 'Pega aquí tus versos o genéralos con IA arriba...' : 'Paste your lyrics here or generate them with AI above...'}
+                                                placeholder={lang === 'es' 
+                                                    ? 'Ej: Llegaste a mi vida como lluvia en verano / y ahora sin ti el sol ya no me calienta igual...' 
+                                                    : 'Ex: You came into my life like summer rain / and now without you the sun doesn\'t warm me the same...'}
                                             />
                                         )}
-                                        {/* Botón funcional de expandir/contraer - solo desktop */}
                                         <button
                                             type="button"
                                             onClick={() => setLyricsExpanded(!lyricsExpanded)}
@@ -543,67 +573,12 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </button>
                                     </div>
                                     
-                                    {/* Opción de enviar después */}
-                                    <div className="mt-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                playTick();
-                                                const newVal = !sendLater;
-                                                setSendLater(newVal);
-                                                if (newVal) {
-                                                    setFormData({ ...formData, lyrics: lang === 'es' ? 'Enviaré la letra/audio por WhatsApp después del pago.' : 'I will send the lyrics/audio via WhatsApp after payment.' });
-                                                } else {
-                                                    setFormData({ ...formData, lyrics: '' });
-                                                }
-                                            }}
-                                            className={`w-full flex items-center justify-between p-4 sm:p-5 rounded-xl border transition-all ${sendLater ? 'bg-[#25D366]/15 border-[#25D366]/60 shadow-[0_0_20px_rgba(37,211,102,0.2)]' : 'bg-white/5 border-white/20 hover:border-white/30 hover:bg-white/10'}`}
-                                        >
-                                            <div className="flex items-center gap-4 sm:gap-5">
-                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-colors ${sendLater ? 'bg-[#25D366] text-white shadow-lg shadow-[#25D366]/50' : 'bg-white/10 text-gray-300'}`}>
-                                                    <MessageCircle className="w-6 h-6" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                        <p className={`text-base sm:text-lg font-black tracking-tight transition-colors ${sendLater ? 'text-[#4ade80]' : 'text-white'}`}>
-                                                            🎤 {lang === 'es' ? '¿Prefieres enviarlo después?' : 'Prefer to send it later?'}
-                                                        </p>
-                                                        {!sendLater && (
-                                                            <span className="bg-[#25D366] text-black text-[10px] font-black uppercase px-2 py-0.5 rounded-md animate-pulse whitespace-nowrap">
-                                                                {lang === 'es' ? '👉 Toca aquí' : '👉 Tap here'}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-xs sm:text-sm text-gray-200 leading-snug font-medium">
-                                                        {lang === 'es' 
-                                                            ? 'Puedes mandar tu letra o audio cantando por WhatsApp tras el pago.' 
-                                                            : 'You can send your lyrics or audio singing via WhatsApp after payment.'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${sendLater ? 'border-[#25D366] bg-[#25D366]' : 'border-gray-400 bg-transparent'}`}>
-                                                {sendLater && <Check className="w-5 h-5 text-white" />}
-                                            </div>
-                                        </button>
-                                    </div>
 
-                                    <div className="mt-4 p-4 bg-coffee-medium/10 border border-coffee-medium/20 rounded-xl flex items-center gap-4 shadow-xl">
-                                        <div className="w-8 h-8 rounded-full bg-coffee-medium/20 flex items-center justify-center shrink-0">
-                                            <Zap className="w-4 h-4 text-coffee-medium" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-coffee-medium uppercase tracking-[0.2em] mb-1">
-                                                {lang === 'es' ? '¿Tienes una melodía propia?' : 'Do you have your own melody?'}
-                                            </p>
-                                            <p className="text-[10px] text-gray-300 leading-normal uppercase tracking-widest font-medium">
-                                                {lang === 'es'
-                                                    ? 'Para conservar tu melodía, envíanos tu audio por WhatsApp tras el pago junto con el comprobante.'
-                                                    : 'To keep your melody, send your audio via WhatsApp after payment along with the receipt.'}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    
+
                                 </div>
-                                <div className="grid md:grid-cols-2 gap-6">
+
+                                <div className="grid md:grid-cols-1 gap-6 pt-4 border-t border-white/5">
                                     <div>
                                         <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Sentimiento de la canción' : 'Song Feeling'}</label>
                                         <select
@@ -624,75 +599,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             <option value="Relajado" className="bg-[#1a1a1a]">Relajado / Chill</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">WhatsApp / Celular</label>
-                                        <div className="relative flex gap-2">
-                                            {/* Country Select */}
-                                            <div className="relative">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowCountrySelect(!showCountrySelect)}
-                                                    className="h-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 flex items-center gap-2 hover:bg-white/10 transition-all min-w-[90px]"
-                                                >
-                                                    <span className="text-xl">{selectedCountry.flag}</span>
-                                                    <span className="text-xs font-bold">{selectedCountry.code}</span>
-                                                    <ChevronDown className={`w-3 h-3 transition-transform ${showCountrySelect ? 'rotate-180' : ''}`} />
-                                                </button>
-
-                                                {showCountrySelect && (
-                                                    <div className="absolute bottom-full left-0 mb-2 w-56 max-h-60 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 p-1 custom-scrollbar">
-                                                        {COUNTRIES.map((country) => (
-                                                            <button
-                                                                key={country.name}
-                                                                type="button"
-                                                                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-lg transition-all text-left"
-                                                                onClick={() => {
-                                                                    setSelectedCountry(country);
-                                                                    setShowCountrySelect(false);
-                                                                }}
-                                                            >
-                                                                <span className="text-xl">{country.flag}</span>
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xs font-bold text-white">{country.name}</span>
-                                                                    <span className="text-[10px] text-gray-500">{country.code}</span>
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <input
-                                                type="tel"
-                                                placeholder="..."
-                                                className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
-                                                value={formData.phone}
-                                                onChange={e => {
-                                                    // playTick(); 
-                                                    setFormData({ ...formData, phone: e.target.value });
-                                                }}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">Email</label>
-                                        <input
-                                            type="email"
-                                            placeholder="tu@email.com"
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
-                                            value={formData.email}
-                                            onChange={e => setFormData({ ...formData, email: e.target.value })}
-                                            required
-                                        />
-                                    </div>
                                 </div>
                             </motion.div>
                         )}
 
-                        {step === 3 && (
+                        {step === 2 && (
                             <motion.div
-                                key="step3"
+                                key="step2"
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 0.25 }}
@@ -728,7 +641,15 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             <div className="relative mb-6">
                                                 <plan.icon className={`w-12 h-12 transition-all ${formData.plan === plan.id ? (plan.id === 'elite' ? 'text-purple-400' : 'text-coffee-light') : 'text-gray-600'}`} />
                                             </div>
-                                            <h4 className="font-black text-lg mb-2 uppercase tracking-tight text-white">{t.pricing.plans[plan.id].name}</h4>
+                                            <h4 className="font-black text-lg mb-1 uppercase tracking-tight text-white">{t.pricing.plans[plan.id].name}</h4>
+                                            {plan.id === 'pro' && (
+                                                <div className="mb-2 flex items-center gap-1 justify-center">
+                                                    <Sparkles className="w-2.5 h-2.5 text-coffee-medium animate-pulse" />
+                                                    <span className="text-[9px] text-coffee-medium font-black uppercase tracking-wider">
+                                                        {lang === 'es' ? 'Elegido por el 78% de artistas' : 'Chosen by 78% of artists'}
+                                                    </span>
+                                                </div>
+                                            )}
                                             <div className="text-4xl font-black mb-2 text-white">${plan.price}<span className="text-[10px] text-gray-600 ml-1 uppercase tracking-widest font-black">USD</span></div>
                                             <p className="text-gray-200 text-sm font-bold mb-4">{t.pricing.plans[plan.id].desc}</p>
                                             
@@ -775,15 +696,82 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                             </motion.div>
                         )}
 
-                        {step === 4 && (
+                        {step === 3 && (
                             <motion.div
-                                key="step4"
+                                key="step3"
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.25 }}
                                 exit={{ opacity: 0, x: -20 }}
                                 className="space-y-8"
                             >
+                                {/* CONTACT INFORMATION SECTION */}
+                                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
+                                    <h4 className="text-sm font-bold text-gray-400 mb-6 uppercase tracking-widest flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-coffee-light"></div>
+                                        {lang === 'es' ? 'Datos de Entrega' : 'Delivery Details'}
+                                    </h4>
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div className="relative min-w-0">
+                                            <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-[0.2em] md:h-10 flex items-center">
+                                                {lang === 'es' ? '¿A qué WhatsApp te enviamos tu canción?' : 'Where should we send your song via WhatsApp?'}
+                                            </label>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowCountrySelect(!showCountrySelect)}
+                                                    className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 flex items-center gap-2 hover:bg-white/10 transition-all min-w-[95px] justify-center shrink-0"
+                                                >
+                                                    <span className="text-xl leading-none">{selectedCountry.flag}</span>
+                                                    <span className="text-sm font-bold text-white leading-none">{selectedCountry.code}</span>
+                                                    <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${showCountrySelect ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                <input
+                                                    type="tel"
+                                                    placeholder="300 123 4567"
+                                                    className="w-full min-w-0 bg-white/5 border border-white/10 rounded-2xl px-4 sm:px-6 py-4 focus:border-coffee-light transition-all outline-none text-white text-base sm:text-lg font-medium"
+                                                    value={formData.phone}
+                                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                                    required
+                                                />
+                                            </div>
+
+                                            {showCountrySelect && (
+                                                <div className="absolute top-full left-0 mt-2 w-full max-w-[280px] max-h-60 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 p-1 custom-scrollbar">
+                                                    {COUNTRIES.map((country) => (
+                                                        <button
+                                                            key={country.name}
+                                                            type="button"
+                                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-lg transition-all text-left"
+                                                            onClick={() => {
+                                                                setSelectedCountry(country);
+                                                                setShowCountrySelect(false);
+                                                            }}
+                                                        >
+                                                            <span className="text-xl">{country.flag}</span>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-bold text-white">{country.name}</span>
+                                                                <span className="text-[10px] text-gray-500">{country.code}</span>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-[0.2em] md:h-10 flex items-center">Email</label>
+                                            <input
+                                                type="email"
+                                                placeholder="tu@email.com"
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:border-coffee-light transition-all outline-none text-white text-base sm:text-lg font-medium"
+                                                value={formData.email}
+                                                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* ORDER SUMMARY TICKET */}
                                 <div className="bg-black/40 border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
                                     <div className="absolute top-0 left-0 w-2 h-full bg-coffee-medium"></div>
@@ -798,10 +786,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 </p>
                                                 <button 
                                                     type="button"
-                                                    onClick={() => setStep(3)}
+                                                    onClick={() => setStep(2)}
                                                     className="text-[9px] text-gray-500 hover:text-coffee-light border border-white/10 hover:border-coffee-medium/30 px-2 py-0.5 rounded transition-all uppercase font-black"
                                                 >
-                                                    {lang === 'es' ? 'Cambiar' : 'Change'}
+                                                    {lang === 'es' ? 'Cambiar Plan' : 'Change Plan'}
                                                 </button>
                                             </div>
                                         </div>
@@ -812,52 +800,41 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-8 mb-8">
-                                        {/* Columna 1: Datos Personales */}
                                         <div className="space-y-4">
-                                            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-white/10 pb-2">Información de Contacto</h4>
+                                            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-white/10 pb-2">Información del Artista</h4>
                                             <div className="grid gap-3">
                                                 <div>
                                                     <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Artista / Cliente</p>
                                                     <p className="text-xs text-white font-bold">{formData.name || '-'}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">WhatsApp de Entrega</p>
-                                                    <p className="text-xs text-white font-bold">{selectedCountry.code} {formData.phone || '-'}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Correo Electrónico</p>
-                                                    <p className="text-xs text-white font-bold">{formData.email || '-'}</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Género</p>
+                                                    <p className="text-xs text-white font-bold">{formData.genre}</p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Columna 2: Especificaciones */}
                                         <div className="space-y-4">
                                             <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest border-b border-white/10 pb-2">Especificaciones Creativas</h4>
                                             <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Género</p>
-                                                    <p className="text-xs text-white font-bold">{formData.genre}</p>
-                                                </div>
                                                 <div>
                                                     <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Preferencia de Voz</p>
                                                     <p className="text-xs text-white font-bold">{formData.vocalist}</p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Sentimiento de la canción</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Sentimiento</p>
                                                     <p className="text-xs text-white font-bold">{formData.mood}</p>
                                                 </div>
-                                                <div>
+                                                <div className="col-span-2">
                                                     <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Entrega Estimada</p>
-                                                    <p className="text-xs text-coffee-light font-bold">
-                                                        {formData.plan === 'Elite Studio' ? '24 HORAS' : formData.plan === 'Pro Master' ? '24-48 HORAS' : '48-72 HORAS'}
+                                                    <p className="text-xs text-coffee-light font-bold uppercase">
+                                                        {formData.plan === 'elite' || formData.plan === 'premium' ? '24 HORAS' : '24-48 HORAS'}
                                                     </p>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Letra */}
                                     <div className="bg-white/5 rounded-2xl p-5 border border-white/5 mb-8 relative">
                                         <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                                         <div className="text-[10px] text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -869,12 +846,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </p>
                                     </div>
 
-                                    {/* Lo que incluye el plan */}
                                     <div className="flex flex-wrap gap-4 justify-center">
                                         {[
                                             'Producción por Humanos + IA',
                                             'Derechos de Autoría 100% (Legal)',
-                                            formData.plan !== 'Starter' ? 'Video Obsequio Incluido' : 'Audio en Alta Calidad',
+                                            formData.plan !== 'starter' ? 'Video Obsequio Incluido' : 'Audio en Alta Calidad',
                                             'Certificado de Propiedad'
                                         ].map(check => (
                                             <div key={check} className="flex items-center gap-2 text-[10px] text-gray-300 font-bold uppercase">
@@ -885,52 +861,19 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     </div>
                                 </div>
 
-                                {/* COMPARISON TABLE */}
-                                <div className="comparison-grid">
-                                    <div className="comparison-col border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.01]">
-                                        <h4 className="text-red-500/80 font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-                                            {lang === 'es' ? 'Estudio Tradicional' : 'Traditional Studio'} <span className="text-lg">×</span>
-                                        </h4>
-                                        <div className="text-3xl font-bold text-gray-600 line-through mb-4">~$5,000 USD</div>
-                                        <p className="text-xs text-gray-500 leading-relaxed">
-                                            {lang === 'es'
-                                                ? 'Músicos, tiempo de estudio, ingeniero y vocalistas.'
-                                                : 'Musicians, studio time, engineer and vocalists.'}
-                                        </p>
-                                    </div>
-
-                                    {/* SEGUNDA COLUMNA: EL VALOR DE STRUKY */}
-                                    <div className="comparison-col bg-coffee-medium/[0.03]">
-                                        <h4 className="text-coffee-medium font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2">
-                                            {lang === 'es' ? 'Tu inversión con Struky' : 'Your investment with Struky'} <span className="text-lg">✓</span>
-                                        </h4>
-                                        <div className="text-4xl font-black text-white mb-4 animate-pulse">${formData.price} USD</div>
-                                        <p className="text-xs text-gray-300 leading-relaxed font-bold">
-                                            {lang === 'es'
-                                                ? 'Entrega garantizada, derechos totales y calidad radio.'
-                                                : 'Guaranteed delivery, total rights and radio quality.'}
-                                        </p>
-                                    </div>
-                                </div>
-
-
                                 {/* TRUST GUARANTEE PIE */}
                                 <div className="flex flex-col items-center gap-6 py-6 border-t border-white/5 mt-8">
                                     <div className="flex items-center justify-center gap-3 flex-wrap">
-                                        {/* Visa */}
                                         <div className="bg-white/[0.06] border border-white/15 rounded-lg px-3 py-2 flex items-center justify-center min-w-[52px] hover:bg-white/10 transition-all">
                                             <span className="text-white font-black text-[13px] italic tracking-tight">VISA</span>
                                         </div>
-                                        {/* Mastercard */}
                                         <div className="bg-white/[0.06] border border-white/15 rounded-lg px-3 py-2 flex items-center gap-1.5 hover:bg-white/10 transition-all">
                                             <div className="w-5 h-5 rounded-full bg-red-500 -mr-2.5"></div>
                                             <div className="w-5 h-5 rounded-full bg-yellow-400 opacity-90"></div>
                                         </div>
-                                        {/* Stripe */}
                                         <div className="bg-white/[0.06] border border-white/15 rounded-lg px-3 py-2 flex items-center justify-center min-w-[52px] hover:bg-white/10 transition-all">
                                             <span className="text-[#7c75ff] font-black text-[13px] tracking-tight">stripe</span>
                                         </div>
-                                        {/* SSL */}
                                         <div className="flex items-center gap-1.5 border border-white/15 rounded-lg px-3 py-2 bg-white/[0.06]">
                                             <Lock className="w-3 h-3 text-green-400" />
                                             <span className="text-[10px] font-black text-green-400 tracking-widest">SSL</span>
@@ -942,6 +885,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             <ShieldCheck className="w-6 h-6 text-coffee-medium" />
                                         </div>
                                         <div className="text-left">
+                                            <p className="text-white font-black text-sm uppercase italic tracking-tight">
+                                                {formData.plan === 'elite' || formData.plan === 'premium' ? '24 HORAS' : '24-48 HORAS'}
+                                            </p>
                                             <div className="text-sm font-black text-white uppercase tracking-widest mb-1">{lang === 'es' ? 'Garantía Estándar Struky' : 'Struky Standard Guarantee'}</div>
                                             <div className="text-xs text-gray-300 leading-tight uppercase tracking-wider font-medium">{lang === 'es' ? 'Tu inversión está protegida. Calidad garantizada o revisamos hasta que ames tu canción.' : 'Your investment is protected. Guaranteed quality or we revise until you love your song.'}</div>
                                         </div>
@@ -951,7 +897,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                         )}
                     </AnimatePresence>
 
-                    {step === 4 && (
+                    {step === 3 && (
                         <div className="text-center mt-8 mb-2 animate-pulse">
                             <p className="text-[10px] md:text-xs font-black text-coffee-medium uppercase tracking-[0.2em]">
                                 {lang === 'es' 
@@ -961,38 +907,57 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                         </div>
                     )}
 
-                    <div className={`flex ${step === 4 ? 'flex-col-reverse md:flex-row' : 'flex-row'} gap-3 sm:gap-4 mt-6`}>
-                        {step > 1 && (
-                            <button
-                                type="button"
-                                onClick={prevStep}
-                                className={`btn-secondary ${step === 4 ? 'w-full md:flex-1' : 'w-1/3 md:flex-1'} !py-3 sm:!py-4 !px-2 sm:!px-4 text-[11px] sm:text-base shrink-0`}
-                            >
-                                {lang === 'es' ? 'Atrás' : 'Back'}
-                            </button>
-                        )}
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className={`btn-primary ${step === 4 ? 'w-full md:flex-1 bg-[#A67C37] !py-4 sm:!py-4 !px-2 sm:!px-4 shadow-[0_0_30px_rgba(166,124,55,0.4)] hover:bg-[#B88C45]' : 'flex-1 !py-3 sm:!py-4 text-[11px] sm:text-base'}`}
-                        >
-                            {isLoading ? (
-                                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin mx-auto text-white" />
-                            ) : (
-                                step === 4 ? (
-                                    <div className="flex items-center justify-center gap-1 sm:gap-4 py-0.5">
-                                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-pulse shrink-0 hidden sm:block" />
-                                        <span className="font-black uppercase tracking-tight text-sm sm:text-xl text-white text-center leading-tight">
-                                            {lang === 'es' ? `¡RESERVAR MI CANCIÓN! ($${formData.price})` : `ORDER MY SONG! ($${formData.price})`}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <span className="font-black uppercase tracking-widest text-white/90 text-[11px] sm:text-base">
-                                        {lang === 'es' ? 'Continuar' : 'Continue'}
+                    <div className="flex flex-col gap-3 mt-6">
+                        {step === 3 && (
+                            <div className="flex justify-center mb-6">
+                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                                    <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest leading-none">
+                                        {lang === 'es' ? 'Calidad garantizada o te devolvemos el dinero — sin preguntas.' : 'Guaranteed quality or your money back — no questions asked.'}
                                     </span>
-                                )
+                                </div>
+                            </div>
+                        )}
+                        <div className={`flex ${step === 3 ? 'flex-col-reverse md:flex-row' : 'flex-row'} gap-3 sm:gap-4`}>
+                            {step > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={prevStep}
+                                    className={`btn-secondary ${step === 3 ? 'w-full md:flex-1' : 'w-1/3 md:flex-1'} !py-3 sm:!py-4 !px-2 sm:!px-4 text-[11px] sm:text-base shrink-0`}
+                                >
+                                    {lang === 'es' ? 'Atrás' : 'Back'}
+                                </button>
                             )}
-                        </button>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className={`btn-primary ${step === 3 ? 'w-full md:flex-1 bg-[#A67C37] !py-4 sm:!py-4 !px-2 sm:!px-4 shadow-[0_0_30px_rgba(166,124,55,0.4)] hover:bg-[#B88C45]' : 'flex-1 !py-3 sm:!py-4 text-[11px] sm:text-base'}`}
+                            >
+                                {isLoading ? (
+                                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin mx-auto text-white" />
+                                ) : (
+                                    step === 3 ? (
+                                        <div className="flex items-center justify-center gap-1 sm:gap-4 py-0.5">
+                                            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-pulse shrink-0 hidden sm:block" />
+                                            <span className="font-black uppercase tracking-tight text-sm sm:text-xl text-white text-center leading-tight">
+                                                {lang === 'es' ? `¡CREAR MI CANCIÓN! ($${formData.price})` : `CREATE MY SONG! ($${formData.price})`}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <span className="font-black uppercase tracking-widest text-white/90 text-[11px] sm:text-base">
+                                            {lang === 'es' ? 'Continuar' : 'Continue'}
+                                        </span>
+                                    )
+                                )}
+                            </button>
+                        </div>
+                        {step === 1 && (
+                            <p className="text-center text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+                                {lang === 'es' 
+                                    ? 'Sin compromiso — puedes cambiar el género después.' 
+                                    : 'No commitment — you can change the genre later.'}
+                            </p>
+                        )}
                     </div>
                 </form>
 

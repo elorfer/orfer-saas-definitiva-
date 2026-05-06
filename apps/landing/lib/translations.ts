@@ -31,9 +31,9 @@ export const translations = {
         genre: "Género musical",
         lyrics: "Tu letra",
         notes: "Notas para el productor",
-        aiButton: "Generar con IA ✨",
+        aiButton: "crear con tu idea ✨",
         aiLoading: "Diseñando tu hit...",
-        aiIdeaPlaceholder: "Solo danos una idea (ej: canción para mi madre en su cumple)..."
+        aiIdeaPlaceholder: "Solo dinos de qué trata (ej: canción para mi novia, despecho, fiesta)..."
       }
     },
     benefits: {
@@ -146,9 +146,9 @@ export const translations = {
         genre: "Musical genre",
         lyrics: "Your lyrics",
         notes: "Notes for the producer",
-        aiButton: "Generate with AI ✨",
+        aiButton: "create with your idea ✨",
         aiLoading: "Designing your hit...",
-        aiIdeaPlaceholder: "Just give us an idea (ex: song for my mom on her bday)..."
+        aiIdeaPlaceholder: "Just tell us what it's about (ex: song for my girlfriend, heartbreak, party)..."
       }
     },
     benefits: {

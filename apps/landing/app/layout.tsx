@@ -93,7 +93,7 @@ export default function RootLayout({
                 <link rel="dns-prefetch" href="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev" />
                 
                 {/* Preload critical hero assets */}
-                <link rel="preload" as="image" href="/hero-bg.png" />
+                <link rel="preload" as="image" href="/hero-bg.jpg" />
             </head>
             <body className={inter.className} suppressHydrationWarning>
                 {/* Meta Pixel Script */}
