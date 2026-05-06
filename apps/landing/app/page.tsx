@@ -11,10 +11,9 @@ import { translations } from '../lib/translations';
 import { useSearchParams } from 'next/navigation';
 import { Music, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { playSuccess, playWhoosh } from '../lib/soundEngine';
+import { playSuccess, playWhoosh, playTick } from '../lib/soundEngine';
 
 // Lazy-load below-the-fold components (code-split into separate chunks)
-const Benefits = dynamic(() => import('../components/Benefits'));
 const HowItWorks = dynamic(() => import('../components/HowItWorks'));
 const StudioShowcase = dynamic(() => import('../components/StudioShowcase'));
 const ComposersSection = dynamic(() => import('../components/ComposersSection'));
@@ -29,60 +28,66 @@ const AudioComparison = dynamic(() => import('../components/AudioComparison'));
 const ComparisonSection = dynamic(() => import('../components/ComparisonSection'));
 const RecentActivity = dynamic(() => import('../components/RecentActivity'));
 const GlobalImpact = dynamic(() => import('../components/GlobalImpact'));
+const MemorableEvents = dynamic(() => import('../components/MemorableEvents'));
+
 
 function HomeContent() {
     const [activeExampleIndex, setActiveExampleIndex] = useState(0);
     const examplesScrollRef = useRef<HTMLDivElement>(null);
     const examplesSectionRef = useRef<HTMLElement>(null);
-
-    const playTick = () => {
-        const audio = new Audio('https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
-    };
+    const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const scrollToExample = (index: number) => {
         playTick();
         if (examplesScrollRef.current) {
             const container = examplesScrollRef.current;
-            const scrollAmount = container.offsetWidth * 0.85 + 16;
-            container.scrollTo({
-                left: index * scrollAmount,
-                behavior: 'smooth'
-            });
+            const cards = Array.from(container.children) as HTMLElement[];
+            if (cards[index]) {
+                // Scroll to the actual card position instead of estimating
+                const card = cards[index];
+                const scrollLeft = card.offsetLeft - (container.offsetWidth - card.offsetWidth) / 2;
+                container.scrollTo({
+                    left: Math.max(0, scrollLeft),
+                    behavior: 'smooth'
+                });
+            }
             setActiveExampleIndex(index);
         }
     };
 
     const handleExamplesScroll = () => {
-        if (examplesScrollRef.current) {
-            const container = examplesScrollRef.current;
-            const scrollPosition = container.scrollLeft;
-            const containerWidth = container.offsetWidth;
-            
-            // Get all card elements
-            const cards = Array.from(container.children) as HTMLElement[];
-            if (cards.length === 0) return;
-
-            // Find which card is closest to the center of the container
-            const containerCenter = scrollPosition + containerWidth / 2;
-            
-            let closestIndex = 0;
-            let minDistance = Infinity;
-
-            cards.forEach((card, i) => {
-                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-                const distance = Math.abs(containerCenter - cardCenter);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    closestIndex = i;
-                }
-            });
-
-            if (closestIndex !== activeExampleIndex) {
-                setActiveExampleIndex(closestIndex);
-            }
+        // Debounce: only update after scrolling stops for 80ms
+        if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
         }
+        scrollTimeoutRef.current = setTimeout(() => {
+            if (examplesScrollRef.current) {
+                const container = examplesScrollRef.current;
+                const scrollPosition = container.scrollLeft;
+                const containerWidth = container.offsetWidth;
+                
+                const cards = Array.from(container.children) as HTMLElement[];
+                if (cards.length === 0) return;
+
+                const containerCenter = scrollPosition + containerWidth / 2;
+                
+                let closestIndex = 0;
+                let minDistance = Infinity;
+
+                cards.forEach((card, i) => {
+                    const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+                    const distance = Math.abs(containerCenter - cardCenter);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestIndex = i;
+                    }
+                });
+
+                if (closestIndex !== activeExampleIndex) {
+                    setActiveExampleIndex(closestIndex);
+                }
+            }
+        }, 80);
     };
 
     const searchParams = useSearchParams();
@@ -233,17 +238,13 @@ function HomeContent() {
             <Header lang={lang} setLang={setLang} />
             
             <Hero t={t.hero} lang={lang} />
-            
-            <OfficialShowcase lang={lang} />
 
             <PlatformLogos lang={lang} />
 
-            {/* === CONVERSION PATH: Lo que convence y vende === */}
-
-            <Benefits t={t.benefits} />
+            {/* === CONVERSION PATH: Hero → Ejemplos → Precios → Formulario === */}
 
             {/* EXAMPLES SECTION — Audio real = la mejor prueba */}
-            <section ref={examplesSectionRef} id="examples" className="section-padding bg-dark-bg relative overflow-hidden scroll-mt-0 pb-32 md:pb-24">
+            <section ref={examplesSectionRef} id="examples" className="pt-8 md:pt-12 bg-dark-bg relative overflow-hidden scroll-mt-0 pb-32 md:pb-24">
                 {/* Background Decor - CSS-only animated orbs (GPU composited) */}
                 <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
                 <div className="bg-orb-2 absolute bottom-1/4 -right-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
@@ -359,8 +360,6 @@ function HomeContent() {
                 </div>
             </section>
 
-            <Testimonials t={t.testimonials} />
-
             <PricingTable 
                 t={t.pricing} 
                 onSelectPlan={handleSelectPlan} 
@@ -368,43 +367,32 @@ function HomeContent() {
 
             <OrderForm lang={lang} initialPlan={selectedPlanFromTable} />
 
-            {/* === CONTENIDO SECUNDARIO === */}
+            <OfficialShowcase lang={lang} />
+
+
+            {/* === CONTENIDO SECUNDARIO: Confianza y autoridad === */}
 
             <AudioComparison lang={lang} />
 
-            <StudioShowcase lang={lang} />
-
-            <GlobalImpact t={t.global} />
-
             <HowItWorks t={t.howItWorks} />
-
-            <ComparisonSection lang={lang} />
 
             <FAQ t={t.faq} />
 
-            {/* === POST-CONVERSION: Contenido secundario para los que siguen explorando === */}
+            <Testimonials t={t.testimonials} />
+
+            <StudioShowcase lang={lang} />
+
+            {/* <MemorableEvents lang={lang} /> — Oculto temporalmente, se activa después */}
+
+            <GlobalImpact t={t.global} />
+
+            <ComparisonSection lang={lang} />
+
+            {/* === POST-CONVERSION: Contenido para los que siguen explorando === */}
 
             <ComposersSection lang={lang} />
 
             <MerchSection lang={lang} />
-
-            {/* Testimonials Banner Image */}
-            <section className="section-padding bg-dark-bg relative overflow-hidden">
-                <div className="max-w-7xl mx-auto px-4 relative z-10">
-                    <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl shadow-black/80 group">
-                        <Image 
-                            src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/TESTIMONIOS.webp"
-                            alt="Struky Studios Testimonials"
-                            width={1200}
-                            height={450}
-                            className="w-full h-auto transition-transform duration-1000 group-hover:scale-105"
-                            sizes="(max-width: 768px) 100vw, 1200px"
-                            unoptimized
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none"></div>
-                    </div>
-                </div>
-            </section>
 
             <Footer lang={lang} />
 

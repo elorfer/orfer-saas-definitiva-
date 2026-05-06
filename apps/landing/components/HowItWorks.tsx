@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Edit3, Headphones, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { playTick } from '../lib/soundEngine';
 
 export default function HowItWorks({ t }: { t: any }) {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -27,6 +28,7 @@ export default function HowItWorks({ t }: { t: any }) {
     };
 
     const scrollToStep = (index: number) => {
+        playTick();
         if (scrollRef.current) {
             const container = scrollRef.current;
             const scrollAmount = container.offsetWidth * 0.85 + 32; // card width + gap

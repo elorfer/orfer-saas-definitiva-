@@ -54,9 +54,9 @@ export default function PlatformLogos({ lang }: PlatformLogosProps) {
     const tickerItems = [...platforms, ...platforms, ...platforms, ...platforms];
 
     return (
-        <section className="py-12 md:py-16 bg-dark-bg/50 border-y border-white/5 overflow-hidden">
+        <section className="py-4 md:py-6 bg-dark-bg/50 border-y border-white/5 overflow-hidden">
             <div className="max-w-full mx-auto">
-                <p className="text-center text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-8 px-6">
+                <p className="text-center text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4 px-6">
                     {lang === 'es' ? 'Distribución Premium Garantizada en' : 'Premium Distribution Guaranteed on'}
                 </p>
 

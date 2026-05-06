@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { BadgeCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { playTick } from '../lib/soundEngine';
 
 export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -23,6 +24,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
     };
 
     const scrollToItem = (index: number) => {
+        playTick();
         if (scrollRef.current) {
             const container = scrollRef.current;
             const scrollAmount = container.offsetWidth * 0.85 + 24;

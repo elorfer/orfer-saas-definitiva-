@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronDown, MessageCircleQuestion } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { playTick } from '../lib/soundEngine';
 
 export default function FAQ({ t }: { t: any }) {
     const questions = [
@@ -30,7 +31,10 @@ export default function FAQ({ t }: { t: any }) {
                     {questions.map((item, i) => (
                         <div key={i} className="card-dark p-0 overflow-hidden">
                             <button 
-                                onClick={() => setActiveIndex(activeIndex === i ? null : i)}
+                                onClick={() => {
+                                    playTick();
+                                    setActiveIndex(activeIndex === i ? null : i);
+                                }}
                                 className="w-full p-6 text-left flex justify-between items-center transition-all hover:bg-white/5"
                             >
                                 <span className="font-bold md:text-lg">{item.q}</span>

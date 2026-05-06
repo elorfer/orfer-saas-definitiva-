@@ -51,7 +51,7 @@ export default function Hero({ t, lang }: HeroProps) {
             {/* Background */}
             <div className="absolute inset-0 z-0">
                 <Image
-                    src="/hero-bg.png"
+                    src="/hero-bg.jpg"
                     alt="Music Studio"
                     fill
                     className="object-cover opacity-40"

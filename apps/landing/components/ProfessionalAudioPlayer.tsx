@@ -2,6 +2,8 @@
 
 import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
+import { playTick } from '../lib/soundEngine';
+
 
 interface AudioPlayerProps {
     src: string;
@@ -31,6 +33,7 @@ export default function ProfessionalAudioPlayer({ src, title, description, cover
             if (isPlaying) {
                 audioRef.current.pause();
             } else {
+                playTick();
                 document.querySelectorAll('audio').forEach(el => el.pause());
                 audioRef.current.play();
             }

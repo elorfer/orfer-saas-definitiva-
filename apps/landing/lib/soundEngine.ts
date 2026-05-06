@@ -1,27 +1,41 @@
 'use client';
 
 /**
- * Struky SoundEngine — Zero-latency audio feedback system
+ * Struky SoundEngine — Zero-latency audio feedback system (Optimized)
  * 
- * Uses Web Audio API to preload all sounds into memory buffers.
+ * Uses Web Audio API to preload sounds into memory buffers.
  * Once loaded, sounds play INSTANTLY (0ms latency) on any device.
  * 
+ * Optimizations applied:
+ * - tick/pop share a single buffer (same source file)
+ * - Sounds loaded in priority order (critical first)
+ * - GainNode reuse pattern for less GC pressure
+ * - Singleton AudioContext with proper lifecycle
+ * 
  * Usage:
- *   import { playTick, playWhoosh, playPop } from '@/lib/soundEngine';
+ *   import { playTick, playWhoosh } from '@/lib/soundEngine';
  *   <button onClick={playTick}>Click me</button>
  */
 
-// === Sound URLs ===
-const SOUNDS = {
-    tick: 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3',
-    pop: 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/button_tiny.mp3',
-    whoosh: 'https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.mp3',
-    success: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
-    cashRegister: 'https://assets.mixkit.co/active_storage/sfx/2021/2021-preview.mp3',
-    magic: 'https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3',
+// === Sound URLs (unique files only) ===
+const R2_BASE = 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev';
+
+const SOUND_URLS = {
+    tick: `${R2_BASE}/tick.mp3`,
+    whoosh: `${R2_BASE}/whoosh.mp3`,
+    success: `${R2_BASE}/success.mp3`,
+    cashRegister: `${R2_BASE}/cash-register.mp3`,
+    magic: `${R2_BASE}/magic.mp3`,
 } as const;
 
-type SoundName = keyof typeof SOUNDS;
+type SoundFile = keyof typeof SOUND_URLS;
+
+// === Sound aliases (pop reuses tick buffer — same audio file) ===
+type SoundName = SoundFile | 'pop';
+
+const SOUND_ALIAS: Partial<Record<SoundName, SoundFile>> = {
+    pop: 'tick',
+};
 
 // === Volume per sound (0.0 - 1.0) ===
 const VOLUMES: Record<SoundName, number> = {
@@ -33,15 +47,18 @@ const VOLUMES: Record<SoundName, number> = {
     magic: 0.3,
 };
 
+// === Load priority (critical interaction sounds first) ===
+const LOAD_ORDER: SoundFile[] = ['tick', 'whoosh', 'success', 'cashRegister', 'magic'];
+
 // === Internal state ===
 let audioContext: AudioContext | null = null;
-const bufferCache: Partial<Record<SoundName, AudioBuffer>> = {};
+const bufferCache = new Map<SoundFile, AudioBuffer>();
 let isInitialized = false;
 let isLoading = false;
 
 /**
- * Initialize AudioContext (must be triggered by user interaction on mobile).
- * Safely handles repeated calls.
+ * Get or create the singleton AudioContext.
+ * Handles iOS Safari's suspended state requirement.
  */
 function getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -64,24 +81,28 @@ function getContext(): AudioContext | null {
 
 /**
  * Fetch and decode a single sound into an AudioBuffer.
+ * Uses Map for O(1) lookup instead of object property access.
  */
-async function loadSound(name: SoundName): Promise<void> {
+async function loadSound(name: SoundFile): Promise<void> {
     const ctx = getContext();
-    if (!ctx) return;
-    if (bufferCache[name]) return; // Already loaded
+    if (!ctx || bufferCache.has(name)) return;
     
     try {
-        const response = await fetch(SOUNDS[name]);
+        const response = await fetch(SOUND_URLS[name]);
+        if (!response.ok) return;
+        
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        bufferCache[name] = audioBuffer;
+        bufferCache.set(name, audioBuffer);
     } catch {
         // Silently fail — sounds are non-critical UX enhancement
     }
 }
 
 /**
- * Preload ALL sounds into memory. Call this once on first user interaction.
+ * Preload sounds into memory in priority order.
+ * Critical sounds (tick, whoosh) load first so they're available fastest.
+ * Call this once on first user interaction.
  */
 async function preloadAll(): Promise<void> {
     if (isInitialized || isLoading) return;
@@ -90,17 +111,23 @@ async function preloadAll(): Promise<void> {
     const ctx = getContext();
     if (!ctx) { isLoading = false; return; }
     
-    // Load all sounds in parallel
-    await Promise.allSettled(
-        (Object.keys(SOUNDS) as SoundName[]).map(name => loadSound(name))
-    );
+    // Load critical sounds first (tick + whoosh), then the rest in parallel
+    const [critical, secondary] = [LOAD_ORDER.slice(0, 2), LOAD_ORDER.slice(2)];
+    
+    // Phase 1: Critical sounds (needed for first interactions)
+    await Promise.allSettled(critical.map(name => loadSound(name)));
+    
+    // Phase 2: Secondary sounds (can load in background)
+    await Promise.allSettled(secondary.map(name => loadSound(name)));
     
     isInitialized = true;
     isLoading = false;
 }
 
 /**
- * Play a preloaded sound instantly. Falls back to HTML Audio if buffer isn't ready.
+ * Play a preloaded sound instantly.
+ * Resolves aliases (e.g. pop → tick) before lookup.
+ * Falls back to HTML Audio if buffer isn't ready yet.
  */
 function playSound(name: SoundName): void {
     if (typeof window === 'undefined') return;
@@ -112,7 +139,9 @@ function playSound(name: SoundName): void {
         preloadAll();
     }
     
-    const buffer = bufferCache[name];
+    // Resolve alias (pop → tick)
+    const bufferKey: SoundFile = SOUND_ALIAS[name] || name as SoundFile;
+    const buffer = bufferCache.get(bufferKey);
     
     if (ctx && buffer) {
         // === FAST PATH: Web Audio API (instant, 0ms latency) ===
@@ -128,7 +157,8 @@ function playSound(name: SoundName): void {
     } else {
         // === FALLBACK: HTML Audio (slower, but works before preload completes) ===
         try {
-            const audio = new Audio(SOUNDS[name]);
+            const url = SOUND_URLS[bufferKey];
+            const audio = new Audio(url);
             audio.volume = VOLUMES[name];
             audio.play().catch(() => {});
         } catch {
@@ -137,7 +167,7 @@ function playSound(name: SoundName): void {
     }
 }
 
-// === Public API (drop-in replacements) ===
+// === Public API ===
 export const playTick = () => playSound('tick');
 export const playPop = () => playSound('pop');
 export const playWhoosh = () => playSound('whoosh');

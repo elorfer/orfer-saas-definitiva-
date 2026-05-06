@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Languages, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { playTick, playWhoosh } from '../lib/soundEngine';
 
 interface HeaderProps {
     lang: 'es' | 'en';
@@ -87,7 +88,10 @@ export default function Header({ lang, setLang }: HeaderProps) {
                     {/* Actions */}
                     <div className="flex items-center gap-4 md:gap-6 z-[60]">
                         <button 
-                            onClick={() => setLang(lang === 'es' ? 'en' : 'es')}
+                            onClick={() => {
+                                playTick();
+                                setLang(lang === 'es' ? 'en' : 'es');
+                            }}
                             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-xs font-bold text-gray-300 uppercase tracking-widest"
                         >
                             <Languages className="w-3.5 h-3.5 opacity-70" />
@@ -105,7 +109,10 @@ export default function Header({ lang, setLang }: HeaderProps) {
                         {/* Mobile Menu Toggle */}
                         <button 
                             className="lg:hidden w-10 h-10 flex items-center justify-center text-white bg-white/5 rounded-full border border-white/10"
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            onClick={() => {
+                                playTick();
+                                setMobileMenuOpen(!mobileMenuOpen);
+                            }}
                         >
                             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                         </button>
