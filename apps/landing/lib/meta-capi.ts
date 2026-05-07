@@ -30,6 +30,7 @@ export async function sendMetaEvent({
         city?: string;
         state?: string;
         country?: string;
+        zip?: string;
     };
     customData?: any;
     eventID?: string;
@@ -63,6 +64,7 @@ export async function sendMetaEvent({
                     ct: userData.city ? [hashData(userData.city)] : [],
                     st: userData.state ? [hashData(userData.state)] : [],
                     country: userData.country ? [hashData(userData.country)] : [],
+                    zp: userData.zip ? [hashData(userData.zip)] : [],
                     ...(userData.externalId ? { external_id: [hashData(userData.externalId)] } : {})
                 },
                 custom_data: customData

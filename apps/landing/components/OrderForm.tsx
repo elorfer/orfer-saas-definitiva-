@@ -220,6 +220,17 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
             });
         }
         
+        // Capture Meta cookies from browser
+        const getCookie = (name: string) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop()?.split(';').shift();
+            return null;
+        };
+
+        const fbp = getCookie('_fbp');
+        const fbc = getCookie('_fbc');
+
         try {
             const response = await fetch('/api/checkout', {
                 method: 'POST',
@@ -228,7 +239,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                     ...formData,
                     plan: t.pricing.plans[formData.plan as keyof typeof t.pricing.plans]?.name || formData.plan,
                     phone: `${selectedCountry.code} ${formData.phone}`,
-                    metaEventId: eventID
+                    metaEventId: eventID,
+                    fbp,
+                    fbc
                 }),
             });
             const data = await response.json();

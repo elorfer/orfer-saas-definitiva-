@@ -17,9 +17,10 @@ async function triggerMetaPurchase(session: Stripe.Checkout.Session) {
     const fbc = metadata.fbc || '';
     const clientIp = metadata.clientIp || '';
     const userAgent = metadata.userAgent || 'StrukyServer/1.0';
-    const city = metadata.city || '';
-    const state = metadata.state || '';
-    const country = metadata.country || '';
+    const city = metadata.city || session.customer_details?.address?.city || '';
+    const state = metadata.state || session.customer_details?.address?.state || '';
+    const country = metadata.country || session.customer_details?.address?.country || '';
+    const zip = session.customer_details?.address?.postal_code || '';
     
     // Obtener ID de cliente de Stripe para usarlo como external_id en Meta
     let externalId = '';
@@ -43,7 +44,8 @@ async function triggerMetaPurchase(session: Stripe.Checkout.Session) {
             externalId: externalId,
             city,
             state,
-            country
+            country,
+            zip // Código postal para mejorar la coincidencia
         },
         customData: {
             value: (session.amount_total || 0) / 100,

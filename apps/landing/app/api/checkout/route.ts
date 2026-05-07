@@ -28,10 +28,10 @@ export async function POST(req: Request) {
         const country = req.headers.get('x-vercel-ip-country') || '';
         const state = req.headers.get('x-vercel-ip-country-region') || '';
 
-        // Extraer cookies de Meta
+        // Extraer cookies de Meta (preferir las enviadas desde el cliente para mayor precisión)
         const cookieStore = await cookies();
-        const fbp = cookieStore.get('_fbp')?.value;
-        const fbc = cookieStore.get('_fbc')?.value;
+        const fbp = body.fbp || cookieStore.get('_fbp')?.value;
+        const fbc = body.fbc || cookieStore.get('_fbc')?.value;
 
         // Esperamos el evento para asegurar que Vercel no mate el proceso antes de enviarlo
         let capiResult: any = null;
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
                     fbc,
                     clientIpAddress: ip,
                     clientUserAgent: userAgent,
+                    externalId: body.email?.toLowerCase().trim(), // EMAIL como ID externo para InitiateCheckout
                     city,
                     state,
                     country
