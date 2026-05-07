@@ -21,7 +21,7 @@ export default function Hero({ t, lang }: HeroProps) {
     }, []);
 
     return (
-        <section className="relative min-h-screen flex items-center bg-black overflow-hidden pt-20 lg:pt-36 pb-10">
+        <section className="relative min-h-screen flex items-center bg-black overflow-hidden pt-20 lg:pt-36 pb-24 lg:pb-10">
             {/* Background Studio Image Overlay */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent z-10 hidden lg:block"></div>
@@ -148,7 +148,7 @@ export default function Hero({ t, lang }: HeroProps) {
                                 playPop();
                                 document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
                             }}
-                            className="w-full sm:w-auto bg-spotify-green hover:bg-[#1ed760] text-black font-black uppercase tracking-[0.1em] md:tracking-[0.2em] py-4 md:py-6 lg:py-5 px-10 md:px-16 lg:px-12 rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(29,185,84,0.4)] mb-8 md:mb-12 text-sm md:text-xl lg:text-lg"
+                            className="w-full sm:w-auto bg-spotify-green hover:bg-[#1ed760] text-black font-black uppercase tracking-[0.1em] md:tracking-[0.2em] py-5 md:py-6 lg:py-5 px-8 md:px-16 lg:px-12 rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(29,185,84,0.4)] mb-8 md:mb-12 text-[13px] sm:text-base md:text-xl lg:text-lg leading-relaxed flex items-center justify-center whitespace-nowrap"
                         >
                             {lang === 'es' ? 'QUIERO MI CANCIÓN' : 'I WANT MY SONG'}
                         </button>
