@@ -79,18 +79,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
             
             <div className="max-w-6xl mx-auto relative z-10">
                 {/* Mascot - Centered Above Title */}
-                <motion.div 
-                    className="relative w-56 h-56 lg:w-72 lg:h-72 mx-auto mb-6 z-20 drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)] pointer-events-none"
-                    animate={{ 
-                        y: [0, -10, 0],
-                        rotate: [1, -1, 1]
-                    }}
-                    transition={{ 
-                        duration: 5, 
-                        repeat: Infinity, 
-                        ease: "easeInOut" 
-                    }}
-                >
+                <div className="relative w-56 h-56 lg:w-72 lg:h-72 mx-auto mb-6 z-20 drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)] pointer-events-none animate-float">
                     <Image 
                         src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/mascot-checkout.webp" 
                         alt="Struky Mascot" 
@@ -99,7 +88,7 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                         sizes="(max-width: 768px) 224px, 288px"
                         unoptimized
                     />
-                </motion.div>
+                </div>
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4 font-heading">
                         {lang === 'es' ? 'Tu Equipo de' : 'Your Elite'} <span className="text-gradient">{lang === 'es' ? 'Élite Musical' : 'Production Team'}</span>

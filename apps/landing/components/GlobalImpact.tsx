@@ -56,29 +56,15 @@ export default function GlobalImpact({ t }: { t: any }) {
                         />
                     </div>
 
-                    {/* Animated Connecting Lines (The "WOW" Factor) */}
-                    <div className="absolute inset-0 z-0 pointer-events-none opacity-40">
-                        <svg viewBox="0 0 1000 500" className="w-full h-full" style={{ filter: 'drop-shadow(0 0 5px rgba(202,160,82,0.5))' }}>
-                            {/* Miami to LA */}
-                            <motion.path d="M 240 175 Q 210 120 180 125" fill="none" stroke="url(#gradient)" strokeWidth="1" strokeDasharray="5 5" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 4, ease: "linear" }} vectorEffect="non-scaling-stroke" />
-                            {/* Miami to Madrid */}
-                            <motion.path d="M 240 175 Q 360 100 480 125" fill="none" stroke="url(#gradient)" strokeWidth="1.5" strokeDasharray="4 8" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 8, ease: "linear" }} vectorEffect="non-scaling-stroke" />
-                            {/* CDMX to Bogota */}
-                            <motion.path d="M 200 210 Q 240 250 280 275" fill="none" stroke="url(#gradient)" strokeWidth="1" strokeDasharray="3 6" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 5, ease: "linear" }} vectorEffect="non-scaling-stroke" />
-                            {/* Bogota to Madrid */}
-                            <motion.path d="M 280 275 Q 380 150 480 125" fill="none" stroke="url(#gradient)" strokeWidth="1" opacity="0.6" animate={{ strokeDasharray: ["0, 1000", "1000, 0"] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} vectorEffect="non-scaling-stroke" />
-                            {/* Madrid to London */}
-                            <motion.path d="M 480 125 Q 475 100 470 75" fill="none" stroke="url(#gradient)" strokeWidth="1" strokeDasharray="2 4" animate={{ strokeDashoffset: [0, -100] }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }} vectorEffect="non-scaling-stroke" />
-                            {/* Bogota to Buenos Aires */}
-                            <motion.path d="M 280 275 Q 300 350 320 375" fill="none" stroke="url(#gradient)" strokeWidth="1" animate={{ strokeDasharray: ["0, 1000", "1000, 0"] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: 1 }} vectorEffect="non-scaling-stroke" />
-                            
-                            <defs>
-                                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                    <stop offset="0%" stopColor="#CAA052" stopOpacity="0" />
-                                    <stop offset="50%" stopColor="#CAA052" stopOpacity="1" />
-                                    <stop offset="100%" stopColor="#CAA052" stopOpacity="0" />
-                                </linearGradient>
-                            </defs>
+                    {/* Connecting Lines - Static for performance */}
+                    <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
+                        <svg viewBox="0 0 1000 500" className="w-full h-full">
+                            <path d="M 240 175 Q 210 120 180 125" fill="none" stroke="#CAA052" strokeWidth="1" strokeDasharray="5 5" vectorEffect="non-scaling-stroke" />
+                            <path d="M 240 175 Q 360 100 480 125" fill="none" stroke="#CAA052" strokeWidth="1" strokeDasharray="4 8" vectorEffect="non-scaling-stroke" />
+                            <path d="M 200 210 Q 240 250 280 275" fill="none" stroke="#CAA052" strokeWidth="1" strokeDasharray="3 6" vectorEffect="non-scaling-stroke" />
+                            <path d="M 280 275 Q 380 150 480 125" fill="none" stroke="#CAA052" strokeWidth="1" opacity="0.6" vectorEffect="non-scaling-stroke" />
+                            <path d="M 480 125 Q 475 100 470 75" fill="none" stroke="#CAA052" strokeWidth="1" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />
+                            <path d="M 280 275 Q 300 350 320 375" fill="none" stroke="#CAA052" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                         </svg>
                     </div>
 
@@ -94,17 +80,9 @@ export default function GlobalImpact({ t }: { t: any }) {
                             }}
                         >
                             <div className="relative cursor-pointer group/dot">
-                                {/* Pulsing Rings */}
-                                <motion.div 
-                                    animate={{ scale: [1, 3], opacity: [0.6, 0] }}
-                                    transition={{ duration: 2.5, repeat: Infinity, delay: studio.delay }}
-                                    className="absolute inset-0 w-12 h-12 -ml-6 -mt-6 rounded-full bg-coffee-medium/30 blur-sm"
-                                />
-                                <motion.div 
-                                    animate={{ scale: [1, 2], opacity: [0.4, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity, delay: studio.delay + 0.5 }}
-                                    className="absolute inset-0 w-8 h-8 -ml-4 -mt-4 rounded-full bg-coffee-light/20"
-                                />
+                                {/* Simple CSS Pulse */}
+                                <div className="absolute inset-0 w-8 h-8 -ml-4 -mt-4 rounded-full bg-coffee-medium/20 animate-pulse-slow" />
+                                <div className="absolute inset-0 w-4 h-4 -ml-2 -mt-2 rounded-full bg-coffee-light/10" />
                                 {/* Core Dot */}
                                 <div className={`relative z-10 w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full transition-all duration-300 ${activeStudio === i ? 'bg-white scale-125' : 'bg-coffee-medium'} shadow-[0_0_20px_rgba(202,160,82,1)] border border-white/40`}></div>
                                 

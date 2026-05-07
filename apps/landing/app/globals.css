@@ -27,7 +27,7 @@
     }
 
     html {
-        scroll-behavior: smooth;
+        /* Removed smooth scroll to prevent mobile bounce conflicts */
     }
 
     h1, h2, h3, h4, h5, h6 {
@@ -72,6 +72,7 @@
 
     .section-padding {
         @apply py-16 md:py-24 px-4 md:px-12 lg:px-24;
+        contain: layout style; /* Performance: Isolate rendering to prevent scroll bounce */
     }
 }
 

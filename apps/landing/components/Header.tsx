@@ -16,8 +16,15 @@ export default function Header({ lang, setLang }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
+        let isTicking = false;
         const handleScroll = () => {
-            setIsScrolled(window.scrollY > 20);
+            if (!isTicking) {
+                window.requestAnimationFrame(() => {
+                    setIsScrolled(window.scrollY > 20);
+                    isTicking = false;
+                });
+                isTicking = true;
+            }
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);

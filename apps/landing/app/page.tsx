@@ -106,12 +106,18 @@ function HomeContent() {
             setLang(urlLang as 'es' | 'en');
         }
 
+        let isTicking = false;
         const handleScroll = () => {
-            // Mostramos el botón solo después de bajar 500px y si el formulario no está visible
-            if (window.scrollY > 500) {
-                setShowStickyCTA(true);
-            } else {
-                setShowStickyCTA(false);
+            if (!isTicking) {
+                window.requestAnimationFrame(() => {
+                    if (window.scrollY > 500) {
+                        setShowStickyCTA(true);
+                    } else {
+                        setShowStickyCTA(false);
+                    }
+                    isTicking = false;
+                });
+                isTicking = true;
             }
         };
 
