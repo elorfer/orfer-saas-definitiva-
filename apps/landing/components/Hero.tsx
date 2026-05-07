@@ -32,6 +32,7 @@ export default function Hero({ t, lang }: HeroProps) {
                     fill
                     priority
                     className="object-cover opacity-60 lg:opacity-80 object-center lg:object-right"
+                    sizes="(max-width: 1024px) 100vw, 800px"
                 />
             </div>
 
@@ -111,7 +112,7 @@ export default function Hero({ t, lang }: HeroProps) {
                         {/* Price & Time Boxes - Optimized for Desktop Grid */}
                         <div className="flex flex-row gap-2 md:gap-4 mb-6 md:mb-10 w-full max-w-xl lg:max-w-none overflow-hidden px-1 md:px-0">
                             {/* Price Box */}
-                            <div className="flex-[1.6] min-h-[120px] md:min-h-[180px] lg:min-h-[140px] bg-black/40 backdrop-blur-md border border-spotify-green/40 rounded-2xl md:rounded-3xl p-2 md:p-6 lg:p-4 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <div className="flex-[1.6] min-h-[120px] md:min-h-[180px] lg:min-h-[140px] bg-black/60 border border-spotify-green/40 rounded-2xl md:rounded-3xl p-2 md:p-6 lg:p-4 flex flex-col items-center justify-center relative overflow-hidden group">
                                 <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.1em] md:tracking-[0.4em] text-white/70 mb-1 lg:mb-0">DESDE</span>
                                 <div className="flex items-end gap-1 md:gap-3 lg:gap-2">
                                     <span className="text-5xl md:text-8xl lg:text-6xl font-black text-spotify-green tracking-tighter leading-none">$50</span>
@@ -120,7 +121,7 @@ export default function Hero({ t, lang }: HeroProps) {
                             </div>
 
                             {/* Time Box */}
-                            <div className="flex-[1.4] min-h-[120px] md:min-h-[180px] lg:min-h-[140px] bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl md:rounded-3xl p-2 md:p-6 lg:p-4 flex flex-row items-center justify-center gap-3 md:gap-6 group">
+                            <div className="flex-[1.4] min-h-[120px] md:min-h-[180px] lg:min-h-[140px] bg-black/60 border border-white/10 rounded-2xl md:rounded-3xl p-2 md:p-6 lg:p-4 flex flex-row items-center justify-center gap-3 md:gap-6 group">
                                 <div className="flex items-center flex-shrink-0">
                                     <div className="w-[1.5px] h-6 md:w-1 md:h-8 bg-spotify-green/50 rounded-full visualizer-bar mx-[0.5px] md:mx-[1px]" style={{ animationDelay: '0.1s' }}></div>
                                     <div className="relative mx-1 md:mx-2">
@@ -166,7 +167,7 @@ export default function Hero({ t, lang }: HeroProps) {
             </div>
 
             {/* Bottom Trust Bar - More impactful size */}
-            <div className="absolute bottom-0 left-0 right-0 z-30 bg-black/95 backdrop-blur-3xl border-t border-white/5 py-6 md:py-12">
+            <div className="absolute bottom-0 left-0 right-0 z-30 bg-black/95 border-t border-white/5 py-6 md:py-12">
                 <div className="max-w-7xl mx-auto px-2 md:px-6">
                     <div className="flex flex-row justify-center items-center gap-3 md:gap-24">
                         <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 group text-center md:text-left">

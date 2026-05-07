@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat, Outfit, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import WhatsAppButton from "../components/WhatsAppButton";
@@ -14,20 +14,6 @@ const montserrat = Montserrat({
     subsets: ["latin"],
     weight: ['700', '800', '900'],
     variable: '--font-montserrat',
-    display: 'swap',
-});
-
-const outfit = Outfit({
-    subsets: ["latin"],
-    weight: ['400', '500', '600', '700', '800', '900'],
-    variable: '--font-outfit',
-    display: 'swap',
-});
-
-const plusJakartaSans = Plus_Jakarta_Sans({
-    subsets: ["latin"],
-    weight: ['400', '500', '600', '700', '800'],
-    variable: '--font-jakarta',
     display: 'swap',
 });
 
@@ -77,7 +63,7 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="es" className={`${inter.variable} ${montserrat.variable} ${outfit.variable} ${plusJakartaSans.variable}`} suppressHydrationWarning>
+        <html lang="es" className={`${inter.variable} ${montserrat.variable}`} suppressHydrationWarning>
             <head>
                 {/* === CRITICAL: Raw OG tags for WhatsApp (its crawler does NOT execute JS) === */}
                 <meta property="og:image" content="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/social-card.png" />

@@ -10,13 +10,11 @@
     --color-accent-blue: #1E3A8A;
     --color-accent-purple: #4C1D95;
 
-    --font-family-sans: var(--font-inter), system-ui, sans-serif;
-    --font-family-heading: var(--font-montserrat), sans-serif;
+    --font-family-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+    --font-family-heading: var(--font-montserrat), system-ui, sans-serif;
     
     --font-family-inter: var(--font-inter);
-    --font-family-montserrat: var(--font-montserrat), sans-serif;
-    --font-family-outfit: var(--font-outfit);
-    --font-family-jakarta: var(--font-jakarta);
+    --font-family-montserrat: var(--font-montserrat);
 }
 
 @layer base {
@@ -42,11 +40,18 @@
         backdrop-filter: blur(12px);
     }
 
-    /* Reduce backdrop-blur on mobile for performance */
+    /* Reduce backdrop-blur on mobile for performance (except header) */
     @media (max-width: 768px) {
-        .glass-morphism {
-            -webkit-backdrop-filter: blur(6px);
-            backdrop-filter: blur(6px);
+        .glass-morphism:not(header) {
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+            @apply bg-black/80;
+        }
+        
+        /* Keep header blur as requested */
+        header.glass-morphism {
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
         }
     }
 

@@ -10,8 +10,8 @@ interface OfficialShowcaseProps {
 export default function OfficialShowcase({ lang }: OfficialShowcaseProps) {
     return (
         <section className="section-padding bg-dark-bg relative overflow-hidden">
-            {/* Background Accent */}
-            <div className="bg-orb-coffee absolute top-1/2 left-1/2 -translate-x-1/2 w-full h-[600px] blur-[150px] pointer-events-none opacity-10" />
+            {/* Background Accent - Simplified for performance */}
+            <div className="absolute inset-0 bg-coffee-medium/5 pointer-events-none" />
 
             <div className="max-w-5xl mx-auto relative z-10 px-4">
                 <div className="text-center mb-16">

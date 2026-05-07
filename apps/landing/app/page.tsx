@@ -251,10 +251,9 @@ function HomeContent() {
 
             {/* EXAMPLES SECTION — Audio real = la mejor prueba */}
             <section ref={examplesSectionRef} id="examples" className="pt-8 md:pt-12 bg-dark-bg relative overflow-hidden scroll-mt-0 pb-32 md:pb-24">
-                {/* Background Decor - CSS-only animated orbs (GPU composited) */}
-                <div className="bg-orb-1 absolute top-1/4 -left-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
-                <div className="bg-orb-2 absolute bottom-1/4 -right-20 w-80 h-80 rounded-full blur-[120px] pointer-events-none" />
-                <div className="bg-orb-coffee absolute top-1/2 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full blur-[150px] pointer-events-none opacity-30" />
+                {/* Background Decor - Simplified for performance */}
+                <div className="absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/5 rounded-full pointer-events-none" />
+                <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/5 rounded-full pointer-events-none" />
                 
                 <div className="max-w-7xl mx-auto relative z-10">
                     {/* The Mascot (The Grandpa) */}
