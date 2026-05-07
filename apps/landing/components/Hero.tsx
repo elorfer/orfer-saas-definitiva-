@@ -68,7 +68,15 @@ export default function Hero({ t, lang }: HeroProps) {
                                 className="flex items-center gap-3 text-sm md:text-lg font-black uppercase tracking-[0.2em] text-white"
                             >
                                 <Music className="w-4 h-4 md:w-6 md:h-6 text-spotify-green fill-spotify-green/20" />
-                                <GenreTicker />
+                                <div className="flex items-center gap-3">
+                                    <div className="min-w-[110px] md:min-w-[160px] flex justify-start">
+                                        <GenreTicker />
+                                    </div>
+                                    <div className="w-px h-4 bg-white/20"></div>
+                                    <div className="flex-shrink-0">
+                                        <SongCounter />
+                                    </div>
+                                </div>
                             </motion.div>
                         </div>
 
@@ -103,7 +111,7 @@ export default function Hero({ t, lang }: HeroProps) {
                                         <div className="relative">
                                             <div className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                             <svg viewBox="0 0 24 24" fill={platform.color} className="w-5 h-5 md:w-8 md:h-8 relative z-10 transform group-hover:scale-110 transition-transform duration-300">
-                                                <path d={platform.path} />
+                                                <path d={platform.path} transform={platform.name === 'Music' ? "translate(0, 4)" : ""} />
                                             </svg>
                                         </div>
                                         <span className="text-white font-black text-xs md:text-xl tracking-tighter opacity-70 group-hover:opacity-100 transition-all duration-300">
@@ -195,6 +203,40 @@ export default function Hero({ t, lang }: HeroProps) {
                 </div>
             </div>
         </section>
+    );
+}
+
+function SongCounter() {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        let start = 0;
+        const end = 10000;
+        const duration = 2000; // 2 seconds
+        const increment = end / (duration / 16); // 60fps approx
+
+        const timer = setInterval(() => {
+            start += increment;
+            if (start >= end) {
+                setCount(end);
+                clearInterval(timer);
+            } else {
+                setCount(Math.floor(start));
+            }
+        }, 16);
+
+        return () => clearInterval(timer);
+    }, []);
+
+    return (
+        <div className="flex items-center gap-1.5">
+            <span className="text-white font-black text-sm md:text-lg tabular-nums">
+                +{count.toLocaleString()}
+            </span>
+            <span className="text-gray-500 text-[10px] md:text-xs font-bold uppercase tracking-widest">
+                CANCIONES
+            </span>
+        </div>
     );
 }
 
