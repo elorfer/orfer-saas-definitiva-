@@ -245,12 +245,11 @@ function HomeContent() {
             
             <Hero t={t.hero} lang={lang} />
 
-            <PlatformLogos lang={lang} />
 
             {/* === CONVERSION PATH: Hero → Ejemplos → Precios → Formulario === */}
 
             {/* EXAMPLES SECTION — Audio real = la mejor prueba */}
-            <section ref={examplesSectionRef} id="examples" className="pt-8 md:pt-12 bg-dark-bg relative overflow-hidden scroll-mt-0 pb-32 md:pb-24">
+            <section ref={examplesSectionRef} id="examples" className="pt-0 bg-dark-bg relative overflow-hidden scroll-mt-0 pb-32 md:pb-24">
                 {/* Background Decor - Simplified for performance */}
                 <div className="absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/5 rounded-full pointer-events-none" />
                 <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/5 rounded-full pointer-events-none" />
@@ -364,6 +363,8 @@ function HomeContent() {
                     </div>
                 </div>
             </section>
+
+            <PlatformLogos lang={lang} />
 
             <PricingTable 
                 t={t.pricing} 
