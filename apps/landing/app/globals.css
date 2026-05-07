@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+    --color-spotify-green: #1DB954;
     --color-coffee-medium: #8D6E63;
     --color-coffee-dark: #5D4037;
     --color-coffee-light: #D7CCC8;
