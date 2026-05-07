@@ -24,12 +24,18 @@
         font-family: var(--font-family-sans);
         overscroll-behavior-x: none;
         overscroll-behavior-y: auto;
+        overflow-x: hidden;
+        width: 100%;
+        position: relative;
     }
 
     html {
         /* Allowed vertical refresh while keeping horizontal rigidity */
         overscroll-behavior-x: none;
         overscroll-behavior-y: auto;
+        overflow-x: hidden;
+        width: 100%;
+        position: relative;
     }
 
     h1, h2, h3, h4, h5, h6 {

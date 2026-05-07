@@ -240,7 +240,7 @@ function HomeContent() {
     };
 
     return (
-        <main className="min-h-screen bg-dark-bg font-sans selection:bg-coffee-medium selection:text-white pb-24 md:pb-0">
+        <main className="min-h-screen bg-dark-bg font-sans selection:bg-coffee-medium selection:text-white pb-24 md:pb-0 overflow-x-hidden max-w-full">
             <Header lang={lang} setLang={setLang} />
             
             <Hero t={t.hero} lang={lang} />
@@ -300,7 +300,7 @@ function HomeContent() {
                             unoptimized
                         />
                     </motion.div>
-                    <div className="text-center mb-16 px-4">
+                    <div className="text-center pt-8 md:pt-16 mb-16 px-4">
                         <h2 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">
                             {t.examples.title.split(' ')[0]} <span className="text-gradient">{t.examples.title.split(' ').slice(1).join(' ')}</span>
                         </h2>

@@ -42,7 +42,13 @@ export default function Header({ lang, setLang }: HeaderProps) {
         setMobileMenuOpen(false);
         const element = document.querySelector(href);
         if (element) {
-            const headerOffset = 80;
+            let headerOffset = 80;
+            
+            // Add extra offset for sections with overlapping elements (like the Mascot in Examples)
+            if (href === '#examples') {
+                headerOffset = 180;
+            }
+
             const elementPosition = element.getBoundingClientRect().top;
             const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 

@@ -21,7 +21,7 @@ export default function Hero({ t, lang }: HeroProps) {
     }, []);
 
     return (
-        <section className="relative z-10 min-h-[90vh] md:min-h-screen flex items-center bg-black pt-20 lg:pt-36 pb-12 lg:pb-32">
+        <section className="relative z-10 min-h-[90vh] md:min-h-screen flex items-center bg-black pt-20 lg:pt-36 pb-12 lg:pb-32 overflow-hidden">
             {/* Background Studio Image Overlay */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent z-10 hidden lg:block"></div>
