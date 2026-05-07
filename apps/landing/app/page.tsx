@@ -249,7 +249,7 @@ function HomeContent() {
             {/* === CONVERSION PATH: Hero → Ejemplos → Precios → Formulario === */}
 
             {/* EXAMPLES SECTION — Audio real = la mejor prueba */}
-            <section ref={examplesSectionRef} id="examples" className="pt-0 bg-dark-bg relative overflow-hidden scroll-mt-0 pb-32 md:pb-24">
+            <section ref={examplesSectionRef} id="examples" className="pt-0 bg-dark-bg relative z-20 scroll-mt-0 pb-32 md:pb-24">
                 {/* Background Decor - Simplified for performance */}
                 <div className="absolute top-1/4 -left-20 w-80 h-80 bg-coffee-medium/5 rounded-full pointer-events-none" />
                 <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-coffee-medium/5 rounded-full pointer-events-none" />
@@ -257,7 +257,7 @@ function HomeContent() {
                 <div className="max-w-7xl mx-auto relative z-10">
                     {/* The Mascot (The Grandpa) */}
                     <motion.div 
-                        className="hidden md:block absolute -top-16 right-0 lg:right-12 z-20 w-56 h-56 lg:w-72 lg:h-72 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] pointer-events-none"
+                        className="hidden md:block absolute -top-24 right-0 lg:right-12 z-40 w-56 h-56 lg:w-72 lg:h-72 drop-shadow-[0_20px_30px_rgba(0,0,0,0.5)] pointer-events-none"
                         animate={{ 
                             y: [0, -15, 0],
                             rotate: [-1, 2, -1],
