@@ -17,7 +17,7 @@ export async function sendMetaEvent({
     sourceUrl,
     testEventCode
 }: {
-    eventName: 'InitiateCheckout' | 'Purchase' | 'Lead' | 'AddToCart';
+    eventName: 'InitiateCheckout' | 'Purchase' | 'Lead' | 'AddToCart' | 'PageView';
     userData: {
         email?: string;
         phone?: string;

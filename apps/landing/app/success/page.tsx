@@ -145,10 +145,16 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                     <Script id="fb-purchase" strategy="afterInteractive">
                         {`
                             if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
+                                const sessionId = '${sessionId}';
+                                const externalId = '${typeof session.customer === 'string' ? session.customer : (session.customer as any)?.id || ''}';
+                                
+                                console.log('Struky: Sending Purchase Event', { eventID: sessionId });
+
                                 // Advanced Matching
                                 window.fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}', {
-                                    em: '${email}',
-                                    ph: '${phone.replace(/\D/g, '')}'
+                                    em: '${email.toLowerCase().trim()}',
+                                    ph: '${phone.replace(/\D/g, '')}',
+                                    external_id: externalId
                                 });
                                 
                                 window.fbq('track', 'Purchase', {
@@ -157,7 +163,7 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                                     content_name: 'Plan ${plan}',
                                     content_category: 'Music Production'
                                 }, { 
-                                    eventID: '${sessionId}' 
+                                    eventID: sessionId 
                                 });
                             }
                         `}

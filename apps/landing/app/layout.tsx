@@ -57,11 +57,38 @@ export const metadata: Metadata = {
     },
 };
 
-export default function RootLayout({
+import { headers, cookies } from "next/headers";
+import { sendMetaEvent } from "@/lib/meta-capi";
+
+export default async function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const headersList = await headers();
+    const cookieStore = await cookies();
+    
+    const userAgent = headersList.get('user-agent') || '';
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0] || headersList.get('x-real-ip') || '';
+    const fbp = cookieStore.get('_fbp')?.value;
+    const fbc = cookieStore.get('_fbc')?.value;
+    
+    // Generate unique Event ID for PageView deduplication
+    const eventID = `pv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    // Fire CAPI PageView (don't await to avoid blocking render)
+    sendMetaEvent({
+        eventName: 'PageView',
+        eventID,
+        userData: {
+            clientIpAddress: ip,
+            clientUserAgent: userAgent,
+            fbp,
+            fbc
+        },
+        sourceUrl: 'https://www.struky.com/'
+    }).catch(err => console.error('Error in PageView CAPI:', err));
+
     return (
         <html lang="es" className={`${inter.variable} ${montserrat.variable}`} suppressHydrationWarning>
             <head>
@@ -95,7 +122,7 @@ export default function RootLayout({
                         'https://connect.facebook.net/en_US/fbevents.js');
                         fbq('set', 'autoConfig', false, '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}');
                         fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715"}');
-                        fbq('track', 'PageView');
+                        fbq('track', 'PageView', {}, { eventID: '${eventID}' });
 
                         // Capture fbclid for CAPI (fbc parameter)
                         const urlParams = new URLSearchParams(window.location.search);
