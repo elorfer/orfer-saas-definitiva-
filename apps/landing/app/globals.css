@@ -22,10 +22,12 @@
         background-color: var(--color-dark-bg);
         color: white;
         font-family: var(--font-family-sans);
+        overscroll-behavior: none;
     }
 
     html {
         /* Removed smooth scroll to prevent mobile bounce conflicts */
+        overscroll-behavior: none;
     }
 
     h1, h2, h3, h4, h5, h6 {
