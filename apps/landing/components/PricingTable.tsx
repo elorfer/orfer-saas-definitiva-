@@ -111,7 +111,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                     <div 
                         ref={scrollRef}
                         onScroll={handleScroll}
-                        className="flex md:grid md:grid-cols-4 gap-3 overflow-x-auto md:overflow-visible pt-8 pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                        className="flex md:grid md:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible pt-8 pb-12 md:pb-0 px-6 md:px-0 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
                     >
                         {plans.map((plan) => (
                             <div
@@ -124,7 +124,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                     : plan.highlight 
                                     ? 'border-coffee-medium/30 bg-coffee-medium/5' 
                                     : 'border-white/5 bg-[#111]'
-                                } flex flex-col flex-shrink-0 w-[75%] md:w-auto snap-center`}
+                                } flex flex-col flex-shrink-0 w-[88%] md:w-auto snap-center`}
                             >
                                 {plan.id === 'elite' && (
                                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-[9px] font-black italic uppercase tracking-tighter px-6 py-2 rounded-full shadow-2xl z-10 border border-white/20 whitespace-nowrap">

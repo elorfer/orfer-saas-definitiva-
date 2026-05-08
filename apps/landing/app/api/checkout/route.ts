@@ -31,7 +31,21 @@ export async function POST(req: Request) {
         // Extraer cookies de Meta (preferir las enviadas desde el cliente para mayor precisión)
         const cookieStore = await cookies();
         const fbp = body.fbp || cookieStore.get('_fbp')?.value;
-        const fbc = body.fbc || cookieStore.get('_fbc')?.value;
+        let fbc = body.fbc || cookieStore.get('_fbc')?.value;
+
+        // Server-side fallback: construct fbc from referer's fbclid if missing
+        if (!fbc) {
+            try {
+                const referer = req.headers.get('referer') || '';
+                if (referer) {
+                    const refUrl = new URL(referer);
+                    const fbclid = refUrl.searchParams.get('fbclid');
+                    if (fbclid) {
+                        fbc = `fb.1.${Date.now()}.${fbclid}`;
+                    }
+                }
+            } catch(e) { /* invalid URL, ignore */ }
+        }
 
         // Esperamos el evento para asegurar que Vercel no mate el proceso antes de enviarlo
         let capiResult: any = null;

@@ -67,7 +67,7 @@ export default function HowItWorks({ t }: { t: any }) {
                     <div 
                         ref={scrollRef}
                         onScroll={handleScroll}
-                        className="flex md:grid md:grid-cols-3 gap-8 md:gap-12 relative overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                        className="flex md:grid md:grid-cols-3 gap-6 md:gap-12 relative overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-6 md:px-0 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
                     >
                         {/* Connection Line (Desktop) */}
                         <div className="hidden md:block absolute top-1/4 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-coffee-medium/20 to-transparent z-0"></div>
@@ -75,7 +75,7 @@ export default function HowItWorks({ t }: { t: any }) {
                         {steps.map((step, i) => (
                             <div 
                                 key={i}
-                                className="relative z-10 flex flex-col items-center text-center min-w-[85%] md:min-w-0 snap-center px-6 py-8 rounded-3xl bg-white/[0.02] border border-white/5 md:bg-transparent md:border-none"
+                                className="relative z-10 flex flex-col items-center text-center min-w-[88%] md:min-w-0 snap-center px-6 py-8 rounded-3xl bg-white/[0.02] border border-white/5 md:bg-transparent md:border-none"
                             >
                                 <div className="w-16 h-16 md:w-24 md:h-24 rounded-full glass-morphism flex items-center justify-center text-coffee-light mb-6 md:mb-8 relative border-2 border-coffee-medium/40 shadow-[0_0_30px_rgba(202,160,82,0.1)]">
                                     <span className="absolute -top-1 -right-1 w-7 h-7 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-coffee-medium to-coffee-dark text-white text-[10px] md:text-sm font-black flex items-center justify-center shadow-xl border border-white/10">

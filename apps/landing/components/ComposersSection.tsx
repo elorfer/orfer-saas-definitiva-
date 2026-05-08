@@ -104,12 +104,12 @@ export default function ComposersSection({ lang }: { lang: 'es' | 'en' }) {
                     <div 
                         ref={scrollRef}
                         onScroll={handleScroll}
-                        className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                        className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible pb-12 md:pb-0 px-6 md:px-0 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
                     >
                         {composers.map((composer, i) => (
                             <div 
                                 key={i}
-                                className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[85%] md:w-auto snap-center hover:bg-white/[0.02] transition-colors duration-300"
+                                className="card-dark text-center flex flex-col items-center flex-shrink-0 w-[88%] md:w-auto snap-center hover:bg-white/[0.02] transition-colors duration-300"
                             >
                                 <div className="relative w-32 h-32 rounded-full border-2 border-coffee-medium/30 p-1 mb-6 overflow-hidden">
                                     <Image 

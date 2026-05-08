@@ -2,6 +2,8 @@ import Link from 'next/link';
 import Script from 'next/script';
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
+import { headers, cookies } from 'next/headers';
+import { sendMetaEvent } from '@/lib/meta-capi';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
     apiVersion: '2026-03-25.dahlia',
@@ -28,6 +30,37 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
     const genre = session.metadata?.genre || '';
     const email = session.customer_details?.email || '';
     const phone = session.metadata?.phone || '';
+
+    // --- CAPI Purchase (redundant with webhook for higher Meta coverage score) ---
+    const headersList = await headers();
+    const cookieStore = await cookies();
+    const ip = headersList.get('x-forwarded-for')?.split(',')[0] || '';
+    const userAgent = headersList.get('user-agent') || '';
+    const fbp = cookieStore.get('_fbp')?.value || session.metadata?.fbp || '';
+    const fbc = cookieStore.get('_fbc')?.value || session.metadata?.fbc || '';
+
+    // Same eventID as webhook (session.id) → Meta deduplicates automatically
+    sendMetaEvent({
+        eventName: 'Purchase',
+        eventID: sessionId,
+        userData: {
+            email,
+            phone,
+            firstName: name,
+            fbp,
+            fbc,
+            clientIpAddress: ip,
+            clientUserAgent: userAgent,
+            externalId: typeof session.customer === 'string' ? session.customer : ''
+        },
+        customData: {
+            value: amount,
+            currency: 'USD',
+            content_name: `Plan ${plan}`,
+            content_category: 'Music Production'
+        },
+        sourceUrl: 'https://www.struky.com/success'
+    }).catch(err => console.error('Error in success page CAPI Purchase:', err));
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-dark-bg relative overflow-hidden">

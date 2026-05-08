@@ -229,7 +229,20 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         };
 
         const fbp = getCookie('_fbp');
-        const fbc = getCookie('_fbc');
+        let fbc = getCookie('_fbc');
+
+        // Fallback chain for fbc (Meta warning #2 fix):
+        // cookie → localStorage → URL fbclid construction
+        if (!fbc) {
+            try { fbc = localStorage.getItem('_struky_fbc'); } catch(e) { /* private browsing */ }
+        }
+        if (!fbc) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fbclid = urlParams.get('fbclid');
+            if (fbclid) {
+                fbc = 'fb.1.' + Date.now() + '.' + fbclid;
+            }
+        }
 
         try {
             const response = await fetch('/api/checkout', {
@@ -631,7 +644,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 <div
                                     ref={planScrollRef}
                                     onScroll={handlePlanScroll}
-                                    className="relative flex lg:grid lg:grid-cols-4 gap-4 overflow-x-auto lg:overflow-visible pt-10 pb-4 lg:pb-0 px-2 snap-x snap-mandatory custom-scrollbar-hide"
+                                    className="relative flex lg:grid lg:grid-cols-4 gap-6 overflow-x-auto lg:overflow-visible pt-10 pb-4 lg:pb-0 px-6 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
                                 >
                                     {PLANS.map((plan) => (
                                         <button
@@ -641,7 +654,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 setFormData(prev => ({ ...prev, plan: plan.id, price: plan.price }));
                                                 triggerSuccessConfetti();
                                             }}
-                                            className={`relative p-6 rounded-[2rem] border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[75%] lg:w-full snap-center ${formData.plan === plan.id
+                                            className={`relative p-6 rounded-[2rem] border transition-all text-left flex flex-col items-center text-center group/card flex-shrink-0 w-[88%] lg:w-full snap-center ${formData.plan === plan.id
                                                 ? (plan.id === 'elite' ? 'border-purple-600 bg-purple-600/5' : plan.id === 'premium' ? 'border-emerald-500 bg-emerald-500/5' : 'border-coffee-medium bg-coffee-medium/5')
                                                 : 'border-white/5 bg-[#111]'
                                                 }`}
