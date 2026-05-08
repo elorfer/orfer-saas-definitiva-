@@ -1,10 +1,11 @@
-import { Zap, Star, Gem, Crown } from 'lucide-react';
+import { Zap, Star, Gem, Crown, Video } from 'lucide-react';
 
 export const PLAN_IDS = {
     STARTER: 'starter',
     PRO: 'pro',
     PREMIUM: 'premium',
-    ELITE: 'elite'
+    ELITE: 'elite',
+    YOUTUBE: 'youtube'
 } as const;
 
 export type PlanId = typeof PLAN_IDS[keyof typeof PLAN_IDS];
@@ -40,6 +41,12 @@ export const PLANS: Plan[] = [
         id: PLAN_IDS.ELITE,
         price: 147,
         icon: Crown,
+        highlight: false
+    },
+    {
+        id: PLAN_IDS.YOUTUBE,
+        price: 250,
+        icon: Video,
         highlight: false
     }
 ];

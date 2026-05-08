@@ -73,7 +73,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
         scrollToPlan(prevIdx);
     };
 
-    const plans = PLANS.map(plan => ({
+    const plans = PLANS.filter(p => p.id !== 'youtube').map(plan => ({
         ...plan,
         name: t.plans[plan.id].name,
         description: t.plans[plan.id].desc,

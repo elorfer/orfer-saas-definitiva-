@@ -105,6 +105,18 @@ export const translations = {
           desc: "Producción VIP Completa.",
           cta: "Elegir Plan Elite",
           features: ["Entrega Express VIP (<24h)", "Revisiones Ilimitadas (Hasta que Ames tu Canción)", "Pistas Separadas (Stems) para Shows", "Masterización Analógica (Nivel Industria)", "Asesoría de Lanzamiento Directa", "OBSEQUIO: Video 4K + Reels/TikTok"]
+        },
+        youtube: {
+          name: "Presencia Redes & YouTube",
+          desc: "Lanzamiento profesional de canal.",
+          cta: "Solicitar Servicio",
+          features: [
+            "Optimización de Canal YouTube",
+            "Estrategia de Contenido para Redes",
+            "Configuración de Monetización",
+            "Diseño de Portadas y Miniaturas",
+            "OBSEQUIO: 1 Video en HD Profesional"
+          ]
         }
       }
     },
@@ -114,6 +126,49 @@ export const translations = {
       stat1: "50+ Estudios Aliados",
       stat2: "15+ Países",
       stat3: "Soporte 24/7"
+    },
+    extraServices: {
+      title: "Más Servicios Profesionales",
+      subtitle: "Impulsa tu carrera artística con presencia digital de élite.",
+      youtube: {
+        name: "Presencia en Redes & YouTube",
+        desc: "Lanzamos tu canal de forma profesional para que tu música llegue a millones.",
+        price: 250,
+        features: [
+          "Optimización de Canal YouTube",
+          "Estrategia de Contenido para Redes",
+          "Configuración de Monetización",
+          "Diseño de Portadas y Miniaturas",
+          "OBSEQUIO: 1 Video en HD Profesional"
+        ],
+        cta: "Solicitar este Servicio"
+      }
+    },
+    youtubeSales: {
+      hero: {
+        title: "No solo creas música, ",
+        highlight: "creas un imperio visual",
+        subtitle: "YouTube es el buscador de música #1 del mundo. Si no estás ahí con calidad profesional, no existes para la industria."
+      },
+      stats: [
+        { value: "2.5B", label: "Usuarios activos en YouTube" },
+        { value: "300%", label: "Más engagement que solo audio" },
+        { value: "100%", label: "Propiedad de tu canal" }
+      ],
+      benefits: [
+        {
+          title: "Impacto Visual Inmediato",
+          desc: "Diseñamos una identidad visual que grita 'Artista de Élite' desde el primer segundo."
+        },
+        {
+          title: "Estrategia de Algoritmo",
+          desc: "No solo subimos videos. Optimizamos títulos, tags y descripciones para que el algoritmo trabaje por ti."
+        },
+        {
+          title: "Monetización desde el Día 1",
+          desc: "Configuramos tu canal para que cada reproducción cuente y estés listo para generar ingresos."
+        }
+      ]
     }
   },
   en: {
@@ -220,6 +275,18 @@ export const translations = {
           desc: "Complete VIP Production.",
           cta: "Choose Elite Plan",
           features: ["VIP Express Delivery (<24h)", "Unlimited Revisions (Until You Love It)", "Separate Tracks (Stems) for Live Shows", "Analog Mastering (Industry Standard)", "Direct Launch Advisory", "GIFT: 4K Video + TikTok/Reels Format"]
+        },
+        youtube: {
+          name: "Social Media & YouTube Presence",
+          desc: "Professional channel launch.",
+          cta: "Request Service",
+          features: [
+            "YouTube Channel Optimization",
+            "Social Media Content Strategy",
+            "Monetization Setup",
+            "Cover & Thumbnail Design",
+            "GIFT: 1 Professional HD Video"
+          ]
         }
       }
     },
@@ -229,6 +296,49 @@ export const translations = {
       stat1: "50+ Allied Studios",
       stat2: "15+ Countries",
       stat3: "24/7 Support"
+    },
+    extraServices: {
+      title: "More Professional Services",
+      subtitle: "Boost your artistic career with elite digital presence.",
+      youtube: {
+        name: "Social Media & YouTube Presence",
+        desc: "We launch your channel professionally so your music reaches millions.",
+        price: 250,
+        features: [
+          "YouTube Channel Optimization",
+          "Social Media Content Strategy",
+          "Monetization Setup",
+          "Cover & Thumbnail Design",
+          "GIFT: 1 Professional HD Video"
+        ],
+        cta: "Request this Service"
+      }
+    },
+    youtubeSales: {
+      hero: {
+        title: "You don't just create music, ",
+        highlight: "you create a visual empire",
+        subtitle: "YouTube is the #1 music search engine in the world. If you're not there with professional quality, you don't exist for the industry."
+      },
+      stats: [
+        { value: "2.5B", label: "Active users on YouTube" },
+        { value: "300%", label: "More engagement than audio only" },
+        { value: "100%", label: "Channel ownership" }
+      ],
+      benefits: [
+        {
+          title: "Immediate Visual Impact",
+          desc: "We design a visual identity that screams 'Elite Artist' from the first second."
+        },
+        {
+          title: "Algorithm Strategy",
+          desc: "We don't just upload videos. We optimize titles, tags, and descriptions so the algorithm works for you."
+        },
+        {
+          title: "Monetization from Day 1",
+          desc: "We set up your channel so every play counts and you're ready to generate income."
+        }
+      ]
     }
   }
 };

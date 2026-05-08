@@ -381,7 +381,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                             >
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Género' : 'Genre'}</label>
+                                        <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">
+                                            {formData.plan === 'youtube' 
+                                                ? (lang === 'es' ? 'Temática del Canal' : 'Channel Topic') 
+                                                : (lang === 'es' ? 'Género' : 'Genre')}
+                                        </label>
                                         <select
                                             className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
                                             style={{ colorScheme: 'dark' }}
@@ -423,39 +427,43 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             </motion.div>
                                         )}
                                     </div>
+                                    {formData.plan !== 'youtube' && (
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Voz' : 'Vocalist'}</label>
+                                            <select
+                                                className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
+                                                style={{ colorScheme: 'dark' }}
+                                                value={formData.vocalist}
+                                                onChange={e => {
+                                                    playTick();
+                                                    setFormData({ ...formData, vocalist: e.target.value });
+                                                }}
+                                            >
+                                                <option value="Voz masculina" className="bg-[#1a1a1a]">{lang === 'es' ? 'Voz masculina' : 'Male voice'}</option>
+                                                <option value="Voz femenina" className="bg-[#1a1a1a]">{lang === 'es' ? 'Voz femenina' : 'Female voice'}</option>
+                                                <option value="Mixta" className="bg-[#1a1a1a]">{lang === 'es' ? 'Mixta (Dúo)' : 'Mixed (Duet)'}</option>
+                                                <option value="Me sorprendes tú" className="bg-[#1a1a1a]">{lang === 'es' ? 'Me sorprendes tú' : 'Surprise me'}</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+
+
+                                {formData.plan !== 'youtube' && (
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? 'Voz' : 'Vocalist'}</label>
-                                        <select
-                                            className="w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none appearance-none text-white"
-                                            style={{ colorScheme: 'dark' }}
-                                            value={formData.vocalist}
+                                        <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? '¿Cómo quieres aparecer en los créditos?' : 'How do you want to appear in the credits?'}</label>
+                                        <input
+                                            type="text"
+                                            placeholder={lang === 'es' ? 'Ej: Tu nombre o seudónimo' : 'Ex: Your name or pseudonym'}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
+                                            value={formData.name}
                                             onChange={e => {
-                                                playTick();
-                                                setFormData({ ...formData, vocalist: e.target.value });
+                                                setFormData({ ...formData, name: e.target.value });
                                             }}
-                                        >
-                                            <option value="Voz masculina" className="bg-[#1a1a1a]">{lang === 'es' ? 'Voz masculina' : 'Male voice'}</option>
-                                            <option value="Voz femenina" className="bg-[#1a1a1a]">{lang === 'es' ? 'Voz femenina' : 'Female voice'}</option>
-                                            <option value="Mixta" className="bg-[#1a1a1a]">{lang === 'es' ? 'Mixta (Dúo)' : 'Mixed (Duet)'}</option>
-                                            <option value="Me sorprendes tú" className="bg-[#1a1a1a]">{lang === 'es' ? 'Me sorprendes tú' : 'Surprise me'}</option>
-                                        </select>
+                                            required={formData.plan !== 'youtube'}
+                                        />
                                     </div>
-                                </div>
-
-
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-widest">{lang === 'es' ? '¿Cómo quieres aparecer en los créditos?' : 'How do you want to appear in the credits?'}</label>
-                                    <input
-                                        type="text"
-                                        placeholder={lang === 'es' ? 'Ej: Tu nombre o seudónimo' : 'Ex: Your name or pseudonym'}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:border-coffee-light transition-all outline-none"
-                                        value={formData.name}
-                                        onChange={e => {
-                                            setFormData({ ...formData, name: e.target.value });
-                                        }}
-                                        required
-                                    />
-                                </div>
+                                )}
 
                                 <div className="pt-4 border-t border-white/5">
                                     <div className="flex items-center justify-between mb-4">
@@ -740,7 +748,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                     <div className="grid md:grid-cols-2 gap-6">
                                         <div className="relative min-w-0">
                                             <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-[0.2em] md:h-10 flex items-center">
-                                                {lang === 'es' ? '¿A qué WhatsApp te enviamos tu canción?' : 'Where should we send your song via WhatsApp?'}
+                                                {formData.plan === 'youtube'
+                                                    ? (lang === 'es' ? '¿A qué WhatsApp te contactamos?' : 'What WhatsApp should we use to contact you?')
+                                                    : (lang === 'es' ? '¿A qué WhatsApp te enviamos tu canción?' : 'Where should we send your song via WhatsApp?')}
                                             </label>
                                             <div className="flex gap-2">
                                                 <button
@@ -966,7 +976,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         <div className="flex items-center justify-center gap-1 sm:gap-4 py-0.5">
                                             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-pulse shrink-0 hidden sm:block" />
                                             <span className="font-black uppercase tracking-tight text-sm sm:text-xl text-white text-center leading-tight">
-                                                {lang === 'es' ? `¡CREAR MI CANCIÓN! ($${formData.price})` : `CREATE MY SONG! ($${formData.price})`}
+                                                {formData.plan === 'youtube'
+                                                    ? (lang === 'es' ? `¡SOLICITAR SERVICIO! ($${formData.price})` : `REQUEST SERVICE! ($${formData.price})`)
+                                                    : (lang === 'es' ? `¡CREAR MI CANCIÓN! ($${formData.price})` : `CREATE MY SONG! ($${formData.price})`)}
                                             </span>
                                         </div>
                                     ) : (

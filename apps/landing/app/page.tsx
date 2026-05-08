@@ -106,6 +106,11 @@ function HomeContent() {
             setLang(urlLang as 'es' | 'en');
         }
 
+        const urlPlan = searchParams.get('plan');
+        if (urlPlan) {
+            setSelectedPlanFromTable(urlPlan);
+        }
+
         let isTicking = false;
         const handleScroll = () => {
             if (!isTicking) {

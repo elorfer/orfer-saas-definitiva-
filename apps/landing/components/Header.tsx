@@ -31,31 +31,35 @@ export default function Header({ lang, setLang }: HeaderProps) {
     }, []);
 
     const navLinks = [
-        { name: lang === 'es' ? 'Ejemplos' : 'Examples', href: '#examples' },
-        { name: lang === 'es' ? 'Cómo Funciona' : 'How it Works', href: '#how-it-works' },
-        { name: lang === 'es' ? 'Precios' : 'Pricing', href: '#pricing' },
-        { name: lang === 'es' ? 'FAQ' : 'FAQ', href: '#faq' },
+        { name: lang === 'es' ? 'Ejemplos' : 'Examples', href: '/#examples' },
+        { name: lang === 'es' ? 'Servicios' : 'Services', href: '/servicios' },
+        { name: lang === 'es' ? 'Cómo Funciona' : 'How it Works', href: '/#how-it-works' },
+        { name: lang === 'es' ? 'Precios' : 'Pricing', href: '/#pricing' },
+        { name: lang === 'es' ? 'FAQ' : 'FAQ', href: '/#faq' },
     ];
 
     const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-        e.preventDefault();
         setMobileMenuOpen(false);
-        const element = document.querySelector(href);
-        if (element) {
-            let headerOffset = 80;
+        
+        // If it's an internal hash link on the current page
+        if (href.startsWith('/#') || href.startsWith('#')) {
+            const hash = href.includes('#') ? '#' + href.split('#')[1] : href;
+            const element = document.querySelector(hash);
             
-            // Add extra offset for sections with overlapping elements (like the Mascot in Examples)
-            if (href === '#examples') {
-                headerOffset = 180;
+            if (element) {
+                e.preventDefault();
+                let headerOffset = 80;
+                if (hash === '#examples') headerOffset = 180;
+
+                const elementPosition = element.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
             }
-
-            const elementPosition = element.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: 'smooth'
-            });
+            // If element not found, let the default link behavior take over (Next.js will handle the route)
         }
     };
 
