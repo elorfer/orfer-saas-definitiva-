@@ -9,14 +9,12 @@ interface AdminAnalyticsProps {
 
 export default function AdminAnalytics({ sessions }: AdminAnalyticsProps) {
     // 1. Cálculos de KPIs
-    const totalRevenue = sessions.reduce((acc, s) => acc + (s.amount_total / 100), 0);
+    const totalRevenue = sessions.reduce((acc, s) => acc + ((s.amount_total || 0) / 100), 0);
     
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
     
-    const revenueLast30Days = sessions
-        .filter(s => new Date(s.created * 1000) > thirtyDaysAgo)
-        .reduce((acc, s) => acc + (s.amount_total / 100), 0);
+        .reduce((acc, s) => acc + ((s.amount_total || 0) / 100), 0);
 
     const pendingOrders = sessions.filter(s => (s.metadata?.status || 'Pendiente') === 'Pendiente').length;
 

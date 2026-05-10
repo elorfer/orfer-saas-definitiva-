@@ -95,7 +95,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     // Estadísticas
     const stats = {
         total: sessions.data.length,
-        revenue: sessions.data.reduce((acc, s) => acc + (s.amount_total / 100), 0),
+        revenue: sessions.data.reduce((acc, s) => acc + ((s.amount_total || 0) / 100), 0),
         pending: sessions.data.filter(s => (s.metadata?.status || 'Pendiente') === 'Pendiente').length,
         inProgress: sessions.data.filter(s => s.metadata?.status === 'Producción').length,
         completed: sessions.data.filter(s => s.metadata?.status === 'Entregado').length,
