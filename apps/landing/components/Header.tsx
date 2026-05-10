@@ -31,6 +31,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
     }, []);
 
     const navLinks = [
+        { name: lang === 'es' ? 'Blog' : 'Blog', href: '/blog' },
         { name: lang === 'es' ? 'Ejemplos' : 'Examples', href: '/#examples' },
         { name: lang === 'es' ? 'Servicios' : 'Services', href: '/servicios' },
         { name: lang === 'es' ? 'Cómo Funciona' : 'How it Works', href: '/#how-it-works' },

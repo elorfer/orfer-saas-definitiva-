@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { translations } from '../lib/translations';
 import { PLANS, PLAN_IDS } from '../lib/plans';
-import { Check, Video, ChevronDown, ChevronLeft, ChevronRight, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard, Zap, MessageCircle } from 'lucide-react';
+import { Check, Video, ChevronDown, ChevronLeft, ChevronRight, Sparkles, Wand2, Loader2, Lock, ShieldCheck, CreditCard, Zap, MessageCircle, Plus, Minus, Music } from 'lucide-react';
 import { playSuccess, playCashRegister, playWhoosh, playMagic, playTick } from '../lib/soundEngine';
 
 const COUNTRIES = [
@@ -74,7 +74,14 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const [sendLater, setSendLater] = useState(false);
     const [planActiveIndex, setPlanActiveIndex] = useState(1); // Default to middle card (Pro)
     const [notification, setNotification] = useState<string | null>(null);
+    const [songQuantity, setSongQuantity] = useState(1);
     const planScrollRef = useRef<HTMLDivElement>(null);
+
+    // Discount: Flat 10% if 3 or more songs are selected
+    const discountPercent = songQuantity >= 3 ? 10 : 0;
+    const unitPriceWithDiscount = formData.price * (1 - discountPercent / 100);
+    const totalPrice = Math.round(unitPriceWithDiscount * songQuantity * 100) / 100;
+    const totalSavings = Math.round((formData.price * songQuantity - totalPrice) * 100) / 100;
 
     // Sync external plan selection internally
     useEffect(() => {
@@ -212,7 +219,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
             });
             
             (window as any).fbq('track', 'InitiateCheckout', {
-                value: formData.price,
+                value: totalPrice,
                 currency: 'USD',
                 content_name: formData.plan
             }, { 
@@ -250,6 +257,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
+                    price: totalPrice,
+                    songQuantity,
+                    unitPrice: formData.price,
+                    discountPercent,
                     plan: t.pricing.plans[formData.plan as keyof typeof t.pricing.plans]?.name || formData.plan,
                     phone: `${selectedCountry.code} ${formData.phone}`,
                     metaEventId: eventID,
@@ -740,14 +751,14 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 className="space-y-8"
                             >
                                 {/* CONTACT INFORMATION SECTION */}
-                                <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8">
-                                    <h4 className="text-sm font-bold text-gray-400 mb-6 uppercase tracking-widest flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-coffee-light"></div>
+                                <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 sm:p-10 shadow-2xl">
+                                    <h4 className="text-sm font-black text-[#dcfc44] mb-8 uppercase tracking-[0.3em] flex items-center gap-3">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-[#dcfc44] shadow-[0_0_10px_rgba(220,252,68,0.5)]"></div>
                                         {lang === 'es' ? 'Datos de Entrega' : 'Delivery Details'}
                                     </h4>
-                                    <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="grid md:grid-cols-2 gap-8">
                                         <div className="relative min-w-0">
-                                            <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-[0.2em] md:h-10 flex items-center">
+                                            <label className="block text-xs font-black text-gray-200 mb-4 uppercase tracking-[0.2em] md:h-10 flex items-center leading-tight">
                                                 {formData.plan === 'youtube'
                                                     ? (lang === 'es' ? '¿A qué WhatsApp te contactamos?' : 'What WhatsApp should we use to contact you?')
                                                     : (lang === 'es' ? '¿A qué WhatsApp te enviamos tu canción?' : 'Where should we send your song via WhatsApp?')}
@@ -756,16 +767,16 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowCountrySelect(!showCountrySelect)}
-                                                    className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 flex items-center gap-2 hover:bg-white/10 transition-all min-w-[95px] justify-center shrink-0"
+                                                    className="bg-white/5 border border-white/20 rounded-2xl px-4 py-4 flex items-center gap-2 hover:bg-white/10 transition-all min-w-[100px] justify-center shrink-0 group"
                                                 >
                                                     <span className="text-xl leading-none">{selectedCountry.flag}</span>
-                                                    <span className="text-sm font-bold text-white leading-none">{selectedCountry.code}</span>
-                                                    <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${showCountrySelect ? 'rotate-180' : ''}`} />
+                                                    <span className="text-sm font-black text-white leading-none">{selectedCountry.code}</span>
+                                                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform group-hover:text-white ${showCountrySelect ? 'rotate-180' : ''}`} />
                                                 </button>
                                                 <input
                                                     type="tel"
                                                     placeholder="300 123 4567"
-                                                    className="w-full min-w-0 bg-white/5 border border-white/10 rounded-2xl px-4 sm:px-6 py-4 focus:border-coffee-light transition-all outline-none text-white text-base sm:text-lg font-medium"
+                                                    className="w-full min-w-0 bg-white/5 border border-white/20 rounded-2xl px-5 sm:px-6 py-4 focus:border-[#dcfc44] focus:bg-white/10 transition-all outline-none text-white text-lg font-bold placeholder:text-gray-600"
                                                     value={formData.phone}
                                                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                                     required
@@ -773,21 +784,21 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             </div>
 
                                             {showCountrySelect && (
-                                                <div className="absolute top-full left-0 mt-2 w-full max-w-[280px] max-h-60 overflow-y-auto bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 p-1 custom-scrollbar">
+                                                <div className="absolute top-full left-0 mt-3 w-full max-w-[300px] max-h-72 overflow-y-auto bg-[#111] border border-white/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] z-50 p-2 custom-scrollbar">
                                                     {COUNTRIES.map((country) => (
                                                         <button
                                                             key={country.name}
                                                             type="button"
-                                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/5 rounded-lg transition-all text-left"
+                                                            className="w-full flex items-center gap-4 px-4 py-3 hover:bg-[#dcfc44]/10 rounded-xl transition-all text-left group"
                                                             onClick={() => {
                                                                 setSelectedCountry(country);
                                                                 setShowCountrySelect(false);
                                                             }}
                                                         >
-                                                            <span className="text-xl">{country.flag}</span>
+                                                            <span className="text-2xl">{country.flag}</span>
                                                             <div className="flex flex-col">
-                                                                <span className="text-xs font-bold text-white">{country.name}</span>
-                                                                <span className="text-[10px] text-gray-500">{country.code}</span>
+                                                                <span className="text-xs font-black text-white group-hover:text-[#dcfc44] transition-colors">{country.name}</span>
+                                                                <span className="text-[10px] text-gray-500 font-bold">{country.code}</span>
                                                             </div>
                                                         </button>
                                                     ))}
@@ -795,11 +806,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             )}
                                         </div>
                                         <div className="min-w-0">
-                                            <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-[0.2em] md:h-10 flex items-center">Email</label>
+                                            <label className="block text-xs font-black text-gray-200 mb-4 uppercase tracking-[0.2em] md:h-10 flex items-center">Email de entrega</label>
                                             <input
                                                 type="email"
                                                 placeholder="tu@email.com"
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:border-coffee-light transition-all outline-none text-white text-base sm:text-lg font-medium"
+                                                className="w-full bg-white/5 border border-white/20 rounded-2xl px-6 py-4 focus:border-[#dcfc44] focus:bg-white/10 transition-all outline-none text-white text-lg font-bold placeholder:text-gray-600"
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 required
@@ -829,11 +840,107 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <span className="text-3xl font-black text-white">${formData.price}</span>
-                                            <span className="text-[10px] text-gray-500 block">USD</span>
+                                    <div className="text-right">
+                                            {songQuantity > 1 ? (
+                                                <>
+                                                    <span className="text-lg text-gray-500 line-through">${formData.price * songQuantity}</span>
+                                                    <span className="text-3xl font-black text-white ml-2">${totalPrice}</span>
+                                                    <span className="text-[10px] text-gray-500 block">USD</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="text-3xl font-black text-white">${formData.price}</span>
+                                                    <span className="text-[10px] text-gray-500 block">USD</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
+
+                                    {/* SONG QUANTITY UPSELL */}
+                                    {formData.plan !== 'youtube' && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.3 }}
+                                            className="bg-[#0a0a0a] border border-[#dcfc44]/30 rounded-3xl p-6 mb-6 relative overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+                                        >
+                                            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#dcfc44]/40 to-transparent"></div>
+                                            
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-[#dcfc44]/10 flex items-center justify-center border border-[#dcfc44]/20">
+                                                        <Music className="w-5 h-5 text-[#dcfc44]" />
+                                                    </div>
+                                                    <div>
+                                                        <h5 className="text-sm font-black text-white uppercase tracking-wider">
+                                                            {lang === 'es' ? '¿Quieres más canciones?' : 'Want more songs?'}
+                                                        </h5>
+                                                        <p className="text-[11px] text-gray-400 font-medium">
+                                                            {lang === 'es' ? 'Lleva 3 o más y obtén 10% de descuento total' : 'Get 3 or more and get 10% total discount'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3 bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { playTick(); setSongQuantity(q => Math.max(1, q - 1)); }}
+                                                        disabled={songQuantity <= 1}
+                                                        className="w-10 h-10 rounded-xl border border-white/10 flex items-center justify-center bg-white/5 hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-95"
+                                                    >
+                                                        <Minus className="w-4 h-4 text-white" />
+                                                    </button>
+                                                    <div className="text-center min-w-[50px]">
+                                                        <span className="text-2xl font-black text-white">{songQuantity}</span>
+                                                        <p className="text-[8px] text-gray-500 uppercase tracking-widest font-black">
+                                                            {songQuantity === 1 ? (lang === 'es' ? 'unidad' : 'unit') : (lang === 'es' ? 'unidades' : 'units')}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { playTick(); setSongQuantity(q => Math.min(5, q + 1)); }}
+                                                        disabled={songQuantity >= 5}
+                                                        className="w-10 h-10 rounded-xl border border-[#dcfc44]/30 flex items-center justify-center bg-[#dcfc44]/20 hover:bg-[#dcfc44]/30 disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-95 shadow-[0_0_15px_rgba(220,252,68,0.1)]"
+                                                    >
+                                                        <Plus className="w-4 h-4 text-[#dcfc44]" />
+                                                    </button>
+                                                </div>
+
+                                                {songQuantity > 1 && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.8 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        className="text-right"
+                                                    >
+                                                        <div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full mb-1 border shadow-lg ${discountPercent > 0 ? 'bg-[#dcfc44] border-[#dcfc44] text-black' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                                                            <Sparkles className={`w-3.5 h-3.5 ${discountPercent > 0 ? 'text-black' : 'text-gray-500'}`} />
+                                                            <span className="text-[11px] font-black uppercase tracking-wider">
+                                                                {discountPercent > 0 
+                                                                    ? (lang === 'es' ? `Ahorras $${totalSavings}` : `Save $${totalSavings}`)
+                                                                    : (lang === 'es' ? 'Sin descuento' : 'No discount')}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">
+                                                            {discountPercent}% OFF  •  ${unitPriceWithDiscount.toFixed(2)} {lang === 'es' ? 'c/u' : 'each'}
+                                                        </p>
+                                                    </motion.div>
+                                                )}
+                                            </div>
+
+                                            {/* Discount tier preview */}
+                                            {songQuantity < 3 && (
+                                                <div className="mt-4 pt-4 border-t border-white/5">
+                                                    <p className="text-[10px] text-[#dcfc44] text-center font-black uppercase tracking-widest animate-pulse">
+                                                        {lang === 'es' 
+                                                            ? `💡 ¡Faltan ${3 - songQuantity} para el 10% de descuento!`
+                                                            : `💡 Need ${3 - songQuantity} more for 10% OFF!`}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
 
                                     <div className="grid md:grid-cols-2 gap-8 mb-8">
                                         <div className="space-y-4">
@@ -977,8 +1084,10 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-pulse shrink-0 hidden sm:block" />
                                             <span className="font-black uppercase tracking-tight text-sm sm:text-xl text-white text-center leading-tight">
                                                 {formData.plan === 'youtube'
-                                                    ? (lang === 'es' ? `¡SOLICITAR SERVICIO! ($${formData.price})` : `REQUEST SERVICE! ($${formData.price})`)
-                                                    : (lang === 'es' ? `¡CREAR MI CANCIÓN! ($${formData.price})` : `CREATE MY SONG! ($${formData.price})`)}
+                                                    ? (lang === 'es' ? `¡SOLICITAR SERVICIO! ($${totalPrice})` : `REQUEST SERVICE! ($${totalPrice})`)
+                                                    : (lang === 'es' 
+                                                        ? `¡CREAR ${songQuantity > 1 ? `MIS ${songQuantity} CANCIONES` : 'MI CANCIÓN'}! ($${totalPrice})`
+                                                        : `CREATE ${songQuantity > 1 ? `MY ${songQuantity} SONGS` : 'MY SONG'}! ($${totalPrice})`)}
                                             </span>
                                         </div>
                                     ) : (

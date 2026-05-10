@@ -117,7 +117,17 @@ export async function POST(req: Request) {
             ...lyricsMetadata
         };
 
-        const finalPrice = [37, 50, 97, 147, 250].includes(Number(body.price)) ? Number(body.price) : 37;
+        const songQuantity = Math.min(Math.max(Math.round(Number(body.songQuantity) || 1), 1), 5);
+        const unitPrice = [37, 50, 97, 147, 250].includes(Number(body.unitPrice)) ? Number(body.unitPrice) : 37;
+        
+        // Server-side discount validation: Flat 10% if 3 or more songs
+        const discountPercent = songQuantity >= 3 ? 10 : 0;
+        const unitPriceWithDiscount = unitPrice * (1 - discountPercent / 100);
+        const calculatedTotal = Math.round(unitPriceWithDiscount * songQuantity * 100) / 100;
+        const finalPrice = calculatedTotal;
+
+        const songLabel = songQuantity > 1 ? `${songQuantity}x ` : '';
+        const discountLabel = discountPercent > 0 ? ` (-${discountPercent}%)` : '';
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -127,10 +137,12 @@ export async function POST(req: Request) {
                     price_data: {
                         currency: 'usd',
                         product_data: {
-                            name: `Plan ${body.plan || 'Starter'} - Struky AI`,
-                            description: 'Tu producción musical personalizada con calidad internacional.',
+                            name: `${songLabel}Plan ${body.plan || 'Starter'} - Struky AI${discountLabel}`,
+                            description: songQuantity > 1
+                                ? `${songQuantity} producciones musicales personalizadas con ${discountPercent}% de descuento.`
+                                : 'Tu producción musical personalizada con calidad internacional.',
                         },
-                        unit_amount: finalPrice * 100,
+                        unit_amount: Math.round(finalPrice * 100),
                     },
                     quantity: 1,
                 },
@@ -138,9 +150,21 @@ export async function POST(req: Request) {
             mode: 'payment',
             success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${origin}?canceled=true`,
-            metadata: safeMetadata,
+            metadata: {
+                ...safeMetadata,
+                songQuantity: String(songQuantity),
+                unitPrice: String(unitPrice),
+                discountPercent: String(discountPercent),
+                totalPrice: String(finalPrice),
+            },
             payment_intent_data: {
-                metadata: safeMetadata,
+                metadata: {
+                    ...safeMetadata,
+                    songQuantity: String(songQuantity),
+                    unitPrice: String(unitPrice),
+                    discountPercent: String(discountPercent),
+                    totalPrice: String(finalPrice),
+                },
             }
         });
 
