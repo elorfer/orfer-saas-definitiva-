@@ -6,6 +6,7 @@ import StatusSelector from './StatusSelector';
 import CopyLyricsButton from './CopyLyricsButton';
 import ProducerNotes from './ProducerNotes';
 import AdminAnalytics from './AdminAnalytics';
+import RechargeParticles from '@/components/RechargeParticles';
 import { Search, X, MessageCircle, Mail, Hash, BarChart3, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface ClientOrderManagerProps {
@@ -180,11 +181,12 @@ export default function ClientOrderManager({ initialSessions }: ClientOrderManag
                                         <p className="text-sm font-medium">{date}</p>
                                     </div>
                                     <div className="pt-2 flex flex-wrap gap-2">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="bg-coffee-medium/10 text-white text-[9px] font-black uppercase px-2 py-1 rounded border border-coffee-medium/20 whitespace-nowrap">
+                                        <div className="flex flex-col gap-1 relative overflow-hidden group/amount">
+                                            <RechargeParticles />
+                                            <span className="bg-coffee-medium/10 text-white text-[9px] font-black uppercase px-2 py-1 rounded border border-coffee-medium/20 whitespace-nowrap relative z-10">
                                                 ${(session.amount_total / 100).toFixed(2)} USD
                                             </span>
-                                            <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest text-center">{meta.plan || 'Starter'}</span>
+                                            <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest text-center relative z-10">{meta.plan || 'Starter'}</span>
                                         </div>
                                         <StatusSelector 
                                             sessionId={session.id} 

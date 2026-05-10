@@ -1,6 +1,7 @@
 'use client';
 
 import { TrendingUp, DollarSign, Package, Calendar } from 'lucide-react';
+import RechargeParticles from '@/components/RechargeParticles';
 
 interface AdminAnalyticsProps {
     sessions: any[];
@@ -41,22 +42,24 @@ export default function AdminAnalytics({ sessions }: AdminAnalyticsProps) {
             {/* KPI GRID */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="glass-morphism p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+                    <RechargeParticles />
                     <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                         <DollarSign className="w-12 h-12 text-coffee-light" />
                     </div>
                     <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Ingresos Totales</span>
-                    <div className="flex items-baseline gap-1">
+                    <div className="flex items-baseline gap-1 relative z-10">
                         <span className="text-2xl font-black text-white">${totalRevenue.toLocaleString()}</span>
                         <span className="text-xs text-gray-400 font-bold uppercase">USD</span>
                     </div>
                 </div>
 
                 <div className="glass-morphism p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+                    <RechargeParticles />
                     <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                         <TrendingUp className="w-12 h-12 text-green-400" />
                     </div>
                     <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-1">Últimos 30 días</span>
-                    <div className="flex items-baseline gap-1">
+                    <div className="flex items-baseline gap-1 relative z-10">
                         <span className="text-2xl font-black text-green-400">${revenueLast30Days.toLocaleString()}</span>
                         <span className="text-[10px] text-green-400/50 font-bold uppercase ml-1">+{(revenueLast30Days/totalRevenue * 100 || 0).toFixed(0)}%</span>
                     </div>

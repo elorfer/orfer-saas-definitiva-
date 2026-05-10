@@ -34,6 +34,7 @@ import {
   useUsers,
 } from '@/hooks/useUsers';
 import { PremiumPlans } from '@/components/PremiumPlans';
+import RechargeParticles from '@/components/dashboard/RechargeParticles';
 import type { UserModel } from '@/types/user';
 
 const PAGE_SIZE = 10;
@@ -282,8 +283,9 @@ export default function PremiumPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 relative overflow-hidden">
+          <RechargeParticles />
+          <div className="flex items-center justify-between relative z-10">
             <div>
               <p className="text-sm font-medium text-gray-500">Ingresos Manuales</p>
               <p className="mt-2 text-3xl font-bold text-emerald-600">

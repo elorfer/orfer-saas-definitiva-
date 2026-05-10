@@ -1,7 +1,9 @@
 import Stripe from 'stripe';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { TrendingUp, DollarSign, Package, Calendar } from 'lucide-react';
 import ClientOrderManager from './ClientOrderManager';
+import RechargeParticles from '@/components/RechargeParticles';
 import { Suspense } from 'react';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
@@ -93,6 +95,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     // Estadísticas
     const stats = {
         total: sessions.data.length,
+        revenue: sessions.data.reduce((acc, s) => acc + (s.amount_total / 100), 0),
         pending: sessions.data.filter(s => (s.metadata?.status || 'Pendiente') === 'Pendiente').length,
         inProgress: sessions.data.filter(s => s.metadata?.status === 'Producción').length,
         completed: sessions.data.filter(s => s.metadata?.status === 'Entregado').length,
@@ -123,6 +126,12 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
                                 Cerrar Sesión
                             </button>
                         </form>
+
+                        <div className="bg-white/5 border border-green-500/20 px-5 py-2 rounded-2xl flex flex-col items-center min-w-[120px] relative overflow-hidden group">
+                            <RechargeParticles />
+                            <span className="text-xl font-black text-green-400 relative z-10">${stats.revenue.toLocaleString()}</span>
+                            <span className="text-[9px] text-green-500/50 font-bold uppercase tracking-widest relative z-10">Ingresos Totales</span>
+                        </div>
 
                         {[
                             { label: 'Pendientes', value: stats.pending, color: 'text-coffee-light' },

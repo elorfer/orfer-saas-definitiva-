@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Copy, RotateCcw, Check, Sparkles, User, Bot, Layout, MessageSquare, ShieldCheck, Zap } from 'lucide-react';
+import RechargeParticles from '@/components/RechargeParticles';
 
 export default function AsistenteVentas() {
   const [stats, setStats] = useState({ total: 0, count: 0 });
@@ -182,11 +183,12 @@ export default function AsistenteVentas() {
                 <p className="text-slate-500 max-w-xl">Pega el mensaje de tu cliente y genera una respuesta optimizada para cerrar la venta en segundos.</p>
             </div>
             
-            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
-                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm relative overflow-hidden">
+                <RechargeParticles />
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center relative z-10">
                     <Zap className="w-6 h-6 text-emerald-600" />
                 </div>
-                <div>
+                <div className="relative z-10">
                     <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Facturado</p>
                     <p className="text-2xl font-black text-slate-900">${stats.total.toLocaleString()} <span className="text-sm font-medium text-slate-400">USD</span></p>
                     <p className="text-[10px] text-emerald-600/60 font-bold uppercase">{stats.count} producciones exitosas</p>
