@@ -175,12 +175,12 @@ export default function RefundPage() {
                                 <div>
                                     <div className="text-sm text-gray-400">WhatsApp</div>
                                     <a
-                                        href="https://wa.me/573009012217"
+                                        href="https://wa.me/573017509921"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-coffee-medium hover:text-coffee-light underline font-semibold"
                                     >
-                                        +57 300 901 2217
+                                        +57 301 7509921
                                     </a>
                                 </div>
                             </div>

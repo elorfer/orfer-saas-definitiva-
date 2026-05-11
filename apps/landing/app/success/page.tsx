@@ -161,7 +161,7 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                         </p>
                         
                         <a 
-                            href={`https://wa.me/573009012217?text=${encodeURIComponent(`Hola Struky! 👋 Acabo de pagar mi pedido de un Plan ${plan}. Aquí te envío mi captura de pago y el audio de mi melodía propia para que la usen en la producción. 🚀\n\nID: ${sessionId.substring(0,12)}`)}`}
+                            href={`https://wa.me/573017509921?text=${encodeURIComponent(`Hola Struky! 👋 Acabo de pagar mi pedido de un Plan ${plan}. Aquí te envío mi captura de pago y el audio de mi melodía propia para que la usen en la producción. 🚀\n\nID: ${sessionId.substring(0,12)}`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center justify-center gap-3 bg-[#25D366] hover:bg-[#20ba59] text-black font-black py-3 px-6 rounded-xl text-[11px] uppercase tracking-widest transition-all scale-100 hover:scale-[1.02] shadow-xl"

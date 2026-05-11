@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function WhatsAppButton() {
     const [showBubble, setShowBubble] = useState(false);
-    const phoneNumber = "573009012217";
+    const phoneNumber = "573017509921";
     const message = encodeURIComponent("Hola STRUKY, me gustaría obtener más información sobre sus servicios de producción musical.");
     
     return (

@@ -9,7 +9,7 @@ class ComposerPromoScreen extends ConsumerWidget {
   const ComposerPromoScreen({super.key});
 
   Future<void> _launchWhatsApp(BuildContext context) async {
-    final String phoneNumber = "573009012217";
+    final String phoneNumber = "573017509921";
     final String message = Uri.encodeComponent("Me gustaría publicar mi música con ustedes");
     final Uri url = Uri.parse("https://wa.me/$phoneNumber?text=$message");
 

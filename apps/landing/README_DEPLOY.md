@@ -9,7 +9,7 @@
 
 ```
 ✅ Email: strukyapp@gmail.com
-✅ WhatsApp: +57 300 901 2217
+✅ WhatsApp: +57 301 7509921
 ✅ Dominio: struky.com (pendiente conectar)
 ✅ Checkout: WhatsApp temporal (hasta aprobación Lemon Squeezy)
 ```
@@ -120,7 +120,7 @@ git push origin main
    
    // REEMPLAZAR:
    const message = encodeURIComponent('¡Hola!...');
-   window.open(`https://wa.me/573009012217?text=${message}`, '_blank');
+   window.open(`https://wa.me/573017509921?text=${message}`, '_blank');
    
    // POR:
    window.open('TU_CHECKOUT_URL_LEMON_SQUEEZY', '_blank');

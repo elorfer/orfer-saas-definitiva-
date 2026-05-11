@@ -524,7 +524,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
                         Icon(MdiIcons.whatsapp, color: const Color(0xFF25D366)),
                   ),
                   title: const Text('Contactar por WhatsApp'),
-                  subtitle: const Text('Respuesta rápida (+57 300 901 2217)'),
+                  subtitle: const Text('Respuesta rápida (+57 301 7509921)'),
                   trailing:
                       const Icon(Icons.arrow_forward_ios_rounded, size: 16),
                   onTap: () {
@@ -567,7 +567,7 @@ class StrukyDrawerMenu extends ConsumerWidget {
   }
 
   Future<void> _launchWhatsApp() async {
-    const phone = '573009012217';
+    const phone = '573017509921';
     // const message = 'Hola, equipo de soporte. Tengo una consulta sobre la app.';
     final url = Uri.parse('https://wa.me/$phone');
     if (await canLaunchUrl(url)) {
