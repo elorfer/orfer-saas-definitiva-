@@ -80,7 +80,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     // Discount: Flat 10% if 3 or more songs are selected
     const discountPercent = songQuantity >= 3 ? 10 : 0;
     const unitPriceWithDiscount = formData.price * (1 - discountPercent / 100);
-    const totalPrice = Math.round(unitPriceWithDiscount * songQuantity * 100) / 100;
+    const totalPrice = Math.ceil(unitPriceWithDiscount * songQuantity);
     const totalSavings = Math.round((formData.price * songQuantity - totalPrice) * 100) / 100;
 
     // Sync external plan selection internally

@@ -123,7 +123,7 @@ export async function POST(req: Request) {
         // Server-side discount validation: Flat 10% if 3 or more songs
         const discountPercent = songQuantity >= 3 ? 10 : 0;
         const unitPriceWithDiscount = unitPrice * (1 - discountPercent / 100);
-        const calculatedTotal = Math.round(unitPriceWithDiscount * songQuantity * 100) / 100;
+        const calculatedTotal = Math.ceil(unitPriceWithDiscount * songQuantity);
         const finalPrice = calculatedTotal;
 
         const songLabel = songQuantity > 1 ? `${songQuantity}x ` : '';
