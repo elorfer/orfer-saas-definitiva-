@@ -816,9 +816,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 </div>
 
                                 {/* ORDER SUMMARY TICKET */}
-                                <div className="bg-black/40 border border-white/10 rounded-3xl p-8 relative overflow-hidden shadow-2xl">
+                                <div className="bg-black/40 border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden shadow-2xl">
                                     <div className="absolute top-0 left-0 w-2 h-full bg-coffee-medium"></div>
-                                    <div className="flex justify-between items-start mb-8">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
                                         <div>
                                             <h3 className="text-xl font-black text-white uppercase tracking-tight mb-1">
                                                 {lang === 'es' ? 'Resumen del Pedido' : 'Order Summary'}
@@ -836,7 +836,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 </button>
                                             </div>
                                         </div>
-                                    <div className="text-right">
+                                    <div className="text-left sm:text-right w-full sm:w-auto">
                                             {songQuantity > 1 ? (
                                                 <>
                                                     <span className="text-lg text-gray-500 line-through">${formData.price * songQuantity}</span>
@@ -858,7 +858,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: 0.3 }}
-                                            className="bg-[#0a0a0a] border border-[#dcfc44]/30 rounded-3xl p-6 mb-6 relative overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+                                            className="bg-[#0a0a0a] border border-[#dcfc44]/30 rounded-3xl p-4 sm:p-6 mb-6 relative overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
                                         >
                                             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#dcfc44]/40 to-transparent"></div>
                                             
@@ -878,7 +878,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between gap-4">
+                                            <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-6 sm:gap-4">
                                                 <div className="flex items-center gap-3 bg-white/5 p-1.5 rounded-2xl border border-white/5">
                                                     <button
                                                         type="button"
@@ -908,7 +908,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                     <motion.div
                                                         initial={{ opacity: 0, scale: 0.8 }}
                                                         animate={{ opacity: 1, scale: 1 }}
-                                                        className="text-right"
+                                                        className="text-center sm:text-right w-full sm:w-auto"
                                                     >
                                                         <div className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full mb-1 border shadow-lg ${discountPercent > 0 ? 'bg-[#dcfc44] border-[#dcfc44] text-black' : 'bg-white/5 border-white/10 text-gray-400'}`}>
                                                             <Sparkles className={`w-3.5 h-3.5 ${discountPercent > 0 ? 'text-black' : 'text-gray-500'}`} />
