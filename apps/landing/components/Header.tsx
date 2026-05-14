@@ -8,7 +8,7 @@ import { playTick, playWhoosh } from '../lib/soundEngine';
 
 interface HeaderProps {
     lang: 'es' | 'en';
-    setLang: (lang: 'es' | 'en') => void;
+    setLang?: (lang: 'es' | 'en') => void;
 }
 
 export default function Header({ lang, setLang }: HeaderProps) {
@@ -108,7 +108,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
                         <button 
                             onClick={() => {
                                 playTick();
-                                setLang(lang === 'es' ? 'en' : 'es');
+                                setLang?.(lang === 'es' ? 'en' : 'es');
                             }}
                             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 hover:bg-white/5 transition-colors text-xs font-bold text-gray-300 uppercase tracking-widest"
                         >
@@ -182,7 +182,7 @@ export default function Header({ lang, setLang }: HeaderProps) {
                         >
                             <button 
                                 onClick={() => {
-                                    setLang(lang === 'es' ? 'en' : 'es');
+                                    setLang?.(lang === 'es' ? 'en' : 'es');
                                     setMobileMenuOpen(false);
                                 }}
                                 className="flex items-center gap-3 px-6 py-3 rounded-full border border-white/10 text-lg font-bold"

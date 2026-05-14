@@ -125,13 +125,19 @@ export default async function RootLayout({
                         fbq('track', 'PageView', {}, { eventID: '${eventID}' });
 
                         // Capture fbclid for CAPI (fbc parameter) — persist to cookie + localStorage
+                        // IMPORTANT: Only create fbc ONCE when user first lands with fbclid.
+                        // Never re-construct with a new timestamp — Meta flags this as "modified fbclid".
                         const urlParams = new URLSearchParams(window.location.search);
                         const fbclid = urlParams.get('fbclid');
                         if (fbclid) {
-                            const now = Date.now();
-                            const fbc = 'fb.1.' + now + '.' + fbclid;
-                            document.cookie = '_fbc=' + fbc + '; path=/; max-age=' + (60 * 60 * 24 * 90) + '; SameSite=Lax';
-                            try { localStorage.setItem('_struky_fbc', fbc); localStorage.setItem('_struky_fbclid', fbclid); } catch(e) {}
+                            // Check if we already have an fbc cookie (don't overwrite with new timestamp)
+                            const existingFbc = document.cookie.split('; ').find(c => c.startsWith('_fbc='));
+                            if (!existingFbc) {
+                                const now = Date.now();
+                                const fbc = 'fb.1.' + now + '.' + fbclid;
+                                document.cookie = '_fbc=' + fbc + '; path=/; max-age=' + (60 * 60 * 24 * 90) + '; SameSite=Lax';
+                                try { localStorage.setItem('_struky_fbc', fbc); localStorage.setItem('_struky_fbclid', fbclid); } catch(e) {}
+                            }
                         }
                     `}
                 </Script>

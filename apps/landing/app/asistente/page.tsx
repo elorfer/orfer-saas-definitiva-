@@ -128,6 +128,10 @@ export default function AsistenteVentas() {
     web: {
       label: "🌐 Invitar a la Web",
       msg: `¡Claro que sí! 🚀 Te invito a que visites nuestra web oficial donde podrás escuchar ejemplos reales, ver testimonios de otros artistas y conocer a fondo todo lo que Struky puede hacer por tu música:\n\n👉 *https://www.struky.com*\n\nAhí puedes ver todos los planes y ejemplos a detalle. ¿Te gustaría que te oriente sobre cuál plan le vendría mejor a tu estilo? 😊`
+    },
+    bienvenida: {
+      label: "✨ Bienvenida e Info",
+      msg: `¡Hola! 👋 Bienvenido a *Struky*.\n\nTodo el proceso de producción se inicia desde nuestra plataforma oficial para garantizar calidad de estudio.\n\n*¿Cómo funciona?*\n1️⃣ Entras a 👉 *https://www.struky.com* y eliges tu plan.\n2️⃣ Completas el formulario de pedido. **Dato clave:** Si no tienes la letra lista, selecciona la opción *"Enviar letra después"* en el formulario.\n3️⃣ Al terminar, el sistema te dará un **Número de Ticket** único.\n4️⃣ Si elegiste enviar la letra después, solo me pasas ese Ticket por aquí (WhatsApp) junto con tu letra o idea, ¡y nuestros productores se ponen manos a la obra! 🎧🔥\n\nEn 24-48h tendrás tu hit listo para sonar en todos lados.\n\n¿Te ayudo a elegir el plan ideal para tu estilo? ⚡`
     }
   };
 
@@ -226,6 +230,24 @@ export default function AsistenteVentas() {
                     </div>
                 </div>
 
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Zap className="w-3 h-3 text-amber-500" />
+                        Categorías de Respuesta Rápida
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        {Object.entries(RESPUESTAS).map(([key, data]: [string, any]) => (
+                            <button
+                                key={key}
+                                onClick={() => setResponse(data.msg)}
+                                className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-xs font-bold text-slate-600 flex items-center gap-2"
+                            >
+                                {data.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button 
                         onClick={handleGenerate}
@@ -247,7 +269,7 @@ export default function AsistenteVentas() {
                         className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-4 rounded-xl flex items-center justify-center gap-2.5 transition-all active:scale-[0.98] disabled:opacity-30 disabled:pointer-events-none shadow-sm"
                     >
                         <Zap className="w-4 h-4 text-amber-500" />
-                        Respuesta Rápida (Fija)
+                        Detectar y Responder
                     </button>
                 </div>
             </div>

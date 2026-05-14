@@ -31,21 +31,11 @@ export async function POST(req: Request) {
         // Extraer cookies de Meta (preferir las enviadas desde el cliente para mayor precisión)
         const cookieStore = await cookies();
         const fbp = body.fbp || cookieStore.get('_fbp')?.value;
-        let fbc = body.fbc || cookieStore.get('_fbc')?.value;
-
-        // Server-side fallback: construct fbc from referer's fbclid if missing
-        if (!fbc) {
-            try {
-                const referer = req.headers.get('referer') || '';
-                if (referer) {
-                    const refUrl = new URL(referer);
-                    const fbclid = refUrl.searchParams.get('fbclid');
-                    if (fbclid) {
-                        fbc = `fb.1.${Date.now()}.${fbclid}`;
-                    }
-                }
-            } catch(e) { /* invalid URL, ignore */ }
-        }
+        const fbc = body.fbc || cookieStore.get('_fbc')?.value || '';
+        // NOTE: Do NOT fabricate fbc server-side with Date.now().
+        // Meta flags any fbc whose timestamp doesn't match the original landing time
+        // as "modified fbclid". The fbc must come from the client cookie/localStorage
+        // where it was created with the correct timestamp when the user first landed.
 
         // Esperamos el evento para asegurar que Vercel no mate el proceso antes de enviarlo
         let capiResult: any = null;

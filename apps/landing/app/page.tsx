@@ -371,6 +371,8 @@ function HomeContent() {
 
             <PlatformLogos lang={lang} />
 
+            <OfficialShowcase lang={lang} />
+
             <PricingTable 
                 t={t.pricing} 
                 onSelectPlan={handleSelectPlan} 
@@ -378,26 +380,58 @@ function HomeContent() {
 
             <OrderForm lang={lang} initialPlan={selectedPlanFromTable} />
 
-            <OfficialShowcase lang={lang} />
 
 
-            {/* === CONTENIDO SECUNDARIO: Confianza y autoridad === */}
-
-            <AudioComparison lang={lang} />
+            {/* === CONTENIDO SECUNDARIO: Resolución de objeciones === */}
 
             <HowItWorks t={t.howItWorks} />
 
-            <FAQ t={t.faq} />
+            <ComparisonSection lang={lang} />
+
+            <AudioComparison lang={lang} />
 
             <Testimonials t={t.testimonials} />
+
+            <FAQ t={t.faq} />
+
+            {/* Mini-CTA: Recupera usuarios que leyeron todo el contenido */}
+            <section className="py-20 md:py-28 bg-gradient-to-b from-transparent via-coffee-medium/5 to-transparent relative overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-coffee-medium/5 rounded-full blur-3xl" />
+                </div>
+                <div className="max-w-2xl mx-auto text-center px-6 relative z-10">
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-coffee-medium mb-4">
+                        {lang === 'es' ? '¿Ya escuchaste los ejemplos?' : 'Already heard the examples?'}
+                    </p>
+                    <h3 className="text-3xl md:text-5xl font-black text-white tracking-tighter mb-6">
+                        {lang === 'es' ? 'Tu canción está a ' : 'Your song is '}
+                        <span className="text-gradient">{lang === 'es' ? 'un clic' : 'one click away'}</span>
+                    </h3>
+                    <p className="text-gray-400 text-sm md:text-base mb-10 max-w-md mx-auto leading-relaxed">
+                        {lang === 'es'
+                            ? 'Escríbenos tu idea, elige tu estilo y recibe tu canción profesional en 48 horas.'
+                            : 'Write your idea, choose your style and receive your professional song in 48 hours.'}
+                    </p>
+                    <button
+                        onClick={() => {
+                            playWhoosh();
+                            document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="bg-coffee-medium hover:bg-coffee-light text-black font-black uppercase tracking-[0.15em] py-4 px-10 rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_10px_40px_rgba(202,160,82,0.3)] text-sm md:text-base inline-flex items-center gap-3"
+                    >
+                        <Music className="w-5 h-5" />
+                        {lang === 'es' ? 'CREAR MI CANCIÓN AHORA' : 'CREATE MY SONG NOW'}
+                    </button>
+                </div>
+            </section>
+
+            {/* === BRANDING & AUTORIDAD === */}
+
+            <GlobalImpact t={t.global} />
 
             <StudioShowcase lang={lang} />
 
             {/* <MemorableEvents lang={lang} /> — Oculto temporalmente, se activa después */}
-
-            <GlobalImpact t={t.global} />
-
-            <ComparisonSection lang={lang} />
 
             {/* === POST-CONVERSION: Contenido para los que siguen explorando === */}
 
@@ -409,7 +443,7 @@ function HomeContent() {
 
             {/* <RecentActivity lang={lang} /> - Desactivado por petición del usuario (estorbaban) */}
 
-            {/* Sticky Mobile CTA with Animation */}
+            {/* Sticky Mobile CTA */}
             <AnimatePresence>
                 {showStickyCTA && !isFormVisible && !isPricingVisible && (
                     <motion.div 
@@ -431,6 +465,31 @@ function HomeContent() {
                                 ? (lang === 'es' ? 'Quiero mi producción así' : 'I want my production like this')
                                 : t.hero.stickyCTA
                             }
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Sticky Desktop CTA — Floating pill bottom-right */}
+            <AnimatePresence>
+                {showStickyCTA && !isFormVisible && !isPricingVisible && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                        transition={{ duration: 0.4, type: 'spring', stiffness: 260, damping: 20 }}
+                        className="fixed bottom-8 right-8 z-[50] hidden md:block"
+                    >
+                        <button
+                            onClick={() => {
+                                playWhoosh();
+                                document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="group bg-coffee-medium hover:bg-coffee-light text-black font-black uppercase tracking-widest py-3.5 px-8 rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_10px_40px_rgba(202,160,82,0.4)] text-xs flex items-center gap-3"
+                        >
+                            <Music className="w-4 h-4" />
+                            {lang === 'es' ? 'CREAR MI CANCIÓN' : 'CREATE MY SONG'}
+                            <span className="w-2 h-2 rounded-full bg-black/20 animate-pulse" />
                         </button>
                     </motion.div>
                 )}

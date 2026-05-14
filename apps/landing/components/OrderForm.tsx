@@ -211,11 +211,13 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         const eventID = `ic_${Date.now()}_${formData.email.split('@')[0]}`;
         
         if (typeof window !== 'undefined' && (window as any).fbq) {
-            // Inicializar con datos de usuario para Coincidencia Avanzada (Advanced Matching)
+            // Advanced Matching: re-init pixel with user data (official Meta approach)
+            // This updates the pixel's user data for better match rates on subsequent events
             const pixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID || "1681899642811715";
             (window as any).fbq('init', pixelId, {
                 em: formData.email.toLowerCase().trim(),
-                ph: `${selectedCountry.code}${formData.phone}`.replace(/\D/g, '')
+                ph: `${selectedCountry.code}${formData.phone}`.replace(/\D/g, ''),
+                fn: formData.name.toLowerCase().trim()
             });
             
             (window as any).fbq('track', 'InitiateCheckout', {
@@ -238,17 +240,11 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
         const fbp = getCookie('_fbp');
         let fbc = getCookie('_fbc');
 
-        // Fallback chain for fbc (Meta warning #2 fix):
-        // cookie → localStorage → URL fbclid construction
+        // Fallback chain for fbc:
+        // cookie → localStorage (already contains proper fbc with original timestamp)
+        // NEVER re-construct fbc with Date.now() — Meta flags this as "modified fbclid"
         if (!fbc) {
             try { fbc = localStorage.getItem('_struky_fbc'); } catch(e) { /* private browsing */ }
-        }
-        if (!fbc) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const fbclid = urlParams.get('fbclid');
-            if (fbclid) {
-                fbc = 'fb.1.' + Date.now() + '.' + fbclid;
-            }
         }
 
         try {

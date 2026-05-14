@@ -188,6 +188,29 @@ export default function Hero({ t, lang }: HeroProps) {
                                     <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/90">PROD. REAL</span>
                                 </div>
                             </div>
+
+                            {/* Social Proof Bar */}
+                            <div className="flex items-center gap-3 mt-4">
+                                <div className="flex -space-x-2">
+                                    {[
+                                        { initials: 'MR', gradient: 'from-amber-500 to-orange-600' },
+                                        { initials: 'VS', gradient: 'from-purple-500 to-pink-600' },
+                                        { initials: 'JP', gradient: 'from-blue-500 to-cyan-600' },
+                                        { initials: 'SL', gradient: 'from-green-500 to-emerald-600' },
+                                        { initials: 'AC', gradient: 'from-red-500 to-rose-600' },
+                                    ].map((avatar, i) => (
+                                        <div 
+                                            key={i}
+                                            className={`w-7 h-7 md:w-8 md:h-8 rounded-full border-2 border-black flex items-center justify-center text-[8px] font-black text-white bg-gradient-to-br ${avatar.gradient}`}
+                                        >
+                                            {avatar.initials}
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] md:text-xs text-gray-400 font-bold">
+                                    <span className="text-white font-black">+127</span> {lang === 'es' ? 'artistas esta semana' : 'artists this week'}
+                                </p>
+                            </div>
                         </div>
                     </motion.div>
 
