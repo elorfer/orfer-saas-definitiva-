@@ -55,6 +55,9 @@ export const metadata: Metadata = {
             { url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp', sizes: '180x180', type: 'image/webp' },
         ],
     },
+    verification: {
+        google: 'XSu4rNOuOJtvmlXmWn0wYLb6fJ8jZCPgIuIDOZJ6TRU',
+    },
 };
 
 import { headers, cookies } from "next/headers";
