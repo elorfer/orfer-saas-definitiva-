@@ -896,8 +896,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                     </div>
                                                     <button
                                                         type="button"
-                                                        onClick={() => { playTick(); setSongQuantity(q => Math.min(5, q + 1)); }}
-                                                        disabled={songQuantity >= 5}
+                                                        onClick={() => { playTick(); setSongQuantity(q => Math.min(10, q + 1)); }}
+                                                        disabled={songQuantity >= 10}
                                                         className="w-10 h-10 rounded-xl border border-[#dcfc44]/30 flex items-center justify-center bg-[#dcfc44]/20 hover:bg-[#dcfc44]/30 disabled:opacity-20 disabled:cursor-not-allowed transition-all active:scale-95 shadow-[0_0_15px_rgba(220,252,68,0.1)]"
                                                     >
                                                         <Plus className="w-4 h-4 text-[#dcfc44]" />

@@ -107,7 +107,7 @@ export async function POST(req: Request) {
             ...lyricsMetadata
         };
 
-        const songQuantity = Math.min(Math.max(Math.round(Number(body.songQuantity) || 1), 1), 5);
+        const songQuantity = Math.min(Math.max(Math.round(Number(body.songQuantity) || 1), 1), 10);
         const unitPrice = [37, 50, 97, 147, 250].includes(Number(body.unitPrice)) ? Number(body.unitPrice) : 37;
         
         // Server-side discount validation: Flat 10% if 3 or more songs
