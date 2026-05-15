@@ -575,58 +575,6 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                         </motion.div>
                                     )}
 
-                                    {/* RESPUESTAS RÁPIDAS - CIERRE DE VENTAS */}
-                                    <div className="mb-8">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="h-px flex-1 bg-white/5"></div>
-                                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">{lang === 'es' ? '¿Necesitas ayuda para cerrar?' : 'Need help closing?'}</span>
-                                            <div className="h-px flex-1 bg-white/5"></div>
-                                        </div>
-                                        
-                                        <div className="flex flex-wrap gap-2">
-                                            <a 
-                                                href={`https://wa.me/573017509921?text=${encodeURIComponent("¡Hola! Quiero pedir mi canción y pagar directo por Nequi. ¿Me das el número para transferir?")}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex-1 min-w-[140px] bg-[#dcfc44]/5 hover:bg-[#dcfc44]/10 border border-[#dcfc44]/20 rounded-xl p-3 transition-all group flex flex-col gap-1"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-black text-[#dcfc44] uppercase tracking-wider">{lang === 'es' ? 'Pagar por Nequi' : 'Pay via Nequi'}</span>
-                                                    <span className="text-lg leading-none">🇨🇴</span>
-                                                </div>
-                                                <p className="text-[9px] text-gray-400 font-medium leading-tight">{lang === 'es' ? 'Transfiere directo y ahorra tiempo' : 'Transfer direct and save time'}</p>
-                                            </a>
-
-                                            <a 
-                                                href={`https://wa.me/573017509921?text=${encodeURIComponent("¡Hola! Tengo una idea para mi canción pero no sé qué plan elegir. ¿Me asesoras con un humano por favor?")}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex-1 min-w-[140px] bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group flex flex-col gap-1"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-black text-white uppercase tracking-wider">{lang === 'es' ? 'Hablar con humano' : 'Talk to human'}</span>
-                                                    <MessageCircle className="w-3.5 h-3.5 text-coffee-medium" />
-                                                </div>
-                                                <p className="text-[9px] text-gray-400 font-medium leading-tight">{lang === 'es' ? 'Asesoría personalizada por WhatsApp' : 'Personalized help via WhatsApp'}</p>
-                                            </a>
-
-                                            <a 
-                                                href={`https://wa.me/573017509921?text=${encodeURIComponent("¡Hola! Me gustaría ver más ejemplos de canciones y videos que han hecho en Struky antes de pedir la mía.")}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="w-full bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group flex items-center justify-between"
-                                            >
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[10px] font-black text-white uppercase tracking-wider">{lang === 'es' ? 'Ver demos y portafolio' : 'See demos & portfolio'}</span>
-                                                    <p className="text-[9px] text-gray-400 font-medium leading-tight">{lang === 'es' ? 'Mira lo que hemos creado para otros artistas' : 'See what we created for others'}</p>
-                                                </div>
-                                                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-coffee-medium transition-colors">
-                                                    <Video className="w-3.5 h-3.5 text-coffee-light" />
-                                                </div>
-                                            </a>
-                                        </div>
-                                    </div>
-
                                     <div className="relative group/textarea">
                                         {!sendLater && (
                                             <textarea
