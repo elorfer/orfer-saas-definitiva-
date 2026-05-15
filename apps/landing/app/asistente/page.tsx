@@ -132,6 +132,22 @@ export default function AsistenteVentas() {
     bienvenida: {
       label: "✨ Bienvenida e Info",
       msg: `¡Hola! 👋 Bienvenido a *Struky*.\n\nTodo el proceso de producción se inicia desde nuestra plataforma oficial para garantizar calidad de estudio.\n\n*¿Cómo funciona?*\n1️⃣ Entras a 👉 *https://www.struky.com* y eliges tu plan.\n2️⃣ Completas el formulario de pedido. **Dato clave:** Si no tienes la letra lista, selecciona la opción *"Enviar letra después"* en el formulario.\n3️⃣ Al terminar, el sistema te dará un **Número de Ticket** único.\n4️⃣ Si elegiste enviar la letra después, solo me pasas ese Ticket por aquí (WhatsApp) junto con tu letra o idea, ¡y nuestros productores se ponen manos a la obra! 🎧🔥\n\nEn 24-48h tendrás tu hit listo para sonar en todos lados.\n\n¿Te ayudo a elegir el plan ideal para tu estilo? ⚡`
+    },
+    nequi: {
+      label: "💰 Pago por Nequi",
+      msg: `¡Excelente! Para agilizar, puedes pagar directo por *Nequi* al número: *3009012217* a nombre de Miguel Ortiz.\n\nUna vez realices la transferencia, me envías el comprobante por aquí y empezamos de inmediato con la producción de tu hit 🚀`
+    },
+    urgencia: {
+      label: "⏱️ Últimos Cupos",
+      msg: `¡Hola! Solo te escribía para confirmarte que hoy nos quedan los *últimos 3 cupos* para entrega en 24 horas. \n\nSi quieres asegurar el tuyo para que empecemos hoy mismo con tu canción, avísame y te reservo el espacio 🎙️🔥`
+    },
+    confirmacion: {
+      label: "✅ Pago Recibido",
+      msg: `¡Perfecto! Ya recibimos tu pago ✅. Nuestros productores ya están en el estudio dándole vida a tu letra.\n\nEn un máximo de 24-48h tendrás tu canción masterizada aquí mismo en tu WhatsApp. ¡Prepárate para sonar gigante! 🎧🔥`
+    },
+    pasos: {
+      label: "👣 Pasos a seguir",
+      msg: `¡Es muy fácil! Estos son los pasos para tener tu canción lista aquí por WhatsApp:\n\n1️⃣ Me envías tu letra o la idea de lo que quieres decir ✍️\n2️⃣ Eliges el género musical y tipo de voz (Hombre o Mujer) 🎤\n3️⃣ Realizas el pago por Nequi o transferencia ✅\n4️⃣ ¡Y listo! En 24-48h recibes tu hit masterizado directamente en este chat 🎧🔥\n\n¿Te gustaría que comencemos con el paso 1? 😊`
     }
   };
 
@@ -230,21 +246,77 @@ export default function AsistenteVentas() {
                     </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm mb-6">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                         <Zap className="w-3 h-3 text-amber-500" />
                         Categorías de Respuesta Rápida
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        {Object.entries(RESPUESTAS).map(([key, data]: [string, any]) => (
-                            <button
-                                key={key}
-                                onClick={() => setResponse(data.msg)}
-                                className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-xs font-bold text-slate-600 flex items-center gap-2"
+                        {Object.entries(RESPUESTAS)
+                            .filter(([key]) => !['nequi', 'urgencia', 'confirmacion', 'pasos'].includes(key))
+                            .map(([key, data]: [string, any]) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setResponse(data.msg)}
+                                    className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-xs font-bold text-slate-600 flex items-center gap-2"
+                                >
+                                    {data.label}
+                                </button>
+                            ))}
+                    </div>
+                </div>
+
+                {/* ASISTENCIA POR WHATSAPP - ACCIONES RÁPIDAS */}
+                <div className="bg-emerald-950 border border-emerald-500/30 rounded-2xl p-6 shadow-lg overflow-hidden relative mb-6">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                        <MessageSquare className="w-16 h-16 text-white" />
+                    </div>
+                    <div className="relative z-10">
+                        <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <MessageSquare className="w-3 h-3 text-emerald-400" />
+                            Cierre de Ventas por WhatsApp
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button 
+                                onClick={() => setResponse(RESPUESTAS.nequi.msg)}
+                                className="bg-white/5 border border-white/10 hover:bg-emerald-500/20 hover:border-emerald-500/50 p-3 rounded-xl transition-all text-left group"
                             >
-                                {data.label}
+                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-1 group-hover:text-emerald-300">💰 Datos Nequi</p>
+                                <p className="text-[9px] text-slate-400 font-medium leading-tight">Cargar datos para pago directo.</p>
                             </button>
-                        ))}
+
+                            <button 
+                                onClick={() => setResponse(`¡Perfecto! Para empezar, solo dime:\n\n1. ¿De qué trata tu letra o qué idea quieres transmitir?\n2. ¿Qué género musical prefieres? (Reggaetón, Pop, Vallenato, Salsa, etc.)\n3. ¿Voz masculina o femenina?\n\nCon eso mis productores ya pueden ir aterrizando tu hit 🎙️🔥`)}
+                                className="bg-white/5 border border-white/10 hover:bg-indigo-500/20 hover:border-indigo-500/50 p-3 rounded-xl transition-all text-left group"
+                            >
+                                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-wider mb-1 group-hover:text-indigo-300">🎤 Iniciar Pedido</p>
+                                <p className="text-[9px] text-slate-400 font-medium leading-tight">Pedir datos de la canción.</p>
+                            </button>
+
+                            <button 
+                                onClick={() => setResponse(RESPUESTAS.urgencia.msg)}
+                                className="bg-white/5 border border-white/10 hover:bg-amber-500/20 hover:border-amber-500/50 p-3 rounded-xl transition-all text-left group"
+                            >
+                                <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-1 group-hover:text-amber-300">⏱️ Urgencia</p>
+                                <p className="text-[9px] text-slate-400 font-medium leading-tight">Cargar mensaje de últimos cupos.</p>
+                            </button>
+
+                            <button 
+                                onClick={() => setResponse(RESPUESTAS.confirmacion.msg)}
+                                className="bg-white/5 border border-white/10 hover:bg-blue-500/20 hover:border-blue-500/50 p-3 rounded-xl transition-all text-left group"
+                            >
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1 group-hover:text-blue-300">✅ Pago OK</p>
+                                <p className="text-[9px] text-slate-400 font-medium leading-tight">Confirmación de éxito.</p>
+                            </button>
+
+                            <button 
+                                onClick={() => setResponse(RESPUESTAS.pasos.msg)}
+                                className="bg-white/5 border border-white/10 hover:bg-purple-500/20 hover:border-purple-500/50 p-3 rounded-xl transition-all text-left group"
+                            >
+                                <p className="text-[10px] font-black text-purple-400 uppercase tracking-wider mb-1 group-hover:text-purple-300">👣 Pasos</p>
+                                <p className="text-[9px] text-slate-400 font-medium leading-tight">Guía rápida de compra.</p>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -346,6 +418,7 @@ export default function AsistenteVentas() {
                 <MiniPlan name="Elite" price="147" desc="VIP Ilimitado" />
             </div>
         </div>
+
 
       </main>
     </div>
