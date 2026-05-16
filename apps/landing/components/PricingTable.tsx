@@ -82,8 +82,9 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
     }));
 
     return (
-        <section ref={sectionRef} id="pricing" className="section-padding bg-[#050505] relative overflow-hidden scroll-mt-20 border-t border-white/5">
-            <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <section ref={sectionRef} id="pricing" className="py-20 md:py-32 bg-[#050505] relative scroll-mt-20 border-t border-white/5">
+            <div className="max-w-7xl mx-auto relative z-10">
+                <div className="px-6 md:px-12 lg:px-24">
                 <div className="text-center mb-16">
                     <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter text-white">
                         Planes de <span className="text-gradient">Producción</span>
@@ -106,12 +107,13 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                         </div>
                     </div>
                 </div>
+                </div>
 
                 <div className="relative">
                     <div 
                         ref={scrollRef}
                         onScroll={handleScroll}
-                        className="flex md:grid md:grid-cols-4 gap-6 overflow-x-auto md:overflow-visible pt-8 pb-12 md:pb-0 px-6 md:px-0 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
+                        className="flex md:grid md:grid-cols-4 gap-4 md:gap-6 overflow-x-auto md:overflow-visible pt-8 pb-12 md:pb-0 px-2 md:px-0 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
                     >
                         {plans.map((plan) => (
                             <div

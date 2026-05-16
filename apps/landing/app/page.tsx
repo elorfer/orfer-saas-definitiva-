@@ -318,7 +318,7 @@ function HomeContent() {
                         <div 
                             ref={examplesScrollRef}
                             onScroll={handleExamplesScroll}
-                            className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible pb-4 md:pb-0 px-4 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
+                            className="flex md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 overflow-x-auto md:overflow-visible pb-4 md:pb-0 px-2 md:px-0 snap-x snap-mandatory custom-scrollbar-hide"
                         >
                             {examples.map((example, i) => (
                                 <div 
@@ -453,10 +453,21 @@ function HomeContent() {
                         transition={{ duration: 0.3 }}
                         className="fixed bottom-4 left-4 right-4 z-[50] md:hidden pointer-events-none pb-[env(safe-area-inset-bottom)]"
                     >
-                        <button 
+                        <motion.button 
                             onClick={() => {
                                 playWhoosh();
                                 document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            animate={{ 
+                                x: [0, -2, 2, -2, 2, 0],
+                                transition: {
+                                    duration: 0.5,
+                                    repeat: Infinity,
+                                    repeatDelay: 5,
+                                    ease: "easeInOut"
+                                }
                             }}
                             className="w-full btn-primary py-4 text-base tracking-widest font-black uppercase pointer-events-auto shadow-[0_0_20px_rgba(202,160,82,0.3)] flex items-center justify-center gap-2"
                         >
@@ -465,7 +476,7 @@ function HomeContent() {
                                 ? (lang === 'es' ? 'Quiero mi producción así' : 'I want my production like this')
                                 : t.hero.stickyCTA
                             }
-                        </button>
+                        </motion.button>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -480,17 +491,28 @@ function HomeContent() {
                         transition={{ duration: 0.4, type: 'spring', stiffness: 260, damping: 20 }}
                         className="fixed bottom-8 right-8 z-[50] hidden md:block"
                     >
-                        <button
+                        <motion.button
                             onClick={() => {
                                 playWhoosh();
                                 document.getElementById('order-form')?.scrollIntoView({ behavior: 'smooth' });
                             }}
-                            className="group bg-coffee-medium hover:bg-coffee-light text-black font-black uppercase tracking-widest py-3.5 px-8 rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_10px_40px_rgba(202,160,82,0.4)] text-xs flex items-center gap-3"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            animate={{ 
+                                x: [0, -2, 2, -2, 2, 0],
+                                transition: {
+                                    duration: 0.5,
+                                    repeat: Infinity,
+                                    repeatDelay: 5,
+                                    ease: "easeInOut"
+                                }
+                            }}
+                            className="group bg-coffee-medium hover:bg-coffee-light text-black font-black uppercase tracking-widest py-3.5 px-8 rounded-full transition-all shadow-[0_10px_40px_rgba(202,160,82,0.4)] text-xs flex items-center gap-3"
                         >
                             <Music className="w-4 h-4" />
                             {lang === 'es' ? 'CREAR MI CANCIÓN' : 'CREATE MY SONG'}
                             <span className="w-2 h-2 rounded-full bg-black/20 animate-pulse" />
-                        </button>
+                        </motion.button>
                     </motion.div>
                 )}
             </AnimatePresence>

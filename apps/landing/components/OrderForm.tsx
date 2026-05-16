@@ -335,9 +335,9 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     };
 
     return (
-        <section id="order-form" className="section-padding bg-dark-card/30 scroll-mt-24 md:scroll-mt-32">
+        <section id="order-form" className="py-16 md:py-24 bg-dark-card/30 scroll-mt-24 md:scroll-mt-32">
             <div className={`mx-auto relative transition-all duration-500 ${step === 2 ? 'max-w-7xl' : 'max-w-3xl'}`}>
-                <div className="text-center mb-12 relative z-10 flex flex-col items-center">
+                <div className="text-center mb-12 relative z-10 flex flex-col items-center px-6">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4 w-full">
                         {lang === 'es' ? 'Crea tu' : 'Create your'} <span className="text-gradient">{lang === 'es' ? 'canción ahora' : 'song now'}</span>
                     </h2>
@@ -360,7 +360,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="glass-morphism rounded-3xl p-5 sm:p-8 md:p-12 relative overflow-hidden">
+                <form onSubmit={handleSubmit} className="glass-morphism sm:rounded-3xl p-5 sm:p-8 md:p-12 relative overflow-hidden border-x-0 sm:border-x border-y border-white/10">
                     {/* Floating Notification */}
                     <AnimatePresence>
                         {notification && (
@@ -659,7 +659,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 <div
                                     ref={planScrollRef}
                                     onScroll={handlePlanScroll}
-                                    className="relative flex lg:grid lg:grid-cols-4 gap-6 overflow-x-auto lg:overflow-visible pt-10 pb-4 lg:pb-0 px-6 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
+                                    className="relative flex lg:grid lg:grid-cols-4 gap-6 overflow-x-auto lg:overflow-visible pt-10 pb-4 lg:pb-0 -mx-5 sm:-mx-8 px-5 sm:px-8 lg:mx-0 lg:px-0 snap-x snap-mandatory scroll-px-6 custom-scrollbar-hide"
                                 >
                                     {PLANS.map((plan) => (
                                         <button
@@ -816,7 +816,8 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                 </div>
 
                                 {/* ORDER SUMMARY TICKET */}
-                                <div className="bg-black/40 border border-white/10 rounded-3xl p-5 sm:p-8 relative overflow-hidden shadow-2xl">
+                                {/* ORDER SUMMARY TICKET */}
+                                <div className="bg-black/40 border-y sm:border border-white/10 sm:rounded-3xl p-5 sm:p-8 relative overflow-hidden shadow-2xl -mx-5 sm:mx-0">
                                     <div className="absolute top-0 left-0 w-2 h-full bg-coffee-medium"></div>
                                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-8">
                                         <div>

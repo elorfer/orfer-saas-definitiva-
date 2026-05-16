@@ -87,7 +87,6 @@
 
     .section-padding {
         @apply py-16 md:py-24 px-4 md:px-12 lg:px-24;
-        contain: layout style; /* Performance: Isolate rendering to prevent scroll bounce */
     }
 }
 

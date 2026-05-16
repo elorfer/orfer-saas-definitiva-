@@ -11,6 +11,36 @@ export interface BlogPost {
 
 export const BLOG_POSTS: BlogPost[] = [
     {
+        slug: 'de-poema-a-cancion-3-ejercicios-estructura',
+        title: 'De poema a canción: 3 ejercicios para estructurar tus versos',
+        excerpt: 'Escribir poesía no es lo mismo que escribir canciones. Aprende a adaptar tus textos para que fluyan perfectamente con cualquier ritmo.',
+        content: `
+            <p>Recibimos cientos de pedidos en Struky de personas que tienen hermosos poemas, pero que rítmicamente no funcionan como canciones. La poesía tiene la libertad de no seguir un tiempo estricto; la música no. Aquí te enseñamos a hacer la transición.</p>
+
+            <h2>Ejercicio 1: La prueba del metrónomo</h2>
+            <p>Descarga cualquier aplicación de metrónomo en tu celular y ponla a 90 BPM (Beats Por Minuto). Intenta leer tu poema al ritmo de los golpes (clics). Si sientes que tienes que apresurarte mucho en una frase y esperar demasiado en otra, <strong>tus métricas son irregulares</strong>. Tienes que acortar las frases largas o alargar las cortas.</p>
+
+            <h2>Ejercicio 2: Identifica el Coro (El gancho)</h2>
+            <p>En un poema, el mensaje se desarrolla a lo largo de las estrofas. En una canción, la idea principal debe estar empaquetada en un bloque de 4 u 8 líneas que se va a repetir varias veces: <strong>el coro</strong>.</p>
+            <p>Toma tu poema, elige la estrofa que resume todo el sentimiento (o la más pegadiza) y muévela al centro de tu estructura. Ese será tu gancho.</p>
+
+            <h2>Ejercicio 3: El principio A-A-B-A</h2>
+            <p>Estructura tus textos usando moldes clásicos. El más sencillo es:</p>
+            <ul>
+                <li><strong>Verso 1 (A):</strong> Presenta la historia.</li>
+                <li><strong>Verso 2 (A):</strong> Continúa la historia con la misma melodía en mente.</li>
+                <li><strong>Coro (B):</strong> Sube la energía, cambia el ritmo, da el mensaje principal.</li>
+                <li><strong>Verso 3 (A):</strong> Regresa al estilo del inicio para concluir la historia.</li>
+            </ul>
+
+            <p>Una vez que tengas esta estructura, introducirla en el formulario de Struky garantizará que la producción musical se acople perfectamente a tu intención original.</p>
+        `,
+        date: '2026-05-15',
+        author: 'Compositor Jefe',
+        image: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/dsfsdfasf.webp',
+        category: 'Composición'
+    },
+    {
         slug: 'como-ponerle-musica-a-una-letra',
         title: '¿Cómo ponerle música a una letra de canción? (Sin saber tocar instrumentos)',
         excerpt: 'Tienes una letra increíble pero no sabes por dónde empezar. Te enseñamos cómo la Inteligencia Artificial y la producción profesional pueden dar vida a tu composición.',
