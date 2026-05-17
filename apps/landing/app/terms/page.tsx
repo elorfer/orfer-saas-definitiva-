@@ -63,7 +63,7 @@ export default function TermsPage() {
                         <h2 className="text-2xl font-bold text-white mb-4">5. Pagos y Precios</h2>
                         <ul className="list-disc list-inside space-y-2 ml-4">
                             <li>Todos los precios están expresados en dólares estadounidenses (USD)</li>
-                            <li>El pago debe realizarse por adelantado a través de Stripe/Lemon Squeezy</li>
+                            <li>El pago debe realizarse por adelantado a través de Stripe</li>
                             <li>Los precios pueden cambiar sin previo aviso</li>
                             <li>Las promociones especiales están sujetas a términos específicos</li>
                         </ul>
@@ -115,8 +115,8 @@ export default function TermsPage() {
                     <section>
                         <h2 className="text-2xl font-bold text-white mb-4">10. Ley Aplicable</h2>
                         <p>
-                            Estos términos se rigen por las leyes aplicables en la jurisdicción donde opera Struky.
-                            Cualquier disputa será resuelta en los tribunales competentes de dicha jurisdicción.
+                            Estos términos se rigen por las leyes de la República de Colombia.
+                            Cualquier disputa será resuelta en los tribunales competentes de Colombia.
                         </p>
                     </section>
 

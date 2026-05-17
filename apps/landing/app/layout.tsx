@@ -154,10 +154,7 @@ export default async function RootLayout({
                     />
                 </noscript>
 
-                <Script
-                    src="https://app.lemonsqueezy.com/js/lemon.js"
-                    strategy="lazyOnload"
-                />
+
                 {children}
                 <WhatsAppButton />
             </body>
