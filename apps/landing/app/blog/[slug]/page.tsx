@@ -44,7 +44,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             name: 'Struky',
             logo: { '@type': 'ImageObject', url: 'https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/logoblanco%20web%20p25).webp' },
         },
-        mainEntityOfPage: { '@type': 'WebPage', '@id': `https://struky.com/blog/${post.slug}` },
+        mainEntityOfPage: { '@type': 'WebPage', '@id': `https://www.struky.com/blog/${post.slug}` },
         wordCount: post.content.replace(/<[^>]*>/g, '').split(/\s+/).length,
         articleSection: post.category,
     };

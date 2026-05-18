@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { BLOG_POSTS } from '@/lib/blog-data';
 
-const BASE_URL = 'https://struky.com';
+const BASE_URL = 'https://www.struky.com';
 
 export default function sitemap(): MetadataRoute.Sitemap {
     // Static pages

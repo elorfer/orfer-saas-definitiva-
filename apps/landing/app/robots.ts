@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
                 disallow: ['/api/', '/admin-orders/', '/success/'],
             },
         ],
-        sitemap: 'https://struky.com/sitemap.xml',
+        sitemap: 'https://www.struky.com/sitemap.xml',
     };
 }
