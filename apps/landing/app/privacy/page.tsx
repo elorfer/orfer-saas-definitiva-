@@ -1,5 +1,13 @@
 import Link from 'next/link';
 
+export const metadata = {
+    title: 'Política de Privacidad | Struky',
+    description: 'Conoce cómo recopilamos, utilizamos y protegemos tus datos de contacto, letras de canciones e información en Struky.',
+    alternates: {
+        canonical: 'https://www.struky.com/privacy',
+    },
+};
+
 export default function PrivacyPage() {
     return (
         <div className="min-h-screen section-padding">

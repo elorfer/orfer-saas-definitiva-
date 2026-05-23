@@ -1,5 +1,13 @@
 import Link from 'next/link';
 
+export const metadata = {
+    title: 'Política de Reembolso | Struky',
+    description: 'Información detallada sobre nuestra política de satisfacción garantizada de 14 días en Struky.',
+    alternates: {
+        canonical: 'https://www.struky.com/refund',
+    },
+};
+
 export default function RefundPage() {
     return (
         <div className="min-h-screen section-padding">

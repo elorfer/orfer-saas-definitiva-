@@ -20,6 +20,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         title: `${post.title} | Blog Struky`,
         description: post.excerpt,
         openGraph: { images: [post.image] },
+        alternates: {
+            canonical: `https://www.struky.com/blog/${post.slug}`,
+        },
     };
 }
 

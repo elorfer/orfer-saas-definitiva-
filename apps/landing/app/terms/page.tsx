@@ -1,5 +1,13 @@
 import Link from 'next/link';
 
+export const metadata = {
+    title: 'Términos de Servicio | Struky',
+    description: 'Términos y condiciones de uso para la producción de canciones y derechos de propiedad intelectual en Struky.',
+    alternates: {
+        canonical: 'https://www.struky.com/terms',
+    },
+};
+
 export default function TermsPage() {
     return (
         <div className="min-h-screen section-padding">

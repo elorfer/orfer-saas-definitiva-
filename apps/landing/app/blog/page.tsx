@@ -6,6 +6,9 @@ import BlogGrid from '@/components/BlogGrid';
 export const metadata = {
     title: 'Blog de Struky | Producción Musical e IA',
     description: 'Aprende sobre producción musical, inteligencia artificial y cómo lanzar tu carrera musical con Struky.',
+    alternates: {
+        canonical: 'https://www.struky.com/blog',
+    },
 };
 
 export default function BlogPage() {
