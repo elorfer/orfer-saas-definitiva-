@@ -83,9 +83,10 @@ export async function POST(req: Request) {
             await triggerMetaPurchase(session);
         } catch (err) {
             console.error('Error sending Meta Purchase:', err);
-        }
-
-        const metadata = session.metadata || {};
+        }        const metadata = session.metadata || {};
+        const email = metadata.email || session.customer_details?.email || '';
+        const phone = metadata.phone || session.customer_details?.phone || '';
+        const name = metadata.name || session.customer_details?.name || 'Cliente';
 
         // Reconstruir la letra desde las partes
         const lyricsParts = Object.keys(metadata)
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
             await resend.emails.send({
                 from: 'Struky Orders <welcome@struky.com>',
                 to: 'welcome@struky.com',
-                subject: `🔥 ¡NUEVO PEDIDO: ${plan}! - ${metadata.name}`,
+                subject: `🔥 ¡NUEVO PEDIDO: ${plan}! - ${name}`,
                 html: `
                     <div style="font-family: sans-serif; background-color: #050505; color: #ffffff; padding: 40px; border-radius: 24px; border: 1px solid #1a1a1a;">
                         <h1 style="color: #caa052; font-size: 24px; margin-bottom: 8px;">🚀 Nueva Venta en Struky</h1>
@@ -113,22 +114,22 @@ export async function POST(req: Request) {
                         
                         <div style="background: #111; padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #222;">
                             <h3 style="color: #caa052; font-size: 12px; text-transform: uppercase; margin-bottom: 16px;">Detalles del Cliente</h3>
-                            <p style="margin: 4px 0;"><strong>Nombre:</strong> ${metadata.name}</p>
-                            <p style="margin: 4px 0;"><strong>Email:</strong> ${metadata.email}</p>
-                            <p style="margin: 4px 0;"><strong>WhatsApp:</strong> ${metadata.phone}</p>
+                            <p style="margin: 4px 0;"><strong>Nombre:</strong> ${name}</p>
+                            <p style="margin: 4px 0;"><strong>Email:</strong> ${email}</p>
+                            <p style="margin: 4px 0;"><strong>WhatsApp:</strong> ${phone || 'No proporcionado'}</p>
                             <p style="margin: 4px 0;"><strong>Plan:</strong> <span style="color: #caa052;">${plan}</span></p>
                         </div>
 
                         <div style="background: #111; padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #222;">
                             <h3 style="color: #caa052; font-size: 12px; text-transform: uppercase; margin-bottom: 16px;">Detalles Artísticos</h3>
-                            <p style="margin: 4px 0;"><strong>Género:</strong> ${metadata.genre}</p>
-                            <p style="margin: 4px 0;"><strong>Voz:</strong> ${metadata.vocalist}</p>
-                            <p style="margin: 4px 0;"><strong>Mood:</strong> ${metadata.mood}</p>
+                            <p style="margin: 4px 0;"><strong>Género:</strong> ${metadata.genre || 'No especificado (Pago directo)'}</p>
+                            <p style="margin: 4px 0;"><strong>Voz:</strong> ${metadata.vocalist || 'No especificada'}</p>
+                            <p style="margin: 4px 0;"><strong>Mood:</strong> ${metadata.mood || 'No especificado'}</p>
                         </div>
 
                         <div style="background: #111; padding: 24px; border-radius: 16px; border: 1px solid #222;">
                             <h3 style="color: #caa052; font-size: 12px; text-transform: uppercase; margin-bottom: 16px;">Letra del Cliente</h3>
-                            <pre style="white-space: pre-wrap; color: #ccc; font-size: 14px; line-height: 1.6;">${fullLyrics || 'Sin letra'}</pre>
+                            <pre style="white-space: pre-wrap; color: #ccc; font-size: 14px; line-height: 1.6;">${fullLyrics || 'Sin letra (Pago directo)'}</pre>
                         </div>
                     </div>
                 `
@@ -137,8 +138,8 @@ export async function POST(req: Request) {
             // 2. Enviar email de bienvenida al CLIENTE
             await resend.emails.send({
                 from: 'Struky Music <welcome@struky.com>',
-                to: metadata.email,
-                subject: `🎧 ¡Tu producción en Struky ha comenzado, ${metadata.name}!`,
+                to: email,
+                subject: `🎧 ¡Tu producción en Struky ha comenzado, ${name}!`,
                 html: `
                     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background-color: #050505; color: #ffffff; padding: 40px; border-radius: 24px;">
                         <div style="text-align: center; margin-bottom: 40px;">
@@ -146,7 +147,7 @@ export async function POST(req: Request) {
                              <p style="color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Premium AI Music Production</p>
                         </div>
 
-                        <h2 style="font-size: 24px; text-align: center; margin-bottom: 24px;">¡Hola, ${metadata.name}! 👋</h2>
+                        <h2 style="font-size: 24px; text-align: center; margin-bottom: 24px;">¡Hola, ${name}! 👋</h2>
                         
                         <p style="color: #ccc; line-height: 1.8; text-align: center; font-size: 16px;">
                             Gracias por confiar en Struky. Hemos recibido correctamente tu pedido del <strong>Plan ${plan}</strong> y nuestro equipo ya está manos a la obra con tus letras.
