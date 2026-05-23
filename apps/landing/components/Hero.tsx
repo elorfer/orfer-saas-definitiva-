@@ -165,16 +165,14 @@ export default function Hero({ t, lang }: HeroProps) {
                                 }}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                animate={{ 
-                                    x: [0, -2, 2, -2, 2, 0],
-                                    transition: {
-                                        duration: 0.5,
-                                        repeat: Infinity,
-                                        repeatDelay: 4,
-                                        ease: "easeInOut"
-                                    }
+                                animate={{ x: [0, -6, 6, -6, 6, 0] }}
+                                transition={{
+                                    duration: 0.5,
+                                    repeat: Infinity,
+                                    repeatDelay: 3,
+                                    ease: "easeInOut"
                                 }}
-                                className="w-full md:w-auto bg-gradient-to-r from-coffee-medium to-coffee-dark hover:from-coffee-medium/90 hover:to-coffee-dark/90 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] py-4 md:py-5 px-8 md:px-12 rounded-full transition-all duration-300 shadow-[0_20px_40px_rgba(141,110,99,0.4)] text-[12px] md:text-lg flex items-center justify-center whitespace-nowrap z-30"
+                                className="w-full md:w-auto bg-gradient-to-r from-coffee-medium to-coffee-dark hover:from-coffee-medium/90 hover:to-coffee-dark/90 text-white font-black uppercase tracking-[0.1em] md:tracking-[0.2em] py-4 md:py-5 px-8 md:px-12 rounded-full transition-colors duration-300 shadow-[0_20px_40px_rgba(141,110,99,0.4)] text-[12px] md:text-lg flex items-center justify-center whitespace-nowrap z-30"
                             >
                                 {lang === 'es' ? 'QUIERO MI CANCIÓN' : 'I WANT MY SONG'}
                             </motion.button>
