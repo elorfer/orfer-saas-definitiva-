@@ -23,18 +23,20 @@ export default function AudioComparison({ lang }: { lang: 'es' | 'en' }) {
 
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-stretch relative">
                     {/* BEFORE - ACAPELA */}
-                    <div className="relative group pt-4">
-                        <div className="absolute top-0 left-6 z-20 flex items-center gap-2 px-5 py-1.5 bg-[#1A1A1A] text-gray-500 rounded-lg text-[10px] md:text-xs font-black italic uppercase tracking-tighter border border-white/5 shadow-2xl">
-                            <Mic2 className="w-3.5 h-3.5" />
-                            {lang === 'es' ? 'Antes: Acapela' : 'Before: Acapella'}
-                        </div>
-                        <div className="h-full rounded-xl overflow-hidden border border-white/5 bg-[#0A0A0A] transition-all group-hover:border-white/10">
-                            <ProfessionalAudioPlayer 
-                                src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/acapela.mp3"
-                                title={lang === 'es' ? "Referencia Original" : "Original Reference"}
-                                description={lang === 'es' ? "Grabación sin procesos" : "Raw recording"}
-                                cover="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/before-cover.png" 
-                            />
+                    <div className="relative group pt-4 flex justify-center">
+                        <div className="w-full max-w-[300px]">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-1.5 bg-[#1A1A1A] text-gray-500 rounded-lg text-[10px] md:text-xs font-black italic uppercase tracking-tighter border border-white/5 shadow-2xl">
+                                <Mic2 className="w-3.5 h-3.5" />
+                                {lang === 'es' ? 'Antes: Acapela' : 'Before: Acapella'}
+                            </div>
+                            <div className="h-full rounded-xl overflow-hidden border border-white/5 bg-[#0A0A0A] transition-all group-hover:border-white/10">
+                                <ProfessionalAudioPlayer 
+                                    src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/acapela.mp3"
+                                    title={lang === 'es' ? "Referencia Original" : "Original Reference"}
+                                    description={lang === 'es' ? "Grabación sin procesos" : "Raw recording"}
+                                    cover="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/before-cover.png" 
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -44,18 +46,20 @@ export default function AudioComparison({ lang }: { lang: 'es' | 'en' }) {
                     </div>
 
                     {/* AFTER - FINAL PRODUCTION */}
-                    <div className="relative group pt-4">
-                        <div className="absolute top-0 left-6 z-20 flex items-center gap-2 px-5 py-1.5 bg-[#7C75FF] text-white rounded-lg text-[10px] md:text-xs font-black italic uppercase tracking-tighter border border-white/20 shadow-[0_0_20px_rgba(124,117,255,0.3)]">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            {lang === 'es' ? 'Después: Master Final' : 'After: Final Master'}
-                        </div>
-                        <div className="h-full rounded-xl overflow-hidden border border-[#7C75FF]/30 bg-[#0A0A0A] shadow-[0_0_50px_rgba(124,117,255,0.05)] transition-all group-hover:border-[#7C75FF]/50">
-                            <ProfessionalAudioPlayer 
-                                src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/jardin-rosita-final.mp3"
-                                title="Jardín de Rosita"
-                                description={lang === 'es' ? "Producción Struky Completa" : "Full Struky Production"}
-                                cover="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/after-cover.png" 
-                            />
+                    <div className="relative group pt-4 flex justify-center">
+                        <div className="w-full max-w-[300px]">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-1.5 bg-[#7C75FF] text-white rounded-lg text-[10px] md:text-xs font-black italic uppercase tracking-tighter border border-white/20 shadow-[0_0_20px_rgba(124,117,255,0.3)]">
+                                <Sparkles className="w-3.5 h-3.5" />
+                                {lang === 'es' ? 'Después: Master Final' : 'After: Final Master'}
+                            </div>
+                            <div className="h-full rounded-xl overflow-hidden border border-[#7C75FF]/30 bg-[#0A0A0A] shadow-[0_0_50px_rgba(124,117,255,0.05)] transition-all group-hover:border-[#7C75FF]/50">
+                                <ProfessionalAudioPlayer 
+                                    src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/jardin-rosita-final.mp3"
+                                    title="Jardín de Rosita"
+                                    description={lang === 'es' ? "Producción Struky Completa" : "Full Struky Production"}
+                                    cover="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/after-cover.png" 
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

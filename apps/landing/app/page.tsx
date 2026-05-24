@@ -323,7 +323,7 @@ function HomeContent() {
                             {examples.map((example, i) => (
                                 <div 
                                     key={i}
-                                    className="flex-shrink-0 w-[85%] md:w-auto snap-center"
+                                    className="flex-shrink-0 w-[260px] md:w-full md:max-w-[300px] mx-auto snap-center"
                                 >
                                     <ProfessionalAudioPlayer 
                                         src={example.src}

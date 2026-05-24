@@ -202,6 +202,20 @@ export default async function SuccessPage({ searchParams }: { searchParams: Prom
                         `}
                     </Script>
 
+                    {/* Limpieza de localStorage de datos del formulario al completar la compra exitosamente */}
+                    <Script id="clear-form-data" strategy="afterInteractive">
+                        {`
+                            if (typeof window !== 'undefined' && window.localStorage) {
+                                localStorage.removeItem('struky_order_form_data');
+                                localStorage.removeItem('struky_order_form_step');
+                                localStorage.removeItem('struky_order_form_send_later');
+                                localStorage.removeItem('struky_order_form_song_quantity');
+                                localStorage.removeItem('struky_order_form_country_code');
+                                console.log('Struky: Form data cleared from localStorage after successful payment.');
+                            }
+                        `}
+                    </Script>
+
                     {/* CTA */}
                     <div className="flex flex-col gap-3">
                         <Link href="/" className="bg-white/5 hover:bg-white/10 text-white w-full py-4 rounded-xl text-[10px] font-black tracking-[0.2em] transition-all text-center border border-white/5 uppercase">

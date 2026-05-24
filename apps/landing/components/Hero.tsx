@@ -23,18 +23,42 @@ export default function Hero({ t, lang }: HeroProps) {
     return (
         <section className="relative z-10 min-h-[90vh] md:min-h-screen flex items-center bg-black pt-20 lg:pt-36 pb-12 lg:pb-32 overflow-hidden">
             {/* Background Studio Image Overlay */}
-            <div className="absolute inset-0 z-0">
+            <div className="absolute inset-0 z-0 overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent z-10 hidden lg:block"></div>
                 <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black z-10 lg:hidden"></div>
-                <Image 
-                    src="/examples/nuevohero.webp"
-                    alt="Studio Background"
-                    fill
-                    priority
-                    className="object-cover opacity-60 lg:opacity-80 object-center lg:object-right"
-                    sizes="(max-width: 1024px) 100vw, 800px"
-                />
+                <div className="absolute inset-0 animate-hero-drift">
+                    <Image 
+                        src="/examples/nuevohero.webp"
+                        alt="Studio Background"
+                        fill
+                        priority
+                        unoptimized
+                        className="object-cover opacity-60 lg:opacity-80 object-center lg:object-right scale-110"
+                    />
+                </div>
             </div>
+
+            {/* Hero drift animation */}
+            <style jsx global>{`
+                @keyframes hero-drift {
+                    0% {
+                        transform: scale(1) translate(0, 0);
+                    }
+                    33% {
+                        transform: scale(1.08) translate(-1.5%, -1%);
+                    }
+                    66% {
+                        transform: scale(1.05) translate(1%, -0.5%);
+                    }
+                    100% {
+                        transform: scale(1) translate(0, 0);
+                    }
+                }
+                .animate-hero-drift {
+                    animation: hero-drift 25s ease-in-out infinite;
+                    will-change: transform;
+                }
+            `}</style>
 
             <div className="relative z-20 max-w-7xl mx-auto px-6 w-full">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">

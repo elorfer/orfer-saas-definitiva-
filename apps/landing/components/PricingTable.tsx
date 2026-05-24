@@ -135,7 +135,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                 )}
 
                                 {plan.highlight && plan.id !== 'elite' && (
-                                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-coffee-medium text-black text-[9px] font-black italic uppercase tracking-tighter px-6 py-2 rounded-full shadow-2xl z-10 border border-white/10 whitespace-nowrap">
+                                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-coffee-medium text-white text-[9px] font-black italic uppercase tracking-tighter px-6 py-2 rounded-full shadow-2xl z-10 border border-white/10 whitespace-nowrap">
                                         {t.popular}
                                     </div>
                                 )}
@@ -173,7 +173,7 @@ export default function PricingTable({ onSelectPlan, t }: PricingTableProps) {
                                         : plan.id === 'premium'
                                         ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500'
                                         : plan.highlight
-                                        ? 'bg-[#8B6A5A] text-black shadow-lg shadow-[#8B6A5A]/10 hover:bg-[#9E7B6B]'
+                                        ? 'bg-[#8B6A5A] text-white shadow-lg shadow-[#8B6A5A]/10 hover:bg-[#9E7B6B]'
                                         : 'bg-white/5 text-white border border-white/10 hover:bg-white/10'
                                     }`}
                                 >

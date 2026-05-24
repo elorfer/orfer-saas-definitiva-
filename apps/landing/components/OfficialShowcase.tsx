@@ -60,7 +60,7 @@ export default function OfficialShowcase({ lang }: OfficialShowcaseProps) {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.2 }}
-                    className="max-w-2xl mx-auto"
+                    className="max-w-[300px] mx-auto"
                 >
                     <ProfessionalAudioPlayer 
                         src="https://pub-cd8d791a454643b3853739c84fd98a3f.r2.dev/Canciones%20en%20Silencio.mp3"

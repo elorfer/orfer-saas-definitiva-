@@ -34,24 +34,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const [isLoading, setIsLoading] = React.useState(false);
     const [showCountrySelect, setShowCountrySelect] = React.useState(false);
     const [selectedCountry, setSelectedCountry] = React.useState(COUNTRIES[0]);
-
-    const isInitialRender = useRef(true);
-
-    // Efecto para auto-scroll al cambiar de paso
-    useEffect(() => {
-        if (isInitialRender.current) {
-            isInitialRender.current = false;
-            return;
-        }
-
-        const element = document.getElementById('order-form');
-        if (element) {
-            // Un pequeño delay (100ms) es clave porque Framer Motion tarda en renderizar el nuevo paso
-            setTimeout(() => {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
-        }
-    }, [step]);
+    const [isLoaded, setIsLoaded] = React.useState(false);
 
     const [formData, setFormData] = React.useState({
         name: '',
@@ -75,7 +58,109 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
     const [planActiveIndex, setPlanActiveIndex] = useState(1); // Default to middle card (Pro)
     const [notification, setNotification] = useState<string | null>(null);
     const [songQuantity, setSongQuantity] = useState(1);
+
+    const isInitialRender = useRef(true);
     const planScrollRef = useRef<HTMLDivElement>(null);
+
+    // Cargar datos persistidos de localStorage al montar (seguro para SSR/hidratación)
+    useEffect(() => {
+        try {
+            const savedFormData = localStorage.getItem('struky_order_form_data');
+            if (savedFormData) {
+                const parsed = JSON.parse(savedFormData);
+                setFormData(prev => ({ ...prev, ...parsed }));
+            }
+
+            const savedStep = localStorage.getItem('struky_order_form_step');
+            if (savedStep) {
+                setStep(parseInt(savedStep, 10));
+            }
+
+            const savedSendLater = localStorage.getItem('struky_order_form_send_later');
+            if (savedSendLater) {
+                setSendLater(savedSendLater === 'true');
+            }
+
+            const savedSongQuantity = localStorage.getItem('struky_order_form_song_quantity');
+            if (savedSongQuantity) {
+                setSongQuantity(parseInt(savedSongQuantity, 10));
+            }
+
+            const savedCountryCode = localStorage.getItem('struky_order_form_country_code');
+            if (savedCountryCode) {
+                const matchedCountry = COUNTRIES.find(c => c.code === savedCountryCode);
+                if (matchedCountry) {
+                    setSelectedCountry(matchedCountry);
+                }
+            }
+        } catch (e) {
+            console.error('Error al cargar datos desde localStorage:', e);
+        } finally {
+            setIsLoaded(true);
+        }
+    }, []);
+
+    // Persistir cambios en localStorage después de que termine la hidratación
+    useEffect(() => {
+        if (!isLoaded) return;
+        try {
+            localStorage.setItem('struky_order_form_data', JSON.stringify(formData));
+        } catch (e) {
+            console.error('Error al guardar formData en localStorage:', e);
+        }
+    }, [formData, isLoaded]);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+        try {
+            localStorage.setItem('struky_order_form_step', step.toString());
+        } catch (e) {
+            console.error('Error al guardar step en localStorage:', e);
+        }
+    }, [step, isLoaded]);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+        try {
+            localStorage.setItem('struky_order_form_send_later', sendLater.toString());
+        } catch (e) {
+            console.error('Error al guardar sendLater en localStorage:', e);
+        }
+    }, [sendLater, isLoaded]);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+        try {
+            localStorage.setItem('struky_order_form_song_quantity', songQuantity.toString());
+        } catch (e) {
+            console.error('Error al guardar songQuantity en localStorage:', e);
+        }
+    }, [songQuantity, isLoaded]);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+        try {
+            localStorage.setItem('struky_order_form_country_code', selectedCountry.code);
+        } catch (e) {
+            console.error('Error al guardar el código de país en localStorage:', e);
+        }
+    }, [selectedCountry, isLoaded]);
+
+    // Efecto para auto-scroll al cambiar de paso
+    useEffect(() => {
+        if (isInitialRender.current) {
+            isInitialRender.current = false;
+            return;
+        }
+
+        const element = document.getElementById('order-form');
+        if (element) {
+            // Un pequeño delay (100ms) es clave porque Framer Motion tarda en renderizar el nuevo paso
+            setTimeout(() => {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }, [step]);
 
     // Discount: Flat 10% if 3 or more songs are selected
     const discountPercent = songQuantity >= 3 ? 10 : 0;
@@ -675,7 +760,7 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
                                                 }`}
                                         >
                                             {plan.highlight && (
-                                                <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 text-white text-[9px] font-black uppercase px-6 py-1.5 rounded-full z-10 border whitespace-nowrap shadow-xl ${plan.id === 'elite' ? 'bg-purple-600 border-white/20' : 'bg-coffee-medium text-black border-white/10'}`}>
+                                                <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 text-white text-[9px] font-black uppercase px-6 py-1.5 rounded-full z-10 border whitespace-nowrap shadow-xl ${plan.id === 'elite' ? 'bg-purple-600 border-white/20' : 'bg-coffee-medium text-white border-white/10'}`}>
                                                     {t.pricing.popular}
                                                 </div>
                                             )}
@@ -1107,17 +1192,17 @@ export default function OrderForm({ lang, initialPlan }: OrderFormProps) {
 
                 {/* MASSIVE GUARANTEE BADGE */}
                 <div className="max-w-4xl mx-auto mt-16">
-                    <div className="bg-gradient-to-b from-coffee-medium/10 to-transparent border border-coffee-medium/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] md:w-full h-px bg-gradient-to-r from-transparent via-coffee-medium to-transparent opacity-50"></div>
+                    <div className="bg-[#0A0A0A] border border-coffee-medium/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] md:w-full h-px bg-gradient-to-r from-transparent via-coffee-medium to-transparent opacity-50 z-20"></div>
                         
-                        <div className="w-20 h-20 md:w-24 md:h-24 mx-auto bg-coffee-medium/10 rounded-full flex items-center justify-center mb-6 border border-coffee-medium/30 shadow-[0_0_50px_rgba(202,160,82,0.2)]">
+                        <div className="relative z-20 w-20 h-20 md:w-24 md:h-24 mx-auto bg-coffee-medium/10 rounded-full flex items-center justify-center mb-6 border border-coffee-medium/30 shadow-[0_0_50px_rgba(202,160,82,0.2)]">
                             <ShieldCheck className="w-10 h-10 md:w-12 md:h-12 text-coffee-medium" />
                         </div>
                         
-                        <h3 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter mb-4 italic">
+                        <h3 className="relative z-20 text-2xl md:text-3xl font-black text-white uppercase tracking-tighter mb-4 italic">
                             {lang === 'es' ? 'Garantía 100%' : '100% Guarantee'} <span className="text-coffee-medium">{lang === 'es' ? 'Anti-Riesgo' : 'Risk-Free'}</span>
                         </h3>
-                        <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+                        <p className="relative z-20 text-gray-300 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
                             {lang === 'es' 
                                 ? <>Nuestra misión es crear el hit que tienes en la cabeza. Si al recibir tu canción sientes que no tiene calidad de industria, <strong className="text-white">la rehacemos junto contigo hasta que te encante</strong>, o te devolvemos tu dinero. Sin letras pequeñas.</>
                                 : <>Our mission is to create the hit you have in your head. If upon receiving your song you feel it lacks industry quality, <strong className="text-white">we will remake it with you until you love it</strong>, or you get your money back. No fine print.</>
