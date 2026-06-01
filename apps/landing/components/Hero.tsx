@@ -74,9 +74,9 @@ export default function Hero({ t, lang }: HeroProps) {
 
                         {/* Giant Headline */}
                         <h1 className="text-5xl md:text-8xl lg:text-[80px] font-black leading-[0.9] tracking-tighter uppercase mb-6 font-heading w-full">
-                            <span className="block text-white">TU LETRA</span>
-                            <span className="block text-white">MERECE</span>
-                            <span className="block text-coffee-medium drop-shadow-[0_0_30px_rgba(141,110,99,0.4)]">SONAR</span>
+                            <span className="block text-white">{lang === 'es' ? 'TU LETRA' : 'YOUR LYRICS'}</span>
+                            <span className="block text-white">{lang === 'es' ? 'MERECE' : 'DESERVE TO'}</span>
+                            <span className="block text-coffee-medium drop-shadow-[0_0_30px_rgba(141,110,99,0.4)]">{lang === 'es' ? 'SONAR' : 'BE HEARD'}</span>
                         </h1>
 
                         {/* Subheadline */}
@@ -94,11 +94,11 @@ export default function Hero({ t, lang }: HeroProps) {
                                 <Music className="w-4 h-4 md:w-6 md:h-6 text-coffee-medium fill-coffee-medium/20" />
                                 <div className="flex items-center gap-3">
                                     <div className="min-w-[110px] md:min-w-[160px] flex justify-start">
-                                        <GenreTicker />
+                                        <GenreTicker lang={lang} />
                                     </div>
                                     <div className="w-px h-4 bg-white/20"></div>
                                     <div className="flex-shrink-0">
-                                        <SongCounter />
+                                        <SongCounter lang={lang} />
                                     </div>
                                 </div>
                             </motion.div>
@@ -161,7 +161,7 @@ export default function Hero({ t, lang }: HeroProps) {
                         <div className="flex flex-row gap-2 mb-6 w-full max-w-full">
                             {/* Price Box */}
                             <div className="flex-[1] min-h-[90px] md:min-h-[140px] bg-black/60 border border-coffee-medium/40 rounded-xl md:rounded-3xl p-3 md:p-6 flex flex-col items-center justify-center relative overflow-hidden group">
-                                <span className="text-[8px] md:text-xs font-black uppercase tracking-[0.2em] text-white/70">DESDE</span>
+                                <span className="text-[8px] md:text-xs font-black uppercase tracking-[0.2em] text-white/70">{lang === 'es' ? 'DESDE' : 'FROM'}</span>
                                 <div className="flex items-end gap-1 md:gap-3">
                                     <span className="text-3xl md:text-6xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] tracking-tighter leading-none">$50</span>
                                     <span className="text-[10px] md:text-2xl font-black text-[#E9DCC9] mb-1 tracking-tighter">USD</span>
@@ -174,7 +174,7 @@ export default function Hero({ t, lang }: HeroProps) {
                                     <Mic className="w-4 h-4 md:w-7 md:h-7 text-white fill-white/10" />
                                 </div>
                                 <div className="flex flex-col items-start justify-center">
-                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-tight text-white/90 leading-tight">HIT EN</span>
+                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-tight text-white/90 leading-tight">{lang === 'es' ? 'HIT EN' : 'HIT IN'}</span>
                                     <span className="text-2xl md:text-5xl font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] leading-none tracking-tighter">48H</span>
                                 </div>
                             </div>
@@ -205,12 +205,12 @@ export default function Hero({ t, lang }: HeroProps) {
                             <div className="flex flex-row items-center gap-4 md:gap-8 opacity-80">
                                 <div className="flex items-center gap-2">
                                     <BadgeCheck className="w-4 h-4 md:w-5 md:h-5 text-coffee-medium" />
-                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/90">DERECHOS 100%</span>
+                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/90">{lang === 'es' ? 'DERECHOS 100%' : '100% RIGHTS'}</span>
                                 </div>
                                 <div className="w-px h-3 bg-white/20"></div>
                                 <div className="flex items-center gap-2">
                                     <Zap className="w-4 h-4 md:w-5 md:h-5 text-coffee-medium" />
-                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/90">ENTREGA RÁPIDA</span>
+                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/90">{lang === 'es' ? 'ENTREGA RÁPIDA' : 'FAST DELIVERY'}</span>
                                 </div>
                                 <div className="w-px h-3 bg-white/20"></div>
                                 <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export default function Hero({ t, lang }: HeroProps) {
                                         <path d="M3 12h1m2 0h1m2 0h1m2 0h1m2 0h1m2 0h1m2 0h1m2 0h1m2 0h1" />
                                         <path d="M7 8v8m4-10v12m4-14v16m4-10v4" />
                                     </svg>
-                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/90">PROD. REAL</span>
+                                    <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/90">{lang === 'es' ? 'PROD. REAL' : 'REAL PROD.'}</span>
                                 </div>
                             </div>
 
@@ -262,7 +262,7 @@ export default function Hero({ t, lang }: HeroProps) {
     );
 }
 
-function SongCounter() {
+function SongCounter({ lang }: { lang: 'es' | 'en' }) {
     const [count, setCount] = useState(0);
 
     useEffect(() => {
@@ -290,14 +290,16 @@ function SongCounter() {
                 +{count.toLocaleString()}
             </span>
             <span className="text-gray-500 text-[10px] md:text-xs font-bold uppercase tracking-widest">
-                CANCIONES
+                {lang === 'es' ? 'CANCIONES' : 'SONGS'}
             </span>
         </div>
     );
 }
 
-function GenreTicker() {
-    const genres = ["URBANO", "CORRIDOS", "SALSA", "POP", "BACHATA", "CRISTIANO", "Y MÁS"];
+function GenreTicker({ lang }: { lang: 'es' | 'en' }) {
+    const genres = lang === 'es' 
+        ? ["URBANO", "CORRIDOS", "SALSA", "POP", "BACHATA", "CRISTIANO", "Y MÁS"]
+        : ["POP", "HIP HOP", "R&B", "EDM", "COUNTRY", "ROCK", "AND MORE"];
     const [index, setIndex] = useState(0);
 
     useEffect(() => {
