@@ -21,7 +21,6 @@ import '../widgets/playlist_search_card.dart';
 import 'web/web_search_screen.dart'; // 🚀 Web UI
 import '../../../core/responsive/responsive_layout.dart'; // 🚀 Responsive Control
 // 📢 AdMob (Mantenido por si acaso)
-import '../../../core/widgets/native_ad_list_tile.dart'; // 🎨 NATIVE AD
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -545,16 +544,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
           ),
         ],
 
-        // 📢 ADMOB: Anuncio Nativo entre Artistas y Canciones
-        const SliverToBoxAdapter(
-          child: RepaintBoundary(
-            child: NativeAdListTile(
-              key: ValueKey('search_results_native_ad'),
-              adType: NativeAdType.small,
-              placement: 'search',
-            ),
-          ),
-        ),
+
 
         // ⚡ OPTIMIZADO: Canciones con RepaintBoundary
         if (filteredResults.songs.isNotEmpty) ...[
@@ -703,16 +693,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen>
             ),
           ),
           
-          // 📢 ADMOB: Anuncio Nativo en Home de búsqueda
-          const SliverToBoxAdapter(
-            child: RepaintBoundary(
-              child: NativeAdListTile(
-                key: ValueKey('search_home_native_ad'),
-                adType: NativeAdType.small,
-                placement: 'search',
-              ),
-            ),
-          ),
+
           
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
 

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { IconSun, IconMoon, IconSparkles } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
+import { IconSun, IconMoon, IconSparkles, IconLogout } from '@tabler/icons-react';
 import { createClient } from '@/utils/supabase/client';
 
 export default function Header() {
+  const router = useRouter();
   const supabase = createClient();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
@@ -46,6 +48,14 @@ export default function Header() {
     }
   };
 
+  const handleLogout = async () => {
+    const confirmLogout = window.confirm("¿Estás seguro de que deseas cerrar sesión?");
+    if (!confirmLogout) return;
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
   return (
     <header className="bg-gradient-to-br from-primary-dark to-primary p-5 sm:p-6 text-white shadow-md relative overflow-hidden shrink-0 flex justify-between items-center">
       <div className="relative z-10">
@@ -58,9 +68,26 @@ export default function Header() {
       <div className="relative z-10 flex items-center gap-3">
         {/* Botón/Badge de Suscripción */}
         {subscriptionTier === 'pro' ? (
-          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-gold/20 border border-accent-gold/30 text-xs font-bold text-accent-gold shadow-sm animate-pulse-slow">
+          <button 
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/portal', { method: 'POST' });
+                const data = await response.json();
+                if (data.url) {
+                  window.open(data.url, '_blank');
+                } else {
+                  alert(data.error || 'No se pudo abrir el portal de facturación.');
+                }
+              } catch (err) {
+                console.error(err);
+                alert('Error al conectar con el portal de facturación.');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent-gold/20 hover:bg-accent-gold/30 border border-accent-gold/30 text-xs font-bold text-accent-gold shadow-sm cursor-pointer transition-all"
+            title="Gestionar tu plan / Facturación de Stripe"
+          >
             <IconSparkles size={12} /> Premium Pro
-          </span>
+          </button>
         ) : (
           <Link 
             href="/paywall"
@@ -77,6 +104,16 @@ export default function Header() {
           aria-label="Cambiar tema"
         >
           {theme === 'dark' ? <IconSun size={18} className="text-accent-gold" /> : <IconMoon size={18} className="text-white" />}
+        </button>
+
+        {/* Botón de cerrar sesión */}
+        <button 
+          onClick={handleLogout}
+          className="p-2.5 rounded-full bg-white/10 hover:bg-red-500/20 hover:text-red-300 transition-all text-white border border-white/10 shadow-inner cursor-pointer"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          <IconLogout size={18} />
         </button>
       </div>
 

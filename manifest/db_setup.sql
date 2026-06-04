@@ -96,3 +96,56 @@ create policy "Users can view their own chat messages." on public.chat_messages
 
 create policy "Users can insert their own chat messages." on public.chat_messages
   for insert with check (auth.uid() = user_id);
+
+
+-- 5. TABLA DE RETOS DE 30 DÍAS (CHALLENGES)
+create table public.challenges (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  area text not null,
+  content jsonb not null, -- [{ day: 1, affirmation: "...", action: "..." }]
+  completed_days jsonb default '{}'::jsonb not null, -- {"1": "2026-06-04T12:00:00Z"}
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Habilitar RLS para seguridad de retos
+alter table public.challenges enable row level security;
+
+create policy "Users can view their own challenges." on public.challenges
+  for select using (auth.uid() = user_id);
+
+create policy "Users can insert their own challenges." on public.challenges
+  for insert with check (auth.uid() = user_id);
+
+create policy "Users can update their own challenges." on public.challenges
+  for update using (auth.uid() = user_id);
+
+create policy "Users can delete their own challenges." on public.challenges
+  for delete using (auth.uid() = user_id);
+
+
+-- 6. TABLA DE TRIÁNGULOS DE MANIFESTACIÓN (MANIFESTATION_TRIANGLES)
+create table public.manifestation_triangles (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users on delete cascade not null,
+  desire text not null,
+  emotion text not null,
+  action text not null,
+  affirmation text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Habilitar RLS para seguridad de triángulos
+alter table public.manifestation_triangles enable row level security;
+
+create policy "Users can view their own triangles." on public.manifestation_triangles
+  for select using (auth.uid() = user_id);
+
+create policy "Users can insert their own triangles." on public.manifestation_triangles
+  for insert with check (auth.uid() = user_id);
+
+create policy "Users can delete their own triangles." on public.manifestation_triangles
+  for delete using (auth.uid() = user_id);
+
+
+

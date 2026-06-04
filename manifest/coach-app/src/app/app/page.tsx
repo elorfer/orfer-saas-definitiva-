@@ -13,6 +13,17 @@ import VisualizeTab from "@/components/tabs/VisualizeTab";
 export default function AppHome() {
   const [activeTab, setActiveTab] = useState<TabType>("coach");
 
+  React.useEffect(() => {
+    const handleTabChange = (event: Event) => {
+      const customEvent = event as CustomEvent<TabType>;
+      if (customEvent.detail) {
+        setActiveTab(customEvent.detail);
+      }
+    };
+    window.addEventListener("change-tab", handleTabChange);
+    return () => window.removeEventListener("change-tab", handleTabChange);
+  }, []);
+
   const renderTab = () => {
     switch (activeTab) {
       case "coach":

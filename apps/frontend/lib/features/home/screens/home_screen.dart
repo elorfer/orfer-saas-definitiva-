@@ -24,7 +24,6 @@ import '../widgets/home_message_banner.dart';
 import '../widgets/home_header.dart'; // Extracted header
 import '../../../core/responsive/responsive_layout.dart';
 import 'web/web_home_screen.dart';
-import '../../../core/widgets/native_ad_list_tile.dart'; // 🚀 NIVEL DIOS: Anuncio Nativo
 
 /// HomeScreen optimizado con AutomaticKeepAliveClientMixin
 /// Evita reconstrucciones innecesarias al cambiar de pestañas
@@ -325,10 +324,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             SliverToBoxAdapter(
                               child: const FeaturedSongsSection(key: ValueKey('featured_songs')),
                             ),
-                            // 📢 ADMOB: Anuncio NATIVO integrado (Nivel Dios)
-                            const SliverToBoxAdapter(
-                              child: NativeAdListTile(key: ValueKey('home_section_native_ad')),
-                            ),
+
                           ],
                         ),
 

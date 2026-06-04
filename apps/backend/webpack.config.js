@@ -7,6 +7,18 @@ module.exports = function (options, webpack) {
     'music-metadata', // Excluir music-metadata del bundle
   ];
 
+  // 🚀 Aumentar el límite de memoria del verificador de tipos de TypeScript si existe
+  const tsCheckerPlugin = options.plugins.find(
+    (plugin) => plugin.constructor.name === 'ForkTsCheckerWebpackPlugin'
+  );
+  if (tsCheckerPlugin && tsCheckerPlugin.options) {
+    tsCheckerPlugin.options.memoryLimit = 4096;
+    if (!tsCheckerPlugin.options.typescript) {
+      tsCheckerPlugin.options.typescript = {};
+    }
+    tsCheckerPlugin.options.typescript.memoryLimit = 4096;
+  }
+
   return {
     ...options,
     resolve: {

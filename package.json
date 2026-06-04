@@ -35,5 +35,10 @@
   "engines": {
     "node": "16.x",
     "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^3.0.80",
+    "@ai-sdk/react": "^3.0.198",
+    "ai": "^6.0.196"
   }
 }

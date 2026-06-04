@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { IconArrowUpRight, IconX, IconLoader2, IconSparkles } from '@tabler/icons-react';
+import { IconArrowUpRight, IconX, IconLoader2, IconSparkles, IconCheck, IconMinus } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/utils/supabase/client';
+import { twMerge } from 'tailwind-merge';
 
 type Goal = {
   id: string;
@@ -118,8 +119,37 @@ export default function GoalsTab() {
   };
 
   const handleIncreaseProgress = async (goalId: string, currentProgress: number) => {
-    if (currentProgress >= 100) return;
-    const nextProgress = Math.min(currentProgress + 10, 100);
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) return;
+    
+    const completedDays = Math.round((currentProgress / 100) * goal.duration_days);
+    if (completedDays >= goal.duration_days) return;
+    
+    const nextCompleted = completedDays + 1;
+    const nextProgress = Math.min(Math.round((nextCompleted / goal.duration_days) * 100), 100);
+    
+    setGoals(prev => prev.map(g => g.id === goalId ? { ...g, progress: nextProgress } : g));
+
+    const { error } = await supabase
+      .from('goals')
+      .update({ progress: nextProgress })
+      .eq('id', goalId);
+      
+    if (error) {
+      setGoals(prev => prev.map(g => g.id === goalId ? { ...g, progress: currentProgress } : g));
+      console.error(error);
+    }
+  };
+
+  const handleDecreaseProgress = async (goalId: string, currentProgress: number) => {
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) return;
+    
+    const completedDays = Math.round((currentProgress / 100) * goal.duration_days);
+    if (completedDays <= 0) return;
+    
+    const nextCompleted = completedDays - 1;
+    const nextProgress = Math.max(Math.round((nextCompleted / goal.duration_days) * 100), 0);
     
     setGoals(prev => prev.map(g => g.id === goalId ? { ...g, progress: nextProgress } : g));
 
@@ -148,46 +178,81 @@ export default function GoalsTab() {
                 ✨ No tienes metas de manifestación creadas. ¡Define tu primera intención de 90 días abajo!
               </div>
             ) : (
-              goals.map((goal, index) => (
-                <motion.div 
-                  key={goal.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="bg-bg-secondary rounded-2xl p-5 border border-border-primary shadow-sm flex flex-col relative"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
-                      🎯 {goal.duration_days} días
+              goals.map((goal, index) => {
+                const completedDays = Math.round((goal.progress / 100) * goal.duration_days);
+                const remainingDays = Math.max(goal.duration_days - completedDays, 0);
+
+                return (
+                  <motion.div 
+                    key={goal.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-bg-secondary rounded-2xl p-5 border border-border-primary shadow-sm flex flex-col relative"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="inline-block text-[11px] font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                        🎯 {goal.duration_days} {goal.duration_days === 1 ? 'día' : 'días'}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {/* Botón Disminuir Progreso (-1 Día) */}
+                        {completedDays > 0 && (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleDecreaseProgress(goal.id, goal.progress)}
+                            className="text-[11px] font-bold px-2.5 py-1.5 rounded-full border border-red-500/30 bg-red-500/5 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 transition-all flex items-center gap-1 cursor-pointer"
+                            title="Restar 1 Día"
+                          >
+                            <IconMinus size={11} stroke={3} />
+                            <span>-1 Día</span>
+                          </motion.button>
+                        )}
+
+                        {/* Botón Aumentar Progreso (+1 Día) */}
+                        <motion.button
+                          whileHover={{ scale: goal.progress >= 100 ? 1 : 1.05 }}
+                          whileTap={{ scale: goal.progress >= 100 ? 1 : 0.95 }}
+                          onClick={() => handleIncreaseProgress(goal.id, goal.progress)}
+                          disabled={goal.progress >= 100}
+                          className={twMerge(
+                            "text-[11px] font-bold px-3 py-1.5 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer",
+                            goal.progress >= 100 
+                              ? "bg-green-500/20 border-green-500/30 text-green-400 font-bold shadow-[0_0_12px_rgba(34,197,94,0.15)]" 
+                              : "bg-gradient-to-r from-indigo-500 to-pink-500 border-transparent text-white shadow-[0_0_15px_rgba(99,102,241,0.25)] hover:shadow-[0_0_20px_rgba(99,102,241,0.45)]"
+                          )}
+                        >
+                          {goal.progress >= 100 ? (
+                            <>
+                              <IconCheck size={12} stroke={3} />
+                              <span>Manifestada</span>
+                            </>
+                          ) : (
+                            <>
+                              <IconSparkles size={12} className="animate-pulse text-yellow-300" />
+                              <span>+1 Día</span>
+                            </>
+                          )}
+                        </motion.button>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleIncreaseProgress(goal.id, goal.progress)}
-                      disabled={goal.progress >= 100}
-                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all ${
-                        goal.progress >= 100 
-                          ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400" 
-                          : "border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-white"
-                      }`}
-                    >
-                      {goal.progress >= 100 ? "✓ Manifestada" : "+ 10% Progreso"}
-                    </button>
-                  </div>
-                  <h3 className="text-[15px] font-bold mb-1 text-text-primary">{goal.title}</h3>
-                  <p className="text-[13px] text-text-secondary mb-4 leading-relaxed">{goal.description}</p>
-                  
-                  <div className="h-1.5 bg-border-primary rounded-full overflow-hidden mb-2">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${goal.progress}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      className="h-full bg-primary rounded-full"
-                    />
-                  </div>
-                  <span className="text-[12px] text-text-secondary block font-medium">
-                    {goal.progress}% completado · {calculateDaysRemaining(goal.created_at, goal.duration_days)}
-                  </span>
-                </motion.div>
-              ))
+                    <h3 className="text-[15px] font-bold mb-1 text-text-primary">{goal.title}</h3>
+                    <p className="text-[13px] text-text-secondary mb-4 leading-relaxed">{goal.description}</p>
+                    
+                    <div className="h-2 bg-border-primary/50 dark:bg-white/5 rounded-full overflow-hidden mb-2 p-[2px] border border-white/5 shadow-inner">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${goal.progress}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full bg-gradient-to-r from-indigo-500 via-pink-500 to-amber-500 rounded-full shadow-[0_0_10px_rgba(236,72,153,0.5)]"
+                      />
+                    </div>
+                    <span className="text-[12px] text-text-secondary block font-medium">
+                      {completedDays} de {goal.duration_days} {goal.duration_days === 1 ? 'día completado' : 'días completados'} · {remainingDays} {remainingDays === 1 ? 'día restante' : 'días restantes'}
+                    </span>
+                  </motion.div>
+                );
+              })
             )}
           </div>
 

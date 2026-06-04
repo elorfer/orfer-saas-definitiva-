@@ -176,8 +176,9 @@ class _IntelligentFeaturedSongsSectionState extends ConsumerState<IntelligentFea
                   ),
                 ],
               ],
-            );
-          },
+            ),
+          );
+        },
         ),
       ],
     );

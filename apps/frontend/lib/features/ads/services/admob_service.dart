@@ -22,15 +22,7 @@ class AdMobService {
   static const String _androidBannerProdId = 'ca-app-pub-2929540794612262/1236347270'; 
   static const String _iosBannerProdId = 'AQUÍ_TU_ID_REAL_IOS';
 
-  static const String _androidNativeTestId = 'ca-app-pub-3940256099942544/2247696110';
-  static const String _iosNativeTestId = 'ca-app-pub-3940256099942544/3986624511';
 
-  /// IDs Nativos Reales
-  static const String _androidNativeHomeProdId = 'ca-app-pub-2929540794612262/2972849203';
-  static const String _iosNativeHomeProdId = 'ca-app-pub-2929540794612262/2972849203'; // El usuario ha proporcionado el mismo para Android, asimilar para iOS por ahora.
-  
-  static const String _androidNativeSearchProdId = 'ca-app-pub-2929540794612262/4094359180';
-  static const String _iosNativeSearchProdId = 'ca-app-pub-2929540794612262/4094359180';
 
   /// Retorna el ID de Banner adecuado según plataforma y modo
   static String? get bannerAdUnitId {
@@ -44,27 +36,7 @@ class AdMobService {
     return null;
   }
 
-  /// Retorna el ID de Anuncio Nativo adecuado según el emplazamiento (placement)
-  static String? nativeAdUnitId({String placement = 'home'}) {
-    if (isTestMode) {
-      return Platform.isAndroid ? _androidNativeTestId : _iosNativeTestId;
-    }
-    
-    // MODO PRODUCCIÓN
-    if (Platform.isAndroid) {
-      if (placement == 'home') return _androidNativeHomeProdId;
-      if (placement == 'search') return _androidNativeSearchProdId;
-      return _androidNativeHomeProdId;
-    }
-    
-    if (Platform.isIOS) {
-      if (placement == 'home') return _iosNativeHomeProdId;
-      if (placement == 'search') return _iosNativeSearchProdId;
-      return _iosNativeHomeProdId;
-    }
-    
-    return null;
-  }
+
 
   /// 🚀 POOL DE ANUNCIOS: Almacena anuncios precargados para visualización instantánea
   static BannerAd? _preloadedBanner;

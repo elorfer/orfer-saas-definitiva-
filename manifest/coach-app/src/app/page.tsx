@@ -20,7 +20,9 @@ import {
   IconArrowUpRight,
   IconSun,
   IconMoon,
-  IconSend
+  IconSend,
+  IconTriangle,
+  IconLoader2
 } from "@tabler/icons-react";
 
 // URLs de Imágenes externas (Cloudflare R2 / CDN) para optimizar recursos y rendimiento en Vercel
@@ -120,6 +122,31 @@ export default function LandingPage() {
 
   // Estados de FAQs
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  // Estados del Triángulo de Manifestación Interactivo de la Landing
+  const [landingStep, setLandingStep] = useState(1);
+  const [landingDesire, setLandingDesire] = useState("");
+  const [landingEmotion, setLandingEmotion] = useState("");
+  const [landingAction, setLandingAction] = useState("");
+  const [landingGenerating, setLandingGenerating] = useState(false);
+  const [landingAffirmation, setLandingAffirmation] = useState("");
+  const [landingCopied, setLandingCopied] = useState(false);
+
+  const handleActivateLandingTriangle = () => {
+    if (!landingDesire.trim() || !landingEmotion.trim() || !landingAction.trim()) return;
+    setLandingGenerating(true);
+    setTimeout(() => {
+      const templates = [
+        `Decreto con convicción absoluta que estoy manifestando "${landingDesire}" sintiendo una profunda vibración de "${landingEmotion}". Hoy tomo la acción inspirada de "${landingAction}", sabiendo que el universo me respalda.`,
+        `Yo elijo conscientemente experimentar "${landingDesire}" a través del sentimiento puro de "${landingEmotion}". Hoy realizo mi paso físico de "${landingAction}" y abro mi realidad al éxito.`,
+        `Agradezco la llegada de "${landingDesire}" en mi vida física. Me inundo de la vibración de "${landingEmotion}" y hoy doy el paso alineado de "${landingAction}". Hecho está.`
+      ];
+      const randomIndex = Math.floor(Math.random() * templates.length);
+      setLandingAffirmation(templates[randomIndex]);
+      setLandingGenerating(false);
+      setLandingStep(4);
+    }, 2000); // 2 segundos de animación láser
+  };
 
   // Cambiar afirmación con animación
   const handleGenerateAffirmation = (category: string) => {
@@ -611,53 +638,69 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             
             {/* Carta 1: AI Coach */}
-            <div className="glass-card p-8 rounded-3xl text-left hover:border-primary/40 transition-all duration-300 group flex flex-col justify-between">
+            <div className="glass-card p-6 rounded-3xl text-left hover:border-primary/40 transition-all duration-300 group flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
                   <IconRobot size={24} />
                 </div>
-                <h3 className="text-xl font-bold text-text-primary mb-3">Coach de Manifestación con IA</h3>
-                <p className="text-text-secondary text-sm leading-relaxed">
+                <h3 className="text-lg font-bold text-text-primary mb-3">Coach de IA 24/7</h3>
+                <p className="text-text-secondary text-xs leading-relaxed">
                   Habla libremente con un mentor virtual entrenado en leyes de atracción, programación neurolingüística y coaching ontológico.
                 </p>
               </div>
-              <div className="pt-6 flex items-center gap-1.5 text-primary dark:text-accent-gold text-sm font-bold">
-                Hablar 24/7 <IconArrowRight size={14} />
+              <div className="pt-6 flex items-center gap-1.5 text-primary dark:text-accent-gold text-xs font-bold">
+                Iniciar diálogo <IconArrowRight size={12} />
               </div>
             </div>
 
-            {/* Carta 2: Afirmaciones */}
-            <div className="glass-card p-8 rounded-3xl text-left hover:border-accent-purple/40 transition-all duration-300 group flex flex-col justify-between">
+            {/* Carta 2: Triángulo de Manifestación */}
+            <div className="glass-card p-6 rounded-3xl text-left hover:border-accent-purple/40 transition-all duration-300 group flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-accent-purple/10 border border-accent-purple/20 flex items-center justify-center text-accent-purple mb-6 group-hover:scale-110 transition-transform">
-                  <IconSparkles size={24} />
+                  <IconTriangle size={24} />
                 </div>
-                <h3 className="text-xl font-bold text-text-primary mb-3">Generador de Afirmaciones</h3>
-                <p className="text-text-secondary text-sm leading-relaxed">
-                  Crea decretos personalizados alineados a tus vibraciones actuales. Libera bloqueos mentales de manera efectiva.
+                <h3 className="text-lg font-bold text-text-primary mb-3">Triángulo de Manifestación</h3>
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  Alinea tu Deseo, tus Emociones y tu Acción física en un triángulo interactivo con afirmaciones creadas por Gemini y metas automáticas.
                 </p>
               </div>
-              <div className="pt-6 flex items-center gap-1.5 text-primary dark:text-accent-gold text-sm font-bold">
-                Decretar ahora <IconArrowRight size={14} />
+              <div className="pt-6 flex items-center gap-1.5 text-primary dark:text-accent-gold text-xs font-bold">
+                Activar triángulo <IconArrowRight size={12} />
               </div>
             </div>
 
-            {/* Carta 3: Visualizador */}
-            <div className="glass-card p-8 rounded-3xl text-left hover:border-accent-gold/40 transition-all duration-300 group flex flex-col justify-between">
+            {/* Carta 3: Reto de 30 Días */}
+            <div className="glass-card p-6 rounded-3xl text-left hover:border-accent-gold/40 transition-all duration-300 group flex flex-col justify-between">
               <div>
                 <div className="w-12 h-12 rounded-2xl bg-accent-gold/10 border border-accent-gold/20 flex items-center justify-center text-accent-gold mb-6 group-hover:scale-110 transition-transform">
-                  <IconEye size={24} />
+                  <IconTarget size={24} />
                 </div>
-                <h3 className="text-xl font-bold text-text-primary mb-3">Visualización Cuántica</h3>
-                <p className="text-text-secondary text-sm leading-relaxed">
-                  Experimenta sesiones inmersivas que estimulan el cerebro visual y auditivamente. Siente la realidad antes de verla.
+                <h3 className="text-lg font-bold text-text-primary mb-3">Retos de 30 Días con IA</h3>
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  Hackea tu subconsciente con un plan gamificado de 30 días con micro-acciones físicas diarias adaptadas por la IA a tu meta.
                 </p>
               </div>
-              <div className="pt-6 flex items-center gap-1.5 text-primary dark:text-accent-gold text-sm font-bold">
-                Iniciar alineación <IconArrowRight size={14} />
+              <div className="pt-6 flex items-center gap-1.5 text-primary dark:text-accent-gold text-xs font-bold">
+                Generar reto <IconArrowRight size={12} />
+              </div>
+            </div>
+
+            {/* Carta 4: Visualización Cuántica */}
+            <div className="glass-card p-6 rounded-3xl text-left hover:border-blue-400/40 transition-all duration-300 group flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                  <IconEye size={24} />
+                </div>
+                <h3 className="text-lg font-bold text-text-primary mb-3">Visualización y Calma</h3>
+                <p className="text-text-secondary text-xs leading-relaxed">
+                  Experimenta ciclos de respiración guiada interactiva y estimuladores cerebrales como el "Spiritual Jackpot" para consolidar tu enfoque.
+                </p>
+              </div>
+              <div className="pt-6 flex items-center gap-1.5 text-primary dark:text-accent-gold text-xs font-bold">
+                Iniciar alineación <IconArrowRight size={12} />
               </div>
             </div>
 
@@ -724,76 +767,322 @@ export default function LandingPage() {
         
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto space-y-4 mb-16">
-            <h2 className="text-xs font-bold text-primary dark:text-accent-purple uppercase tracking-widest">Pruébalo en vivo</h2>
             <p className="text-3xl sm:text-4xl font-black text-text-primary tracking-tight">Siente el poder de Manifiestas AI</p>
             <p className="text-text-secondary">Prueba nuestras dos herramientas principales directamente en la landing page.</p>
           </div>
 
           <div className="grid lg:grid-cols-12 gap-12 items-start">
             
-            {/* WIDGET 1: GENERADOR DE AFIRMACIONES INTERACTIVO */}
+            {/* WIDGET 1: SIMULADOR INTERACTIVO DEL TRIÁNGULO DE MANIFESTACIÓN */}
             <div className="lg:col-span-6 space-y-6">
-              <div className="glass-card rounded-3xl p-6 md:p-8 space-y-6 shadow-xl relative overflow-hidden">
+              <div className="glass-card rounded-3xl p-6 md:p-8 space-y-6 shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[430px]">
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-accent-purple/5 dark:bg-accent-purple/10 rounded-full blur-2xl pointer-events-none"></div>
                 
                 <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
-                  <span className="text-accent-purple">⚡</span> Genera tu Decretador Personal
+                  <span className="text-accent-purple">🔺</span> Prueba el Triángulo de Manifestación
                 </h3>
-                
-                <div className="space-y-3">
-                  <label className="text-xs text-text-secondary font-bold tracking-wider block">1. SELECCIONA TU ENFOQUE</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {["dinero", "amor", "exito", "confianza"].map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => handleGenerateAffirmation(cat)}
-                        className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border ${
-                          selectedCategory === cat
-                            ? "bg-primary/10 border-primary text-primary"
-                            : "bg-bg-secondary dark:bg-white/5 border-border-primary dark:border-white/10 text-text-secondary dark:text-slate-300 hover:border-primary/30"
-                        }`}
-                      >
-                        {cat === "dinero" ? "💰 Dinero" : cat === "amor" ? "💗 Amor" : cat === "exito" ? "🚀 Éxito" : "🦋 Confianza"}
-                      </button>
-                    ))}
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center flex-1">
+                  
+                  {/* Triángulo SVG */}
+                  <div className="sm:col-span-5 flex justify-center">
+                    <svg className="w-40 h-36 drop-shadow-[0_0_12px_rgba(99,102,241,0.25)] select-none" viewBox="0 0 200 170">
+                      <defs>
+                        <filter id="landing-glow" x="-20%" y="-20%" width="140%" height="140%">
+                          <feGaussianBlur stdDeviation="4" result="blur" />
+                          <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                          </feMerge>
+                        </filter>
+                        <linearGradient id="landing-loading-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#6366f1" />
+                          <stop offset="50%" stopColor="#ec4899" />
+                          <stop offset="100%" stopColor="#f59e0b" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Láser de carga */}
+                      {landingGenerating && (
+                        <motion.polygon 
+                          points="100,25 35,145 165,145" 
+                          fill="rgba(245,158,11,0.03)"
+                          stroke="url(#landing-loading-grad)"
+                          strokeWidth="3.5"
+                          animate={{ 
+                            strokeDashoffset: [0, 400],
+                            opacity: [0.4, 0.9, 0.4]
+                          }}
+                          style={{ 
+                            strokeDasharray: "10, 20", 
+                            filter: "drop-shadow(0 0 6px rgba(236,72,153,0.6))" 
+                          }}
+                          transition={{ 
+                            duration: 3, 
+                            repeat: Infinity, 
+                            ease: "linear" 
+                          }}
+                        />
+                      )}
+
+                      {/* Líneas */}
+                      <line 
+                        x1={100} y1={25} x2={35} y2={145} 
+                        stroke={(!!landingDesire.trim() || landingStep >= 2) ? "#818cf8" : "rgba(255, 255, 255, 0.1)"}
+                        strokeWidth="2.5"
+                        style={{
+                          filter: (!!landingDesire.trim() || landingStep >= 2) ? 'url(#landing-glow)' : 'none'
+                        }}
+                      />
+                      <line 
+                        x1={35} y1={145} x2={165} y2={145.1} 
+                        stroke={(!!landingEmotion.trim() || landingStep >= 3) ? "#f472b6" : "rgba(255, 255, 255, 0.1)"}
+                        strokeWidth="2.5"
+                        style={{
+                          filter: (!!landingEmotion.trim() || landingStep >= 3) ? 'url(#landing-glow)' : 'none'
+                        }}
+                      />
+                      <line 
+                        x1={165} y1={145} x2={100} y2={25} 
+                        stroke={(!!landingAction.trim() || landingStep >= 4) ? "#fbbf24" : "rgba(255, 255, 255, 0.1)"}
+                        strokeWidth="2.5"
+                        style={{
+                          filter: (!!landingAction.trim() || landingStep >= 4) ? 'url(#landing-glow)' : 'none'
+                        }}
+                      />
+
+                      {/* Nodos */}
+                      {/* Vértice 1: Deseo */}
+                      <circle 
+                        cx={100} cy={25} r={9} 
+                        className={
+                          landingStep === 1 ? "fill-indigo-500 stroke-indigo-300 stroke-[2px] animate-pulse" : 
+                          landingDesire.trim() ? "fill-indigo-500 stroke-indigo-400 stroke-1" : "fill-white/10 stroke-white/20"
+                        }
+                        style={landingStep >= 1 || landingDesire.trim() ? { filter: 'url(#landing-glow)' } : {}}
+                      />
+
+                      {/* Vértice 2: Emoción */}
+                      <circle 
+                        cx={35} cy={145} r={9} 
+                        className={
+                          landingStep === 2 ? "fill-pink-500 stroke-pink-300 stroke-[2px] animate-pulse" : 
+                          landingEmotion.trim() ? "fill-pink-500 stroke-pink-400 stroke-1" : "fill-white/10 stroke-white/20"
+                        }
+                        style={landingStep >= 2 || landingEmotion.trim() ? { filter: 'url(#landing-glow)' } : {}}
+                      />
+
+                      {/* Vértice 3: Acción */}
+                      <circle 
+                        cx={165} cy={145} r={9} 
+                        className={
+                          landingStep === 3 ? "fill-amber-500 stroke-amber-300 stroke-[2px] animate-pulse" : 
+                          landingAction.trim() ? "fill-amber-500 stroke-amber-400 stroke-1" : "fill-white/10 stroke-white/20"
+                        }
+                        style={landingStep >= 3 || landingAction.trim() ? { filter: 'url(#landing-glow)' } : {}}
+                      />
+                    </svg>
                   </div>
+
+                  {/* Formulario */}
+                  <div className="sm:col-span-7 flex flex-col justify-center min-h-[220px]">
+                    <AnimatePresence mode="wait">
+                      {/* PASO 1: DESEO */}
+                      {landingStep === 1 && (
+                        <motion.div
+                          key="l-step1"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="space-y-3"
+                        >
+                          <div>
+                            <span className="text-[9px] font-black text-indigo-400 dark:text-indigo-300 uppercase tracking-widest block mb-1">Paso 1: Deseo</span>
+                            <h4 className="text-xs font-bold text-text-primary dark:text-white">¿Qué quieres manifestar hoy?</h4>
+                          </div>
+                          <textarea
+                            value={landingDesire}
+                            onChange={(e) => setLandingDesire(e.target.value)}
+                            placeholder="Ej. Saldo de $5,000 en mi cuenta bancaria o un nuevo cliente pro..."
+                            className="w-full bg-bg-secondary dark:bg-slate-900/60 border border-border-primary dark:border-white/10 rounded-xl p-3 text-xs text-text-primary dark:text-white outline-none focus:border-indigo-500 transition-colors h-16 resize-none leading-relaxed"
+                          />
+                          <button
+                            disabled={!landingDesire.trim()}
+                            onClick={() => setLandingStep(2)}
+                            className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50"
+                          >
+                            Siguiente Vértice
+                          </button>
+                        </motion.div>
+                      )}
+
+                      {/* PASO 2: EMOCIÓN */}
+                      {landingStep === 2 && (
+                        <motion.div
+                          key="l-step2"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="space-y-3"
+                        >
+                          <div>
+                            <span className="text-[9px] font-black text-pink-400 dark:text-pink-300 uppercase tracking-widest block mb-0.5">Paso 2: Emoción</span>
+                            <h4 className="text-xs font-bold text-text-primary dark:text-white">¿Cómo te sentirías al lograrlo?</h4>
+                          </div>
+                          <textarea
+                            value={landingEmotion}
+                            onChange={(e) => setLandingEmotion(e.target.value)}
+                            placeholder="Ej. Libre, empoderada, sumamente agradecida y en paz..."
+                            className="w-full bg-bg-secondary dark:bg-slate-900/60 border border-border-primary dark:border-white/10 rounded-xl p-3 text-xs text-text-primary dark:text-white outline-none focus:border-pink-500 transition-colors h-14 resize-none leading-relaxed"
+                          />
+                          <div className="flex flex-wrap gap-1.5 justify-center">
+                            {['Gratitud 💖', 'Libertad 🦋', 'Paz 🕊️', 'Poder 💪'].map((chip) => (
+                              <button
+                                key={chip}
+                                type="button"
+                                onClick={() => {
+                                  const clean = chip.split(' ')[0];
+                                  if (!landingEmotion.trim()) {
+                                    setLandingEmotion(clean);
+                                  } else {
+                                    setLandingEmotion(prev => prev.includes(clean) ? prev : `${prev}, ${clean}`);
+                                  }
+                                }}
+                                className="px-2 py-1 rounded-full bg-white/5 hover:bg-pink-500/10 border border-white/10 text-[10px] text-text-secondary hover:text-pink-400 transition-all"
+                              >
+                                {chip}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setLandingStep(1)}
+                              className="flex-1 py-2 bg-white/5 border border-white/10 text-text-primary dark:text-slate-200 text-xs font-bold uppercase rounded-xl hover:bg-white/10"
+                            >
+                              Atrás
+                            </button>
+                            <button
+                              disabled={!landingEmotion.trim()}
+                              onClick={() => setLandingStep(3)}
+                              className="flex-1 py-2 bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50"
+                            >
+                              Siguiente
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* PASO 3: ACCIÓN */}
+                      {landingStep === 3 && (
+                        <motion.div
+                          key="l-step3"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="space-y-3"
+                        >
+                          <div>
+                            <span className="text-[9px] font-black text-amber-400 dark:text-amber-300 uppercase tracking-widest block mb-0.5">Paso 3: Acción</span>
+                            <h4 className="text-xs font-bold text-text-primary dark:text-white">¿Qué paso físico darás hoy?</h4>
+                          </div>
+                          <textarea
+                            value={landingAction}
+                            onChange={(e) => setLandingAction(e.target.value)}
+                            placeholder="Ej. Registrar mi dominio o enviar dos correos importantes..."
+                            className="w-full bg-bg-secondary dark:bg-slate-900/60 border border-border-primary dark:border-white/10 rounded-xl p-3 text-xs text-text-primary dark:text-white outline-none focus:border-amber-500 transition-colors h-16 resize-none leading-relaxed"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              disabled={landingGenerating}
+                              onClick={() => setLandingStep(2)}
+                              className="flex-1 py-2 bg-white/5 border border-white/10 text-text-primary dark:text-slate-200 text-xs font-bold uppercase rounded-xl hover:bg-white/10"
+                            >
+                              Atrás
+                            </button>
+                            <button
+                              disabled={!landingAction.trim() || landingGenerating}
+                              onClick={handleActivateLandingTriangle}
+                              className="flex-1 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1 shadow-md shadow-amber-500/10"
+                            >
+                              {landingGenerating ? (
+                                <IconLoader2 size={12} className="animate-spin" />
+                              ) : (
+                                <>Activar Triángulo 🔺</>
+                              )}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* PASO 4: RESULTADO AFIRMACIÓN Y GOAL */}
+                      {landingStep === 4 && (
+                        <motion.div
+                          key="l-step4"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="space-y-3.5"
+                        >
+                          <div className="text-center">
+                            <span className="text-xs">✨ Triángulo Completado</span>
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-[11px] font-bold text-accent-gold italic leading-normal text-left mt-1.5 relative shadow-inner">
+                              "{landingAffirmation}"
+                            </div>
+                          </div>
+
+                          <div className="bg-[#534AB7]/5 border border-[#534AB7]/10 p-2.5 rounded-xl text-left flex items-start gap-2 shadow-inner">
+                            <span className="text-lg">🎯</span>
+                            <div>
+                              <span className="text-[8px] font-black text-[#534AB7] dark:text-violet-300 uppercase tracking-widest block leading-tight">Meta de Acción Programada</span>
+                              <h5 className="text-[10px] font-bold text-text-primary dark:text-white leading-snug">
+                                Acción Inspirada: {landingAction}
+                              </h5>
+                              <p className="text-[8.5px] text-text-secondary/80 leading-normal">
+                                En la App real, esta meta se integra con tu agenda física diaria por 1 día para concretar tu manifestación hoy.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(landingAffirmation);
+                                setLandingCopied(true);
+                                setTimeout(() => setLandingCopied(false), 2000);
+                              }}
+                              className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase rounded-xl text-text-primary dark:text-slate-200"
+                            >
+                              {landingCopied ? "✓ Copiado" : "Copiar"}
+                            </button>
+                            <Link
+                              href="/app"
+                              className="flex-1 py-2 bg-gradient-to-r from-primary to-accent-purple hover:opacity-90 text-[10px] font-bold uppercase rounded-xl text-white text-center flex items-center justify-center gap-1 shadow-md"
+                            >
+                              Registrar Gratis 🚀
+                            </Link>
+                          </div>
+                          
+                          <button
+                            onClick={() => {
+                              setLandingStep(1);
+                              setLandingDesire("");
+                              setLandingEmotion("");
+                              setLandingAction("");
+                              setLandingAffirmation("");
+                            }}
+                            className="w-full text-center text-[9px] font-bold text-text-secondary hover:text-text-primary underline cursor-pointer"
+                          >
+                            Hacer otro triángulo
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
                 </div>
 
-                <div className="space-y-3 pt-2">
-                  <label className="text-xs text-text-secondary font-bold tracking-wider block">2. TU DECRETO ALINEADO</label>
-                  <div className="bg-bg-secondary dark:bg-slate-950/70 border border-border-primary dark:border-white/10 rounded-2xl p-6 text-center min-h-[120px] flex flex-col justify-center items-center relative shadow-inner">
-                    <p className="text-base sm:text-lg font-medium text-text-primary dark:text-white italic leading-relaxed">
-                      "{currentAffirmation}"
-                    </p>
-                    
-                    {/* Botón copiar */}
-                    <button 
-                      onClick={handleCopy}
-                      className="absolute bottom-3 right-3 p-2 bg-bg-primary hover:bg-border-primary dark:bg-white/5 dark:hover:bg-white/10 rounded-lg text-text-secondary dark:text-slate-400 hover:text-text-primary transition-colors border border-border-primary dark:border-transparent"
-                      title="Copiar decreto"
-                    >
-                      {copied ? <IconCheck size={16} className="text-green-500 dark:text-green-400" /> : <IconCopy size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 pt-2">
-                  <button
-                    onClick={() => handleGenerateAffirmation(selectedCategory)}
-                    className="flex-1 py-3 rounded-xl border border-border-secondary dark:border-white/10 text-xs font-bold text-text-primary dark:text-slate-200 hover:bg-bg-secondary dark:hover:bg-white/5 transition-all flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    Generar Otra
-                  </button>
-                  <Link
-                    href="/app"
-                    className="flex-1 py-3 rounded-xl bg-primary hover:bg-primary-dark text-xs font-bold text-white transition-all flex items-center justify-center gap-1.5 shadow-md shadow-primary/20"
-                  >
-                    Llevar a mi Diario <IconArrowRight size={14} />
-                  </Link>
-                </div>
               </div>
             </div>
-
+            
             {/* WIDGET 2: CHAT CON EL MENTOR SIMULADO */}
             <div className="lg:col-span-6 space-y-6">
               <div className="glass-card rounded-3xl p-6 md:p-8 space-y-6 shadow-xl relative flex flex-col h-[415px]">
@@ -1098,7 +1387,7 @@ export default function LandingPage() {
                 <p className="text-text-secondary text-sm mt-1">Sin tarjeta de crédito</p>
               </div>
               <ul className="space-y-3 flex-1">
-                {["Coach de IA — 10 mensajes/día", "Afirmaciones básicas", "Diario de gratitud", "1 visualización guiada", "Seguimiento de metas (hasta 3)"].map((item) => (
+                {["Coach de IA — 5 mensajes/día", "Diario de gratitud (hasta 3 entradas)", "Triángulo de Manifestación básico", "Visualizaciones guiadas", "Seguimiento de 1 meta activa"].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary">
                     <span className="text-green-500 mt-0.5 shrink-0">✓</span>{item}
                   </li>
@@ -1124,7 +1413,7 @@ export default function LandingPage() {
                   <p className="text-text-secondary text-sm mt-1">O $79.99/año — ahorra 33%</p>
                 </div>
                 <ul className="space-y-3 flex-1">
-                  {["Coach de IA — mensajes ilimitados", "Afirmaciones personalizadas con IA", "Visualizaciones cuánticas ilimitadas", "Diario de gratitud avanzado", "Metas ilimitadas", "Decreto de abundancia diario", "Modo sin conexión", "Soporte prioritario"].map((item) => (
+                  {["Coach de IA — mensajes ilimitados", "Triángulos de Manifestación ilimitados", "Retos de 30 Días con IA personalizados", "Diario de gratitud ilimitado", "Metas de Acción ilimitadas con avance por días", "Decretos de abundancia guardados (Mis Decretos 🔺)", "Visualizaciones cuánticas ilimitadas", "Gestión de facturación con Stripe"].map((item) => (
                     <li key={item} className="flex items-start gap-2.5 text-sm text-text-secondary dark:text-slate-300">
                       <span className="text-accent-gold mt-0.5 shrink-0">✦</span>{item}
                     </li>

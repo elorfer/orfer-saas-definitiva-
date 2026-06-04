@@ -20,11 +20,7 @@ export default function PaywallPage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  
-  // Formulario de tarjeta (Simulado)
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCVC, setCardCVC] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     const checkUser = async () => {
@@ -41,25 +37,31 @@ export default function PaywallPage() {
     e.preventDefault();
     if (!user) return;
     setPaying(true);
+    setErrorMsg("");
 
     try {
-      // Simular tiempo de procesamiento de pago
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-      // Actualizar el perfil del usuario a PRO en la base de datos
-      const { error } = await supabase
-        .from("profiles")
-        .update({ subscription_tier: "pro" })
-        .eq("id", user.id);
+      const data = await response.json();
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(data.error || "Error al iniciar Stripe Checkout");
+      }
 
-      // Redirigir a la aplicación
-      router.push("/app");
-      router.refresh();
-    } catch (err) {
+      if (data.url) {
+        // Redirigir a la pasarela segura de Stripe
+        window.location.href = data.url;
+      } else {
+        throw new Error("No se recibió la URL de pago de Stripe");
+      }
+    } catch (err: any) {
       console.error("Error al procesar la suscripción:", err);
-      alert("Ocurrió un error al procesar tu suscripción. Inténtalo de nuevo.");
+      setErrorMsg(err.message || "Ocurrió un error inesperado al procesar la suscripción.");
       setPaying(false);
     }
   };
@@ -136,7 +138,7 @@ export default function PaywallPage() {
           </div>
         </motion.div>
 
-        {/* Columna Derecha: Formulario de Pago */}
+        {/* Columna Derecha: Resumen y Botón de Pago */}
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -155,70 +157,53 @@ export default function PaywallPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleSubscribe} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">Número de Tarjeta</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary">
-                      <IconCreditCard size={18} />
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
-                      placeholder="4000 1234 5678 9010"
-                      className="w-full bg-bg-secondary/50 border border-border-secondary rounded-xl py-3 pl-11 pr-4 text-sm text-text-primary placeholder:text-text-secondary/50 focus:border-primary focus:outline-none transition-colors shadow-inner"
-                    />
+              <form onSubmit={handleSubscribe} className="space-y-6">
+                <div className="bg-bg-secondary/40 border border-border-primary/50 p-4 rounded-2xl space-y-3">
+                  <div className="flex justify-between text-xs text-text-secondary">
+                    <span>Suscripción Mensual</span>
+                    <span>$9.99</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-text-secondary">
+                    <span>Impuestos</span>
+                    <span>$0.00</span>
+                  </div>
+                  <div className="border-t border-border-primary/50 pt-3 flex justify-between text-sm font-bold text-text-primary">
+                    <span>Total hoy</span>
+                    <span>$9.99</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">Vencimiento</label>
-                    <input
-                      type="text"
-                      required
-                      value={cardExpiry}
-                      onChange={(e) => setCardExpiry(e.target.value)}
-                      placeholder="MM/AA"
-                      className="w-full bg-bg-secondary/50 border border-border-secondary rounded-xl py-3 px-4 text-sm text-text-primary placeholder:text-text-secondary/50 focus:border-primary focus:outline-none transition-colors shadow-inner text-center"
-                    />
+                {errorMsg && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-xs rounded-xl text-center">
+                    {errorMsg}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider block">CVC</label>
-                    <input
-                      type="text"
-                      required
-                      value={cardCVC}
-                      onChange={(e) => setCardCVC(e.target.value)}
-                      placeholder="123"
-                      className="w-full bg-bg-secondary/50 border border-border-secondary rounded-xl py-3 px-4 text-sm text-text-primary placeholder:text-text-secondary/50 focus:border-primary focus:outline-none transition-colors shadow-inner text-center"
-                    />
-                  </div>
-                </div>
+                )}
 
-                <div className="flex items-center gap-2 text-[10px] text-text-secondary/80 bg-bg-secondary p-3 rounded-xl border border-border-primary/50">
-                  <IconLock size={14} className="shrink-0 text-green-500" />
-                  <span>Transacción de prueba cifrada de alta seguridad. Ingresa datos ficticios para suscribirte.</span>
+                <div className="flex items-start gap-2.5 text-[11px] text-text-secondary leading-relaxed bg-bg-secondary/50 p-3.5 rounded-xl border border-border-primary/50">
+                  <IconLock size={16} className="shrink-0 text-green-500 mt-0.5" />
+                  <span>
+                    El pago se procesará de forma segura a través de **Stripe**. Al hacer clic abajo, serás redirigido a su pasarela de pago oficial.
+                  </span>
                 </div>
 
                 <button
                   type="submit"
                   disabled={paying}
-                  className="w-full py-4 rounded-xl border-none text-[13px] font-bold tracking-wide transition-all bg-primary hover:bg-primary-dark text-white flex justify-center items-center gap-2 shadow-lg shadow-primary/10 disabled:opacity-50 active:scale-[0.98] mt-4 uppercase"
+                  className="w-full py-4 rounded-xl border-none text-[13px] font-bold tracking-wide transition-all bg-primary hover:bg-primary-dark text-white flex justify-center items-center gap-2 shadow-lg shadow-primary/10 disabled:opacity-50 active:scale-[0.98] uppercase"
                 >
                   {paying ? (
                     <IconLoader2 size={18} className="animate-spin" />
                   ) : (
-                    "Suscribirse e Iniciar"
+                    <>
+                      Proceder al Pago <IconCreditCard size={18} />
+                    </>
                   )}
                 </button>
               </form>
             </div>
 
             <div className="text-center text-[10px] text-text-secondary mt-6">
-              🔒 Garantía de satisfacción de 7 días. Si no estás feliz, solicítanos tu devolución sin preguntas.
+              🔒 Garantía de satisfacción de 7 días. Si no estás feliz, solicita la devolución sin preguntas.
             </div>
           </div>
         </motion.div>
