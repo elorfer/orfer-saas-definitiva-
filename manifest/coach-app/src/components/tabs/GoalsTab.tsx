@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { IconArrowUpRight, IconX, IconLoader2, IconCheck } from '@tabler/icons-react';
+import Link from 'next/link';
+import { IconArrowUpRight, IconX, IconLoader2, IconSparkles } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/utils/supabase/client';
 
@@ -19,9 +20,11 @@ export default function GoalsTab() {
   const [user, setUser] = useState<any>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPro, setIsPro] = useState(false);
   
-  // Estados para nueva meta
+  // Estados para modales
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [durationDays, setDurationDays] = useState('90');
@@ -32,6 +35,19 @@ export default function GoalsTab() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
+        
+        // Cargar perfil para ver tier
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_tier')
+          .eq('id', user.id)
+          .single();
+          
+        if (profile) {
+          setIsPro(profile.subscription_tier === 'pro');
+        }
+
+        // Cargar metas
         const { data, error } = await supabase
           .from('goals')
           .select('*')
@@ -46,6 +62,15 @@ export default function GoalsTab() {
 
     fetchUserAndGoals();
   }, []);
+
+  const handleOpenAdd = () => {
+    // Si ya tiene 1 meta y no es PRO, mostrar advertencia de pago
+    if (goals.length >= 1 && !isPro) {
+      setShowUpgradeModal(true);
+    } else {
+      setShowAddModal(true);
+    }
+  };
 
   const handleAddGoal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +96,6 @@ export default function GoalsTab() {
 
       if (data && data.length > 0) {
         setGoals([data[0], ...goals]);
-        // Reset form
         setTitle('');
         setDescription('');
         setDurationDays('90');
@@ -97,7 +121,6 @@ export default function GoalsTab() {
     if (currentProgress >= 100) return;
     const nextProgress = Math.min(currentProgress + 10, 100);
     
-    // Optimista local update
     setGoals(prev => prev.map(g => g.id === goalId ? { ...g, progress: nextProgress } : g));
 
     const { error } = await supabase
@@ -106,7 +129,6 @@ export default function GoalsTab() {
       .eq('id', goalId);
       
     if (error) {
-      // Revertir en caso de error
       setGoals(prev => prev.map(g => g.id === goalId ? { ...g, progress: currentProgress } : g));
       console.error(error);
     }
@@ -170,7 +192,7 @@ export default function GoalsTab() {
           </div>
 
           <button 
-            onClick={() => setShowAddModal(true)}
+            onClick={handleOpenAdd}
             className="w-full py-3.5 rounded-xl border-none text-[15px] font-medium cursor-pointer transition-all bg-primary hover:bg-primary-dark text-white flex justify-center items-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98]"
           >
             + Nueva meta <IconArrowUpRight size={18} />
@@ -178,7 +200,7 @@ export default function GoalsTab() {
         </>
       )}
 
-      {/* MODAL ANIMADO DE NUEVA META */}
+      {/* MODAL DE NUEVA META */}
       <AnimatePresence>
         {showAddModal && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
@@ -248,6 +270,43 @@ export default function GoalsTab() {
                   {saving ? <IconLoader2 size={18} className="animate-spin" /> : "Guardar en mi realidad"}
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE ADVERTENCIA DE PAGO (UPGRADE) */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-bg-primary border border-border-secondary w-full max-w-[380px] rounded-3xl p-6 shadow-2xl relative text-center flex flex-col items-center"
+            >
+              <button 
+                onClick={() => setShowUpgradeModal(false)}
+                className="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-primary rounded-full hover:bg-bg-secondary transition-all"
+              >
+                <IconX size={20} />
+              </button>
+
+              <div className="w-12 h-12 bg-accent-gold/20 text-accent-gold rounded-full flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(250,204,21,0.2)] animate-bounce mt-2">
+                <IconSparkles size={24} stroke={2.5} />
+              </div>
+
+              <h3 className="text-base font-bold text-text-primary mb-1.5">Límite de metas alcanzado</h3>
+              <p className="text-text-secondary text-xs mb-6 max-w-[260px] leading-relaxed">
+                En el plan gratuito solo puedes seguir 1 meta a la vez. Actualiza a Pro para registrar metas de manifestación ilimitadas.
+              </p>
+
+              <Link 
+                href="/paywall"
+                className="w-full py-3.5 rounded-xl border-none text-[14px] font-bold tracking-wide transition-all bg-primary hover:bg-primary-dark text-white flex justify-center items-center gap-1.5 shadow-lg shadow-primary/10 active:scale-[0.98] mb-2 uppercase"
+              >
+                Obtener Plan Pro <IconArrowUpRight size={16} />
+              </Link>
             </motion.div>
           </div>
         )}

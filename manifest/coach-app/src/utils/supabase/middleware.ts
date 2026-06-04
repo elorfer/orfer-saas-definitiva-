@@ -34,7 +34,7 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Redirigir si intenta acceder a la app sin estar autenticado
+  // Redirigir si intenta acceder a la app o paywall sin estar autenticado
   if ((pathname.startsWith('/app') || pathname === '/paywall') && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -57,13 +57,6 @@ export async function updateSession(request: NextRequest) {
       .single()
 
     const isPro = profile?.subscription_tier === 'pro';
-
-    // Si es un usuario FREE e intenta acceder a /app, redirigir a /paywall
-    if (pathname.startsWith('/app') && !isPro) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/paywall'
-      return NextResponse.redirect(url)
-    }
 
     // Si es un usuario PRO e intenta acceder a /paywall, redirigir a /app
     if (pathname === '/paywall' && isPro) {

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { IconSend, IconLoader2 } from '@tabler/icons-react';
+import Link from 'next/link';
+import { IconSend, IconLoader2, IconSparkles, IconArrowUpRight } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/utils/supabase/client';
 
@@ -47,6 +48,7 @@ export default function CoachTab() {
   const [inputValue, setInputValue] = useState('');
   const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -62,6 +64,19 @@ export default function CoachTab() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
+
+        // Cargar perfil para ver tier
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_tier')
+          .eq('id', user.id)
+          .single();
+          
+        if (profile) {
+          setIsPro(profile.subscription_tier === 'pro');
+        }
+
+        // Cargar mensajes
         const { data, error } = await supabase
           .from('chat_messages')
           .select('*')
@@ -79,18 +94,19 @@ export default function CoachTab() {
     fetchUserAndMessages();
   }, []);
 
+  const userMessagesCount = messages.filter(m => m.sender === 'user').length;
+  const isLimitReached = userMessagesCount >= 5 && !isPro;
+
   const handleSend = async () => {
     const trimmedInput = inputValue.trim();
-    if (!trimmedInput || !user) return;
+    if (!trimmedInput || !user || isLimitReached) return;
 
-    // Optimista local update
     const tempUserMsg: Message = { id: Date.now().toString(), text: trimmedInput, sender: 'user' };
     setMessages((prev) => [...prev, tempUserMsg]);
     setInputValue('');
     setIsTyping(true);
 
     try {
-      // 1. Guardar mensaje del usuario en base de datos
       const { data: userMsgData, error: userError } = await supabase
         .from('chat_messages')
         .insert([
@@ -104,12 +120,10 @@ export default function CoachTab() {
 
       if (userError) throw userError;
 
-      // Actualizar el mensaje local con su ID real de base de datos
       if (userMsgData && userMsgData.length > 0) {
         setMessages(prev => prev.map(m => m.id === tempUserMsg.id ? userMsgData[0] : m));
       }
 
-      // 2. Simular respuesta del AI
       setTimeout(async () => {
         const lower = trimmedInput.toLowerCase();
         let key = 'default';
@@ -120,7 +134,6 @@ export default function CoachTab() {
         const replies = aiReplies[key] || aiReplies.default;
         const replyText = replies[Math.floor(Math.random() * replies.length)];
 
-        // Guardar mensaje de la IA en la base de datos
         const { data: aiMsgData, error: aiError } = await supabase
           .from('chat_messages')
           .insert([
@@ -135,7 +148,6 @@ export default function CoachTab() {
         if (!aiError && aiMsgData && aiMsgData.length > 0) {
           setMessages((prev) => [...prev, aiMsgData[0]]);
         } else {
-          // Fallback local en caso de error de guardado de IA
           setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), text: replyText, sender: 'ai' }]);
         }
         setIsTyping(false);
@@ -187,23 +199,47 @@ export default function CoachTab() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="mt-auto shrink-0 flex gap-2">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Escríbeme lo que sientes..."
-              className="flex-1 px-4 py-3 rounded-xl border border-border-secondary bg-bg-primary outline-none focus:border-primary transition-colors text-[15px] text-text-primary placeholder:text-text-secondary/50"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!inputValue.trim() || isTyping}
-              className="px-5 bg-primary hover:bg-primary-dark text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0 shadow-md"
+          {/* Bloque de Entrada / Muro de Pago Inline */}
+          {isLimitReached ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-auto bg-bg-secondary border border-accent-gold/30 rounded-2xl p-4 text-center flex flex-col items-center shadow-inner relative overflow-hidden"
             >
-              <IconSend size={20} />
-            </button>
-          </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-accent-gold/5 to-transparent pointer-events-none"></div>
+              <div className="w-10 h-10 bg-accent-gold/20 text-accent-gold rounded-full flex items-center justify-center mb-3 shadow-[0_0_10px_rgba(250,204,21,0.25)] animate-pulse">
+                <IconSparkles size={20} stroke={2.5} />
+              </div>
+              <h4 className="text-sm font-bold text-text-primary mb-1">Límite diario de coaching alcanzado</h4>
+              <p className="text-[12px] text-text-secondary mb-4 max-w-[285px] leading-relaxed">
+                Has enviado tus 5 mensajes diarios permitidos. ¡Actualiza a Pro para conversar de manera ilimitada con tu mentor espiritual!
+              </p>
+              <Link 
+                href="/paywall"
+                className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white text-xs font-bold uppercase tracking-wider shadow-md shadow-primary/10 active:scale-95 transition-all"
+              >
+                Obtener Plan Pro <IconArrowUpRight size={14} />
+              </Link>
+            </motion.div>
+          ) : (
+            <div className="mt-auto shrink-0 flex gap-2">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Escríbeme lo que sientes..."
+                className="flex-1 px-4 py-3 rounded-xl border border-border-secondary bg-bg-primary outline-none focus:border-primary transition-colors text-[15px] text-text-primary placeholder:text-text-secondary/50"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!inputValue.trim() || isTyping}
+                className="px-5 bg-primary hover:bg-primary-dark text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shrink-0 shadow-md"
+              >
+                <IconSend size={20} />
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

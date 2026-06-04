@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IconLoader2, IconTrash } from '@tabler/icons-react';
+import { IconLoader2, IconTrash, IconX, IconSparkles, IconArrowUpRight } from '@tabler/icons-react';
 import { createClient } from '@/utils/supabase/client';
 
 type GratitudeEntry = {
@@ -18,12 +19,27 @@ export default function GratitudeTab() {
   const [entries, setEntries] = useState<GratitudeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isPro, setIsPro] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     const fetchUserAndEntries = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
+
+        // Cargar perfil para ver tier
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_tier')
+          .eq('id', user.id)
+          .single();
+          
+        if (profile) {
+          setIsPro(profile.subscription_tier === 'pro');
+        }
+
+        // Cargar registros
         const { data, error } = await supabase
           .from('gratitude_entries')
           .select('*')
@@ -41,6 +57,13 @@ export default function GratitudeTab() {
 
   const handleAdd = async () => {
     if (!text.trim() || !user) return;
+
+    // Si ya tiene 3 registros y no es PRO, bloquear con paywall
+    if (entries.length >= 3 && !isPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -68,7 +91,6 @@ export default function GratitudeTab() {
   };
 
   const handleDelete = async (id: string) => {
-    // Optimista
     setEntries(prev => prev.filter(e => e.id !== id));
 
     const { error } = await supabase
@@ -78,7 +100,6 @@ export default function GratitudeTab() {
 
     if (error) {
       console.error("Error al eliminar la entrada:", error);
-      // Recargar de la base de datos en caso de error
       const { data } = await supabase
         .from('gratitude_entries')
         .select('*')
@@ -170,6 +191,43 @@ export default function GratitudeTab() {
           </div>
         </>
       )}
+
+      {/* MODAL DE ADVERTENCIA DE PAGO (UPGRADE) */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-bg-primary border border-border-secondary w-full max-w-[380px] rounded-3xl p-6 shadow-2xl relative text-center flex flex-col items-center"
+            >
+              <button 
+                onClick={() => setShowUpgradeModal(false)}
+                className="absolute top-4 right-4 p-1 text-text-secondary hover:text-text-primary rounded-full hover:bg-bg-secondary transition-all"
+              >
+                <IconX size={20} />
+              </button>
+
+              <div className="w-12 h-12 bg-accent-gold/20 text-accent-gold rounded-full flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(250,204,21,0.2)] animate-bounce mt-2">
+                <IconSparkles size={24} stroke={2.5} />
+              </div>
+
+              <h3 className="text-base font-bold text-text-primary mb-1.5">Límite de diario alcanzado</h3>
+              <p className="text-text-secondary text-xs mb-6 max-w-[260px] leading-relaxed">
+                En el plan gratuito solo puedes registrar hasta 3 entradas en tu diario de gratitud. Actualiza a Pro para escribir de manera ilimitada.
+              </p>
+
+              <Link 
+                href="/paywall"
+                className="w-full py-3.5 rounded-xl border-none text-[14px] font-bold tracking-wide transition-all bg-primary hover:bg-primary-dark text-white flex justify-center items-center gap-1.5 shadow-lg shadow-primary/10 active:scale-[0.98] mb-2 uppercase"
+              >
+                Obtener Plan Pro <IconArrowUpRight size={16} />
+              </Link>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
