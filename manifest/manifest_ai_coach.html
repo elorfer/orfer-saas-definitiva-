@@ -1,0 +1,255 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.app{max-width:680px;min-height:600px;background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);overflow:hidden}
+.header{background:linear-gradient(135deg,#3C3489,#534AB7);padding:20px 24px;color:white}
+.header h1{font-size:20px;font-weight:500;color:white;margin-bottom:2px}
+.header p{font-size:13px;opacity:0.8;color:white}
+.nav{display:flex;border-bottom:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+.nav-btn{flex:1;padding:12px 4px;font-size:12px;background:none;border:none;border-bottom:2px solid transparent;color:var(--color-text-secondary);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .2s}
+.nav-btn.active{border-bottom-color:#534AB7;color:#534AB7}
+.nav-btn i{font-size:18px}
+.content{padding:20px 24px}
+.screen{display:none}
+.screen.active{display:block}
+
+.goal-card{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:16px;margin-bottom:12px;border:0.5px solid var(--color-border-tertiary)}
+.goal-card h3{font-size:14px;font-weight:500;margin-bottom:4px}
+.goal-card p{font-size:13px;color:var(--color-text-secondary)}
+.progress-bar{height:6px;background:var(--color-border-tertiary);border-radius:3px;margin-top:10px;overflow:hidden}
+.progress-fill{height:100%;background:#534AB7;border-radius:3px;transition:width .5s}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:#EEEDFE;color:#3C3489;margin-top:6px}
+
+.affirmation-box{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:20px;text-align:center;border:0.5px solid var(--color-border-tertiary);margin-bottom:16px;min-height:100px;display:flex;align-items:center;justify-content:center}
+.affirmation-box p{font-size:17px;font-weight:500;color:#534AB7;line-height:1.5}
+
+.section-label{font-size:12px;color:var(--color-text-secondary);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{padding:6px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:13px;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);transition:all .15s}
+.chip.sel{background:#EEEDFE;border-color:#534AB7;color:#3C3489}
+
+.action-btn{width:100%;padding:12px;border-radius:var(--border-radius-md);border:none;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;margin-top:8px}
+.btn-primary{background:#534AB7;color:white}
+.btn-primary:hover{background:#3C3489}
+.btn-secondary{background:var(--color-background-secondary);color:var(--color-text-primary);border:0.5px solid var(--color-border-secondary)}
+
+.chat-area{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;max-height:280px;overflow-y:auto}
+.msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:14px;line-height:1.5}
+.msg.ai{background:var(--color-background-secondary);align-self:flex-start;border-bottom-left-radius:3px}
+.msg.user{background:#534AB7;color:white;align-self:flex-end;border-bottom-right-radius:3px}
+.chat-input-row{display:flex;gap:8px}
+.chat-input-row input{flex:1;padding:10px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);font-size:14px;background:var(--color-background-primary);color:var(--color-text-primary);outline:none}
+.chat-input-row button{padding:10px 16px;border-radius:var(--border-radius-md);border:none;background:#534AB7;color:white;cursor:pointer;font-size:14px}
+
+.gratitude-entry{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;margin-bottom:8px;border-left:3px solid #534AB7}
+.gratitude-entry p{font-size:14px;line-height:1.5}
+.gratitude-entry span{font-size:11px;color:var(--color-text-secondary);margin-top:4px;display:block}
+
+.vis-card{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:20px;text-align:center;border:0.5px solid var(--color-border-tertiary);margin-bottom:12px}
+.vis-icon{font-size:36px;margin-bottom:8px;display:block}
+.vis-card h3{font-size:16px;font-weight:500;margin-bottom:4px}
+.vis-card p{font-size:13px;color:var(--color-text-secondary)}
+.pulse-ring{display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:50%;background:#EEEDFE;margin-bottom:12px;position:relative}
+.pulse-ring i{font-size:28px;color:#534AB7}
+.pulse-ring::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid #AFA9EC;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.1);opacity:.3}}
+
+textarea.journal{width:100%;padding:12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);font-size:14px;min-height:90px;resize:none;background:var(--color-background-primary);color:var(--color-text-primary);font-family:var(--font-sans);outline:none;line-height:1.6;margin-bottom:8px}
+</style>
+
+<div class="app" role="main">
+  <div class="header">
+    <h1>✨ Manifiestas AI</h1>
+    <p>Tu coach de manifestación personal — disponible 24/7</p>
+  </div>
+
+  <div class="nav" role="tablist">
+    <button class="nav-btn active" onclick="switchTab('coach')" role="tab" aria-label="Coach">
+      <i class="ti ti-robot" aria-hidden="true"></i>Coach
+    </button>
+    <button class="nav-btn" onclick="switchTab('afirmaciones')" role="tab" aria-label="Afirmaciones">
+      <i class="ti ti-sparkles" aria-hidden="true"></i>Afirmar
+    </button>
+    <button class="nav-btn" onclick="switchTab('metas')" role="tab" aria-label="Metas">
+      <i class="ti ti-target" aria-hidden="true"></i>Metas
+    </button>
+    <button class="nav-btn" onclick="switchTab('gratitud')" role="tab" aria-label="Gratitud">
+      <i class="ti ti-heart" aria-hidden="true"></i>Gratitud
+    </button>
+    <button class="nav-btn" onclick="switchTab('visualizar')" role="tab" aria-label="Visualizar">
+      <i class="ti ti-eye" aria-hidden="true"></i>Visualizar
+    </button>
+  </div>
+
+  <div class="content">
+
+    <!-- COACH -->
+    <div id="tab-coach" class="screen active">
+      <div class="chat-area" id="chatArea">
+        <div class="msg ai">👋 Hola! Soy tu coach de manifestación. ¿En qué área de tu vida quieres enfocarte hoy — dinero, amor, salud, o algo más?</div>
+      </div>
+      <div class="chat-input-row">
+        <input id="chatInput" type="text" placeholder="Escríbeme lo que sientes..." onkeydown="if(event.key==='Enter')sendChat()"/>
+        <button onclick="sendChat()"><i class="ti ti-send" aria-hidden="true"></i></button>
+      </div>
+    </div>
+
+    <!-- AFIRMACIONES -->
+    <div id="tab-afirmaciones" class="screen">
+      <div class="affirmation-box" id="affBox">
+        <p id="affText">Selecciona un área para generar tu afirmación personalizada ✨</p>
+      </div>
+      <div class="section-label">¿En qué quieres enfocarte?</div>
+      <div class="chip-row">
+        <span class="chip" onclick="selectChip(this,'dinero')">💰 Dinero</span>
+        <span class="chip" onclick="selectChip(this,'amor')">💗 Amor</span>
+        <span class="chip" onclick="selectChip(this,'salud')">🌿 Salud</span>
+        <span class="chip" onclick="selectChip(this,'exito')">🚀 Éxito</span>
+        <span class="chip" onclick="selectChip(this,'confianza')">🦋 Confianza</span>
+        <span class="chip" onclick="selectChip(this,'abundancia')">🌟 Abundancia</span>
+      </div>
+      <button class="action-btn btn-primary" onclick="generateAffirmation()"><i class="ti ti-refresh" aria-hidden="true"></i> Generar nueva afirmación</button>
+      <button class="action-btn btn-secondary" onclick="sendPrompt('Quiero un plan de afirmaciones para 30 días enfocado en ' + selectedArea)">Crear plan de 30 días ↗</button>
+    </div>
+
+    <!-- METAS -->
+    <div id="tab-metas" class="screen">
+      <div class="goal-card">
+        <div class="badge">🎯 90 días</div>
+        <h3 style="margin-top:8px">Libertad financiera</h3>
+        <p>Generar $3,000 mes con mi negocio</p>
+        <div class="progress-bar"><div class="progress-fill" style="width:35%"></div></div>
+        <span style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;display:block">35% completado · 58 días restantes</span>
+      </div>
+      <div class="goal-card">
+        <div class="badge">💗 En curso</div>
+        <h3 style="margin-top:8px">Relación saludable</h3>
+        <p>Atraer una pareja alineada conmigo</p>
+        <div class="progress-bar"><div class="progress-fill" style="width:60%"></div></div>
+        <span style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;display:block">60% · trabajando en autoestima</span>
+      </div>
+      <button class="action-btn btn-primary" onclick="sendPrompt('Quiero definir una nueva meta de manifestación para los próximos 90 días')">+ Nueva meta ↗</button>
+    </div>
+
+    <!-- GRATITUD -->
+    <div id="tab-gratitud" class="screen">
+      <div class="section-label">¿Por qué estás agradecid@ hoy?</div>
+      <textarea class="journal" id="gratText" placeholder="Hoy estoy agradecid@ por..."></textarea>
+      <button class="action-btn btn-primary" onclick="addGratitude()">Guardar en mi diario</button>
+      <div class="section-label" style="margin-top:20px">Entradas recientes</div>
+      <div id="gratList">
+        <div class="gratitude-entry"><p>💜 Mi salud y la energía que tengo cada mañana</p><span>Hace 1 día</span></div>
+        <div class="gratitude-entry"><p>🌟 Una oportunidad nueva que llegó inesperadamente</p><span>Hace 2 días</span></div>
+        <div class="gratitude-entry"><p>🙏 Las personas que me apoyan sin condiciones</p><span>Hace 3 días</span></div>
+      </div>
+    </div>
+
+    <!-- VISUALIZAR -->
+    <div id="tab-visualizar" class="screen">
+      <div class="vis-card">
+        <div class="pulse-ring"><i class="ti ti-player-play" aria-hidden="true"></i></div>
+        <h3>Sesión de visualización guiada</h3>
+        <p>5 minutos para conectar con tu versión más próspera</p>
+        <button class="action-btn btn-primary" style="margin-top:12px" onclick="sendPrompt('Guíame en una visualización de 5 minutos para manifestar abundancia y prosperidad en mi vida')">Iniciar sesión guiada ↗</button>
+      </div>
+      <div class="section-label">Área de enfoque</div>
+      <div class="chip-row">
+        <span class="chip" onclick="selectVis(this,'dinero')">💰 Abundancia</span>
+        <span class="chip" onclick="selectVis(this,'amor')">💗 Amor ideal</span>
+        <span class="chip" onclick="selectVis(this,'exito')">🚀 Éxito</span>
+        <span class="chip" onclick="selectVis(this,'paz')">🕊 Paz interior</span>
+      </div>
+      <button class="action-btn btn-secondary" onclick="sendPrompt('Crea un tablero de visión personalizado con afirmaciones visuales para mis metas de manifestación')">Crear vision board inteligente ↗</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const afirmaciones = {
+  dinero: ["El dinero fluye hacia mí de forma fácil y abundante","Soy un imán para la prosperidad y las oportunidades financieras","Merezco abundancia y la recibo con gratitud","Mi energía creativa genera ingresos de múltiples fuentes","La riqueza es mi estado natural y la abrazo completamente"],
+  amor: ["Soy digno/a de un amor profundo y auténtico","Mi corazón está abierto para dar y recibir amor","Atraigo relaciones saludables y llenas de alegría","El amor que busco también me está buscando a mí","Me amo profundamente y ese amor atrae amor verdadero"],
+  salud: ["Mi cuerpo es fuerte, sano y lleno de vitalidad","Cada célula de mi ser vibra en perfecta salud","Merezco sentirme increíble en cuerpo y mente","Mi energía es renovada y radiante cada día","Confío plenamente en la sabiduría de mi cuerpo"],
+  exito: ["El éxito es mi destino y cada paso me acerca a él","Mis ideas tienen valor y el mundo las necesita","Tengo todas las habilidades para alcanzar mis sueños","Cada desafío es una oportunidad disfrazada de lección","El universo conspira a mi favor en cada momento"],
+  confianza: ["Confío plenamente en mí y en mi camino","Mi voz importa y merezco ser escuchado/a","Soy suficiente exactamente como soy hoy","Avanzo con seguridad hacia la mejor versión de mí","Mi confianza crece con cada pequeño paso que doy"],
+  abundancia: ["Vivo en un universo de abundancia infinita","Todo lo que necesito llega a mí en el momento perfecto","La abundancia fluye hacia mí desde todas las direcciones","Soy receptor/a agradecido/a de todas las bendiciones","Mi vida está llena de oportunidades, amor y prosperidad"]
+};
+
+const aiReplies = {
+  dinero:["Perfecto. Tu relación con el dinero refleja tu relación contigo mismo. Empieza visualizando que ya tienes lo que deseas. ¿Cuánto quieres generar en los próximos 90 días?","El dinero es energía. Para atraerlo, primero debemos eliminar creencias limitantes. ¿Qué pensamiento negativo sobre el dinero repites más?"],
+  amor:["El amor comienza dentro de ti. Cuando te amas completamente, atraes lo que mereces. ¿Cómo te describes en una relación ideal?","Para manifestar amor, describe con detalle cómo te sientes (no cómo es la persona). Las emociones son el imán más poderoso del universo."],
+  salud:["Tu cuerpo escucha cada pensamiento. Empieza agradeciéndole por todo lo que ya hace por ti. ¿Qué aspecto de tu salud quieres transformar?","La salud se manifiesta cuando alineamos mente, cuerpo y emoción. ¿Qué hábito pequeño podrías empezar hoy?"],
+  default:["Gracias por compartir eso conmigo. Tu intención ya es el primer paso de la manifestación. Cuéntame más: ¿cómo te sentirías cuando eso ya sea una realidad?","Eso que describes tiene mucho poder. La clave está en sentirlo como si ya fuera real. ¿Estás list@ para crear afirmaciones personalizadas para esto?","Hermoso. El universo ya está organizando todo para que recibas eso. ¿Quieres que creemos un plan de manifestación de 30 días juntos?"]
+};
+
+let selectedArea = 'abundancia';
+let selectedVisArea = '';
+const topics = ['dinero','amor','salud'];
+
+function switchTab(tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  const tabs=['coach','afirmaciones','metas','gratitud','visualizar'];
+  document.querySelectorAll('.nav-btn')[tabs.indexOf(tab)].classList.add('active');
+}
+
+function selectChip(el,area){
+  document.querySelectorAll('#tab-afirmaciones .chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedArea=area;
+  generateAffirmation();
+}
+
+function selectVis(el,area){
+  document.querySelectorAll('#tab-visualizar .chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedVisArea=area;
+}
+
+function generateAffirmation(){
+  if(!selectedArea||!afirmaciones[selectedArea])return;
+  const arr=afirmaciones[selectedArea];
+  const txt=arr[Math.floor(Math.random()*arr.length)];
+  const box=document.getElementById('affText');
+  box.style.opacity=0;
+  setTimeout(()=>{box.textContent=txt;box.style.opacity=1;box.style.transition='opacity .4s';},200);
+}
+
+function sendChat(){
+  const input=document.getElementById('chatInput');
+  const msg=input.value.trim();
+  if(!msg)return;
+  addMsg(msg,'user');
+  input.value='';
+  setTimeout(()=>{
+    const lower=msg.toLowerCase();
+    let key='default';
+    topics.forEach(t=>{if(lower.includes(t))key=t;});
+    const replies=aiReplies[key]||aiReplies.default;
+    const reply=replies[Math.floor(Math.random()*replies.length)];
+    addMsg(reply,'ai');
+  },800);
+}
+
+function addMsg(text,type){
+  const area=document.getElementById('chatArea');
+  const div=document.createElement('div');
+  div.className='msg '+type;
+  div.textContent=text;
+  area.appendChild(div);
+  area.scrollTop=area.scrollHeight;
+}
+
+function addGratitude(){
+  const txt=document.getElementById('gratText').value.trim();
+  if(!txt)return;
+  const list=document.getElementById('gratList');
+  const entry=document.createElement('div');
+  entry.className='gratitude-entry';
+  entry.innerHTML=`<p>💜 ${txt}</p><span>Ahora mismo</span>`;
+  list.insertBefore(entry,list.firstChild);
+  document.getElementById('gratText').value='';
+}
+</script>

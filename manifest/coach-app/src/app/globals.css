@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #534AB7;
+  --color-primary-dark: #3C3489;
+  --color-primary-light: #EEEDFE;
+  
+  --color-accent-gold: #fbbf24;
+  --color-accent-purple: #8b5cf6;
+  
+  --color-dark-deep: var(--background);
+  --color-dark-card: var(--bg-primary);
+  --color-dark-border: var(--border-primary);
+  
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-border-primary: var(--border-primary);
+  --color-border-secondary: var(--border-secondary);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-spin-slow: spin 20s linear infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+@layer base {
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f6fc; /* Muy claro con toque violeta espiritual */
+    --border-primary: #f0ecfa;
+    --border-secondary: #e2dcf7;
+    --text-primary: #1a1625;
+    --text-secondary: #6b667a;
+    
+    --background: #fcfbfe; /* Fondo general ultra claro y luminoso */
+    --foreground: var(--text-primary);
+  }
+  
+  .dark {
+    --bg-primary: #120b29; /* Tarjeta oscura */
+    --bg-secondary: #0f0923; /* Detalle oscuro */
+    --border-primary: #231649;
+    --border-secondary: #322168;
+    --text-primary: #f8fafc;
+    --text-secondary: #a39eb9;
+    
+    --background: #080414; /* Fondo general oscuro */
+    --foreground: var(--text-primary);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: Arial, Helvetica, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  * {
+    @apply border-border-primary;
+    transition: border-color 0.3s ease, background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(83, 74, 183, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(83, 74, 183, 0.04);
+    transition: background-color 0.3s, border-color 0.3s;
+  }
+  
+  .dark .glass-card {
+    background: rgba(18, 11, 41, 0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  /* Ocultar barra de scroll en navegadores */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .purple-glow {
+    box-shadow: 0 0 50px 10px rgba(139, 92, 246, 0.15);
+  }
+  
+  .gold-glow {
+    box-shadow: 0 0 50px 10px rgba(251, 191, 36, 0.15);
+  }
+}
