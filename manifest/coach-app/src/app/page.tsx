@@ -132,6 +132,21 @@ export default function LandingPage() {
   const [landingAffirmation, setLandingAffirmation] = useState("");
   const [landingCopied, setLandingCopied] = useState(false);
 
+  // Estado para el aviso de cookies
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
+
+  useEffect(() => {
+    const consent = localStorage.getItem("cookieConsent");
+    if (!consent) {
+      setShowCookieBanner(true);
+    }
+  }, []);
+
+  const handleAcceptCookies = () => {
+    localStorage.setItem("cookieConsent", "accepted");
+    setShowCookieBanner(false);
+  };
+
   const handleActivateLandingTriangle = () => {
     if (!landingDesire.trim() || !landingEmotion.trim() || !landingAction.trim()) return;
     setLandingGenerating(true);
@@ -1512,13 +1527,51 @@ export default function LandingPage() {
               <span>© {new Date().getFullYear()} Todos los derechos reservados.</span>
             </div>
             
-            <div className="flex gap-6">
-              <a href="#" className="hover:text-primary dark:hover:text-white transition-colors">Términos de servicio</a>
-              <a href="#" className="hover:text-primary dark:hover:text-white transition-colors">Política de privacidad</a>
+            <div className="flex flex-wrap justify-center gap-6">
+              <Link href="/terms" className="hover:text-primary dark:hover:text-white transition-colors">Términos de servicio</Link>
+              <Link href="/privacy" className="hover:text-primary dark:hover:text-white transition-colors">Política de privacidad</Link>
+              <Link href="/refunds" className="hover:text-primary dark:hover:text-white transition-colors">Política de reembolso</Link>
             </div>
           </div>
         </div>
       </section>
+
+      {/* AVISO DE COOKIES INTERACTIVO */}
+      <AnimatePresence>
+        {showCookieBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-6 right-6 z-50 max-w-sm w-[calc(100vw-3rem)] glass-card rounded-3xl p-6 border border-white/10 dark:border-white/10 shadow-2xl backdrop-blur-xl flex flex-col gap-4 text-left"
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🍪</span>
+              <div className="space-y-1">
+                <h4 className="text-xs font-black text-text-primary dark:text-white uppercase tracking-wider">Aviso de Cookies</h4>
+                <p className="text-[11px] text-text-secondary leading-relaxed">
+                  Utilizamos cookies esenciales y de análisis para garantizar la seguridad de tus pagos mediante Stripe y optimizar el rendimiento de la plataforma. Al continuar, aceptas nuestra <Link href="/privacy" className="underline hover:text-primary dark:hover:text-white">Política de Privacidad</Link>.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowCookieBanner(false)}
+                className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-text-secondary dark:text-slate-300 transition-colors uppercase tracking-wider cursor-pointer"
+              >
+                Rechazar
+              </button>
+              <button
+                onClick={handleAcceptCookies}
+                className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-primary to-accent-purple hover:opacity-90 text-[10px] font-bold text-white transition-all uppercase tracking-wider shadow-md cursor-pointer"
+              >
+                Aceptar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
